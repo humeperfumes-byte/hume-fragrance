@@ -1,5 +1,5 @@
 import { getProductPath } from "@/lib/product-route";
-const SITE_URL = "https://humefragrance.com";
+import { SITE_URL, siteUrl } from "@/lib/site";
 
 function getSeoProductUrl(product: {
   id: string;
@@ -15,7 +15,7 @@ function getSeoProductUrl(product: {
       inspirationBrand: product.inspirationBrand,
     })}`;
   }
-  return `${SITE_URL}/product/${product.id}`;
+  return siteUrl(`/product/${product.id}`);
 }
 
 export const getOrganizationSchema = () => ({
@@ -23,7 +23,7 @@ export const getOrganizationSchema = () => ({
   "@type": "Organization",
   name: "HUME Fragrance",
   url: SITE_URL,
-  logo: `${SITE_URL}/images/logo.png`,
+  logo: siteUrl("/images/logo.png"),
   description:
     "Premium inspired perfumes crafted to celebrate iconic scent profiles with refined quality and modern luxury.",
   sameAs: ["https://instagram.com/humefragrance", "https://wa.me/919559024822"],
@@ -46,7 +46,7 @@ export const getWebSiteSchema = () => ({
   url: SITE_URL,
   potentialAction: {
     "@type": "SearchAction",
-    target: `${SITE_URL}/search?q={search_term_string}`,
+    target: siteUrl("/search?q={search_term_string}"),
     "query-input": "required name=search_term_string",
   },
 });
@@ -140,7 +140,7 @@ export const getCollectionPageSchema = (
   name: "Shop All Fragrances - HUME Fragrance",
   description:
     "Browse our complete collection of premium fragrance interpretations and modern luxury scents.",
-  url: `${SITE_URL}/shop`,
+  url: siteUrl("/shop"),
   mainEntity: {
     "@type": "ItemList",
     numberOfItems: products.length,

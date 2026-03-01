@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import type { PerfumeData } from "@/data/perfumes";
 import type { BlogPost } from "@/data/blogPosts";
+import { isVisibleNatureCategory } from "@/lib/nature-categories";
 
 type ProductForm = {
   name: string;
@@ -19,6 +20,7 @@ type ProductForm = {
   woreByImageUrl: string;
   category: string;
   categoryId: string;
+  categoryIdsCsv: string;
   gender: "Men" | "Women" | "Unisex";
   imagesCsv: string;
   price: string;
@@ -58,6 +60,7 @@ const initialProductForm: ProductForm = {
   woreByImageUrl: "https://placehold.co/600x600?text=Celeb",
   category: "",
   categoryId: "",
+  categoryIdsCsv: "",
   gender: "Unisex",
   imagesCsv: "",
   price: "",
@@ -119,6 +122,28 @@ export default function AdminDashboard() {
     if (stored) setAdminToken(stored);
   }, []);
 
+  const dbCategoryOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    products.forEach((product) => {
+      (product.dbCategoryTags ?? product.categoryTags ?? []).forEach((tag) => {
+        if (!tag?.id) return;
+        if (!isVisibleNatureCategory(tag.id) || !isVisibleNatureCategory(tag.label || tag.id)) return;
+        map.set(tag.id, tag.label || tag.id);
+      });
+      (product.dbCategoryIds ?? product.categoryIds ?? []).forEach((id) => {
+        if (!id || map.has(id)) return;
+        if (!isVisibleNatureCategory(id)) return;
+        map.set(
+          id,
+          id.replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+        );
+      });
+    });
+    return Array.from(map.entries())
+      .map(([id, label]) => ({ id, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [products]);
+
   useEffect(() => {
     window.localStorage.setItem("admin_api_token", adminToken);
   }, [adminToken]);
@@ -166,6 +191,7 @@ export default function AdminDashboard() {
         productForm.woreByImageUrl || "https://placehold.co/600x600?text=Celeb",
       category: productForm.category,
       categoryId: productForm.categoryId,
+      categoryIds: splitCsv(productForm.categoryIdsCsv),
       gender: productForm.gender,
       images: splitCsv(productForm.imagesCsv),
       price: Number(productForm.price),
@@ -352,8 +378,43 @@ export default function AdminDashboard() {
                 <Input placeholder="Inspiration Brand" value={productForm.inspirationBrand} onChange={(e) => setProductForm((s) => ({ ...s, inspirationBrand: e.target.value }))} required />
                 <Input placeholder="Worn by (optional celeb name)" value={productForm.woreBy} onChange={(e) => setProductForm((s) => ({ ...s, woreBy: e.target.value }))} />
                 <Input placeholder="Worn by image URL (Cloudinary)" value={productForm.woreByImageUrl} onChange={(e) => setProductForm((s) => ({ ...s, woreByImageUrl: e.target.value }))} required />
-                <Input placeholder="Category (e.g., Fresh)" value={productForm.category} onChange={(e) => setProductForm((s) => ({ ...s, category: e.target.value }))} required />
-                <Input placeholder="Category ID (e.g., fresh)" value={productForm.categoryId} onChange={(e) => setProductForm((s) => ({ ...s, categoryId: e.target.value }))} required />
+                <Input
+                  list="admin-category-labels"
+                  placeholder="Category (e.g., Fresh)"
+                  value={productForm.category}
+                  onChange={(e) => setProductForm((s) => ({ ...s, category: e.target.value }))}
+                  required
+                />
+                <datalist id="admin-category-labels">
+                  {dbCategoryOptions.map((item) => (
+                    <option key={`label-${item.id}`} value={item.label} />
+                  ))}
+                </datalist>
+                <Input
+                  list="admin-category-ids"
+                  placeholder="Category ID (e.g., fresh)"
+                  value={productForm.categoryId}
+                  onChange={(e) => {
+                    const nextId = e.target.value;
+                    const matched = dbCategoryOptions.find((item) => item.id === nextId);
+                    setProductForm((s) => ({
+                      ...s,
+                      categoryId: nextId,
+                      category: matched?.label || s.category,
+                    }));
+                  }}
+                  required
+                />
+                <datalist id="admin-category-ids">
+                  {dbCategoryOptions.map((item) => (
+                    <option key={`id-${item.id}`} value={item.id} />
+                  ))}
+                </datalist>
+                <Input
+                  placeholder="Additional category IDs CSV (e.g., woody,smoky)"
+                  value={productForm.categoryIdsCsv}
+                  onChange={(e) => setProductForm((s) => ({ ...s, categoryIdsCsv: e.target.value }))}
+                />
                 <Input placeholder="Gender: Men, Women, Unisex" value={productForm.gender} onChange={(e) => setProductForm((s) => ({ ...s, gender: (e.target.value as ProductForm["gender"]) || "Unisex" }))} required />
                 <Input placeholder="Price in INR (e.g., 1499)" value={productForm.price} onChange={(e) => setProductForm((s) => ({ ...s, price: e.target.value }))} required />
                 <Input placeholder="Size (e.g., 50ml)" value={productForm.size} onChange={(e) => setProductForm((s) => ({ ...s, size: e.target.value }))} required />

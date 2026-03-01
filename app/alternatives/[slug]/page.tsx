@@ -71,12 +71,12 @@ export default async function AlternativeIntentPage({
       "@type": "CollectionPage",
       name: page.title,
       description: page.description,
-      url: `https://humeperfumes.com/alternatives/${page.slug}`,
+      url: `https://humefragrance.com/alternatives/${page.slug}`,
     },
     getBreadcrumbSchema([
-      { name: "Home", url: "https://humeperfumes.com" },
-      { name: "Alternatives", url: "https://humeperfumes.com/alternatives" },
-      { name: page.title, url: `https://humeperfumes.com/alternatives/${page.slug}` },
+      { name: "Home", url: "https://humefragrance.com" },
+      { name: "Alternatives", url: "https://humefragrance.com/alternatives" },
+      { name: page.title, url: `https://humefragrance.com/alternatives/${page.slug}` },
     ]),
   ];
 
@@ -103,6 +103,8 @@ export default async function AlternativeIntentPage({
                   inspiration={perfume.inspiration}
                   inspirationBrand={perfume.inspirationBrand}
                   category={perfume.category}
+                  categoryTags={perfume.categoryTags}
+                  categoryIds={perfume.categoryIds}
                   image={perfume.images[0]}
                   price={perfume.price}
                   index={idx}

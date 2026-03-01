@@ -228,6 +228,8 @@ export default function ScentQuiz({ perfumes }: { perfumes: PerfumeData[] }) {
                   inspiration={perfume.inspiration}
                   inspirationBrand={perfume.inspirationBrand}
                   category={perfume.category}
+                  categoryTags={perfume.categoryTags}
+                  categoryIds={perfume.categoryIds}
                   image={perfume.images[0]}
                   price={perfume.price}
                   index={index}

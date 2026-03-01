@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { products, reviews } from "@/db/schema";
+import { products, reviews, productCategories } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { requireAdminToken } from "@/lib/admin-auth";
@@ -34,9 +34,21 @@ export async function GET(
       .from(reviews)
       .where(eq(reviews.productId, id));
 
+    let mappedCategoryIds: string[] = [product.categoryId];
+    try {
+      const rows = await db
+        .select({ categoryId: productCategories.categoryId })
+        .from(productCategories)
+        .where(eq(productCategories.productId, id));
+      mappedCategoryIds = rows.length > 0 ? rows.map((row) => row.categoryId) : [product.categoryId];
+    } catch {
+      mappedCategoryIds = [product.categoryId];
+    }
+
     return NextResponse.json({
       ...product,
       price: parseFloat(product.price),
+      categoryIds: Array.from(new Set([product.categoryId, ...mappedCategoryIds].filter(Boolean))),
       reviews: productReviews.map((r) => ({
         ...r,
         rating: parseFloat(r.rating),
@@ -71,6 +83,7 @@ export async function PUT(
       woreByImageUrl: z.string().trim().url().optional(),
       category: z.string().optional(),
       categoryId: z.string().optional(),
+      categoryIds: z.array(z.string()).optional(),
       gender: z.enum(["Men", "Women", "Unisex"]).optional(),
       images: imageUrlSchema.optional(),
       price: z.number().optional(),
@@ -120,9 +133,44 @@ export async function PUT(
       );
     }
 
+    try {
+      if (validatedData.categoryId || validatedData.categoryIds) {
+        const resolvedPrimary = validatedData.categoryId ?? updatedProduct.categoryId;
+        const resolvedLabel = validatedData.category ?? updatedProduct.category;
+        const categoryIds = Array.from(
+          new Set([resolvedPrimary, ...(validatedData.categoryIds ?? [])].filter(Boolean))
+        );
+
+        await db.delete(productCategories).where(eq(productCategories.productId, id));
+        if (categoryIds.length > 0) {
+          await db.insert(productCategories).values(
+            categoryIds.map((categoryId) => ({
+              productId: id,
+              categoryId,
+              categoryLabel: resolvedLabel,
+            }))
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Failed to sync product_categories:", error);
+    }
+
+    let mappedCategoryIds: string[] = [updatedProduct.categoryId];
+    try {
+      const rows = await db
+        .select({ categoryId: productCategories.categoryId })
+        .from(productCategories)
+        .where(eq(productCategories.productId, id));
+      mappedCategoryIds = rows.length > 0 ? rows.map((row) => row.categoryId) : [updatedProduct.categoryId];
+    } catch {
+      mappedCategoryIds = [updatedProduct.categoryId];
+    }
+
     return NextResponse.json({
       ...updatedProduct,
       price: parseFloat(updatedProduct.price),
+      categoryIds: Array.from(new Set([updatedProduct.categoryId, ...mappedCategoryIds].filter(Boolean))),
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -152,6 +200,7 @@ export async function DELETE(
 
     // Delete reviews first (cascade should handle this, but being explicit)
     await db.delete(reviews).where(eq(reviews.productId, id));
+    await db.delete(productCategories).where(eq(productCategories.productId, id));
 
     const [deletedProduct] = await db
       .delete(products)

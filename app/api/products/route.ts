@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { products, reviews } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { products, productCategories } from "@/db/schema";
 import { z } from "zod";
 import { perfumes as localPerfumes } from "@/data/perfumes";
 import { requireAdminToken } from "@/lib/admin-auth";
+import { getAllProducts } from "@/lib/db/products";
 
 const imageUrlSchema = z
   .array(z.string().trim().url())
@@ -17,39 +17,17 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const categoryId = searchParams.get("categoryId");
     const gender = searchParams.get("gender");
+    const allProducts = await getAllProducts();
+    const filtered = allProducts.filter((product) => {
+      const byCategory =
+        !categoryId ||
+        categoryId === "all" ||
+        (product.categoryIds ?? [product.categoryId]).includes(categoryId);
+      const byGender = !gender || product.gender === gender;
+      return byCategory && byGender;
+    });
 
-    let query = db.select().from(products);
-
-    if (categoryId && categoryId !== "all") {
-      query = query.where(eq(products.categoryId, categoryId)) as any;
-    }
-
-    if (gender) {
-      query = query.where(eq(products.gender, gender as any)) as any;
-    }
-
-    const allProducts = await query;
-
-    // Fetch reviews for each product
-    const productsWithReviews = await Promise.all(
-      allProducts.map(async (product) => {
-        const productReviews = await db
-          .select()
-          .from(reviews)
-          .where(eq(reviews.productId, product.id));
-
-        return {
-          ...product,
-          price: parseFloat(product.price),
-          reviews: productReviews.map((r) => ({
-            ...r,
-            rating: parseFloat(r.rating),
-          })),
-        };
-      })
-    );
-
-    return NextResponse.json(productsWithReviews);
+    return NextResponse.json(filtered);
   } catch (error) {
     console.error("Error fetching products:", error);
     const searchParams = request.nextUrl.searchParams;
@@ -83,6 +61,7 @@ export async function POST(request: NextRequest) {
       woreByImageUrl: z.string().trim().url().default(defaultCelebImage),
       category: z.string(),
       categoryId: z.string(),
+      categoryIds: z.array(z.string()).optional(),
       gender: z.enum(["Men", "Women", "Unisex"]),
       images: imageUrlSchema,
       price: z.number(),
@@ -114,10 +93,29 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
+    const categoryIds = Array.from(
+      new Set([validatedData.categoryId, ...(validatedData.categoryIds ?? [])].filter(Boolean))
+    );
+
+    try {
+      if (categoryIds.length > 0) {
+        await db.insert(productCategories).values(
+          categoryIds.map((id) => ({
+            productId: validatedData.id,
+            categoryId: id,
+            categoryLabel: validatedData.category,
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Failed to save product_categories rows:", error);
+    }
+
     return NextResponse.json(
       {
         ...newProduct,
         price: parseFloat(newProduct.price),
+        categoryIds,
       },
       { status: 201 }
     );

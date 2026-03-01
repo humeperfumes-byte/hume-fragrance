@@ -1,21 +1,44 @@
-﻿"use client";
-
 import Link from "next/link";
+import { getAllProducts } from "@/lib/db/products";
+import { isVisibleNatureCategory } from "@/lib/nature-categories";
 
-const Footer = () => {
+function prettyCategory(label: string) {
+  return label
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
+}
+
+export default async function Footer() {
+  const products = await getAllProducts();
+
+  const categoryMap = new Map<string, string>();
+  products.forEach((product) => {
+    (product.dbCategoryTags ?? product.categoryTags ?? []).forEach((tag) => {
+      if (!tag?.id) return;
+      if (!isVisibleNatureCategory(tag.id) || !isVisibleNatureCategory(tag.label || tag.id)) return;
+      categoryMap.set(tag.id, tag.label || prettyCategory(tag.id));
+    });
+    (product.dbCategoryIds ?? product.categoryIds ?? []).forEach((id) => {
+      if (!id || categoryMap.has(id)) return;
+      if (!isVisibleNatureCategory(id)) return;
+      categoryMap.set(id, prettyCategory(id));
+    });
+  });
+
+  const categoryLinks = Array.from(categoryMap.entries())
+    .map(([, label]) => ({
+      href: `/shop?filter=nature&value=${encodeURIComponent(label)}`,
+      label: `${label} Fragrances`,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+    .slice(0, 8);
+
   const shopLinks = [
     { href: "/shop", label: "Shop All Perfumes" },
     { href: "/bottles", label: "Choose Your Bottle" },
     { href: "/kit-pack", label: "Build Your Kit" },
     { href: "/celebrities-favorites", label: "Celebrities' Favorites" },
-  ];
-
-  const categoryLinks = [
-    { href: "/shop?category=fresh", label: "Fresh Fragrances" },
-    { href: "/shop?category=woody", label: "Woody Fragrances" },
-    { href: "/shop?category=oud", label: "Oud Fragrances" },
-    { href: "/shop?category=oriental", label: "Oriental Fragrances" },
-    { href: "/shop?category=sweet", label: "Sweet Fragrances" },
   ];
 
   const discoverLinks = [
@@ -110,6 +133,4 @@ const Footer = () => {
       </div>
     </footer>
   );
-};
-
-export default Footer;
+}

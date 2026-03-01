@@ -14,8 +14,8 @@ export default async function ShopPage() {
   const shopJsonLd = [
     getCollectionPageSchema(perfumes),
     getBreadcrumbSchema([
-      { name: "Home", url: "https://humeperfumes.com" },
-      { name: "Shop", url: "https://humeperfumes.com/shop" },
+      { name: "Home", url: "https://humefragrance.com" },
+      { name: "Shop", url: "https://humefragrance.com/shop" },
     ]),
   ];
 

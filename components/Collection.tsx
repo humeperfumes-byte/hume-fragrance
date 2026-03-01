@@ -1,26 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import PerfumeCard from "./PerfumeCard";
 import type { PerfumeData } from "@/data/perfumes";
-
-const categories = [
-  { id: "all", label: "All Fragrances" },
-  { id: "fresh", label: "Fresh" },
-  { id: "woody", label: "Woody" },
-  { id: "sweet", label: "Sweet" },
-  { id: "oriental", label: "Oriental" },
-  { id: "oud", label: "Oud" },
-];
+import { isVisibleNatureCategory } from "@/lib/nature-categories";
 
 const Collection = ({ perfumes }: { perfumes: PerfumeData[] }) => {
   const [activeCategory, setActiveCategory] = useState("all");
+  const categories = useMemo(() => {
+    const map = new Map<string, string>();
+    perfumes.forEach((p) => {
+      (p.dbCategoryTags ?? p.categoryTags ?? []).forEach((tag) => {
+        if (!tag?.id) return;
+        if (!isVisibleNatureCategory(tag.id) || !isVisibleNatureCategory(tag.label || tag.id)) return;
+        map.set(tag.id, tag.label || tag.id);
+      });
+      (p.dbCategoryIds ?? p.categoryIds ?? []).forEach((id) => {
+        if (id && !map.has(id) && isVisibleNatureCategory(id)) {
+          map.set(
+            id,
+            id
+              .replace(/[-_]+/g, " ")
+              .replace(/\b\w/g, (c) => c.toUpperCase())
+          );
+        }
+      });
+    });
+
+    const dynamic = Array.from(map.entries())
+      .map(([id, label]) => ({ id, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+
+    return [{ id: "all", label: "All Fragrances" }, ...dynamic];
+  }, [perfumes]);
 
   const filteredPerfumes =
     activeCategory === "all"
       ? perfumes
-      : perfumes.filter((p) => p.categoryId === activeCategory);
+      : perfumes.filter((p) => (p.dbCategoryIds ?? p.categoryIds ?? [p.categoryId]).includes(activeCategory));
   const visiblePerfumes = filteredPerfumes.slice(0, 8);
 
   return (
@@ -86,6 +105,8 @@ const Collection = ({ perfumes }: { perfumes: PerfumeData[] }) => {
                 inspiration={perfume.inspiration}
                 inspirationBrand={perfume.inspirationBrand}
                 category={perfume.category}
+                categoryTags={perfume.categoryTags}
+                categoryIds={perfume.categoryIds}
                 image={perfume.images[0]}
                 price={perfume.price}
                 index={index}
@@ -98,12 +119,12 @@ const Collection = ({ perfumes }: { perfumes: PerfumeData[] }) => {
         </motion.div>
 
         <div className="mt-10 flex justify-center">
-          <a
+          <Link
             href="/shop"
             className="inline-flex items-center justify-center px-8 py-3.5 border border-foreground text-caption tracking-[0.2em] uppercase hover:bg-foreground hover:text-background transition-colors"
           >
             See All Products
-          </a>
+          </Link>
         </div>
       </div>
     </section>

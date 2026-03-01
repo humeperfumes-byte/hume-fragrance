@@ -30,7 +30,7 @@ export default async function BlogPage() {
     name: "HUME Perfumes Blog",
     description:
       "Expert guides, comparisons, and tips on inspired perfumes. Discover the best alternatives to Dior, Chanel, Tom Ford, Creed, YSL and more.",
-    url: "https://humeperfumes.com/blog",
+    url: "https://humefragrance.com/blog",
     publisher: {
       "@type": "Organization",
       name: "HUME Perfumes",
@@ -38,7 +38,7 @@ export default async function BlogPage() {
     blogPost: blogPosts.map((post) => ({
       "@type": "BlogPosting",
       headline: post.title,
-      url: `https://humeperfumes.com/blog/${post.slug}`,
+      url: `https://humefragrance.com/blog/${post.slug}`,
       datePublished: post.date,
       author: { "@type": "Person", name: post.author },
       description: post.excerpt,
@@ -48,8 +48,8 @@ export default async function BlogPage() {
   const jsonLd = [
     blogListSchema,
     getBreadcrumbSchema([
-      { name: "Home", url: "https://humeperfumes.com" },
-      { name: "Blog", url: "https://humeperfumes.com/blog" },
+      { name: "Home", url: "https://humefragrance.com" },
+      { name: "Blog", url: "https://humefragrance.com/blog" },
     ]),
   ];
 

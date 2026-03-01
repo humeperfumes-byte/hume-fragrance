@@ -25,6 +25,10 @@ export interface PerfumeData {
   woreByImageUrl?: string;
   category: string;
   categoryId: string;
+  categoryIds?: string[];
+  categoryTags?: Array<{ id: string; label: string }>;
+  dbCategoryIds?: string[];
+  dbCategoryTags?: Array<{ id: string; label?: string }>;
   gender: Gender;
   images: string[];
   videos?: string[];

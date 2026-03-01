@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -6,6 +7,7 @@ import EarlyBirdPopup from "@/components/EarlyBirdPopup";
 import AIChatBot from "@/components/AIChatBot";
 import ConsentCaptureBanner from "@/components/ConsentCaptureBanner";
 import ConsentTimelineTracker from "@/components/ConsentTimelineTracker";
+import { SITE_URL } from "@/lib/site";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -22,7 +24,7 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://humefragrance.com"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "HUME Fragrance | Premium Inspired Perfumes in India | Shop Now",
     template: "%s | HUME Perfumes",
@@ -30,9 +32,9 @@ export const metadata: Metadata = {
   description:
     "HUME Fragrance | Premium inspired perfumes for men & women in India. 8-10hr longevity. Fresh, leather, smoky, marine & floral. Free shipping. Shop now.",
   icons: {
-    icon: "/images/logo.png?v=2",
-    shortcut: "/images/logo.png?v=2",
-    apple: "/images/logo.png?v=2",
+    icon: "/images/logo.png?v=3",
+    shortcut: "/images/logo.png?v=3",
+    apple: "/images/logo.png?v=3",
   },
   keywords: [
     "luxury fragrances",
@@ -45,7 +47,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_IN",
     siteName: "HUME Fragrance",
-    url: "https://humefragrance.com",
+    url: SITE_URL,
     images: [
       {
         url: "/images/logo.png?v=2",
@@ -80,9 +82,9 @@ export default function RootLayout({
           href="/images/collection-hero.jpg"
           fetchPriority="high"
         />
-        <link rel="icon" href="/images/logo.png?v=2" type="image/png" />
-        <link rel="shortcut icon" href="/images/logo.png?v=2" type="image/png" />
-        <link rel="apple-touch-icon" href="/images/logo.png?v=2" />
+        <link rel="icon" href="/images/logo.png?v=3" type="image/png" />
+        <link rel="shortcut icon" href="/images/logo.png?v=3" type="image/png" />
+        <link rel="apple-touch-icon" href="/images/logo.png?v=3" />
       </head>
       <body className={`${inter.variable} ${cormorant.variable} antialiased`}>
         <Providers>
@@ -90,7 +92,9 @@ export default function RootLayout({
           <AIChatBot />
           <EarlyBirdPopup />
           <ConsentCaptureBanner />
-          <ConsentTimelineTracker />
+          <Suspense fallback={null}>
+            <ConsentTimelineTracker />
+          </Suspense>
         </Providers>
       </body>
     </html>

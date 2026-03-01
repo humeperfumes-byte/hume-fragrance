@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { products, reviews } from "@/db/schema";
+import { products, reviews, productCategories } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { perfumes as localPerfumes, type PerfumeData, type Review } from "@/data/perfumes";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
@@ -52,7 +52,11 @@ function buildDefaultReviews(product: any): Review[] {
 }
 
 // Transform database product to PerfumeData format
-function transformProduct(product: any, productReviews: any[]): PerfumeData {
+function transformProduct(
+  product: any,
+  productReviews: any[],
+  mappedCategories: Array<{ id: string; label?: string }> = []
+): PerfumeData {
   const defaultCelebImage = "https://placehold.co/600x600?text=Celeb";
   const fallbackReviews = buildDefaultReviews(product);
   const mappedReviews = productReviews.map((r) => ({
@@ -79,6 +83,25 @@ function transformProduct(product: any, productReviews: any[]): PerfumeData {
     woreByImageUrl: withCloudinaryTransforms(product.woreByImageUrl ?? defaultCelebImage),
     category: product.category,
     categoryId: product.categoryId,
+    categoryIds:
+      mappedCategories.length > 0
+        ? Array.from(
+            new Set([product.categoryId, ...mappedCategories.map((c) => c.id)].filter(Boolean))
+          )
+        : [product.categoryId],
+    dbCategoryIds: mappedCategories.map((c) => c.id).filter(Boolean),
+    categoryTags:
+      mappedCategories.length > 0
+        ? Array.from(
+            new Map(
+              [{ id: product.categoryId, label: product.category }, ...mappedCategories].map((c) => [
+                c.id,
+                { id: c.id, label: c.label || c.id },
+              ])
+            ).values()
+          )
+        : [{ id: product.categoryId, label: product.category }],
+    dbCategoryTags: mappedCategories.map((c) => ({ id: c.id, label: c.label || c.id })),
     gender: product.gender,
     images: (product.images as string[]).map((url) => withCloudinaryTransforms(url)),
     price: parseFloat(product.price),
@@ -119,7 +142,24 @@ export async function getAllProducts(): Promise<PerfumeData[]> {
           .from(reviews)
           .where(eq(reviews.productId, product.id));
 
-        return transformProduct(product, productReviews);
+        let mappedCategories: Array<{ id: string; label?: string }> = [];
+        try {
+          const rows = await db
+            .select({
+              categoryId: productCategories.categoryId,
+              categoryLabel: productCategories.categoryLabel,
+            })
+            .from(productCategories)
+            .where(eq(productCategories.productId, product.id));
+          mappedCategories = rows.map((row) => ({
+            id: row.categoryId,
+            label: row.categoryLabel ?? undefined,
+          }));
+        } catch {
+          mappedCategories = [{ id: product.categoryId, label: product.category }];
+        }
+
+        return transformProduct(product, productReviews, mappedCategories);
       })
     );
 
@@ -148,7 +188,24 @@ export async function getProductById(id: string): Promise<PerfumeData | null> {
       .from(reviews)
       .where(eq(reviews.productId, id));
 
-    return transformProduct(product, productReviews);
+    let mappedCategories: Array<{ id: string; label?: string }> = [];
+    try {
+      const rows = await db
+        .select({
+          categoryId: productCategories.categoryId,
+          categoryLabel: productCategories.categoryLabel,
+        })
+        .from(productCategories)
+        .where(eq(productCategories.productId, id));
+      mappedCategories = rows.map((row) => ({
+        id: row.categoryId,
+        label: row.categoryLabel ?? undefined,
+      }));
+    } catch {
+      mappedCategories = [{ id: product.categoryId, label: product.category }];
+    }
+
+    return transformProduct(product, productReviews, mappedCategories);
   } catch (error) {
     console.error(`Error loading product ${id} from DB, using local fallback:`, error);
     return localPerfumes.find((p) => p.id === id) ?? null;
@@ -168,23 +225,8 @@ export async function getProductsByCategory(
   categoryId: string
 ): Promise<PerfumeData[]> {
   try {
-    const categoryProducts = await db
-      .select()
-      .from(products)
-      .where(eq(products.categoryId, categoryId));
-
-    const productsWithReviews = await Promise.all(
-      categoryProducts.map(async (product) => {
-        const productReviews = await db
-          .select()
-          .from(reviews)
-          .where(eq(reviews.productId, product.id));
-
-        return transformProduct(product, productReviews);
-      })
-    );
-
-    return productsWithReviews;
+    const all = await getAllProducts();
+    return all.filter((p) => (p.categoryIds ?? [p.categoryId]).includes(categoryId));
   } catch (error) {
     console.error(`Error loading category ${categoryId} from DB, using local fallback:`, error);
     return localPerfumes.filter((p) => p.categoryId === categoryId);

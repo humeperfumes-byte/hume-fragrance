@@ -10,7 +10,7 @@ type SeoProps = {
 };
 
 export default function Seo({ title, description, image, url }: SeoProps) {
-  const imageUrl = image ?? "https://humeperfumes.com/og.jpg";
+  const imageUrl = image ?? "https://humefragrance.com/og.jpg";
 
   return (
     <Head>

@@ -164,6 +164,8 @@ export default async function FestivalSeoPage({ params }: Props) {
                 inspiration={product.inspiration}
                 inspirationBrand={product.inspirationBrand}
                 category={product.category}
+                categoryTags={product.categoryTags}
+                categoryIds={product.categoryIds}
                 image={product.images[0]}
                 price={product.price}
                 index={index}

@@ -158,6 +158,8 @@ export default async function AlternativesToPage({
                     inspiration={itemProduct.inspiration}
                     inspirationBrand={itemProduct.inspirationBrand}
                     category={itemProduct.category}
+                    categoryTags={itemProduct.categoryTags}
+                    categoryIds={itemProduct.categoryIds}
                     image={itemProduct.images[0]}
                     price={itemProduct.price}
                     index={idx}

@@ -34,10 +34,16 @@ const shopSections: ShopSection[] = [
         href: "/scent-quiz",
       },
       {
-        label: "Build Your Kit Pack of 4",
+        label: "Build Your Kit",
         description: "Create your own 4 x 20ml set",
         filterType: "occasion",
         href: "/kit-pack",
+      },
+      {
+        label: "Refill Program",
+        description: "Sustainable refill membership",
+        filterType: "occasion",
+        href: "/refill-subscription",
       },
     ],
   },
@@ -50,9 +56,7 @@ const shopSections: ShopSection[] = [
       { label: "Office", description: "Subtle and sophisticated", filterType: "occasion" },
       { label: "Date Night", description: "Seductive and alluring", filterType: "occasion" },
       { label: "Party", description: "Bold and unforgettable", filterType: "occasion" },
-      { label: "Evening", description: "Rich and noticeable", filterType: "occasion" },
       { label: "Formal", description: "Elegant and refined", filterType: "occasion" },
-      { label: "Special Events", description: "For standout moments", filterType: "occasion" },
     ],
   },
   {
@@ -76,6 +80,8 @@ interface ShopMegaMenuProps {
 const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
   const router = useRouter();
   const [celebImageByLabel, setCelebImageByLabel] = useState<Record<string, string>>({});
+  const [dbGenderItems, setDbGenderItems] = useState<ShopItem[]>([]);
+  const [dbOccasionItems, setDbOccasionItems] = useState<ShopItem[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -86,12 +92,39 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
         const byId = new Map<string, { woreByImageUrl?: string }>(
           data.map((p: { id: string; woreByImageUrl?: string }) => [p.id, p])
         );
+
+        const genderSet = new Set<string>();
+        const occasionSet = new Set<string>();
+        data.forEach((p: { gender?: string; longevity?: { occasion?: string[] } }) => {
+          if (p.gender) genderSet.add(p.gender);
+          (p.longevity?.occasion ?? []).forEach((o) => {
+            const v = String(o || "").trim();
+            if (v) occasionSet.add(v);
+          });
+        });
+
+        const preferredGenderOrder = ["Men", "Women", "Unisex"];
+        const genderItems = preferredGenderOrder
+          .filter((g) => genderSet.has(g))
+          .map((g) => ({ label: g, description: "", filterType: "gender" as const }));
+
+        const preferredOccasionOrder = ["Gym", "Daily Wear", "Office", "Date Night", "Party", "Formal"];
+        const preferredOccasions = preferredOccasionOrder.filter((o) => occasionSet.has(o));
+        const remainingOccasions = Array.from(occasionSet)
+          .filter((o) => !preferredOccasionOrder.includes(o))
+          .sort((a, b) => a.localeCompare(b));
+        const occasionItems = [...preferredOccasions, ...remainingOccasions]
+          .slice(0, 6)
+          .map((o) => ({ label: o, description: "", filterType: "occasion" as const }));
+
         const mapped = Object.fromEntries(
           celebrityFavorites.map((c) => [
             c.label,
             byId.get(c.perfumeIds[0])?.woreByImageUrl || c.image,
           ])
         );
+        setDbGenderItems(genderItems);
+        setDbOccasionItems(occasionItems);
         setCelebImageByLabel(mapped);
       })
       .catch(() => {});
@@ -116,6 +149,27 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
     [celebImageByLabel]
   );
 
+  const genderItems =
+    dbGenderItems.length > 0
+      ? dbGenderItems
+      : [
+          { label: "Men", description: "", filterType: "gender" as const },
+          { label: "Women", description: "", filterType: "gender" as const },
+          { label: "Unisex", description: "", filterType: "gender" as const },
+        ];
+
+  const occasionItems =
+    dbOccasionItems.length > 0
+      ? dbOccasionItems
+      : [
+          { label: "Gym", description: "", filterType: "occasion" as const },
+          { label: "Daily Wear", description: "", filterType: "occasion" as const },
+          { label: "Office", description: "", filterType: "occasion" as const },
+          { label: "Date Night", description: "", filterType: "occasion" as const },
+          { label: "Party", description: "", filterType: "occasion" as const },
+          { label: "Formal", description: "", filterType: "occasion" as const },
+        ];
+
   const handleItemClick = (item: ShopItem) => {
     onClose();
     if (item.href) {
@@ -129,16 +183,11 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
     router.push(`/shop?filter=${item.filterType}&value=${encodeURIComponent(item.label)}`);
   };
 
-  const handleViewAll = () => {
-    onClose();
-    router.push("/shop");
-  };
-
   return (
     <div className="relative" onMouseEnter={onOpen} onMouseLeave={onClose}>
       <button
         onClick={() => (isOpen ? onClose() : onOpen())}
-        className="flex items-center gap-1 text-caption link-underline text-muted-foreground hover:text-foreground transition-luxury cursor-pointer"
+        className="flex items-center gap-1 text-caption font-bold link-underline text-foreground hover:text-foreground transition-luxury cursor-pointer"
       >
         Shop
         <ChevronDown
@@ -154,14 +203,16 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
-            className="fixed left-0 right-0 top-[72px] z-50 bg-background border-t border-b border-border shadow-lg"
+            className="fixed left-1/2 top-[72px] z-50 w-[min(1380px,calc(100vw-80px))] -translate-x-1/2 bg-background border border-border shadow-lg"
           >
-            <div className="container-luxury py-10">
+            <div className="px-8 py-10">
               <div className="grid grid-cols-3 gap-10">
                 {renderedSections.map((section) => (
                   <div key={section.title}>
                     <div className="flex items-center gap-2 mb-5">
-                      <section.icon size={16} className="text-muted-foreground" />
+                      {section.title !== "Discover" && section.title !== "By Occasion" ? (
+                        <section.icon size={16} className="text-muted-foreground" />
+                      ) : null}
                       {section.title === "Celebrities' Favorite" ? (
                         <button
                           onClick={() => {
@@ -173,70 +224,155 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
                           {section.title}
                           <ExternalLink size={12} className="transition-transform duration-200 group-hover:translate-x-0.5" />
                         </button>
-                      ) : (
+                      ) : section.title === "Discover" || section.title === "By Occasion" ? null : (
                         <h3 className="text-caption text-foreground">{section.title}</h3>
                       )}
                     </div>
-                    <ul className="space-y-3">
-                      {section.items.map((item) => (
-                        <li key={item.label}>
-                          {item.href ? (
-                            <motion.button
+                    {section.title === "By Occasion" ? (
+                      <div className="space-y-5">
+                        <div>
+                          <h4 className="mb-3 text-caption text-foreground">BY GENDER</h4>
+                          <ul className="grid grid-cols-3 gap-3">
+                            {genderItems.map((item) => (
+                              <li key={`gender-${item.label}`}>
+                                <button
+                                  onClick={() => handleItemClick(item)}
+                                  className="h-12 w-full border border-border bg-background text-sm font-light text-foreground hover:bg-secondary/30 transition-luxury cursor-pointer"
+                                >
+                                  {item.label}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div>
+                          <h4 className="mb-3 text-caption text-foreground">BY OCCASION</h4>
+                          <ul className="grid grid-cols-2 gap-3">
+                            {occasionItems.map((item) => (
+                              <li key={item.label}>
+                                <button
+                                  onClick={() => handleItemClick(item)}
+                                  className="h-12 w-full border border-border bg-background text-sm font-light text-foreground hover:bg-secondary/30 transition-luxury cursor-pointer"
+                                >
+                                  {item.label}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    ) : section.title === "Celebrities' Favorite" ? (
+                      <ul className="grid grid-cols-2 gap-2.5">
+                        {section.items.map((item) => (
+                          <li key={item.label}>
+                            <button
                               onClick={() => handleItemClick(item)}
-                              initial={{ opacity: 0.95, y: 0 }}
-                              animate={{ opacity: [0.95, 1, 0.95], y: [0, -1.5, 0] }}
-                              transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-                              className="group block text-left w-full border border-foreground/20 bg-gradient-to-r from-foreground to-zinc-700 text-background px-3 py-2.5 cursor-pointer hover:scale-[1.01] transition-transform duration-200"
+                              className="group block w-full max-w-[150px] text-left cursor-pointer"
                             >
-                              <span className="block text-sm font-medium group-hover:opacity-95 transition-luxury">
-                                {item.label}
-                              </span>
-                              <span className="block text-xs opacity-90 mt-0.5">
-                                {item.description}
-                              </span>
-                            </motion.button>
-                          ) : (
-                          <button
-                            onClick={() => handleItemClick(item)}
-                            className="group block text-left w-full cursor-pointer"
-                          >
-                            <span className="flex items-center gap-3">
                               {item.image ? (
                                 <img
                                   src={item.image}
                                   alt={item.label}
-                                  className="w-12 h-12 rounded-sm object-cover border border-border"
+                                  className="w-full aspect-[3/4] object-cover border border-border"
                                 />
                               ) : null}
-                              <span>
-                                <span className="block text-sm font-light text-foreground group-hover:text-muted-foreground transition-luxury">
-                                  {item.label}
-                                </span>
-                                <span className="block text-xs text-muted-foreground/70 font-light mt-0.5">
-                                  {item.description}
-                                </span>
+                              <span className="mt-1.5 block text-[0.95rem] font-light text-foreground group-hover:text-muted-foreground transition-luxury">
+                                {item.label}
                               </span>
-                            </span>
-                          </button>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div>
+                        <ul className="space-y-3">
+                          {section.items.map((item) => (
+                            <li key={item.label}>
+                            {item.href ? (
+                              <button
+                                onClick={() => handleItemClick(item)}
+                                className="group flex w-full items-center justify-between border border-zinc-800 bg-zinc-950 px-4 py-3 text-left text-white cursor-pointer transition-luxury hover:bg-zinc-900"
+                              >
+                                <span className="font-serif text-[1.25rem] leading-none tracking-wide">
+                                  {item.label === "Build Your Kit" ? (
+                                    <>
+                                      Build Your Kit{" "}
+                                      <span className="text-[0.85rem] align-middle text-white/80">
+                                        (pack of 4)
+                                      </span>
+                                    </>
+                                  ) : (
+                                    item.label
+                                  )}
+                                </span>
+                                <span className="text-[2rem] leading-none text-white/85">
+                                  →
+                                </span>
+                              </button>
+                            ) : (
+                                <button
+                                  onClick={() => handleItemClick(item)}
+                                  className="group block text-left w-full cursor-pointer"
+                                >
+                                  <span className="flex items-center gap-3">
+                                    {item.image ? (
+                                      <img
+                                        src={item.image}
+                                        alt={item.label}
+                                        className="w-12 h-12 rounded-sm object-cover border border-border"
+                                      />
+                                    ) : null}
+                                    <span>
+                                      <span className="block text-sm font-light text-foreground group-hover:text-muted-foreground transition-luxury">
+                                        {item.label}
+                                      </span>
+                                      <span className="block text-xs text-muted-foreground/70 font-light mt-0.5">
+                                        {item.description}
+                                      </span>
+                                    </span>
+                                  </span>
+                                </button>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+
+                        {section.title === "Discover" ? (
+                          <div className="mt-10 border-t border-border">
+                            <button
+                              onClick={() => {
+                                onClose();
+                                router.push("/bestseller");
+                              }}
+                              className="block w-full border-b border-border py-3 text-left font-serif text-[1.5rem] leading-none text-foreground hover:text-muted-foreground transition-luxury"
+                            >
+                              Best Sellers
+                            </button>
+                            <button
+                              onClick={() => {
+                                onClose();
+                                router.push("/hume-special");
+                              }}
+                              className="block w-full border-b border-border py-3 text-left font-serif text-[1.5rem] leading-none text-foreground hover:text-muted-foreground transition-luxury"
+                            >
+                              HUME Specials
+                            </button>
+                            <button
+                              onClick={() => {
+                                onClose();
+                                router.push("/shop");
+                              }}
+                              className="block w-full py-3 text-left font-serif text-[1.5rem] leading-none text-foreground hover:text-muted-foreground transition-luxury"
+                            >
+                              Shop All
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
                   </div>
                 ))}
-              </div>
-              <div className="mt-8 pt-6 border-t border-border flex items-center justify-between">
-                <p className="text-xs text-muted-foreground font-light tracking-wide">
-                  All fragrances are crafted with premium ingredients
-                </p>
-                <div className="flex items-center gap-6">
-                  <button
-                    onClick={handleViewAll}
-                    className="text-caption link-underline text-foreground hover:text-muted-foreground transition-luxury cursor-pointer"
-                  >
-                    View All Perfumes -&gt;
-                  </button>
-                </div>
               </div>
             </div>
           </motion.div>
@@ -249,3 +385,4 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
 export { shopSections };
 export type { FilterType };
 export default ShopMegaMenu;
+

@@ -19,7 +19,7 @@ export async function generateMetadata({
   const { slug } = await params;
   const post = await getBlogPostBySlug(slug);
   if (!post) return { title: "Not Found" };
-  const canonicalUrl = `https://humeperfumes.com/blog/${post.slug}`;
+  const canonicalUrl = `https://humefragrance.com/blog/${post.slug}`;
   return {
     title: post.seoTitle,
     description: post.seoDescription,
@@ -112,7 +112,7 @@ export default async function BlogPostPage({
     "@type": "BlogPosting",
     headline: post.title,
     description: post.seoDescription,
-    url: `https://humeperfumes.com/blog/${post.slug}`,
+    url: `https://humefragrance.com/blog/${post.slug}`,
     datePublished: post.date,
     dateModified: post.date,
     author: {
@@ -122,22 +122,22 @@ export default async function BlogPostPage({
     publisher: {
       "@type": "Organization",
       name: "HUME Perfumes",
-      url: "https://humeperfumes.com",
+      url: "https://humefragrance.com",
     },
     mainEntityOfPage: {
       "@type": "WebPage",
-      "@id": `https://humeperfumes.com/blog/${post.slug}`,
+      "@id": `https://humefragrance.com/blog/${post.slug}`,
     },
   };
 
   const jsonLd = [
     articleSchema,
     getBreadcrumbSchema([
-      { name: "Home", url: "https://humeperfumes.com" },
-      { name: "Blog", url: "https://humeperfumes.com/blog" },
+      { name: "Home", url: "https://humefragrance.com" },
+      { name: "Blog", url: "https://humefragrance.com/blog" },
       {
         name: post.title,
-        url: `https://humeperfumes.com/blog/${post.slug}`,
+        url: `https://humefragrance.com/blog/${post.slug}`,
       },
     ]),
   ];

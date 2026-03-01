@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, decimal, jsonb, boolean, timestamp, pgEnum, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, decimal, jsonb, boolean, timestamp, pgEnum, integer, serial } from "drizzle-orm/pg-core";
 
 // Enums
 export const genderEnum = pgEnum("gender", ["Men", "Women", "Unisex"]);
@@ -136,6 +136,17 @@ export const coupons = pgTable("coupons", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Product multi-category mapping
+export const productCategories = pgTable("product_categories", {
+  id: serial("id").primaryKey(),
+  productId: varchar("product_id", { length: 255 })
+    .notNull()
+    .references(() => products.id, { onDelete: "cascade" }),
+  categoryId: varchar("category_id", { length: 100 }).notNull(),
+  categoryLabel: varchar("category_label", { length: 100 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Consent Capture Events
 export const consentEvents = pgTable("consent_events", {
   id: varchar("id", { length: 255 }).primaryKey(),
@@ -170,5 +181,7 @@ export type ImageAsset = typeof images.$inferSelect;
 export type NewImageAsset = typeof images.$inferInsert;
 export type Coupon = typeof coupons.$inferSelect;
 export type NewCoupon = typeof coupons.$inferInsert;
+export type ProductCategory = typeof productCategories.$inferSelect;
+export type NewProductCategory = typeof productCategories.$inferInsert;
 export type ConsentEvent = typeof consentEvents.$inferSelect;
 export type NewConsentEvent = typeof consentEvents.$inferInsert;

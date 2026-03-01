@@ -13,6 +13,8 @@ interface CelebrityFavoriteCardProps {
   inspiration: string;
   inspirationBrand?: string;
   category: string;
+  categoryTags?: Array<{ id: string; label?: string }>;
+  categoryIds?: string[];
   image: string;
   price: number;
   celebrityName?: string;
@@ -30,12 +32,41 @@ function getStyleTags(category: string, inspiration: string) {
   return tags;
 }
 
+function getDisplayCategories(
+  category: string,
+  categoryTags: Array<{ id: string; label?: string }> = [],
+  categoryIds: string[] = []
+) {
+  const labelSet = new Set<string>();
+
+  categoryTags.forEach((tag) => {
+    const value = (tag.label || tag.id || "").trim();
+    if (value) labelSet.add(value.toUpperCase());
+  });
+
+  categoryIds.forEach((id) => {
+    const value = id
+      .replace(/[-_]+/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase())
+      .trim();
+    if (value) labelSet.add(value.toUpperCase());
+  });
+
+  if (labelSet.size === 0 && category) {
+    labelSet.add(category.toUpperCase());
+  }
+
+  return Array.from(labelSet).slice(0, 3);
+}
+
 export default function CelebrityFavoriteCard({
   id,
   name,
   inspiration,
   inspirationBrand = "",
   category,
+  categoryTags = [],
+  categoryIds = [],
   image,
   price,
   celebrityName,
@@ -44,7 +75,8 @@ export default function CelebrityFavoriteCard({
 }: CelebrityFavoriteCardProps) {
   const router = useRouter();
   const { addItem } = useCart();
-  const tags = getStyleTags(category, inspiration);
+  const mappedTags = getDisplayCategories(category, categoryTags, categoryIds);
+  const tags = mappedTags.length > 0 ? mappedTags : getStyleTags(category, inspiration);
   const productFirst = index % 2 === 0;
   const productPath = getProductPath({ id, name, inspirationBrand, inspiration });
 

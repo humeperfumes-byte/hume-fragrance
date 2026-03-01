@@ -193,6 +193,8 @@ export default async function InspiredByPage({
                     inspiration={related.inspiration}
                     inspirationBrand={related.inspirationBrand}
                     category={related.category}
+                    categoryTags={related.categoryTags}
+                    categoryIds={related.categoryIds}
                     image={related.images[0]}
                     price={related.price}
                     index={idx}

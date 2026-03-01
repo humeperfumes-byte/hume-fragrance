@@ -16,6 +16,8 @@ interface PerfumeCardProps {
   inspiration: string;
   inspirationBrand?: string;
   category: string;
+  categoryTags?: Array<{ id: string; label?: string }>;
+  categoryIds?: string[];
   image: string;
   price: number;
   index: number;
@@ -31,6 +33,8 @@ const PerfumeCard = ({
   inspiration,
   inspirationBrand = "",
   category,
+  categoryTags = [],
+  categoryIds = [],
   image,
   price,
   index,
@@ -49,6 +53,27 @@ const PerfumeCard = ({
   });
   const blurDataURL =
     "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iNDIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjQyIiBmaWxsPSIjZWVlY2VjIi8+PC9zdmc+";
+
+  const categoryLine = (() => {
+    const labels = new Set<string>();
+
+    categoryTags.forEach((tag) => {
+      const value = (tag.label || tag.id || "").trim();
+      if (value) labels.add(value);
+    });
+
+    categoryIds.forEach((id) => {
+      const value = id
+        .replace(/[-_]+/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase())
+        .trim();
+      if (value) labels.add(value);
+    });
+
+    if (labels.size === 0 && category) labels.add(category);
+
+    return Array.from(labels).slice(0, 3).join(" • ");
+  })();
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -113,7 +138,7 @@ const PerfumeCard = ({
         </div>
         <div className="flex flex-col h-[170px]">
           <p className="text-[11px] uppercase tracking-[0.28em] text-muted-foreground/80 mb-2">
-            {category}
+            {categoryLine}
           </p>
           <h3 className="font-serif text-[1.25rem] md:text-2xl font-light tracking-wide mb-1">
             {name}

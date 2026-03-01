@@ -7,6 +7,7 @@ import { SlidersHorizontal, X } from "lucide-react";
 import PerfumeCard from "@/components/PerfumeCard";
 import type { PerfumeData } from "@/data/perfumes";
 import { celebrityFavorites } from "@/lib/celebrity-favorites";
+import { isVisibleNatureCategory } from "@/lib/nature-categories";
 
 type FilterType = "nature" | "gender" | "occasion" | "celebrity";
 
@@ -16,39 +17,23 @@ interface FilterConfig {
   options: string[];
 }
 
-const filterConfigs: FilterConfig[] = [
-  {
-    type: "nature",
-    label: "By Nature",
-    options: ["Woody", "Ambery & Creamy", "Fresh Blue", "Aquatic & Marine", "Sweet", "Smoky", "Floral", "Fruity", "Spicy"],
-  },
-  {
-    type: "gender",
-    label: "By Gender",
-    options: ["Men", "Women", "Unisex"],
-  },
-  {
-    type: "occasion",
-    label: "By Occasion",
-    options: ["Gym", "Daily Wear", "Office", "Date Night", "Party", "Evening", "Formal", "Special Events"],
-  },
+const baseFilterConfigs: Omit<FilterConfig, "options">[] = [
+  { type: "nature", label: "By Nature" },
+  { type: "gender", label: "By Gender" },
+  { type: "occasion", label: "By Occasion" },
 ];
 
-const natureKeywords: Record<string, string[]> = {
-  "Woody": ["cedar", "sandalwood", "vetiver", "wood", "birch", "patchouli", "oak"],
-  "Ambery & Creamy": ["amber", "ambroxan", "tonka", "vanilla", "labdanum", "musk"],
-  "Fresh Blue": ["bergamot", "lemon", "grapefruit", "mint", "aldehydes", "fresh"],
-  "Aquatic & Marine": ["sea", "aquatic", "marine", "ocean", "water"],
-  "Sweet": ["sweet", "vanilla", "toffee", "caramel", "praline", "sugar", "tonka"],
-  "Smoky": ["oud", "incense", "smoke", "leather", "tobacco"],
-  "Floral": ["rose", "jasmine", "lavender", "geranium", "iris", "violet", "neroli", "orange blossom", "floral"],
-  "Fruity": ["apple", "pineapple", "pear", "mandarin", "black currant", "dried fruits", "fruit"],
-  "Spicy": ["pepper", "cardamom", "ginger", "nutmeg", "sichuan", "cinnamon", "spicy"],
-};
+const normalizeKey = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
 
 const celebrityMap: Record<string, string[]> = Object.fromEntries(
   celebrityFavorites.map((c) => [c.label, c.perfumeIds])
 );
+
+const prettifyCategory = (value: string) =>
+  value
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+    .trim();
 
 function filterPerfumes(
   allPerfumes: PerfumeData[],
@@ -59,18 +44,19 @@ function filterPerfumes(
 
   switch (filterType) {
     case "nature": {
-      const keywords = natureKeywords[filterValue] || [];
-      if (keywords.length === 0) return allPerfumes;
+      const normalizedSelected = normalizeKey(filterValue);
       return allPerfumes.filter((p) => {
-        const allNotes = [...p.notes.top, ...p.notes.heart, ...p.notes.base]
-          .map((n) => n.toLowerCase());
-        const desc = p.description.toLowerCase();
-        const cat = p.category.toLowerCase();
-        return keywords.some(
-          (kw) =>
-            allNotes.some((n) => n.includes(kw)) ||
-            desc.includes(kw) ||
-            cat.includes(kw)
+        const categoryTokens = new Set<string>();
+
+        (p.dbCategoryTags ?? []).forEach((tag) => {
+          categoryTokens.add(normalizeKey(tag.id));
+          if (tag.label) categoryTokens.add(normalizeKey(tag.label));
+        });
+
+        (p.dbCategoryIds ?? []).forEach((id) => categoryTokens.add(normalizeKey(id)));
+
+        return Array.from(categoryTokens).some(
+          (token) => token === normalizedSelected
         );
       });
     }
@@ -107,6 +93,80 @@ export default function ShopContent({ perfumes }: { perfumes: PerfumeData[] }) {
   const filteredPerfumes = useMemo(
     () => filterPerfumes(perfumes, activeFilterType, activeFilterValue),
     [perfumes, activeFilterType, activeFilterValue]
+  );
+
+  const dynamicNatureOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    perfumes.forEach((perfume) => {
+      const tags = perfume.dbCategoryTags?.length ? perfume.dbCategoryTags : [];
+      tags.forEach((tag) => {
+        const label = (tag.label || prettifyCategory(tag.id)).trim();
+        if (!isVisibleNatureCategory(tag.id) || !isVisibleNatureCategory(label)) return;
+        const key = normalizeKey(label);
+        if (!key) return;
+        if (!map.has(key)) map.set(key, label);
+      });
+      (perfume.dbCategoryIds ?? []).forEach((id) => {
+        const label = prettifyCategory(id);
+        if (!isVisibleNatureCategory(id) || !isVisibleNatureCategory(label)) return;
+        const key = normalizeKey(label);
+        if (!key) return;
+        if (!map.has(key)) map.set(key, label);
+      });
+    });
+
+    const knownOrder = [
+      "Amber",
+      "Animalic",
+      "Aquatic",
+      "Aromatic",
+      "Citrus",
+      "Earthy",
+      "Floral",
+      "Fresh",
+      "Fruity",
+      "Green",
+      "Incense",
+      "Leather",
+      "Musky",
+      "Mysterious",
+      "Oud",
+      "Patchouli",
+      "Smoky",
+      "Spicy",
+      "Tobacco",
+      "Vanilla",
+      "Woody",
+    ];
+
+    const ordered: string[] = [];
+    const usedKeys = new Set<string>();
+    knownOrder.forEach((label) => {
+      const key = normalizeKey(label);
+      if (map.has(key)) {
+        ordered.push(map.get(key)!);
+        usedKeys.add(key);
+      }
+    });
+
+    const rest = Array.from(map.entries())
+      .filter(([key]) => !usedKeys.has(key))
+      .map(([, label]) => label)
+      .sort((a, b) => a.localeCompare(b));
+
+    return [...ordered, ...rest];
+  }, [perfumes]);
+
+  const filterConfigs: FilterConfig[] = useMemo(
+    () => [
+      { ...baseFilterConfigs[0], options: dynamicNatureOptions },
+      { ...baseFilterConfigs[1], options: ["Men", "Women", "Unisex"] },
+      {
+        ...baseFilterConfigs[2],
+        options: ["Gym", "Daily Wear", "Office", "Date Night", "Party", "Evening", "Formal", "Special Events"],
+      },
+    ],
+    [dynamicNatureOptions]
   );
 
   const setFilter = (type: FilterType, value: string) => {
@@ -293,6 +353,8 @@ export default function ShopContent({ perfumes }: { perfumes: PerfumeData[] }) {
                       inspiration={perfume.inspiration}
                       inspirationBrand={perfume.inspirationBrand}
                       category={perfume.category}
+                      categoryTags={perfume.categoryTags}
+                      categoryIds={perfume.categoryIds}
                       image={perfume.images[0]}
                       price={perfume.price}
                       index={index}
