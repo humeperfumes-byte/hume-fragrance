@@ -86,7 +86,7 @@ export default function RootLayout({
         <link rel="shortcut icon" href="/images/logo.png?v=3" type="image/png" />
         <link rel="apple-touch-icon" href="/images/logo.png?v=3" />
       </head>
-      <body className={`${inter.variable} ${cormorant.variable} antialiased`}>
+      <body suppressHydrationWarning className={`${inter.variable} ${cormorant.variable} antialiased`}>
         <Providers>
           {children}
           <AIChatBot />

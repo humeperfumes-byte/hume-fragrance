@@ -5,13 +5,11 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PerfumeCard from "@/components/PerfumeCard";
 import { JsonLd } from "@/components/JsonLd";
-import { Button } from "@/components/ui/button";
 import { getAllProducts, getProductById } from "@/lib/db/products";
 import {
   getAllProgrammaticInspirations,
   getAlternativeToBySlug,
 } from "@/lib/programmatic-seo";
-import { getProductPath } from "@/lib/product-route";
 
 const baseUrl = "https://humefragrance.com";
 
@@ -21,6 +19,19 @@ const formatPrice = (amount: number) =>
     currency: "INR",
     maximumFractionDigits: 0,
   }).format(amount);
+
+async function resolveMappedProduct(item: NonNullable<ReturnType<typeof getAlternativeToBySlug>>) {
+  const byId = await getProductById(item.humeProduct.slug);
+  if (byId) return byId;
+
+  const allProducts = await getAllProducts();
+  const target = item.originalName.toLowerCase();
+  return (
+    allProducts.find((p) =>
+      `${p.inspirationBrand} ${p.inspiration}`.toLowerCase().includes(target)
+    ) ?? null
+  );
+}
 
 export async function generateStaticParams() {
   return getAllProgrammaticInspirations().map((item) => ({ slug: item.slug }));
@@ -35,7 +46,7 @@ export async function generateMetadata({
   const item = getAlternativeToBySlug(slug);
   if (!item) return { title: "Not Found" };
 
-  const product = await getProductById(item.humeProduct.slug);
+  const product = await resolveMappedProduct(item);
   if (!product) return { title: "Not Found" };
 
   return {
@@ -62,15 +73,14 @@ export default async function AlternativesToPage({
   const item = getAlternativeToBySlug(slug);
   if (!item) notFound();
 
-  const [primary, products] = await Promise.all([
-    getProductById(item.humeProduct.slug),
-    getAllProducts(),
-  ]);
+  const [primary, products] = await Promise.all([resolveMappedProduct(item), getAllProducts()]);
   if (!primary) notFound();
 
   const related = products
     .filter((p) => p.id !== primary.id)
-    .filter((p) => p.categoryId === primary.categoryId)
+    .filter((p) => (p.dbCategoryIds ?? p.categoryIds ?? [p.categoryId]).some((id) =>
+      (primary.dbCategoryIds ?? primary.categoryIds ?? [primary.categoryId]).includes(id)
+    ))
     .slice(0, 4);
 
   const jsonLd = {
@@ -96,23 +106,30 @@ export default async function AlternativesToPage({
             <p className="text-body text-muted-foreground">{item.why_inspired}</p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="border border-border p-6">
+          <div className="space-y-6">
+            <div className="rounded-sm border border-border p-4 bg-secondary/10 max-w-md">
+              <PerfumeCard
+                id={primary.id}
+                name={primary.name}
+                inspiration={primary.inspiration}
+                inspirationBrand={primary.inspirationBrand}
+                category={primary.category}
+                categoryTags={primary.categoryTags}
+                categoryIds={primary.categoryIds}
+                image={primary.images[0]}
+                price={primary.price}
+                index={0}
+                bestSeller={primary.badges?.bestSeller}
+                humeSpecial={primary.badges?.humeSpecial}
+                limitedStock={primary.badges?.limitedStock}
+              />
+            </div>
+            <div className="border border-border p-6 max-w-md">
               <h2 className="font-serif text-2xl mb-2">{item.originalName}</h2>
               <p className="text-sm text-muted-foreground mb-4">
                 Signature family: {item.scent_profile.family}
               </p>
               <p className="text-xl font-semibold">{formatPrice(item.original_price)}</p>
-            </div>
-            <div className="border border-border p-6 bg-secondary/10">
-              <h2 className="font-serif text-2xl mb-2">HUME {primary.name}</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Longevity: {item.characteristics.longevity} | Projection: {item.characteristics.projection}
-              </p>
-              <p className="text-xl font-semibold mb-4">{formatPrice(primary.price)}</p>
-              <Button asChild>
-                <Link href={getProductPath(primary)}>Shop This Alternative</Link>
-              </Button>
             </div>
           </div>
 
@@ -175,9 +192,12 @@ export default async function AlternativesToPage({
             <p className="text-sm text-muted-foreground mb-4">
               Looking for more options? Explore all inspired fragrances in our shop.
             </p>
-            <Button asChild variant="outline">
-              <Link href="/shop">Browse All Fragrances</Link>
-            </Button>
+            <Link
+              href="/shop"
+              className="inline-flex h-11 items-center rounded-md border border-border px-5 text-sm font-medium hover:bg-secondary/30"
+            >
+              Browse All Fragrances
+            </Link>
           </div>
         </div>
       </section>

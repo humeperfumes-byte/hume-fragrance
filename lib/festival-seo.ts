@@ -176,6 +176,7 @@ export const FESTIVAL_SEO_PAGES: FestivalSeoEntry[] = [
   },
   ...buildBudgetEntries(),
   ...buildOccasionEntries(),
+  ...buildInspiredPerfumeEntries(),
 ];
 
 export function getFestivalSeoEntry(slug: string): FestivalSeoEntry | null {
@@ -766,5 +767,105 @@ function buildOccasionEntries(): FestivalSeoEntry[] {
         : ["clean", "versatile", "professional", "daily-wear", "balanced"],
       faq: faqForOccasion(occasionName),
     };
+  });
+}
+
+function buildInspiredPerfumeEntries(): FestivalSeoEntry[] {
+  const inspiredSlugs = [
+    "dior-sauvage-inspired-perfume",
+    "creed-aventus-inspired-perfume",
+    "creed-viking-inspired-perfume",
+    "tom-ford-oud-wood-inspired-perfume",
+    "tom-ford-ombre-leather-inspired-perfume",
+    "bleu-de-chanel-inspired-perfume",
+    "ysl-y-inspired-perfume",
+    "versace-eros-inspired-perfume",
+    "paco-rabanne-1-million-inspired-perfume",
+    "armani-code-inspired-perfume",
+    "creed-absolu-aventus-inspired-perfume",
+    "hugo-boss-bottled-absolu-inspired-perfume",
+    "french-avenue-liquid-brun-inspired-perfume",
+    "dior-homme-parfum-inspired-perfume",
+    "ysl-myslf-le-parfum-inspired-perfume",
+    "amouage-outlands-inspired-perfume",
+    "kilian-angels-share-paradis-inspired-perfume",
+    "hermes-terre-d-hermes-intense-inspired-perfume",
+    "jpg-le-male-elixir-absolu-inspired-perfume",
+    "jpg-ultra-male-inspired-perfume",
+    "jpg-le-beau-paradise-garden-inspired-perfume",
+    "armani-acqua-di-gio-profondo-inspired-perfume",
+    "byredo-bal-d-afrique-absolu-inspired-perfume",
+    "creed-virgin-island-water-inspired-perfume",
+    "viktor-rolf-spicebomb-extreme-inspired-perfume",
+    "azzaro-most-wanted-parfum-inspired-perfume",
+    "armaf-club-de-nuit-intense-man-inspired-perfume",
+    "paco-rabanne-invictus-parfum-inspired-perfume",
+    "rasasi-hawas-inspired-perfume",
+    "rasasi-hawas-ice-inspired-perfume",
+    "maison-crivelli-oud-marakuja-inspired-perfume",
+    "parfums-de-marly-althair-inspired-perfume",
+    "replica-jazz-club-inspired-perfume",
+    "lv-imagination-inspired-perfume",
+    "lv-ombre-nomade-inspired-perfume",
+    "lv-afternoon-swim-inspired-perfume",
+    "lv-city-of-stars-inspired-perfume",
+    "valentino-born-in-roma-intense-inspired-perfume",
+    "afnan-9pm-inspired-perfume",
+    "afnan-9pm-night-out-inspired-perfume",
+    "baccarat-rouge-540-inspired-perfume",
+    "ysl-black-opium-inspired-perfume",
+    "carolina-herrera-good-girl-inspired-perfume",
+    "prada-paradoxe-inspired-perfume",
+    "tom-ford-lost-cherry-inspired-perfume",
+    "guerlain-shalimar-inspired-perfume",
+  ];
+
+  const inspiredFaq = (label: string): FestivalSeoFaq[] => [
+    {
+      question: `What is the best ${label} inspired perfume in India?`,
+      answer:
+        "The best pick depends on your preferred notes, projection style, and daily use case. This page lists practical HUME alternatives optimized for Indian weather.",
+    },
+    {
+      question: "Will inspired perfumes last in Indian heat and humidity?",
+      answer:
+        "Yes, when the concentration and base-note structure are designed for local conditions. Focus on stable dry-down and balanced projection.",
+    },
+    {
+      question: "Are these alternatives suitable for daily wear?",
+      answer:
+        "Yes. The recommendations prioritize versatility, social comfort, and reliable all-day wear across office, casual, and evening settings.",
+    },
+    {
+      question: "Can I get similar scent DNA at a lower price?",
+      answer:
+        "That is the goal of inspired perfumery: preserve the recognizable scent direction while improving value and practicality for daily use.",
+    },
+    {
+      question: "How many recommendations are shown on each page?",
+      answer:
+        "Each page shows up to 4 relevant HUME products. If an exact one is unavailable, close-profile alternatives are shown automatically.",
+    },
+  ];
+
+  return inspiredSlugs.map((slug) => {
+    const label = slug
+      .replace(/-inspired-perfume$/, "")
+      .replace(/-/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+
+    return {
+      slug,
+      title: `Best ${label} Inspired Perfume in India (2026 Guide)`,
+      metaTitle: `${label} Inspired Perfume | Best Alternatives in India`,
+      metaDescription:
+        `Looking for ${label} inspired perfume in India? Explore top HUME alternatives with long-lasting performance, balanced projection, and premium scent profile.`,
+      festivalName: label,
+      intro:
+        `${label} remains a popular scent profile, and many buyers in India want that same olfactory direction with better value. This page helps you compare HUME alternatives by smell style, wearability, and real-world performance in Indian weather.`,
+      focusKeywords: ["inspired perfume", "alternative", "long lasting", "india", "edp", "luxury profile"],
+      styleKeywords: ["premium-inspired", "versatile", "balanced", "long-lasting", "value"],
+      faq: inspiredFaq(label),
+    } satisfies FestivalSeoEntry;
   });
 }
