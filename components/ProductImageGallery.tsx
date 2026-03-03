@@ -60,7 +60,7 @@ const ProductImageGallery = ({ images, videos = [], name }: ProductImageGalleryP
         <CarouselContent className="-ml-0">
           {mediaItems.map((item, index) => (
             <CarouselItem key={`${item.src}-${index}`} className="pl-0 basis-full">
-              <div className="aspect-[3/4] bg-secondary overflow-hidden relative">
+              <div className="aspect-[3/4] lg:aspect-square bg-secondary overflow-hidden relative">
                 {item.type === "video" ? (
                   <video
                     src={item.src}

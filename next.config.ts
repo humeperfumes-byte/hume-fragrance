@@ -78,6 +78,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "banasuraspices.com",
       },
+      {
+        protocol: "https",
+        hostname: "cdn.wikifarmer.com",
+      },
     ],
   },
   webpack: (config) => {

@@ -116,7 +116,7 @@ const Header = () => {
               HUME
             </span>
             <span className="text-caption text-muted-foreground hidden sm:inline">
-              PERFUMES
+              Fragrance
             </span>
           </Link>
 

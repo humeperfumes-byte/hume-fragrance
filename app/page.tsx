@@ -3,6 +3,7 @@ import Hero from "@/components/Hero";
 import HumeSpecialSection from "@/components/HumeSpecialSection";
 import BestsellerSection from "@/components/BestsellerSection";
 import RefillProgramSection from "@/components/RefillProgramSection";
+import SeoHubTeaser from "@/components/SeoHubTeaser";
 import Collection from "@/components/Collection";
 import Footer from "@/components/Footer";
 import nextDynamic from "next/dynamic";
@@ -39,6 +40,7 @@ export default async function Home() {
       <HumeSpecialSection perfumes={perfumes} />
       <BestsellerSection perfumes={perfumes} />
       <RefillProgramSection />
+      <SeoHubTeaser />
       <Craft />
       <LatestJournal />
       <About />

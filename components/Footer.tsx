@@ -42,6 +42,7 @@ export default async function Footer() {
   ];
 
   const discoverLinks = [
+    { href: "/fragrance-guides", label: "Fragrance Guides Hub" },
     { href: "/blog", label: "Journal" },
     { href: "/scent-quiz", label: "Scent Quiz" },
     { href: "/alternatives/creed-aventus", label: "Perfume Alternatives" },
@@ -71,6 +72,24 @@ export default async function Footer() {
               <p>hello@humefragrance.com</p>
               <p>WhatsApp: +91 95590 24822</p>
               <p>Mumbai, Maharashtra, India</p>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <a
+                href="https://wa.me/919559024822"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-10 items-center justify-center rounded-md bg-[#25D366] px-4 text-xs font-medium text-white hover:bg-[#20c15a] transition-colors"
+              >
+                Queries on WhatsApp
+              </a>
+              <a
+                href="https://www.instagram.com/hume.perfume/"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-10 items-center justify-center rounded-md border border-primary-foreground/20 bg-white/90 px-4 text-xs font-medium text-black hover:bg-white transition-colors"
+              >
+                Follow on Instagram
+              </a>
             </div>
           </div>
 
