@@ -90,6 +90,13 @@ export default async function BestProgrammaticPage({
             <p className="text-sm text-muted-foreground">{item.why_this_matters}</p>
           </div>
 
+          <div className="rounded-md border border-border bg-card p-4">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground mb-2">Quick Answer</p>
+            <p className="text-sm text-muted-foreground">
+              For {item.targetKeyword}, choose EDP-style profiles with stable base notes and 8+ hour wear in Indian weather. This page prioritizes practical picks with strong value and balanced projection.
+            </p>
+          </div>
+
           <div className="grid md:grid-cols-3 gap-4">
             <div className="border border-border p-4">
               <p className="text-xs text-muted-foreground uppercase tracking-[0.12em] mb-1">Target Keyword</p>

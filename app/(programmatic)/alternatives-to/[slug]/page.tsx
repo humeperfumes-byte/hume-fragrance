@@ -106,6 +106,16 @@ export default async function AlternativesToPage({
             <p className="text-body text-muted-foreground">{item.why_inspired}</p>
           </div>
 
+          <div className="rounded-md border border-border bg-card p-4">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground mb-2">Quick Answer</p>
+            <p className="text-sm text-muted-foreground">
+              If you want a {item.originalName}-style profile with better daily value in India, choose{" "}
+              <span className="font-medium text-foreground">HUME {primary.name}</span> for{" "}
+              <span className="font-medium text-foreground">{formatPrice(primary.price)}</span>. It keeps the same{" "}
+              {item.scent_profile.family.toLowerCase()} direction with practical {item.characteristics.longevity.toLowerCase()} wear.
+            </p>
+          </div>
+
           <div className="space-y-6">
             <div className="rounded-sm border border-border p-4 bg-secondary/10 max-w-md">
               <PerfumeCard

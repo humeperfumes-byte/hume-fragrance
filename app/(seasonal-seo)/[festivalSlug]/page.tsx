@@ -329,6 +329,12 @@ export default async function FestivalSeoPage({ params }: Props) {
           <p className="text-[10px] md:text-[11px] uppercase tracking-[0.2em] md:tracking-[0.22em] text-muted-foreground">Festival Fragrance Guide</p>
           <h1 className="mt-3 font-serif text-3xl md:text-6xl leading-tight max-w-4xl">{page.title}</h1>
           <p className="mt-4 md:mt-5 max-w-3xl text-[15px] md:text-lg text-muted-foreground">{page.intro}</p>
+          <div className="mt-4 rounded-md border border-border bg-card p-4 max-w-3xl">
+            <p className="text-[10px] md:text-[11px] uppercase tracking-[0.18em] text-muted-foreground mb-2">Quick Answer</p>
+            <p className="text-sm text-muted-foreground">
+              For {page.festivalName}, pick a {page.styleKeywords.slice(0, 2).join(" and ")} profile with 8-10 hour comfort in Indian weather. Start with balanced projection fragrances and choose richer notes for evening events.
+            </p>
+          </div>
 
           <div className="mt-8 md:mt-10 grid gap-4 md:gap-6 md:grid-cols-3">
             <div className="rounded-xl md:rounded-2xl border border-border bg-card p-4 md:p-5">

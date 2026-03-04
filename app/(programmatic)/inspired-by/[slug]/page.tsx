@@ -116,6 +116,15 @@ export default async function InspiredByPage({
             </p>
           </div>
 
+          <div className="rounded-md border border-border bg-card p-4">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground mb-2">Quick Answer</p>
+            <p className="text-sm text-muted-foreground">
+              The closest daily-wear option here is <span className="font-medium text-foreground">{product.name}</span>, inspired by{" "}
+              {item.originalBrand} {item.originalName}, with {item.characteristics.longevity.toLowerCase()} and a{" "}
+              {item.scent_profile.family.toLowerCase()} profile at {formatPrice(product.price)}.
+            </p>
+          </div>
+
           <div className="grid md:grid-cols-2 gap-6">
             <div className="border border-border p-6 bg-secondary/10">
               <p className="text-caption text-muted-foreground mb-2">Original</p>
