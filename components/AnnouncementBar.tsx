@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { detectGeoRegionClient, getGeoExperience } from "@/lib/geo";
 
 const AnnouncementBar = () => {
   const [isVisible, setIsVisible] = useState(true);
+  const geoCopy = getGeoExperience(detectGeoRegionClient());
 
   return (
     <AnimatePresence>
@@ -19,9 +21,9 @@ const AnnouncementBar = () => {
         >
           <div className="relative flex items-center justify-center py-2.5 px-10">
             <span className="font-light">
-              Complimentary shipping on all orders above INR 799 - Use code{" "}
-              <span className="font-medium">HUME15</span> for 15% off your
-              first order
+              {geoCopy.announcement.split("HUME15")[0]}
+              <span className="font-medium">HUME15</span>
+              {geoCopy.announcement.split("HUME15")[1] ?? ""}
             </span>
             <button
               onClick={() => setIsVisible(false)}
@@ -38,5 +40,4 @@ const AnnouncementBar = () => {
 };
 
 export default AnnouncementBar;
-
 

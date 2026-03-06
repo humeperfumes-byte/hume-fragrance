@@ -5,19 +5,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
+import { detectGeoRegionClient, getGeoExperience } from "@/lib/geo";
 
 const fallbackSlides = [
   { url: "/images/collection-hero.jpg", label: "HUME collection", link: "/shop" },
   { url: "/images/hero-perfume.jpg", label: "HUME luxury perfume", link: "/shop" },
   { url: "/images/hero-perfume.jpg", label: "HUME offers", link: "/shop" },
 ];
-const rotatingOffers = [
-  "Buy 3. Get 1 Complimentary",
-  "10% Off on 2 Perfumes",
-  "30% Off on 3 Perfumes",
-];
-
 const Hero = () => {
+  const geoCopy = getGeoExperience(detectGeoRegionClient());
+  const rotatingOffers = geoCopy.offers;
   const [api, setApi] = useState<CarouselApi | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [slideCount, setSlideCount] = useState(fallbackSlides.length);
@@ -105,8 +102,7 @@ const Hero = () => {
               <span className="italic font-light">Reimagined</span>
             </h1>
             <p className="hidden md:block mt-7 text-body text-muted-foreground max-w-lg mx-auto">
-              Experience iconic fragrance profiles, meticulously reimagined.
-              HUME crafts refined luxury interpretations designed for everyday wear.
+              {geoCopy.heroBody}
             </p>
 
             <div className="mx-auto max-w-lg border border-border/70 bg-background/90 px-6 py-6 shadow-[0_10px_24px_rgba(0,0,0,0.08)]">
