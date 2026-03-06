@@ -17,11 +17,6 @@ function getCookie(name: string): string | null {
 function detectDisplayCurrency(): DisplayCurrency {
   if (typeof window === "undefined") return "INR";
 
-  // Strong India-first checks so Indian visitors don't get USD due to stale cookies.
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
-  const locale = (navigator.language || "").toUpperCase();
-  if (timeZone === "Asia/Kolkata" || timeZone === "Asia/Calcutta" || locale.endsWith("-IN")) return "INR";
-
   const country = (getCookie("hf_country") || "").toUpperCase();
   if (country === "IN") return "INR";
   if (country === "CA") return "CAD";
@@ -36,6 +31,11 @@ function detectDisplayCurrency(): DisplayCurrency {
     return "EUR";
   }
   if (country) return "USD";
+
+  // Fallback only when country cookie is unavailable.
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  const locale = (navigator.language || "").toUpperCase();
+  if (timeZone === "Asia/Kolkata" || timeZone === "Asia/Calcutta" || locale.endsWith("-IN")) return "INR";
   // Keep first paint deterministic with server-rendered HTML.
   // If country cookie is not present yet, default to INR on client as well.
   return "INR";
