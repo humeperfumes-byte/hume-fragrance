@@ -3,7 +3,9 @@ import { coupons } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import type { CouponData } from "@/data/coupons";
 
-function transformCoupon(row: any): CouponData {
+type CouponRow = typeof coupons.$inferSelect;
+
+function transformCoupon(row: CouponRow): CouponData {
   return {
     id: row.id,
     code: row.code,

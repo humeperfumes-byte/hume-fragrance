@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Bot, MessageCircle, Send, X } from "lucide-react";
 import { useCart } from "@/context/CartContext";
@@ -245,6 +245,7 @@ export default function AIChatBot() {
   const { isCartOpen } = useCart();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
+  const messageSeqRef = useRef(1);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "m1",
@@ -262,14 +263,20 @@ export default function AIChatBot() {
     const trimmed = value.trim();
     if (!trimmed) return;
 
+    const nextId = () => {
+      const id = messageSeqRef.current;
+      messageSeqRef.current += 1;
+      return `${id}`;
+    };
+
     const userMsg: ChatMessage = {
-      id: `u-${Date.now()}`,
+      id: `u-${nextId()}`,
       role: "user",
       text: trimmed,
     };
     const reply = getBotReply(trimmed);
     const botMsg: ChatMessage = {
-      id: `b-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      id: `b-${nextId()}`,
       role: "assistant",
       text: reply.text,
       links: reply.links,

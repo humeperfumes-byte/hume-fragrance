@@ -35,7 +35,7 @@ const About = () => {
               perfumery.
             </p>
             <p className="text-body text-muted-foreground max-w-2xl mx-auto">
-              We understand that a signature scent is more than a luxury—it's an
+              We understand that a signature scent is more than a luxury—it&apos;s an
               expression of identity. Our artisans work tirelessly to capture
               the essence of iconic fragrances, from the fresh citrus notes of
               Eau Sauvage to the rich complexity of Creed Aventus.

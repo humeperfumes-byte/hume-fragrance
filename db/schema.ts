@@ -166,6 +166,24 @@ export const consentEvents = pgTable("consent_events", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Cart analytics events (no consent-gating, anonymous session based)
+export const cartEvents = pgTable("cart_events", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  sessionId: varchar("session_id", { length: 255 }).notNull(),
+  eventType: varchar("event_type", { length: 80 }).notNull(), // cart_open | add_to_cart | update_cart_quantity | remove_from_cart
+  path: varchar("path", { length: 2048 }),
+  productId: varchar("product_id", { length: 255 }),
+  productName: varchar("product_name", { length: 255 }),
+  price: decimal("price", { precision: 10, scale: 2 }),
+  quantity: integer("quantity"),
+  isGift: boolean("is_gift"),
+  country: varchar("country", { length: 8 }),
+  ipAddress: varchar("ip_address", { length: 255 }),
+  userAgent: text("user_agent"),
+  payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Export types
 export type Product = typeof products.$inferSelect;
 export type NewProduct = typeof products.$inferInsert;
@@ -185,3 +203,5 @@ export type ProductCategory = typeof productCategories.$inferSelect;
 export type NewProductCategory = typeof productCategories.$inferInsert;
 export type ConsentEvent = typeof consentEvents.$inferSelect;
 export type NewConsentEvent = typeof consentEvents.$inferInsert;
+export type CartEvent = typeof cartEvents.$inferSelect;
+export type NewCartEvent = typeof cartEvents.$inferInsert;

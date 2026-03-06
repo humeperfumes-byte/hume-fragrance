@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,10 +17,8 @@ const Header = () => {
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [celebImageByLabel, setCelebImageByLabel] = useState<Record<string, string>>({});
-  const [badgeBumpKey, setBadgeBumpKey] = useState(0);
   const { totalItems, setIsCartOpen } = useCart();
   const router = useRouter();
-  const prevTotalItemsRef = useRef(totalItems);
 
   const displayCartCount = totalItems > 99 ? "99+" : `${totalItems}`;
 
@@ -55,13 +53,6 @@ const Header = () => {
       document.body.style.overflow = previous;
     };
   }, [isMenuOpen]);
-
-  useEffect(() => {
-    if (totalItems > prevTotalItemsRef.current) {
-      setBadgeBumpKey((k) => k + 1);
-    }
-    prevTotalItemsRef.current = totalItems;
-  }, [totalItems]);
 
   const handleMobileFilterClick = (filterType: FilterType, value: string, href?: string) => {
     setIsMenuOpen(false);
@@ -143,7 +134,16 @@ const Header = () => {
               <Search size={18} />
             </button>
             <button
-              onClick={() => setIsCartOpen(true)}
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(
+                    new CustomEvent("hume:tracking", {
+                      detail: { eventType: "cart_open", payload: { source: "header" } },
+                    })
+                  );
+                }
+                setIsCartOpen(true);
+              }}
               className="relative p-2 hover:bg-muted transition-colors"
               aria-label="Open cart"
             >
@@ -174,7 +174,7 @@ const Header = () => {
               </motion.span>
               {totalItems > 0 && (
                 <motion.span
-                  key={`badge-desktop-${badgeBumpKey}`}
+                  key={`badge-desktop-${totalItems}`}
                   initial={{ scale: 0.85 }}
                   animate={{ scale: [1, 1.24, 1] }}
                   transition={{ duration: 0.25 }}

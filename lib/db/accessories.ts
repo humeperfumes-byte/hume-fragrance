@@ -3,7 +3,9 @@ import { accessories } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { accessories as localAccessories, type AccessoryData } from "@/data/accessories";
 
-function transformAccessory(row: any): AccessoryData {
+type AccessoryRow = typeof accessories.$inferSelect;
+
+function transformAccessory(row: AccessoryRow): AccessoryData {
   return {
     id: row.id,
     name: row.name,
@@ -42,4 +44,3 @@ export async function getAccessoryById(id: string): Promise<AccessoryData | null
     return localAccessories.find((item) => item.id === id) ?? null;
   }
 }
-

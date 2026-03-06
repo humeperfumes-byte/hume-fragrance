@@ -108,6 +108,13 @@ function slugify(value: string): string {
     .replace(/-+/g, "-");
 }
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return "Request failed.";
+}
+
 export default function AdminDashboard() {
   const [adminToken, setAdminToken] = useState("");
   const [products, setProducts] = useState<PerfumeData[]>([]);
@@ -285,8 +292,8 @@ export default function AdminDashboard() {
       setStatus("Product created.");
       setProductForm(initialProductForm);
       await loadAll();
-    } catch (error: any) {
-      setStatus(error?.message || "Failed to create product.");
+    } catch (error: unknown) {
+      setStatus(getErrorMessage(error) || "Failed to create product.");
     } finally {
       setBusy(false);
     }
@@ -301,8 +308,8 @@ export default function AdminDashboard() {
       setStatus("Blog post created.");
       setBlogForm(initialBlogForm);
       await loadAll();
-    } catch (error: any) {
-      setStatus(error?.message || "Failed to create blog post.");
+    } catch (error: unknown) {
+      setStatus(getErrorMessage(error) || "Failed to create blog post.");
     } finally {
       setBusy(false);
     }
@@ -316,8 +323,8 @@ export default function AdminDashboard() {
       await deleteProduct(id);
       setStatus("Product deleted.");
       await loadAll();
-    } catch (error: any) {
-      setStatus(error?.message || "Failed to delete product.");
+    } catch (error: unknown) {
+      setStatus(getErrorMessage(error) || "Failed to delete product.");
     } finally {
       setBusy(false);
     }
@@ -331,8 +338,8 @@ export default function AdminDashboard() {
       await deletePost(slug);
       setStatus("Blog post deleted.");
       await loadAll();
-    } catch (error: any) {
-      setStatus(error?.message || "Failed to delete blog post.");
+    } catch (error: unknown) {
+      setStatus(getErrorMessage(error) || "Failed to delete blog post.");
     } finally {
       setBusy(false);
     }

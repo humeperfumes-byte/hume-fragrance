@@ -4,7 +4,9 @@ import { eq, desc } from "drizzle-orm";
 import { blogPosts as localBlogPosts, type BlogPost } from "@/data/blogPosts";
 
 // Transform database blog post to BlogPost format
-function transformBlogPost(post: any): BlogPost {
+type BlogPostRow = typeof blogPosts.$inferSelect;
+
+function transformBlogPost(post: BlogPostRow): BlogPost {
   return {
     id: post.id,
     title: post.title,

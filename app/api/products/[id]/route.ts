@@ -9,6 +9,42 @@ const imageUrlSchema = z
   .array(z.string().trim().url())
   .min(1, "At least one image URL is required");
 
+const productSchema = z.object({
+  name: z.string().optional(),
+  inspiration: z.string().optional(),
+  inspirationBrand: z.string().optional(),
+  woreBy: z.string().optional().nullable(),
+  woreByImageUrl: z.string().trim().url().optional(),
+  category: z.string().optional(),
+  categoryId: z.string().optional(),
+  categoryIds: z.array(z.string()).optional(),
+  gender: z.enum(["Men", "Women", "Unisex"]).optional(),
+  images: imageUrlSchema.optional(),
+  price: z.number().optional(),
+  priceCurrency: z.literal("INR").optional(),
+  description: z.string().optional(),
+  seoDescription: z.string().optional(),
+  seoKeywords: z.array(z.string()).optional(),
+  notes: z
+    .object({
+      top: z.array(z.string()),
+      heart: z.array(z.string()),
+      base: z.array(z.string()),
+    })
+    .optional(),
+  longevity: z
+    .object({
+      duration: z.string(),
+      sillage: z.string(),
+      season: z.array(z.string()),
+      occasion: z.array(z.string()),
+    })
+    .optional(),
+  size: z.string().optional(),
+});
+
+type ProductUpdateInput = z.infer<typeof productSchema>;
+
 // GET single product by ID
 export async function GET(
   request: NextRequest,
@@ -75,43 +111,9 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
-    const productSchema = z.object({
-      name: z.string().optional(),
-      inspiration: z.string().optional(),
-      inspirationBrand: z.string().optional(),
-      woreBy: z.string().optional().nullable(),
-      woreByImageUrl: z.string().trim().url().optional(),
-      category: z.string().optional(),
-      categoryId: z.string().optional(),
-      categoryIds: z.array(z.string()).optional(),
-      gender: z.enum(["Men", "Women", "Unisex"]).optional(),
-      images: imageUrlSchema.optional(),
-      price: z.number().optional(),
-      priceCurrency: z.literal("INR").optional(),
-      description: z.string().optional(),
-      seoDescription: z.string().optional(),
-      seoKeywords: z.array(z.string()).optional(),
-      notes: z
-        .object({
-          top: z.array(z.string()),
-          heart: z.array(z.string()),
-          base: z.array(z.string()),
-        })
-        .optional(),
-      longevity: z
-        .object({
-          duration: z.string(),
-          sillage: z.string(),
-          season: z.array(z.string()),
-          occasion: z.array(z.string()),
-        })
-        .optional(),
-      size: z.string().optional(),
-    });
-
     const validatedData = productSchema.parse(body);
 
-    const updateData: any = {
+    const updateData: Omit<ProductUpdateInput, "price"> & { price?: string; updatedAt: Date } = {
       ...validatedData,
       updatedAt: new Date(),
     };

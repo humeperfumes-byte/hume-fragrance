@@ -61,7 +61,7 @@ const Collection = ({ perfumes }: { perfumes: PerfumeData[] }) => {
           </h2>
           <div className="divider-elegant mx-auto mb-6" />
           <p className="text-body text-muted-foreground max-w-xl mx-auto">
-            Each fragrance is a tribute to the world's most iconic scents,
+            Each fragrance is a tribute to the world&apos;s most iconic scents,
             crafted with precision and passion in the heart of England.
           </p>
         </motion.div>

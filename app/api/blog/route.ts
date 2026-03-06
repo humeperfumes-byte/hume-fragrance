@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { blogPosts } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { z } from "zod";
 import { blogPosts as localBlogPosts } from "@/data/blogPosts";
 import { requireAdminToken } from "@/lib/admin-auth";
@@ -13,17 +13,19 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get("category");
     const featured = searchParams.get("featured");
 
-    let query = db.select().from(blogPosts);
-
+    const conditions = [];
     if (category && category !== "All") {
-      query = query.where(eq(blogPosts.category, category)) as any;
+      conditions.push(eq(blogPosts.category, category));
     }
-
     if (featured === "true") {
-      query = query.where(eq(blogPosts.featured, true)) as any;
+      conditions.push(eq(blogPosts.featured, true));
     }
 
-    const posts = await query.orderBy(desc(blogPosts.createdAt));
+    const posts = await db
+      .select()
+      .from(blogPosts)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(blogPosts.createdAt));
 
     return NextResponse.json(posts);
   } catch (error) {

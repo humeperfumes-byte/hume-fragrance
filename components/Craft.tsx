@@ -60,7 +60,7 @@ const Craft = () => {
             <p className="text-body text-muted-foreground mb-12">
               At HUME, we believe that luxury should be accessible. Our mission
               is to democratise fine fragrance, offering exceptional
-              interpretations of the world's most coveted scents at a fraction
+              interpretations of the world&apos;s most coveted scents at a fraction
               of the price.
             </p>
 

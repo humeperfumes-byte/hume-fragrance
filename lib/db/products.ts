@@ -5,7 +5,20 @@ import { perfumes as localPerfumes, type PerfumeData, type Review } from "@/data
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getProductSeoSlug } from "@/lib/product-route";
 
-function buildDefaultReviews(product: any): Review[] {
+type ProductRow = typeof products.$inferSelect;
+type ReviewRow = typeof reviews.$inferSelect;
+type CategoryMapping = { id: string; label?: string };
+type ProductBadges = Partial<{
+  bestSeller: boolean;
+  humeSpecial: boolean;
+  limitedStock: boolean;
+}>;
+
+function getStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function buildDefaultReviews(product: ProductRow): Review[] {
   const productLabel = product.name ?? product.inspiration ?? "this fragrance";
   const entries: Array<Pick<Review, "author" | "rating" | "date" | "content">> = [
     {
@@ -53,11 +66,15 @@ function buildDefaultReviews(product: any): Review[] {
 
 // Transform database product to PerfumeData format
 function transformProduct(
-  product: any,
-  productReviews: any[],
-  mappedCategories: Array<{ id: string; label?: string }> = []
+  product: ProductRow,
+  productReviews: ReviewRow[],
+  mappedCategories: CategoryMapping[] = []
 ): PerfumeData {
   const defaultCelebImage = "https://placehold.co/600x600?text=Celeb";
+  const badges = (product.badges ?? {}) as ProductBadges;
+  const imageUrls = getStringArray(product.images);
+  const seoKeywords = getStringArray(product.seoKeywords);
+
   const fallbackReviews = buildDefaultReviews(product);
   const mappedReviews = productReviews.map((r) => ({
     id: r.id,
@@ -103,28 +120,19 @@ function transformProduct(
         : [{ id: product.categoryId, label: product.category }],
     dbCategoryTags: mappedCategories.map((c) => ({ id: c.id, label: c.label || c.id })),
     gender: product.gender,
-    images: (product.images as string[]).map((url) => withCloudinaryTransforms(url)),
+    images: imageUrls.map((url) => withCloudinaryTransforms(url)),
     price: parseFloat(product.price),
     priceCurrency: "INR",
     description: product.description,
     seoDescription: product.seoDescription,
-    seoKeywords: product.seoKeywords as string[],
+    seoKeywords,
     badges: {
-      bestSeller: Boolean((product.badges as any)?.bestSeller),
-      humeSpecial: Boolean((product.badges as any)?.humeSpecial),
-      limitedStock: Boolean((product.badges as any)?.limitedStock),
+      bestSeller: Boolean(badges.bestSeller),
+      humeSpecial: Boolean(badges.humeSpecial),
+      limitedStock: Boolean(badges.limitedStock),
     },
-    notes: product.notes as {
-      top: string[];
-      heart: string[];
-      base: string[];
-    },
-    longevity: product.longevity as {
-      duration: string;
-      sillage: string;
-      season: string[];
-      occasion: string[];
-    },
+    notes: product.notes as PerfumeData["notes"],
+    longevity: product.longevity as PerfumeData["longevity"],
     size: product.size,
     reviews: normalizedReviews,
   };

@@ -8,6 +8,7 @@ import EarlyBirdPopup from "@/components/EarlyBirdPopup";
 import AIChatBot from "@/components/AIChatBot";
 import ConsentCaptureBanner from "@/components/ConsentCaptureBanner";
 import ConsentTimelineTracker from "@/components/ConsentTimelineTracker";
+import CartAnalyticsTracker from "@/components/CartAnalyticsTracker";
 import { SITE_URL } from "@/lib/site";
 
 const inter = Inter({
@@ -97,6 +98,9 @@ export default function RootLayout({
           <ConsentCaptureBanner />
           <Suspense fallback={null}>
             <ConsentTimelineTracker />
+          </Suspense>
+          <Suspense fallback={null}>
+            <CartAnalyticsTracker />
           </Suspense>
         </Providers>
         {cloudflareBeaconToken ? (

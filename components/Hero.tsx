@@ -81,7 +81,7 @@ const Hero = () => {
       setOfferIndex((current) => (current + 1) % rotatingOffers.length);
     }, 2600);
     return () => clearInterval(interval);
-  }, []);
+  }, [rotatingOffers.length]);
 
   return (
     <section className="min-h-screen flex items-center pt-24">
