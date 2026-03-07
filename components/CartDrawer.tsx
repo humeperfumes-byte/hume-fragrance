@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Minus, Plus, MessageCircle, Trash2, Gift, IndianRupee, ChevronDown, ChevronUp } from "lucide-react";
+import { X, Minus, Plus, MessageCircle, Trash2, Gift, ChevronDown, ChevronUp } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
@@ -127,7 +127,6 @@ const CartDrawer = () => {
   const grandTotal = subtotal - normalizedCouponDiscount + shippingFee;
   const mrpTotal = subtotal + shippingFee;
   const discountOnMrp = Math.max(0, mrpTotal - grandTotal);
-  const discountPercent = mrpTotal > 0 ? Math.round((discountOnMrp / mrpTotal) * 100) : 0;
 
   const unlockedGiftCount = subtotal >= secondGiftThreshold ? 2 : subtotal >= firstGiftThreshold ? 1 : 0;
   const claimedGiftCount = items.filter((item) => item.isGift).length;
@@ -275,7 +274,7 @@ const CartDrawer = () => {
         ? `\nCoupon (${appliedCoupon.code}): -${formatINR(normalizedCouponDiscount)}`
         : "";
 
-    return `Hello HUME Perfumes,\n\nI would like to place an order:\n\n${orderLines}\n\nSubtotal: ${formatINR(subtotal)}${couponLine}\nDelivery: ${shippingFee === 0 ? "FREE" : formatINR(shippingFee)}\nGrand Total: ${formatINR(grandTotal)}\nAuto Gifts: ${claimedGiftCount}/${unlockedGiftCount} added based on subtotal tiers (₹799 and ₹1399).\n\nPlease let me know how to proceed with the payment.`;
+    return `Hello HUME Perfumes\n\nI would like to place an order:\n\n${orderLines}\n\nSubtotal: ${formatINR(subtotal)}${couponLine}\nDelivery: ${shippingFee === 0 ? "FREE" : formatINR(shippingFee)}\nGrand Total: ${formatINR(grandTotal)}\nAuto Gifts: ${claimedGiftCount}/${unlockedGiftCount} added based on subtotal tiers (${formatINR(firstGiftThreshold)} and ${formatINR(secondGiftThreshold)}).\n\nPlease let me know how to proceed with the payment.`;
   };
 
   const handleWhatsAppCheckout = () => {
@@ -328,14 +327,14 @@ const CartDrawer = () => {
                     </div>
                     <div className="relative pt-6">
                       <div className="absolute inset-x-0 top-0 text-[10px] font-medium text-[#8fa1b6]">
-                        <span className="absolute left-0">₹0</span>
+                        <span className="absolute left-0">{formatINR(0)}</span>
                         <span
                           className="absolute -translate-x-1/2"
                           style={{ left: `${(firstGiftThreshold / secondGiftThreshold) * 100}%` }}
                         >
-                          ₹799
+                          {formatINR(firstGiftThreshold)}
                         </span>
-                        <span className="absolute right-0">₹1399</span>
+                        <span className="absolute right-0">{formatINR(secondGiftThreshold)}</span>
                       </div>
                       <div className="relative h-1.5 rounded-full bg-[#e8edf4] overflow-hidden">
                         <motion.div
@@ -572,11 +571,11 @@ const CartDrawer = () => {
               <div className="border-t border-border px-5 py-4 space-y-3">
                 <button type="button" onClick={() => setIsBreakupOpen((v) => !v)} className="w-full flex items-center justify-between">
                   <span className="inline-flex items-center gap-2 text-[13px] font-medium">
-                    <Image src="/images/ruppee.png" alt="₹" width={16} height={16} />
+                    <Image src="/images/ruppee.png" alt="currency icon" width={16} height={16} />
                     Estimated Total
                     {isBreakupOpen ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
                   </span>
-                  <span className="text-[18px] leading-none font-semibold">{formatINR(grandTotal).replace(/[^\d.,₹]/g, "")}</span>
+                  <span className="text-[18px] leading-none font-semibold">{formatINR(grandTotal)}</span>
                 </button>
 
                 {isBreakupOpen && (
