@@ -13,9 +13,9 @@ function transformAccessory(row: AccessoryRow): AccessoryData {
     description: row.description,
     images: row.images as string[],
     price: parseFloat(row.price),
-    priceCurrency: row.priceCurrency ?? "INR",
+    priceCurrency: "INR",
     isComplementary: Boolean(row.isComplementary),
-    giftTier: row.giftTier ?? undefined,
+    giftTier: row.giftTier === 1 || row.giftTier === 2 ? row.giftTier : undefined,
   };
 }
 

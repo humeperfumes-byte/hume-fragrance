@@ -5,6 +5,7 @@ import { useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Bot, MessageCircle, Send, X } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { stripRegionPrefix } from "@/lib/region-routing";
 
 type ChatMessage = {
   id: string;
@@ -255,7 +256,8 @@ export default function AIChatBot() {
   ]);
 
   const canSend = useMemo(() => input.trim().length > 0, [input]);
-  const shouldRender = (pathname === "/" || pathname.startsWith("/shop")) && !isCartOpen;
+  const normalizedPath = useMemo(() => stripRegionPrefix(pathname || "/").pathWithoutPrefix, [pathname]);
+  const shouldRender = (normalizedPath === "/" || normalizedPath.startsWith("/shop")) && !isCartOpen;
 
   if (!shouldRender) return null;
 

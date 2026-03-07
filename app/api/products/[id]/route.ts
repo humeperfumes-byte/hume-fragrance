@@ -44,6 +44,7 @@ const productSchema = z.object({
 });
 
 type ProductUpdateInput = z.infer<typeof productSchema>;
+type ProductUpdateRecord = Partial<typeof products.$inferInsert> & { updatedAt: Date };
 
 // GET single product by ID
 export async function GET(
@@ -113,14 +114,12 @@ export async function PUT(
 
     const validatedData = productSchema.parse(body);
 
-    const updateData: Omit<ProductUpdateInput, "price"> & { price?: string; updatedAt: Date } = {
-      ...validatedData,
+    const { price, ...restValidatedData } = validatedData as ProductUpdateInput;
+    const updateData: ProductUpdateRecord = {
+      ...restValidatedData,
       updatedAt: new Date(),
+      ...(price !== undefined ? { price: price.toString() } : {}),
     };
-
-    if (validatedData.price !== undefined) {
-      updateData.price = validatedData.price.toString();
-    }
 
     const [updatedProduct] = await db
       .update(products)

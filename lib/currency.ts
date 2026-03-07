@@ -1,3 +1,5 @@
+import type { DisplayCurrency } from "@/lib/region-routing";
+
 const INR_TO_USD_RATE = 83; // fallback display rates
 const INR_TO_CAD_RATE = 61;
 const INR_TO_EUR_RATE = 90;
@@ -5,8 +7,6 @@ const INR_TO_AUD_RATE = 55;
 const INR_TO_SAR_RATE = 22;
 const INR_TO_AED_RATE = 23;
 const INTERNATIONAL_PRICE_MULTIPLIER = 2;
-
-type DisplayCurrency = "INR" | "USD" | "CAD" | "EUR" | "AUD" | "SAR" | "AED";
 
 function getCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
@@ -16,6 +16,11 @@ function getCookie(name: string): string | null {
 
 function detectDisplayCurrency(): DisplayCurrency {
   if (typeof window === "undefined") return "INR";
+
+  const explicitCurrency = (getCookie("hf_currency") || "").toUpperCase();
+  if (["INR", "USD", "CAD", "EUR", "AUD", "SAR", "AED"].includes(explicitCurrency)) {
+    return explicitCurrency as DisplayCurrency;
+  }
 
   const country = (getCookie("hf_country") || "").toUpperCase();
   if (country === "IN") return "INR";
