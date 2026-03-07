@@ -50,7 +50,8 @@ export function middleware(request: NextRequest) {
   }
 
   const stickyConfig = getRegionConfigFromPrefix(cookiePrefix);
-  const activeConfig = cookiePrefix ? stickyConfig : preferredConfig;
+  // Always trust fresh geo header first. Use sticky cookie only when headers are unavailable.
+  const activeConfig = countryFromHeader ? preferredConfig : (cookiePrefix ? stickyConfig : preferredConfig);
   const shouldRedirectToPrefixedRoute = activeConfig.prefix !== "";
 
   if (shouldRedirectToPrefixedRoute) {

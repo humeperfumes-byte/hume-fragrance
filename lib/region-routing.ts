@@ -36,6 +36,7 @@ export function getRegionConfigFromPrefix(prefix: string | null | undefined): Re
 
 export function getPrefixFromCountry(countryCode: string | null | undefined): RegionPrefix {
   const code = (countryCode || "").toUpperCase();
+  if (!code || code === "XX" || code === "T1" || code === "A1" || code === "A2") return "";
   if (code === "IN") return "";
   if (code === "US") return "us";
   if (code === "CA") return "ca";
@@ -43,7 +44,7 @@ export function getPrefixFromCountry(countryCode: string | null | undefined): Re
   if (code === "AE") return "ae";
   if (code === "SA") return "sa";
   if (EU_COUNTRIES.has(code)) return "eu";
-  return "us";
+  return "";
 }
 
 export function getRegionConfigFromCountry(countryCode: string | null | undefined): RegionRoutingConfig {
@@ -64,4 +65,3 @@ export function withRegionPrefix(pathname: string, prefix: RegionPrefix): string
   const normalizedPath = pathname === "/" ? "" : pathname;
   return `/${prefix}${normalizedPath}` || `/${prefix}`;
 }
-
