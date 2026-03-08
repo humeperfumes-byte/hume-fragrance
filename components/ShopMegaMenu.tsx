@@ -278,6 +278,10 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
                                   className="w-full aspect-[3/4] object-cover border border-border"
                                   loading="lazy"
                                   decoding="async"
+                                  onError={(e) => {
+                                    e.currentTarget.onerror = null;
+                                    e.currentTarget.src = "/images/celebrities/srk.png";
+                                  }}
                                 />
                               ) : null}
                               <span className="mt-1.5 block text-[0.95rem] font-light text-foreground group-hover:text-muted-foreground transition-luxury">
@@ -326,6 +330,10 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
                                         className="w-12 h-12 rounded-sm object-cover border border-border"
                                         loading="lazy"
                                         decoding="async"
+                                        onError={(e) => {
+                                          e.currentTarget.onerror = null;
+                                          e.currentTarget.src = "/images/celebrities/srk.png";
+                                        }}
                                       />
                                     ) : null}
                                     <span>

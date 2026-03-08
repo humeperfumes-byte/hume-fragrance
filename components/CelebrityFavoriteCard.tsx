@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { toast } from "@/hooks/use-toast";
 import { formatINR } from "@/lib/currency";
@@ -76,7 +75,6 @@ export default function CelebrityFavoriteCard({
   index = 0,
 }: CelebrityFavoriteCardProps) {
   const router = useRouter();
-  const pathname = usePathname();
   const { addItem } = useCart();
   const mappedTags = getDisplayCategories(category, categoryTags, categoryIds);
   const tags = mappedTags.length > 0 ? mappedTags : getStyleTags(category, inspiration);
@@ -86,11 +84,7 @@ export default function CelebrityFavoriteCard({
   const celebPortrait = withCloudinaryTransforms(celebrityImage || "https://placehold.co/600x600?text=Celeb", {
     width: 640,
   });
-  const [displayPrice, setDisplayPrice] = useState(() => formatINR(price));
-
-  useEffect(() => {
-    setDisplayPrice(formatINR(price));
-  }, [price, pathname]);
+  const displayPrice = formatINR(price);
 
   const handleAddToCart = () => {
     addItem({ id, name, inspiration, category, image, price, size: "50ml" });

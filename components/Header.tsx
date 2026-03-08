@@ -343,6 +343,10 @@ const Header = () => {
                           className="aspect-[3/4] w-full object-cover border border-border/60"
                           loading="lazy"
                           decoding="async"
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = "/images/celebrities/srk.png";
+                          }}
                         />
                         <p className="mt-2 text-[14px] text-gray-700 leading-none">{celeb.label}</p>
                         <p className="mt-1 text-[5px] uppercase tracking-[0.14em] text-muted-foreground">

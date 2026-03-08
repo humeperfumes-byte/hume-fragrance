@@ -1,11 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { LiaCartPlusSolid } from "react-icons/lia";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { toast } from "@/hooks/use-toast";
 import { formatINR } from "@/lib/currency";
@@ -47,7 +46,6 @@ const PerfumeCard = ({
 }: PerfumeCardProps) => {
   const { addItem } = useCart();
   const router = useRouter();
-  const pathname = usePathname();
   const productPath = getProductPath({
     id,
     name,
@@ -57,7 +55,7 @@ const PerfumeCard = ({
   const blurDataURL =
     "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iNDIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjQyIiBmaWxsPSIjZWVlY2VjIi8+PC9zdmc+";
   const cardImage = withCloudinaryTransforms(image, { width: 640 });
-  const displayPrice = useMemo(() => formatINR(price), [price, pathname]);
+  const displayPrice = formatINR(price);
 
   const categoryLine = (() => {
     const labels = new Set<string>();
