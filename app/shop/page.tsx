@@ -6,7 +6,7 @@ import { getCollectionPageSchema, getBreadcrumbSchema } from "@/lib/seo";
 import { getAllProducts } from "@/lib/db/products";
 import ShopContent from "./ShopContent";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 120;
 
 export default async function ShopPage() {
   const perfumes = await getAllProducts();

@@ -1,9 +1,11 @@
 import { db } from "@/db";
 import { products, reviews, productCategories } from "@/db/schema";
-import { eq } from "drizzle-orm";
-import { perfumes as localPerfumes, type PerfumeData, type Review } from "@/data/perfumes";
+import { eq, inArray } from "drizzle-orm";
+import { type PerfumeData, type Review } from "@/data/perfumes";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getProductSeoSlug } from "@/lib/product-route";
+import { unstable_cache } from "next/cache";
+import { cache } from "react";
 
 type ProductRow = typeof products.$inferSelect;
 type ReviewRow = typeof reviews.$inferSelect;
@@ -139,44 +141,63 @@ function transformProduct(
 }
 
 // Get all products
-export async function getAllProducts(): Promise<PerfumeData[]> {
+async function getAllProductsRaw(): Promise<PerfumeData[]> {
   try {
     const allProducts = await db.select().from(products);
+    if (allProducts.length === 0) return [];
 
-    const productsWithReviews = await Promise.all(
-      allProducts.map(async (product) => {
-        const productReviews = await db
-          .select()
-          .from(reviews)
-          .where(eq(reviews.productId, product.id));
+    const productIds = allProducts.map((product) => product.id);
+    const [allReviews, allCategoryRows] = await Promise.all([
+      db.select().from(reviews).where(inArray(reviews.productId, productIds)),
+      db
+        .select({
+          productId: productCategories.productId,
+          categoryId: productCategories.categoryId,
+          categoryLabel: productCategories.categoryLabel,
+        })
+        .from(productCategories)
+        .where(inArray(productCategories.productId, productIds))
+        .catch(() => [] as Array<{ productId: string; categoryId: string; categoryLabel: string | null }>),
+    ]);
 
-        let mappedCategories: Array<{ id: string; label?: string }> = [];
-        try {
-          const rows = await db
-            .select({
-              categoryId: productCategories.categoryId,
-              categoryLabel: productCategories.categoryLabel,
-            })
-            .from(productCategories)
-            .where(eq(productCategories.productId, product.id));
-          mappedCategories = rows.map((row) => ({
-            id: row.categoryId,
-            label: row.categoryLabel ?? undefined,
-          }));
-        } catch {
-          mappedCategories = [{ id: product.categoryId, label: product.category }];
-        }
+    const reviewsByProduct = new Map<string, ReviewRow[]>();
+    allReviews.forEach((review) => {
+      const existing = reviewsByProduct.get(review.productId);
+      if (existing) existing.push(review);
+      else reviewsByProduct.set(review.productId, [review]);
+    });
 
-        return transformProduct(product, productReviews, mappedCategories);
-      })
+    const categoriesByProduct = new Map<string, CategoryMapping[]>();
+    allCategoryRows.forEach((row) => {
+      const mapping = { id: row.categoryId, label: row.categoryLabel ?? undefined };
+      const existing = categoriesByProduct.get(row.productId);
+      if (existing) existing.push(mapping);
+      else categoriesByProduct.set(row.productId, [mapping]);
+    });
+
+    const productsWithReviews = allProducts.map((product) =>
+      transformProduct(
+        product,
+        reviewsByProduct.get(product.id) ?? [],
+        categoriesByProduct.get(product.id) ?? [{ id: product.categoryId, label: product.category }]
+      )
     );
 
     return productsWithReviews;
   } catch (error) {
-    console.error("Error loading products from DB, using local fallback:", error);
-    return localPerfumes;
+    console.error("Error loading products from DB:", error);
+    return [];
   }
 }
+
+const getAllProductsCached = unstable_cache(getAllProductsRaw, ["products:all"], {
+  revalidate: 120,
+  tags: ["products"],
+});
+
+export const getAllProducts = cache(async (): Promise<PerfumeData[]> => {
+  return getAllProductsCached();
+});
 
 // Get product by ID
 export async function getProductById(id: string): Promise<PerfumeData | null> {
@@ -215,18 +236,18 @@ export async function getProductById(id: string): Promise<PerfumeData | null> {
 
     return transformProduct(product, productReviews, mappedCategories);
   } catch (error) {
-    console.error(`Error loading product ${id} from DB, using local fallback:`, error);
-    return localPerfumes.find((p) => p.id === id) ?? null;
+    console.error(`Error loading product ${id} from DB:`, error);
+    return null;
   }
 }
 
-export async function getProductByRouteSegment(segment: string): Promise<PerfumeData | null> {
+export const getProductByRouteSegment = cache(async (segment: string): Promise<PerfumeData | null> => {
   const byId = await getProductById(segment);
   if (byId) return byId;
 
   const all = await getAllProducts();
   return all.find((product) => getProductSeoSlug(product) === segment) ?? null;
-}
+});
 
 // Get products by category
 export async function getProductsByCategory(
@@ -236,7 +257,7 @@ export async function getProductsByCategory(
     const all = await getAllProducts();
     return all.filter((p) => (p.categoryIds ?? [p.categoryId]).includes(categoryId));
   } catch (error) {
-    console.error(`Error loading category ${categoryId} from DB, using local fallback:`, error);
-    return localPerfumes.filter((p) => p.categoryId === categoryId);
+    console.error(`Error loading category ${categoryId} from DB:`, error);
+    return [];
   }
 }

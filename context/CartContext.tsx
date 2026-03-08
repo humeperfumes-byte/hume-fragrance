@@ -30,7 +30,7 @@ interface CartContextType {
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
-const CART_STORAGE_KEY = "hume_cart_v1";
+const CART_STORAGE_KEY = "hume_cart_v2";
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -61,7 +61,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
             typeof item.id === "string" &&
             typeof item.name === "string" &&
             typeof item.price === "number" &&
-            typeof item.quantity === "number"
+            typeof item.quantity === "number" &&
+            (item.isGift || item.price >= 100)
           )
         );
       }

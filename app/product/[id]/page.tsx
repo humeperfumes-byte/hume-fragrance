@@ -14,7 +14,7 @@ import {
 } from "@/lib/seo";
 import { getProductPath, getProductSeoSlug } from "@/lib/product-route";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 120;
 
 export async function generateMetadata({
   params,
@@ -79,4 +79,3 @@ export default async function ProductPage({
     </main>
   );
 }
-

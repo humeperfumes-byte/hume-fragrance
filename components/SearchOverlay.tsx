@@ -6,7 +6,7 @@ import { Search, X, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { perfumes, PerfumeData, getAverageRating } from "@/data/perfumes";
+import { PerfumeData, getAverageRating } from "@/data/perfumes";
 import { formatINR } from "@/lib/currency";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getProductPath } from "@/lib/product-route";
@@ -18,7 +18,24 @@ interface SearchOverlayProps {
 
 const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
   const [query, setQuery] = useState("");
+  const [products, setProducts] = useState<PerfumeData[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    fetch("/api/products")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!mounted || !Array.isArray(data)) return;
+        setProducts(data);
+      })
+      .catch(() => {
+        if (mounted) setProducts([]);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (isOpen) setTimeout(() => inputRef.current?.focus(), 60);
@@ -35,7 +52,7 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
   const results = useMemo(() => {
     if (!query.trim()) return [];
     const q = query.toLowerCase();
-    return perfumes.filter(
+    return products.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
         p.inspiration.toLowerCase().includes(q) ||
@@ -48,9 +65,9 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
         p.longevity.occasion.some((o) => o.toLowerCase().includes(q)) ||
         p.longevity.season.some((s) => s.toLowerCase().includes(q))
     );
-  }, [query]);
+  }, [query, products]);
 
-  const topPicks = useMemo(() => perfumes.slice(0, 6), []);
+  const topPicks = useMemo(() => products.slice(0, 6), [products]);
 
   return (
     <AnimatePresence>

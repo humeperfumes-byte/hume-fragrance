@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { products, productCategories } from "@/db/schema";
 import { z } from "zod";
-import { perfumes as localPerfumes } from "@/data/perfumes";
 import { requireAdminToken } from "@/lib/admin-auth";
 import { getAllProducts } from "@/lib/db/products";
 
@@ -30,17 +29,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(filtered);
   } catch (error) {
     console.error("Error fetching products:", error);
-    const searchParams = request.nextUrl.searchParams;
-    const categoryId = searchParams.get("categoryId");
-    const gender = searchParams.get("gender");
-
-    const filtered = localPerfumes.filter((p) => {
-      const categoryMatch = !categoryId || categoryId === "all" || p.categoryId === categoryId;
-      const genderMatch = !gender || p.gender === gender;
-      return categoryMatch && genderMatch;
-    });
-
-    return NextResponse.json(filtered);
+    return NextResponse.json([]);
   }
 }
 
