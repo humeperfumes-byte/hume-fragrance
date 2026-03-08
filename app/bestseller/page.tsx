@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PerfumeCard from "@/components/PerfumeCard";
+import SeoHubTeaser from "@/components/SeoHubTeaser";
+import { JsonLd } from "@/components/JsonLd";
 import { getAllProducts } from "@/lib/db/products";
+import { getBreadcrumbSchema, getItemListSchema } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Best Seller",
@@ -10,14 +13,22 @@ export const metadata: Metadata = {
     "Explore HUME best seller perfumes - top rated and most loved inspired fragrances.",
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 120;
 
 export default async function BestsellerPage() {
   const products = await getAllProducts();
   const bestsellerProducts = products.filter((p) => p.badges?.bestSeller);
+  const jsonLd = [
+    getItemListSchema("HUME Best Seller Fragrances", "/bestseller", bestsellerProducts),
+    getBreadcrumbSchema([
+      { name: "Home", url: "https://humefragrance.com" },
+      { name: "Best Seller", url: "https://humefragrance.com/bestseller" },
+    ]),
+  ];
 
   return (
     <main className="bg-background min-h-screen">
+      <JsonLd data={jsonLd} />
       <Header />
 
       <section className="pt-28 pb-20 md:pt-36 md:pb-24">
@@ -62,6 +73,7 @@ export default async function BestsellerPage() {
         </div>
       </section>
 
+      <SeoHubTeaser />
       <Footer />
     </main>
   );

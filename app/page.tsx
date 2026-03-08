@@ -11,7 +11,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { getOrganizationSchema, getWebSiteSchema, getFAQSchema } from "@/lib/seo";
 import { getAllProducts } from "@/lib/db/products";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 120;
 
 const Craft = nextDynamic(() => import("@/components/Craft"), {
   loading: () => <div className="py-24 md:py-32" />,

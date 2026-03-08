@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PerfumeCard from "@/components/PerfumeCard";
+import SeoHubTeaser from "@/components/SeoHubTeaser";
+import { JsonLd } from "@/components/JsonLd";
 import { getAllProducts } from "@/lib/db/products";
+import { getBreadcrumbSchema, getItemListSchema } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "HUME Special",
@@ -10,14 +13,22 @@ export const metadata: Metadata = {
     "Discover all HUME Special perfumes - curated premium inspired fragrances with standout profiles.",
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 120;
 
 export default async function HumeSpecialPage() {
   const products = await getAllProducts();
   const specialProducts = products.filter((p) => p.badges?.humeSpecial);
+  const jsonLd = [
+    getItemListSchema("HUME Special Fragrances", "/hume-special", specialProducts),
+    getBreadcrumbSchema([
+      { name: "Home", url: "https://humefragrance.com" },
+      { name: "HUME Special", url: "https://humefragrance.com/hume-special" },
+    ]),
+  ];
 
   return (
     <main className="bg-background min-h-screen">
+      <JsonLd data={jsonLd} />
       <Header />
 
       <section className="pt-28 pb-20 md:pt-36 md:pb-24">
@@ -62,6 +73,7 @@ export default async function HumeSpecialPage() {
         </div>
       </section>
 
+      <SeoHubTeaser />
       <Footer />
     </main>
   );

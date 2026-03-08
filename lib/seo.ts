@@ -160,6 +160,29 @@ export const getCollectionPageSchema = (
   },
 });
 
+export const getItemListSchema = (
+  name: string,
+  urlPath: string,
+  items: {
+    id: string;
+    name: string;
+    inspiration?: string;
+    inspirationBrand?: string;
+  }[]
+) => ({
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  name,
+  url: siteUrl(urlPath),
+  numberOfItems: items.length,
+  itemListElement: items.map((item, index) => ({
+    "@type": "ListItem",
+    position: index + 1,
+    url: getSeoProductUrl(item),
+    name: item.name,
+  })),
+});
+
 export const getFAQSchema = () => ({
   "@context": "https://schema.org",
   "@type": "FAQPage",

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { JsonLd } from "@/components/JsonLd";
+import { getBreadcrumbSchema } from "@/lib/seo";
 import {
   getAllProgrammaticAlternatives,
   getAllProgrammaticInspirations,
@@ -110,9 +112,39 @@ export default function FragranceGuidesHubPage() {
   ].filter((item) => item.links.length > 0);
 
   const totalLinks = sections.reduce((sum, item) => sum + item.links.length, 0);
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: "Fragrance Guides Hub | HUME",
+      url: `${baseUrl}/fragrance-guides`,
+      description:
+        "Hub page linking all HUME fragrance guides, alternatives, inspired pages and seasonal recommendations.",
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      name: "Fragrance Guides Index",
+      numberOfItems: totalLinks,
+      itemListElement: sections
+        .flatMap((sectionItem) => sectionItem.links)
+        .slice(0, 200)
+        .map((link, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          url: `${baseUrl}${link.href}`,
+          name: link.label,
+        })),
+    },
+    getBreadcrumbSchema([
+      { name: "Home", url: baseUrl },
+      { name: "Fragrance Guides", url: `${baseUrl}/fragrance-guides` },
+    ]),
+  ];
 
   return (
     <main className="bg-background min-h-screen">
+      <JsonLd data={jsonLd} />
       <Header />
       <section className="pt-28 pb-16">
         <div className="container-luxury">
@@ -141,4 +173,3 @@ export default function FragranceGuidesHubPage() {
     </main>
   );
 }
-

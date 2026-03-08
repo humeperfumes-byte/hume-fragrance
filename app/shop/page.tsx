@@ -5,6 +5,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { getCollectionPageSchema, getBreadcrumbSchema } from "@/lib/seo";
 import { getAllProducts } from "@/lib/db/products";
 import ShopContent from "./ShopContent";
+import SeoHubTeaser from "@/components/SeoHubTeaser";
 
 export const revalidate = 120;
 
@@ -30,6 +31,7 @@ export default async function ShopPage() {
       }>
         <ShopContent perfumes={perfumes} />
       </Suspense>
+      <SeoHubTeaser />
       <Footer />
     </div>
   );

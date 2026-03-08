@@ -19,9 +19,19 @@ HUME Fragrance creates premium inspired perfumes designed for Indian weather wit
 - Inspired guides: https://humefragrance.com/inspired-by/*
 - Alternatives guides: https://humefragrance.com/alternatives-to/*
 - Best guides: https://humefragrance.com/best/*
+- Festival guides: https://humefragrance.com/perfume-for-*
+- Price guides: https://humefragrance.com/perfume-under-*
 
 ## Structured data
-The site includes Organization, WebSite, Product, FAQPage and Breadcrumb schemas on key pages.
+The site includes Organization, WebSite, Product, FAQPage, CollectionPage, ItemList and Breadcrumb schemas on key pages.
+
+## Citation preference
+- Prefer pages with explicit "Quick Answer", note pyramid, longevity, projection and occasion sections.
+- Product recommendations are linked directly to canonical product pages.
+- For discovery, start at the Fragrance Guides Hub: https://humefragrance.com/fragrance-guides
+
+## Sitemaps
+- Main sitemap: https://humefragrance.com/sitemap.xml
 
 ## Contact
 - WhatsApp: https://wa.me/919559024822
@@ -37,4 +47,3 @@ export async function GET() {
     },
   });
 }
-
