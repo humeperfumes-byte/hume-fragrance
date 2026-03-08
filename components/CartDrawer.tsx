@@ -4,11 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Minus, Plus, MessageCircle, Trash2, Gift, ChevronDown, ChevronUp } from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { formatINR } from "@/lib/currency";
+import { withCloudinaryTransforms } from "@/lib/cloudinary";
+import { stripRegionPrefix } from "@/lib/region-routing";
 
 interface Coupon {
   id: string;
@@ -24,6 +26,7 @@ interface Coupon {
 
 const CartDrawer = () => {
   const router = useRouter();
+  const pathname = usePathname();
   const { items, removeItem, updateQuantity, totalItems, totalPrice, isCartOpen, setIsCartOpen } = useCart();
 
   const freeDeliveryThreshold = 800;
@@ -38,6 +41,9 @@ const CartDrawer = () => {
   const [couponInput, setCouponInput] = useState("");
   const [isOffersOpen, setIsOffersOpen] = useState(false);
   const offersPanelRef = useRef<HTMLDivElement | null>(null);
+  const { prefix: currentPrefix } = stripRegionPrefix(pathname || "/");
+  const isIndiaRootStorefront = currentPrefix === "";
+  const listableCoupons = isIndiaRootStorefront ? visibleCoupons : [];
 
   const subtotal = totalPrice;
   const paidItemCount = items.reduce((sum, item) => sum + (item.isGift ? 0 : item.quantity), 0);
@@ -383,9 +389,11 @@ const CartDrawer = () => {
                       }}
                     >
                       <img
-                        src={item.image || "/images/logo.png?v=2"}
+                        src={withCloudinaryTransforms(item.image || "/images/logo.png?v=2", { width: 160 })}
                         alt={item.name}
                         className="w-20 h-20 rounded-md object-cover bg-secondary"
+                        loading="lazy"
+                        decoding="async"
                         onError={(e) => {
                           e.currentTarget.onerror = null;
                           e.currentTarget.src = "/images/logo.png?v=2";
@@ -453,7 +461,7 @@ const CartDrawer = () => {
                     </motion.div>
                   )})}
 
-                  {(visibleCoupons.length > 0 || appliedCoupon) && (
+                  {(allCoupons.length > 0 || appliedCoupon) && (
                     <div className="relative border border-border rounded-2xl bg-secondary/10 p-3">
                       <div className="rounded-xl bg-muted/50 p-2.5">
                         {appliedCoupon ? (
@@ -497,7 +505,7 @@ const CartDrawer = () => {
                         )}
                       </div>
 
-                      {visibleCoupons.length > 0 ? (
+                      {listableCoupons.length > 0 ? (
                         <button
                           type="button"
                           onClick={handleToggleOffers}
@@ -507,10 +515,10 @@ const CartDrawer = () => {
                         </button>
                       ) : null}
 
-                      {isOffersOpen && visibleCoupons.length > 0 && (
+                      {isOffersOpen && listableCoupons.length > 0 && (
                         <div ref={offersPanelRef} className="mt-3 rounded-xl border border-border bg-background p-3 space-y-3">
                           <p className="font-semibold text-base">Available Offers</p>
-                          {visibleCoupons.map((coupon) => {
+                          {listableCoupons.map((coupon) => {
                             const isApplied = appliedCouponCode === coupon.code;
                             const isEligible = isCouponEligible(coupon);
                             return (

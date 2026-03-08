@@ -5,6 +5,7 @@ import { ChevronDown, Sun, Star, Sparkles, ExternalLink } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { celebrityFavorites } from "@/lib/celebrity-favorites";
+import { withCloudinaryTransforms } from "@/lib/cloudinary";
 
 type FilterType = "nature" | "gender" | "occasion" | "celebrity";
 
@@ -272,9 +273,11 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
                             >
                               {item.image ? (
                                 <img
-                                  src={item.image}
+                                  src={withCloudinaryTransforms(item.image, { width: 320 })}
                                   alt={item.label}
                                   className="w-full aspect-[3/4] object-cover border border-border"
+                                  loading="lazy"
+                                  decoding="async"
                                 />
                               ) : null}
                               <span className="mt-1.5 block text-[0.95rem] font-light text-foreground group-hover:text-muted-foreground transition-luxury">
@@ -318,9 +321,11 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
                                   <span className="flex items-center gap-3">
                                     {item.image ? (
                                       <img
-                                        src={item.image}
+                                        src={withCloudinaryTransforms(item.image, { width: 120 })}
                                         alt={item.label}
                                         className="w-12 h-12 rounded-sm object-cover border border-border"
+                                        loading="lazy"
+                                        decoding="async"
                                       />
                                     ) : null}
                                     <span>

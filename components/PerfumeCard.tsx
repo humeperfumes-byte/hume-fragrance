@@ -1,13 +1,15 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { LiaCartPlusSolid } from "react-icons/lia";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { toast } from "@/hooks/use-toast";
 import { formatINR } from "@/lib/currency";
+import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getProductPath } from "@/lib/product-route";
 
 interface PerfumeCardProps {
@@ -45,6 +47,7 @@ const PerfumeCard = ({
 }: PerfumeCardProps) => {
   const { addItem } = useCart();
   const router = useRouter();
+  const pathname = usePathname();
   const productPath = getProductPath({
     id,
     name,
@@ -53,6 +56,8 @@ const PerfumeCard = ({
   });
   const blurDataURL =
     "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iNDIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjQyIiBmaWxsPSIjZWVlY2VjIi8+PC9zdmc+";
+  const cardImage = withCloudinaryTransforms(image, { width: 640 });
+  const displayPrice = useMemo(() => formatINR(price), [price, pathname]);
 
   const categoryLine = (() => {
     const labels = new Set<string>();
@@ -100,10 +105,12 @@ const PerfumeCard = ({
       >
         <div className="relative overflow-hidden bg-secondary mb-6">
           <Image
-            src={image}
+            src={cardImage}
             alt={name}
             width={400}
             height={533}
+            sizes="(max-width: 640px) 90vw, (max-width: 1200px) 33vw, 25vw"
+            quality={60}
             className="w-full aspect-[3/4] object-cover transition-transform duration-700 group-hover:scale-105"
             placeholder="blur"
             blurDataURL={blurDataURL}
@@ -149,10 +156,9 @@ const PerfumeCard = ({
           {!hidePrice && (
             <div className="flex items-center justify-between gap-3 ">
               <p
-                suppressHydrationWarning
                 className="text-[1.35rem] leading-none font-light tracking-tight text-foreground/90"
               >
-                {formatINR(price)}
+                {displayPrice}
               </p>
             </div>
           )}

@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { toast } from "@/hooks/use-toast";
 import { formatINR } from "@/lib/currency";
+import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getProductPath } from "@/lib/product-route";
 
 interface CelebrityFavoriteCardProps {
@@ -74,11 +76,21 @@ export default function CelebrityFavoriteCard({
   index = 0,
 }: CelebrityFavoriteCardProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { addItem } = useCart();
   const mappedTags = getDisplayCategories(category, categoryTags, categoryIds);
   const tags = mappedTags.length > 0 ? mappedTags : getStyleTags(category, inspiration);
   const productFirst = index % 2 === 0;
   const productPath = getProductPath({ id, name, inspirationBrand, inspiration });
+  const productImage = withCloudinaryTransforms(image, { width: 640 });
+  const celebPortrait = withCloudinaryTransforms(celebrityImage || "https://placehold.co/600x600?text=Celeb", {
+    width: 640,
+  });
+  const [displayPrice, setDisplayPrice] = useState(() => formatINR(price));
+
+  useEffect(() => {
+    setDisplayPrice(formatINR(price));
+  }, [price, pathname]);
 
   const handleAddToCart = () => {
     addItem({ id, name, inspiration, category, image, price, size: "50ml" });
@@ -106,20 +118,22 @@ export default function CelebrityFavoriteCard({
       <div className="mb-5 grid grid-cols-2 gap-4">
         <div className={`relative block aspect-[3/4] bg-[#efefef] ${productFirst ? "order-1" : "order-2"}`}>
           <Image
-            src={image}
+            src={productImage}
             alt={name}
             fill
             sizes="(max-width: 640px) 44vw, 180px"
+            quality={60}
             className="object-cover"
           />
         </div>
 
         <div className={`relative aspect-[3/4] bg-[#efefef] ${productFirst ? "order-2" : "order-1"}`}>
           <Image
-            src={celebrityImage || "https://placehold.co/600x600?text=Celeb"}
+            src={celebPortrait}
             alt={celebrityName || "Celebrity"}
             fill
             sizes="(max-width: 640px) 44vw, 180px"
+            quality={60}
             className="object-cover"
           />
         </div>
@@ -132,8 +146,8 @@ export default function CelebrityFavoriteCard({
 
         <div className="mt-2 flex items-end justify-between gap-3">
           <p className="font-serif text-[2.05rem] leading-none font-light">{name}</p>
-          <p suppressHydrationWarning className="text-[2rem] leading-none font-light">
-            {formatINR(price)}
+          <p className="text-[2rem] leading-none font-light">
+            {displayPrice}
           </p>
         </div>
 

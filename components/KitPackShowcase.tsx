@@ -6,6 +6,7 @@ import { Plus, X } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { toast } from "@/hooks/use-toast";
 import { formatINR } from "@/lib/currency";
+import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import {
   Dialog,
   DialogContent,
@@ -46,7 +47,7 @@ export default function KitPackShowcase() {
   }, []);
 
   const kitPerfumes = useMemo(() => allPerfumes, [allPerfumes]);
-  const kitTotal = 499;
+  const kitTotal = 799;
   const isComplete = slots.every(Boolean);
 
   const openPickerForSlot = (index: number) => {
@@ -151,9 +152,11 @@ export default function KitPackShowcase() {
                     <div className="h-10 w-10 border border-white/30 bg-white/10 flex items-center justify-center">
                       {slot ? (
                         <img
-                          src={slot.images?.[0]}
+                          src={withCloudinaryTransforms(slot.images?.[0] || "/images/logo.png?v=2", { width: 80 })}
                           alt={slot.name}
                           className="h-10 w-10 object-cover"
+                          loading="lazy"
+                          decoding="async"
                         />
                       ) : (
                         <Plus size={16} className="text-white/70" />
@@ -231,9 +234,11 @@ export default function KitPackShowcase() {
                   className="text-left border border-border/60 bg-background hover:bg-secondary/20 transition-colors p-3"
                 >
                   <img
-                    src={perfume.images?.[0]}
+                    src={withCloudinaryTransforms(perfume.images?.[0] || "/images/logo.png?v=2", { width: 320 })}
                     alt={perfume.name}
                     className="aspect-square w-full object-cover bg-secondary"
+                    loading="lazy"
+                    decoding="async"
                   />
                   <div className="mt-3">
                     <p className="font-serif text-base">{perfume.name}</p>

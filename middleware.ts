@@ -18,6 +18,7 @@ export function middleware(request: NextRequest) {
     request.headers.get("x-country-code");
 
   const cookiePrefix = request.cookies.get("hf_region_prefix")?.value;
+  const manualRegionSelected = request.cookies.get("hf_manual_region")?.value === "1";
   const fallbackCountry = countryFromHeader || request.cookies.get("hf_country")?.value || "IN";
   const preferredConfig = getRegionConfigFromCountry(fallbackCountry);
 
@@ -51,7 +52,11 @@ export function middleware(request: NextRequest) {
 
   const stickyConfig = getRegionConfigFromPrefix(cookiePrefix);
   // Always trust fresh geo header first. Use sticky cookie only when headers are unavailable.
-  const activeConfig = countryFromHeader ? preferredConfig : (cookiePrefix ? stickyConfig : preferredConfig);
+  const activeConfig = manualRegionSelected
+    ? stickyConfig
+    : countryFromHeader
+      ? preferredConfig
+      : (cookiePrefix ? stickyConfig : preferredConfig);
   const shouldRedirectToPrefixedRoute = activeConfig.prefix !== "";
 
   if (shouldRedirectToPrefixedRoute) {

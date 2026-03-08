@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Script from "next/script";
+import { cookies } from "next/headers";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -68,11 +69,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const regionPrefix = cookieStore.get("hf_region_prefix")?.value ?? "";
   const cloudflareBeaconToken = process.env.NEXT_PUBLIC_CF_BEACON_TOKEN;
 
   return (
@@ -90,7 +93,11 @@ export default function RootLayout({
         <link rel="shortcut icon" href="/images/logo.png?v=3" type="image/png" />
         <link rel="apple-touch-icon" href="/images/logo.png?v=3" />
       </head>
-      <body suppressHydrationWarning className={`${inter.variable} ${cormorant.variable} antialiased`}>
+      <body
+        suppressHydrationWarning
+        className={`${inter.variable} ${cormorant.variable} antialiased`}
+        data-hf-region-prefix={regionPrefix}
+      >
         <Providers>
           {children}
           <AIChatBot />

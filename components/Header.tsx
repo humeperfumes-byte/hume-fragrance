@@ -2,15 +2,105 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Search, ExternalLink } from "lucide-react";
+import { Menu, X, Search, ExternalLink, ChevronDown, Check } from "lucide-react";
 import { HiOutlineShoppingBag } from "react-icons/hi2";
 import { useCart } from "@/context/CartContext";
 import ShopMegaMenu from "./ShopMegaMenu";
 import type { FilterType } from "./ShopMegaMenu";
 import SearchOverlay from "./SearchOverlay";
 import { celebrityFavorites } from "@/lib/celebrity-favorites";
+import { withCloudinaryTransforms } from "@/lib/cloudinary";
+import {
+  getRegionConfigFromPrefix,
+  stripRegionPrefix,
+  type RegionPrefix,
+  withRegionPrefix,
+} from "@/lib/region-routing";
+
+const STOREFRONT_OPTIONS: Array<{ label: string; name: string; prefix: RegionPrefix }> = [
+  { label: "IN", name: "India", prefix: "" },
+  { label: "USA", name: "United States", prefix: "us" },
+  { label: "CA", name: "Canada", prefix: "ca" },
+  { label: "EU", name: "Europe", prefix: "eu" },
+  { label: "AU", name: "Australia", prefix: "au" },
+  { label: "UAE", name: "United Arab Emirates", prefix: "ae" },
+  { label: "SA", name: "Saudi Arabia", prefix: "sa" },
+];
+
+const RegionSwitcher = ({
+  value,
+  onChange,
+  compact = false,
+}: {
+  value: RegionPrefix;
+  onChange: (prefix: RegionPrefix) => void;
+  compact?: boolean;
+}) => {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [open]);
+
+  const selected = STOREFRONT_OPTIONS.find((opt) => opt.prefix === value) ?? STOREFRONT_OPTIONS[0];
+
+  return (
+    <div className="relative" onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className={`inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-[11px] font-semibold tracking-[0.08em] text-foreground shadow-sm hover:bg-secondary/40 ${
+          compact ? "h-8" : "h-8"
+        }`}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label="Choose storefront region"
+      >
+        {selected.label}
+        <ChevronDown size={13} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open ? (
+        <div className="absolute right-0 top-[calc(100%+6px)] z-[120] min-w-[120px] overflow-hidden rounded-xl border border-border bg-background shadow-xl">
+          <ul className="max-h-64 overflow-auto py-1" role="listbox">
+            {STOREFRONT_OPTIONS.map((option) => {
+              const active = option.prefix === value;
+              return (
+                <li key={`region-${option.label}`}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false);
+                      onChange(option.prefix);
+                    }}
+                    className={`flex w-full items-center justify-between px-3 py-2 text-left text-[12px] font-medium transition-colors ${
+                      active
+                        ? "bg-foreground text-background"
+                        : "text-foreground hover:bg-secondary/50"
+                    }`}
+                    role="option"
+                    aria-selected={active}
+                  >
+                    <span className="font-semibold">{option.label}</span>
+                    <span className={`ml-2 text-[11px] ${active ? "text-background/80" : "text-muted-foreground"}`}>
+                      {option.name}
+                    </span>
+                    {active ? <Check size={13} /> : null}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+};
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -19,6 +109,8 @@ const Header = () => {
   const [celebImageByLabel, setCelebImageByLabel] = useState<Record<string, string>>({});
   const { totalItems, setIsCartOpen } = useCart();
   const router = useRouter();
+  const pathname = usePathname();
+  const { prefix: selectedStorefront } = stripRegionPrefix(pathname || "/");
 
   const displayCartCount = totalItems > 99 ? "99+" : `${totalItems}`;
 
@@ -53,6 +145,20 @@ const Header = () => {
       document.body.style.overflow = previous;
     };
   }, [isMenuOpen]);
+
+  const handleStorefrontChange = (prefix: RegionPrefix) => {
+    const { pathWithoutPrefix } = stripRegionPrefix(pathname || "/");
+    const targetPath = withRegionPrefix(pathWithoutPrefix || "/", prefix);
+    const config = getRegionConfigFromPrefix(prefix);
+    const expires = 60 * 60 * 24 * 30;
+    document.cookie = `hf_region_prefix=${prefix}; path=/; max-age=${expires}; samesite=lax`;
+    document.cookie = `hf_country=${config.country}; path=/; max-age=${expires}; samesite=lax`;
+    document.cookie = `hf_region=${config.region}; path=/; max-age=${expires}; samesite=lax`;
+    document.cookie = `hf_currency=${config.currency}; path=/; max-age=${expires}; samesite=lax`;
+    document.cookie = `hf_manual_region=1; path=/; max-age=${expires}; samesite=lax`;
+    setIsMenuOpen(false);
+    router.push(targetPath);
+  };
 
   const handleMobileFilterClick = (filterType: FilterType, value: string, href?: string) => {
     setIsMenuOpen(false);
@@ -126,6 +232,9 @@ const Header = () => {
                 Refill
               </Link>
             </nav>
+            <div className="hidden md:block">
+              <RegionSwitcher value={selectedStorefront} onChange={handleStorefrontChange} />
+            </div>
             <button
               onClick={() => setIsSearchOpen(true)}
               className="p-2 hover:bg-muted transition-colors"
@@ -207,7 +316,7 @@ const Header = () => {
                   <X size={20} />
                 </button>
                 <span className="font-serif text-[1.65rem] leading-none tracking-[0.2em]">HUME</span>
-                <div className="w-8" />
+                <RegionSwitcher value={selectedStorefront} onChange={handleStorefrontChange} compact />
               </div>
 
               <div className="px-6 py-5 space-y-6">
@@ -337,9 +446,11 @@ const Header = () => {
                         className="text-left"
                       >
                         <img
-                          src={celebImageByLabel[celeb.label] || celeb.image}
+                          src={withCloudinaryTransforms(celebImageByLabel[celeb.label] || celeb.image, { width: 320 })}
                           alt={celeb.label}
                           className="aspect-[3/4] w-full object-cover border border-border/60"
+                          loading="lazy"
+                          decoding="async"
                         />
                         <p className="mt-2 text-[14px] text-gray-700 leading-none">{celeb.label}</p>
                         <p className="mt-1 text-[5px] uppercase tracking-[0.14em] text-muted-foreground">

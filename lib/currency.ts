@@ -17,9 +17,9 @@ function detectDisplayCurrency(): DisplayCurrency {
   if (prefix !== "") {
     return getRegionConfigFromPrefix(prefix).currency;
   }
-  // Root (no prefix) is India storefront.
-  return "INR";
 
+  // Root (no prefix) is always India storefront.
+  return "INR";
 }
 
 function formatAs(amount: number, currency: DisplayCurrency) {

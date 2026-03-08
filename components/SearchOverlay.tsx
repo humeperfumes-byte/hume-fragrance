@@ -8,6 +8,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { perfumes, PerfumeData, getAverageRating } from "@/data/perfumes";
 import { formatINR } from "@/lib/currency";
+import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getProductPath } from "@/lib/product-route";
 
 interface SearchOverlayProps {
@@ -142,6 +143,7 @@ const SearchResultCard = ({
     "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iNDIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjQyIiBmaWxsPSIjZWVlY2VjIi8+PC9zdmc+";
   const avgRating = getAverageRating(perfume.reviews);
   const productPath = getProductPath(perfume);
+  const cardImage = withCloudinaryTransforms(perfume.images[0], { width: 320 });
 
   const highlightMatch = (text: string) => {
     if (!query) return text;
@@ -165,10 +167,11 @@ const SearchResultCard = ({
     >
       <div className="w-20 h-24 md:w-24 md:h-32 shrink-0 overflow-hidden bg-secondary relative">
         <Image
-          src={perfume.images[0]}
+          src={cardImage}
           alt={perfume.name}
           fill
           sizes="96px"
+          quality={55}
           className="object-cover group-hover:scale-105 transition-transform duration-500"
           placeholder="blur"
           blurDataURL={blurDataURL}
