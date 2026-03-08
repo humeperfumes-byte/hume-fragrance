@@ -9,7 +9,7 @@ import type { PerfumeData } from "@/data/perfumes";
 import { celebrityFavorites } from "@/lib/celebrity-favorites";
 import { isVisibleNatureCategory } from "@/lib/nature-categories";
 
-type FilterType = "nature" | "gender" | "occasion" | "celebrity";
+type FilterType = "nature" | "selection" | "gender" | "occasion" | "celebrity";
 
 interface FilterConfig {
   type: FilterType;
@@ -18,6 +18,7 @@ interface FilterConfig {
 }
 
 const baseFilterConfigs: Omit<FilterConfig, "options">[] = [
+  { type: "selection", label: "By Selection" },
   { type: "nature", label: "By Nature" },
   { type: "gender", label: "By Gender" },
   { type: "occasion", label: "By Occasion" },
@@ -64,6 +65,14 @@ function filterPerfumes(
       return allPerfumes.filter(
         (p) => p.gender.toLowerCase() === filterValue.toLowerCase()
       );
+    case "selection":
+      if (filterValue.toLowerCase() === "best seller") {
+        return allPerfumes.filter((p) => Boolean(p.badges?.bestSeller));
+      }
+      if (filterValue.toLowerCase() === "hume special") {
+        return allPerfumes.filter((p) => Boolean(p.badges?.humeSpecial));
+      }
+      return allPerfumes;
     case "occasion":
       return allPerfumes.filter((p) =>
         p.longevity.occasion.some(
@@ -159,10 +168,17 @@ export default function ShopContent({ perfumes }: { perfumes: PerfumeData[] }) {
 
   const filterConfigs: FilterConfig[] = useMemo(
     () => [
-      { ...baseFilterConfigs[0], options: dynamicNatureOptions },
-      { ...baseFilterConfigs[1], options: ["Men", "Women", "Unisex"] },
       {
-        ...baseFilterConfigs[2],
+        ...baseFilterConfigs[0],
+        options: ["Best Seller", "HUME Special"],
+      },
+      {
+        ...baseFilterConfigs[1],
+        options: dynamicNatureOptions,
+      },
+      { ...baseFilterConfigs[2], options: ["Men", "Women", "Unisex"] },
+      {
+        ...baseFilterConfigs[3],
         options: ["Gym", "Daily Wear", "Office", "Date Night", "Party", "Evening", "Formal", "Special Events"],
       },
     ],
@@ -224,7 +240,7 @@ export default function ShopContent({ perfumes }: { perfumes: PerfumeData[] }) {
 
         <div className="flex gap-10">
           <aside className="hidden lg:block w-56 shrink-0">
-            <div className="sticky top-28 space-y-8">
+            <div className="sticky top-28 max-h-[calc(100vh-8rem)] overflow-y-auto scrollbar-none pr-1 space-y-8">
               <button
                 onClick={clearFilter}
                 className={`text-caption w-full text-left pb-2 border-b border-border transition-luxury ${
@@ -238,21 +254,30 @@ export default function ShopContent({ perfumes }: { perfumes: PerfumeData[] }) {
               {filterConfigs.map((config) => (
                 <div key={config.type}>
                   <h3 className="text-caption text-foreground mb-3">{config.label}</h3>
-                  <ul className="space-y-2">
+                  <ul className="grid grid-cols-2 gap-x-3 gap-y-2">
                     {config.options.map((option) => {
                       const isActive =
                         activeFilterType === config.type && activeFilterValue === option;
+                      const isSelection = config.type === "selection";
                       return (
                         <li key={option}>
                           <button
                             onClick={() => setFilter(config.type, option)}
-                            className={`text-sm font-light tracking-wide transition-luxury block w-full text-left ${
-                              isActive
-                                ? "text-foreground font-normal"
-                                : "text-muted-foreground hover:text-foreground"
+                            className={`text-sm tracking-wide transition-luxury block w-full text-left leading-tight ${
+                              isSelection
+                                ? `border px-3 py-2 text-[13px] whitespace-nowrap ${
+                                    isActive
+                                      ? "bg-primary text-primary-foreground border-primary"
+                                      : "border-border text-foreground hover:border-foreground"
+                                  }`
+                                : `${
+                                    isActive
+                                      ? "text-foreground font-normal"
+                                      : "text-muted-foreground hover:text-foreground"
+                                  }`
                             }`}
                           >
-                            {isActive && "— "}
+                            {!isSelection && isActive && "- "}
                             {option}
                           </button>
                         </li>

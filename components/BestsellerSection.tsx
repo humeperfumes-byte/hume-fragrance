@@ -20,11 +20,11 @@ export default function BestsellerSection({ perfumes }: { perfumes: PerfumeData[
           </Link>
         </div>
 
-        <div className="flex gap-6 overflow-x-auto snap-x snap-mandatory scrollbar-none pb-3">
+        <div className="flex gap-6 overflow-x-auto overscroll-x-contain touch-pan-x snap-x snap-mandatory scrollbar-none pb-3">
           {bestsellerProducts.map((perfume, index) => (
             <div
               key={perfume.id}
-              className="min-w-[78%] sm:min-w-[48%] lg:min-w-[36%] xl:min-w-[30%] snap-start"
+              className="min-w-[78%] sm:min-w-[48%] lg:min-w-[36%] xl:min-w-[30%] snap-start snap-always"
             >
               <PerfumeCard
                 id={perfume.id}

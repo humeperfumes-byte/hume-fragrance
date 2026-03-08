@@ -41,6 +41,7 @@ const Collection = ({ perfumes }: { perfumes: PerfumeData[] }) => {
       ? perfumes
       : perfumes.filter((p) => (p.dbCategoryIds ?? p.categoryIds ?? [p.categoryId]).includes(activeCategory));
   const visiblePerfumes = filteredPerfumes.slice(0, 8);
+  const visibleCategories = categories.slice(0, 10);
 
   return (
     <section id="collection" className="py-24 md:py-32">
@@ -74,7 +75,7 @@ const Collection = ({ perfumes }: { perfumes: PerfumeData[] }) => {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="flex flex-wrap justify-center gap-2 md:gap-4 mb-12 md:mb-16"
         >
-          {categories.map((cat) => (
+          {visibleCategories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
@@ -87,6 +88,14 @@ const Collection = ({ perfumes }: { perfumes: PerfumeData[] }) => {
               {cat.label}
             </button>
           ))}
+          {categories.length > 10 && (
+            <Link
+              href="/shop"
+              className="text-[10px] md:text-caption px-3 md:px-4 py-1.5 md:py-2 transition-all duration-300 bg-foreground text-background border border-foreground hover:bg-background hover:text-foreground"
+            >
+              10+
+            </Link>
+          )}
         </motion.div>
 
         {/* Perfume Grid */}
