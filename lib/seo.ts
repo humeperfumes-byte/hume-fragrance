@@ -36,6 +36,8 @@ export const getOrganizationSchema = () => ({
   },
   address: {
     "@type": "PostalAddress",
+    addressLocality: "Kannauj",
+    addressRegion: "Uttar Pradesh",
     addressCountry: "IN",
   },
 });
