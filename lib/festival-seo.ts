@@ -176,6 +176,7 @@ export const FESTIVAL_SEO_PAGES: FestivalSeoEntry[] = [
   },
   ...buildBudgetEntries(),
   ...buildOccasionEntries(),
+  ...buildBrandComparisonEntries(),
   ...buildInspiredPerfumeEntries(),
 ];
 
@@ -768,6 +769,141 @@ function buildOccasionEntries(): FestivalSeoEntry[] {
       faq: faqForOccasion(occasionName),
     };
   });
+}
+
+function buildBrandComparisonEntries(): FestivalSeoEntry[] {
+  const comparisons: Array<{
+    slug: string;
+    brand: string;
+    styleKeywords: string[];
+    focusKeywords: string[];
+  }> = [
+    { slug: "hume-vs-sephora", brand: "Sephora Collection", styleKeywords: ["premium-inspired", "balanced", "long-lasting", "value"], focusKeywords: ["premium inspired perfumes", "long lasting", "india", "edp", "best alternatives", "value"] },
+    { slug: "hume-vs-bella-vita", brand: "Bella Vita", styleKeywords: ["daily-wear", "value", "versatile", "clean"], focusKeywords: ["daily wear perfume", "fresh", "long lasting", "india", "budget", "versatile"] },
+    { slug: "hume-vs-ajmal", brand: "Ajmal", styleKeywords: ["oud-forward", "warm", "evening", "rich"], focusKeywords: ["oud", "amber", "spicy", "long lasting", "india", "premium inspired"] },
+    { slug: "hume-vs-arabian-aroma", brand: "Arabian Aroma", styleKeywords: ["middle-eastern style", "bold", "sweet", "night"], focusKeywords: ["arabic perfume alternative", "strong projection", "sweet", "oud", "india", "long lasting"] },
+    { slug: "hume-vs-skinn-titan", brand: "SKINN by Titan", styleKeywords: ["office-friendly", "versatile", "elegant", "modern"], focusKeywords: ["office perfume", "signature scent", "fresh woody", "india", "long lasting", "professional"] },
+    { slug: "hume-vs-the-man-company", brand: "The Man Company", styleKeywords: ["masculine", "daily-wear", "clean", "modern"], focusKeywords: ["men perfume", "fresh", "woody", "daily use", "india", "edp"] },
+    { slug: "hume-vs-beardo", brand: "Beardo", styleKeywords: ["bold", "youthful", "party-ready", "warm"], focusKeywords: ["party perfume", "men", "spicy", "sweet", "long lasting", "india"] },
+    { slug: "hume-vs-wild-stone", brand: "Wild Stone", styleKeywords: ["mass-appeal", "fresh", "budget", "casual"], focusKeywords: ["budget perfume india", "fresh", "daily wear", "men", "long lasting", "best alternative"] },
+    { slug: "hume-vs-engage", brand: "Engage", styleKeywords: ["light", "clean", "youthful", "easy-wear"], focusKeywords: ["fresh perfume", "daily wear", "india", "unisex", "long lasting", "budget"] },
+    { slug: "hume-vs-fogg", brand: "Fogg", styleKeywords: ["deodorant alternative", "strong", "value", "daily"], focusKeywords: ["perfume vs deodorant", "long lasting perfume", "india", "men", "best value", "edp"] },
+    { slug: "hume-vs-zudio-perfume", brand: "Zudio Perfume", styleKeywords: ["affordable", "mass-market", "casual", "clean"], focusKeywords: ["affordable perfume", "india", "fresh", "budget", "daily use", "best alternative"] },
+    { slug: "hume-vs-miniso-perfume", brand: "MINISO Perfume", styleKeywords: ["light", "fresh", "minimal", "casual"], focusKeywords: ["fresh perfume", "light perfume", "india", "budget", "daily wear", "long lasting"] },
+    { slug: "hume-vs-dossier", brand: "Dossier", styleKeywords: ["dupe comparison", "designer alternatives", "value", "edp"], focusKeywords: ["designer alternatives", "inspired perfume", "long lasting", "india", "best clone", "value"] },
+    { slug: "hume-vs-perfume-steal", brand: "Perfume Steal", styleKeywords: ["clone comparison", "projection", "performance", "value"], focusKeywords: ["perfume clone india", "long lasting", "best alternatives", "performance", "edp", "inspired"] },
+    { slug: "hume-vs-latfa", brand: "Lattafa", styleKeywords: ["arabic luxury", "oud", "gourmand", "bold"], focusKeywords: ["lattafa alternatives", "oud", "sweet", "long lasting", "india", "premium inspired"] },
+    { slug: "hume-vs-armaf", brand: "Armaf", styleKeywords: ["projection-focused", "bold", "compliment-getter", "versatile"], focusKeywords: ["armaf alternative", "strong projection", "compliment perfume", "india", "long lasting", "edp"] },
+    { slug: "hume-vs-rasasi", brand: "Rasasi", styleKeywords: ["middle-eastern", "fresh spicy", "modern", "long-lasting"], focusKeywords: ["rasasi alternative", "hawas style", "fresh spicy", "india", "long lasting", "men perfume"] },
+    { slug: "hume-vs-yardley", brand: "Yardley", styleKeywords: ["classic", "clean", "everyday", "soft"], focusKeywords: ["daily perfume india", "clean scent", "classic", "long lasting", "affordable", "women men"] },
+    { slug: "hume-vs-park-avenue", brand: "Park Avenue", styleKeywords: ["mass-market", "professional", "fresh", "budget"], focusKeywords: ["office perfume men", "budget perfume", "fresh woody", "india", "daily use", "long lasting"] },
+    { slug: "hume-vs-denver", brand: "Denver", styleKeywords: ["masculine", "strong", "budget", "casual"], focusKeywords: ["men perfume india", "strong perfume", "budget", "daily wear", "long lasting", "best alternative"] },
+    { slug: "hume-vs-dior-perfume", brand: "Dior", styleKeywords: ["designer luxury", "balanced", "refined", "long-lasting"], focusKeywords: ["dior alternative", "designer inspired perfume", "india", "long lasting", "edp", "luxury profile"] },
+    { slug: "hume-vs-chanel-perfume", brand: "Chanel", styleKeywords: ["elegant", "woody aromatic", "signature", "premium"], focusKeywords: ["chanel alternative", "bleu style perfume", "india", "office and evening", "long lasting", "premium inspired"] },
+    { slug: "hume-vs-tom-ford", brand: "Tom Ford", styleKeywords: ["bold", "oud-forward", "luxury", "statement"], focusKeywords: ["tom ford inspired perfume", "oud wood alternative", "ombre leather style", "india", "long lasting", "luxury"] },
+    { slug: "hume-vs-creed-perfume", brand: "Creed", styleKeywords: ["fresh fruity", "executive", "signature", "compliment-getter"], focusKeywords: ["creed aventus alternative", "creed inspired perfume", "india", "long lasting", "premium", "men"] },
+    { slug: "hume-vs-ysl-perfume", brand: "YSL", styleKeywords: ["modern", "clean", "versatile", "date-night"], focusKeywords: ["ysl y alternative", "ysl inspired perfume", "india", "long lasting", "fresh spicy", "premium"] },
+    { slug: "hume-vs-gucci-perfume", brand: "Gucci", styleKeywords: ["stylish", "floral-woody", "modern", "elegant"], focusKeywords: ["gucci perfume alternative", "designer inspired", "india", "long lasting", "premium", "everyday luxury"] },
+    { slug: "hume-vs-armani-perfume", brand: "Armani", styleKeywords: ["aquatic aromatic", "formal", "smooth", "all-season"], focusKeywords: ["armani alternative", "acqua di gio inspired", "india", "long lasting", "office perfume", "premium"] },
+    { slug: "hume-vs-versace-perfume", brand: "Versace", styleKeywords: ["party-ready", "sweet spicy", "bold", "youthful"], focusKeywords: ["versace eros alternative", "versace inspired", "india", "night-out", "strong projection", "long lasting"] },
+    { slug: "hume-vs-prada-perfume", brand: "Prada", styleKeywords: ["clean luxury", "sophisticated", "minimal", "refined"], focusKeywords: ["prada perfume alternative", "designer inspired perfume", "india", "long lasting", "premium", "office"] },
+    { slug: "hume-vs-bvlgari-perfume", brand: "Bvlgari", styleKeywords: ["fresh", "citrus-woody", "elegant", "day-to-night"], focusKeywords: ["bvlgari perfume alternative", "designer style perfume", "india", "long lasting", "fresh luxury", "premium inspired"] },
+    { slug: "hume-sauvage-vs-dior-sauvage", brand: "Dior Sauvage", styleKeywords: ["fresh spicy", "ambroxan", "modern", "versatile"], focusKeywords: ["hume sauvage vs dior sauvage", "dior sauvage alternative", "fresh spicy perfume", "india", "long lasting", "edp"] },
+    { slug: "hume-aventus-vs-creed-aventus", brand: "Creed Aventus", styleKeywords: ["fresh fruity", "smoky woods", "executive", "signature"], focusKeywords: ["hume aventus vs creed aventus", "aventus alternative india", "pineapple woody perfume", "long lasting", "premium inspired", "men"] },
+    { slug: "hume-baccarat-540-vs-baccarat-rouge-540", brand: "Baccarat Rouge 540", styleKeywords: ["ambery sweet", "airy", "luxury", "unisex"], focusKeywords: ["baccarat rouge 540 alternative", "hume baccarat 540", "luxury inspired perfume", "india", "long lasting", "unisex"] },
+    { slug: "hume-ombre-leather-vs-tom-ford-ombre-leather", brand: "Tom Ford Ombre Leather", styleKeywords: ["leather", "spicy", "bold", "evening"], focusKeywords: ["ombre leather alternative", "hume ombre leather", "tom ford inspired", "india", "long lasting", "leather perfume"] },
+    { slug: "hume-oud-wood-vs-tom-ford-oud-wood", brand: "Tom Ford Oud Wood", styleKeywords: ["oud", "woody oriental", "smooth", "luxury"], focusKeywords: ["oud wood alternative", "hume oud wood", "tom ford oud wood inspired", "india", "oud perfume", "long lasting"] },
+    { slug: "hume-tobacco-vanille-vs-tom-ford-tobacco-vanille", brand: "Tom Ford Tobacco Vanille", styleKeywords: ["tobacco", "vanilla", "warm spicy", "winter"], focusKeywords: ["tobacco vanille alternative", "hume tobacco vanille", "tom ford inspired", "india", "winter perfume", "long lasting"] },
+    { slug: "hume-bleu-vs-bleu-de-chanel", brand: "Bleu de Chanel", styleKeywords: ["woody aromatic", "clean", "office", "all-season"], focusKeywords: ["bleu de chanel alternative", "hume bleu", "office perfume india", "long lasting", "fresh woody", "men"] },
+    { slug: "hume-ysl-y-vs-ysl-y", brand: "YSL Y", styleKeywords: ["fresh aromatic", "modern", "clean", "versatile"], focusKeywords: ["ysl y alternative", "hume ysl y", "fresh aromatic perfume", "india", "long lasting", "daily wear"] },
+    { slug: "hume-dylan-blue-vs-versace-dylan-blue", brand: "Versace Dylan Blue", styleKeywords: ["blue fragrance", "fresh", "ambroxan", "daily"], focusKeywords: ["dylan blue alternative", "hume dylan blue", "versace inspired", "india", "fresh perfume", "long lasting"] },
+    { slug: "hume-eros-vs-versace-eros", brand: "Versace Eros", styleKeywords: ["sweet", "minty", "party", "attractive"], focusKeywords: ["versace eros alternative", "hume eros", "party perfume men", "india", "strong projection", "long lasting"] },
+    { slug: "hume-layton-vs-parfums-de-marly-layton", brand: "Parfums de Marly Layton", styleKeywords: ["apple spicy", "amber", "luxury", "evening"], focusKeywords: ["layton alternative", "hume layton", "parfums de marly inspired", "india", "premium inspired", "long lasting"] },
+    { slug: "hume-jazz-club-vs-replica-jazz-club", brand: "Replica Jazz Club", styleKeywords: ["boozy", "tobacco", "vanilla", "warm"], focusKeywords: ["jazz club alternative", "hume jazz club", "replica inspired perfume", "india", "boozy perfume", "long lasting"] },
+    { slug: "hume-by-the-fireplace-vs-replica-by-the-fireplace", brand: "Replica By The Fireplace", styleKeywords: ["smoky", "sweet", "cozy", "winter"], focusKeywords: ["by the fireplace alternative", "hume by the fireplace", "replica inspired", "india", "winter perfume", "long lasting"] },
+    { slug: "hume-hacivat-vs-nishane-hacivat", brand: "Nishane Hacivat", styleKeywords: ["citrus fruity", "oakmoss", "sharp", "signature"], focusKeywords: ["hacivat alternative", "hume hacivat", "nishane inspired", "india", "fresh fruity perfume", "long lasting"] },
+    { slug: "hume-red-tobacco-vs-mancera-red-tobacco", brand: "Mancera Red Tobacco", styleKeywords: ["tobacco", "spicy", "intense", "night"], focusKeywords: ["red tobacco alternative", "hume red tobacco", "mancera inspired perfume", "india", "beast mode", "long lasting"] },
+    { slug: "dior-sauvage-vs-clone", brand: "Dior Sauvage Clone Comparison", styleKeywords: ["fresh spicy", "ambroxan", "mass-appeal", "versatile"], focusKeywords: ["dior sauvage vs clone", "best sauvage clone india", "fresh spicy perfume", "long lasting", "edp", "alternative"] },
+    { slug: "aventus-vs-clone", brand: "Creed Aventus Clone Comparison", styleKeywords: ["fresh fruity", "smoky woods", "executive", "signature"], focusKeywords: ["aventus vs clone", "best aventus clone india", "pineapple woody perfume", "long lasting", "alternative", "men"] },
+    { slug: "baccarat-rouge-540-vs-dupe", brand: "Baccarat Rouge 540 Dupe Comparison", styleKeywords: ["ambery sweet", "airy", "luxury", "unisex"], focusKeywords: ["baccarat rouge 540 dupe", "best br540 alternative india", "luxury inspired perfume", "long lasting", "unisex", "edp"] },
+    { slug: "bleu-de-chanel-vs-alternative", brand: "Bleu de Chanel Alternative Comparison", styleKeywords: ["woody aromatic", "clean", "office-ready", "all-season"], focusKeywords: ["bleu de chanel alternative", "best bleu clone india", "office perfume men", "long lasting", "fresh woody", "edp"] },
+    { slug: "tom-ford-oud-wood-vs-clone", brand: "Tom Ford Oud Wood Clone Comparison", styleKeywords: ["oud", "woody oriental", "smooth", "luxury"], focusKeywords: ["tom ford oud wood vs clone", "oud wood alternative india", "oud perfume clone", "long lasting", "premium inspired", "edp"] },
+    { slug: "ysl-y-vs-alternative", brand: "YSL Y Alternative Comparison", styleKeywords: ["fresh aromatic", "modern", "clean", "versatile"], focusKeywords: ["ysl y alternative", "best ysl y clone india", "fresh aromatic perfume", "long lasting", "daily wear", "men"] },
+    { slug: "versace-eros-vs-dupe", brand: "Versace Eros Dupe Comparison", styleKeywords: ["sweet", "minty", "party", "strong"], focusKeywords: ["versace eros dupe", "best eros clone india", "party perfume men", "strong projection", "long lasting", "sweet spicy"] },
+    { slug: "dylan-blue-vs-clone", brand: "Versace Dylan Blue Clone Comparison", styleKeywords: ["blue fragrance", "fresh", "ambroxan", "daily"], focusKeywords: ["dylan blue vs clone", "best dylan blue clone india", "blue perfume alternative", "long lasting", "fresh", "men"] },
+    { slug: "spicebomb-vs-clone", brand: "Spicebomb Clone Comparison", styleKeywords: ["warm spicy", "tobacco", "winter", "bold"], focusKeywords: ["spicebomb vs clone", "best spicebomb clone india", "winter spicy perfume", "long lasting", "men", "alternative"] },
+    { slug: "ultra-male-vs-clone", brand: "Ultra Male Clone Comparison", styleKeywords: ["sweet spicy", "night-out", "youthful", "strong"], focusKeywords: ["ultra male vs clone", "best ultra male clone india", "night perfume men", "long lasting", "dupe", "alternative"] },
+    { slug: "perfume-under-500-vs-under-1000", brand: "Perfume Budget Comparison", styleKeywords: ["budget", "value", "daily wear", "entry-level"], focusKeywords: ["perfume under 500 vs under 1000", "budget perfume india", "value comparison", "best under 1000", "daily use", "long lasting"] },
+    { slug: "perfume-under-1000-vs-under-2000", brand: "Mid-Budget Perfume Comparison", styleKeywords: ["mid-budget", "better performance", "versatile", "value"], focusKeywords: ["perfume under 1000 vs under 2000", "best perfume under 2000", "value vs quality", "india", "long lasting", "edp"] },
+    { slug: "cheap-perfume-vs-expensive-perfume", brand: "Cheap vs Expensive Perfume", styleKeywords: ["value logic", "quality", "performance", "comparison"], focusKeywords: ["cheap perfume vs expensive perfume", "perfume value comparison", "is expensive perfume worth it", "india", "long lasting", "quality"] },
+    { slug: "999-perfume-vs-10000-perfume", brand: "999 vs 10000 Perfume Comparison", styleKeywords: ["budget vs luxury", "performance", "value", "practical"], focusKeywords: ["999 perfume vs 10000 perfume", "budget vs luxury perfume", "india", "value for money", "long lasting", "comparison"] },
+    { slug: "budget-perfume-vs-luxury-perfume", brand: "Budget vs Luxury Perfume", styleKeywords: ["value", "luxury feel", "performance", "smart buy"], focusKeywords: ["budget perfume vs luxury perfume", "luxury inspired perfume", "india", "best value perfume", "long lasting", "comparison"] },
+    { slug: "attar-vs-perfume", brand: "Attar vs Perfume", styleKeywords: ["traditional", "modern", "oil-based", "spray-based"], focusKeywords: ["attar vs perfume", "which is better attar or perfume", "india fragrance guide", "longevity", "daily wear", "comparison"] },
+    { slug: "oil-perfume-vs-spray-perfume", brand: "Oil vs Spray Perfume", styleKeywords: ["oil concentration", "spray convenience", "longevity", "projection"], focusKeywords: ["oil perfume vs spray perfume", "which lasts longer oil or spray", "india", "projection", "longevity", "comparison"] },
+    { slug: "fragrance-vs-perfumes", brand: "Fragrance vs Perfumes", styleKeywords: ["terminology", "buying guide", "clarity", "beginner"], focusKeywords: ["fragrance vs perfumes", "difference between fragrance and perfume", "perfume guide", "india", "beginner", "comparison"] },
+    { slug: "dio-vs-perfumes", brand: "Deo vs Perfume", styleKeywords: ["deodorant vs perfume", "daily use", "sillage", "longevity"], focusKeywords: ["dio vs perfumes", "deo vs perfume", "what is better deo or perfume", "india", "long lasting", "comparison"] },
+    { slug: "men-perfumes-vs-women-perfumes", brand: "Men vs Women Perfumes", styleKeywords: ["gender profiles", "unisex", "note families", "selection"], focusKeywords: ["men perfumes vs women perfumes", "difference men women perfume", "unisex perfume", "india", "notes", "comparison"] },
+    { slug: "office-perfume-vs-party-perfume", brand: "Office vs Party Perfume", styleKeywords: ["professional", "party", "projection control", "occasion"], focusKeywords: ["office perfume vs party perfume", "best office perfume", "best party perfume", "india", "projection", "comparison"] },
+    { slug: "summer-perfume-vs-winter-perfume", brand: "Summer vs Winter Perfume", styleKeywords: ["seasonal", "fresh vs warm", "climate fit", "longevity"], focusKeywords: ["summer perfume vs winter perfume", "seasonal perfume guide", "india weather perfume", "long lasting", "fresh vs warm", "comparison"] },
+    { slug: "day-perfume-vs-night-perfume", brand: "Day vs Night Perfume", styleKeywords: ["daytime", "night-out", "intensity", "occasion"], focusKeywords: ["day perfume vs night perfume", "daytime fragrance vs evening fragrance", "india", "projection", "best perfume", "comparison"] },
+    { slug: "date-perfume-vs-daily-perfume", brand: "Date vs Daily Perfume", styleKeywords: ["attractive", "clean", "versatile", "context"], focusKeywords: ["date perfume vs daily perfume", "best date perfume", "daily use perfume", "india", "men", "comparison"] },
+    { slug: "gym-perfume-vs-office-perfume", brand: "Gym vs Office Perfume", styleKeywords: ["fresh", "clean", "soft projection", "professional"], focusKeywords: ["gym perfume vs office perfume", "best gym perfume", "office perfume india", "fresh perfume", "comparison", "daily"] },
+    { slug: "long-lasting-vs-strong-perfume", brand: "Long-Lasting vs Strong Perfume", styleKeywords: ["longevity", "projection", "sillage", "performance"], focusKeywords: ["long lasting vs strong perfume", "longevity vs projection", "perfume performance", "india", "best perfume", "comparison"] },
+    { slug: "edp-vs-edt", brand: "EDP vs EDT", styleKeywords: ["concentration", "daily wear", "performance", "selection"], focusKeywords: ["edp vs edt", "difference between edp and edt", "which lasts longer", "india", "perfume concentration", "guide"] },
+    { slug: "edp-vs-edt-parfums", brand: "EDP vs EDT vs Parfum", styleKeywords: ["concentration ladder", "performance", "value", "guide"], focusKeywords: ["edp vs edt parfums", "edp vs edt vs parfum", "perfume concentration comparison", "india", "longevity", "guide"] },
+    { slug: "parfum-vs-edp", brand: "Parfum vs EDP", styleKeywords: ["high concentration", "richness", "wearability", "value"], focusKeywords: ["parfum vs edp", "difference between parfum and edp", "which is better", "india", "long lasting", "comparison"] },
+    { slug: "projection-vs-longevity-perfume", brand: "Projection vs Longevity", styleKeywords: ["performance", "technical", "wearability", "buying guide"], focusKeywords: ["projection vs longevity perfume", "what is projection in perfume", "what is longevity", "india", "performance", "guide"] },
+    { slug: "sillage-vs-projection", brand: "Sillage vs Projection", styleKeywords: ["trail", "aura", "performance", "technical"], focusKeywords: ["sillage vs projection", "difference between sillage and projection", "perfume terms", "india", "performance", "guide"] },
+    { slug: "smell-like-millionaire-vs-normal-perfume", brand: "Luxury Smell vs Normal Perfume", styleKeywords: ["expensive-smelling", "refined", "smooth", "premium-inspired"], focusKeywords: ["smell like millionaire vs normal perfume", "expensive smelling perfume", "luxury perfume vibe", "india", "premium inspired", "comparison"] },
+    { slug: "compliment-perfume-vs-regular-perfume", brand: "Compliment Perfume vs Regular", styleKeywords: ["compliment-getter", "mass-appeal", "balanced", "wearable"], focusKeywords: ["compliment perfume vs regular perfume", "most complimented perfumes", "best perfume for compliments", "india", "comparison", "daily wear"] },
+    { slug: "luxury-smell-vs-budget-perfume", brand: "Luxury Smell vs Budget Perfume", styleKeywords: ["value", "luxury impression", "smart-buy", "long-lasting"], focusKeywords: ["luxury smell vs budget perfume", "smells expensive perfume", "budget luxury perfume india", "comparison", "long lasting", "best value"] },
+    { slug: "rich-smell-vs-sweet-smell", brand: "Rich Smell vs Sweet Smell", styleKeywords: ["ambery", "sweet", "mature", "style-direction"], focusKeywords: ["rich smell vs sweet smell perfume", "amber vs sweet perfume", "which perfume style is better", "india", "comparison", "men"] },
+    { slug: "masculine-vs-fresh-perfume", brand: "Masculine vs Fresh Perfume", styleKeywords: ["masculine", "fresh", "office", "night"], focusKeywords: ["masculine vs fresh perfume", "best masculine perfume", "best fresh perfume men", "india", "comparison", "daily wear"] },
+    { slug: "bella-vita-skai-vs-armaf-club-de-nuit", brand: "Bella Vita Skai vs Armaf Club De Nuit", styleKeywords: ["fresh spicy", "woody", "projection", "value"], focusKeywords: ["bella vita skai vs armaf club de nuit", "club de nuit comparison", "best alternative india", "long lasting", "men perfume", "comparison"] },
+    { slug: "lattafa-asad-vs-dior-sauvage", brand: "Lattafa Asad vs Dior Sauvage", styleKeywords: ["spicy", "ambroxan", "bold", "modern"], focusKeywords: ["lattafa asad vs dior sauvage", "asad vs sauvage", "best sauvage alternative", "india", "long lasting", "comparison"] },
+    { slug: "armaf-club-de-nuit-vs-creed-aventus", brand: "Armaf Club De Nuit vs Creed Aventus", styleKeywords: ["fruity smoky", "signature", "projection", "value"], focusKeywords: ["armaf club de nuit vs creed aventus", "aventus alternative comparison", "best clone india", "long lasting", "men perfume", "comparison"] },
+    { slug: "rasasi-hawas-vs-versace-eros", brand: "Rasasi Hawas vs Versace Eros", styleKeywords: ["sweet fresh", "night-out", "projection", "attractive"], focusKeywords: ["rasasi hawas vs versace eros", "hawas vs eros", "best party perfume men", "india", "long lasting", "comparison"] },
+  ];
+
+  const faqForBrand = (brand: string): FestivalSeoFaq[] => [
+    {
+      question: `Is HUME better than ${brand} for longevity in Indian weather?`,
+      answer:
+        `HUME focuses on EDP-first structure and stable base notes, which generally perform better in Indian heat and humidity for longer wear windows.`,
+    },
+    {
+      question: `How is HUME different from ${brand} in scent quality?`,
+      answer:
+        `HUME is built around premium-inspired scent architecture with smoother transitions from top to base, aimed at a more refined profile and balanced projection.`,
+    },
+    {
+      question: `Which one is better for office and daily wear?`,
+      answer:
+        "For office and repeat daily use, choose fragrances with controlled projection and clean dry-down. HUME recommendations on this page are selected for that balance.",
+    },
+    {
+      question: `Can I find designer-style alternatives in HUME?`,
+      answer:
+        "Yes. HUME is positioned around inspired profiles that capture popular luxury scent directions while keeping pricing practical for regular use.",
+    },
+    {
+      question: "How should I choose between brands?",
+      answer:
+        "Compare on concentration, note balance, social comfort, and longevity-per-rupee. The best pick is the one that performs consistently on your skin and routine.",
+    },
+  ];
+
+  return comparisons.map((item) => ({
+    slug: item.slug,
+    title: `HUME vs ${item.brand}: Which Perfume Brand is Better in India? (2026 Guide)`,
+    metaTitle: `HUME vs ${item.brand} | Perfume Comparison Guide India`,
+    metaDescription: `Compare HUME vs ${item.brand} on scent quality, longevity, projection, and value in India. Find the best perfume picks for daily wear, office, and occasion use.`,
+    festivalName: `${item.brand} Comparison`,
+    intro: `If you're comparing HUME and ${item.brand}, this guide helps you choose by what matters in real life: smell quality, longevity in Indian weather, projection comfort, and value per wear. We also show practical HUME recommendations based on popular scent preferences so you can move from comparison to the right product quickly.`,
+    focusKeywords: item.focusKeywords,
+    styleKeywords: item.styleKeywords,
+    faq: faqForBrand(item.brand),
+  }));
 }
 
 function buildInspiredPerfumeEntries(): FestivalSeoEntry[] {
