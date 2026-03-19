@@ -2,9 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { detectAcquisitionSource } from "@/lib/acquisition-source";
 
 const CONSENT_DECISION_KEY = "hume_consent_decision";
 const CONSENT_SESSION_KEY = "hume_consent_session_id";
+const FIRST_TOUCH_SOURCE_KEY = "hume_first_touch_source";
 
 type TrackingDetail = {
   eventType: string;
@@ -52,10 +54,38 @@ export default function ConsentTimelineTracker() {
     const toPath = `${pathname}${searchParams?.toString() ? `?${searchParams.toString()}` : ""}`;
     const fromPath = previousPathRef.current;
     previousPathRef.current = toPath;
+    const utmSource = searchParams?.get("utm_source");
+    const utmMedium = searchParams?.get("utm_medium");
+    const utmCampaign = searchParams?.get("utm_campaign");
+    const referrer = typeof document !== "undefined" ? document.referrer : "";
+    const acquisition = detectAcquisitionSource({ utmSource, referrer });
+
+    try {
+      if (typeof window !== "undefined" && !window.localStorage.getItem(FIRST_TOUCH_SOURCE_KEY)) {
+        window.localStorage.setItem(
+          FIRST_TOUCH_SOURCE_KEY,
+          JSON.stringify({
+            source: acquisition.source,
+            category: acquisition.category,
+            referrerHost: acquisition.referrerHost,
+            capturedAt: new Date().toISOString(),
+          }),
+        );
+      }
+    } catch (error) {
+      console.error("Failed to persist first-touch source:", error);
+    }
 
     void sendEvent("page_view", {
       fromPath,
       toPath,
+      source: acquisition.source,
+      sourceCategory: acquisition.category,
+      referrer,
+      referrerHost: acquisition.referrerHost,
+      utmSource: utmSource || undefined,
+      utmMedium: utmMedium || undefined,
+      utmCampaign: utmCampaign || undefined,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, searchParams]);
@@ -74,4 +104,3 @@ export default function ConsentTimelineTracker() {
 
   return null;
 }
-

@@ -184,6 +184,50 @@ export const cartEvents = pgTable("cart_events", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Checkout draft captures (anonymous session based, partial or complete)
+export const checkoutDrafts = pgTable("checkout_drafts", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  sessionId: varchar("session_id", { length: 255 }).notNull().unique(),
+  status: varchar("status", { length: 50 }).notNull().default("started"), // started | partial | complete | whatsapp_initiated
+  path: varchar("path", { length: 2048 }),
+  acquisitionSource: varchar("acquisition_source", { length: 100 }),
+  acquisitionCategory: varchar("acquisition_category", { length: 50 }),
+  acquisitionReferrerHost: varchar("acquisition_referrer_host", { length: 255 }),
+  fullName: varchar("full_name", { length: 255 }),
+  phone: varchar("phone", { length: 50 }),
+  email: varchar("email", { length: 255 }),
+  addressLine1: text("address_line_1"),
+  addressLine2: text("address_line_2"),
+  city: varchar("city", { length: 255 }),
+  state: varchar("state", { length: 255 }),
+  pincode: varchar("pincode", { length: 20 }),
+  notes: text("notes"),
+  lastEditedField: varchar("last_edited_field", { length: 100 }),
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }),
+  shippingFee: decimal("shipping_fee", { precision: 10, scale: 2 }),
+  grandTotal: decimal("grand_total", { precision: 10, scale: 2 }),
+  cartSnapshot: jsonb("cart_snapshot")
+    .$type<
+      Array<{
+        id: string;
+        name: string;
+        inspiration?: string;
+        size?: string;
+        quantity: number;
+        price: number;
+        isGift?: boolean;
+      }>
+    >()
+    .notNull()
+    .default([]),
+  country: varchar("country", { length: 8 }),
+  ipAddress: varchar("ip_address", { length: 255 }),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  whatsappInitiatedAt: timestamp("whatsapp_initiated_at"),
+});
+
 // Export types
 export type Product = typeof products.$inferSelect;
 export type NewProduct = typeof products.$inferInsert;
@@ -205,3 +249,5 @@ export type ConsentEvent = typeof consentEvents.$inferSelect;
 export type NewConsentEvent = typeof consentEvents.$inferInsert;
 export type CartEvent = typeof cartEvents.$inferSelect;
 export type NewCartEvent = typeof cartEvents.$inferInsert;
+export type CheckoutDraft = typeof checkoutDrafts.$inferSelect;
+export type NewCheckoutDraft = typeof checkoutDrafts.$inferInsert;

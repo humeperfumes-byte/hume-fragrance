@@ -111,7 +111,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const clearCart = () => setItems([]);
 
   // Keep gift eligibility consistent with spend tiers:
-  // 1 gift above 799, 2 gifts above 1399.
+  // 1 gift above 1299, 2 gifts above 1899.
   useEffect(() => {
     if (!hydrated) return;
     setItems((prev) => {
@@ -119,7 +119,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         (sum, item) => sum + (!item.isGift ? item.price * item.quantity : 0),
         0
       );
-      const allowedGiftCount = paidSubtotal >= 1399 ? 2 : paidSubtotal >= 799 ? 1 : 0;
+      const allowedGiftCount = paidSubtotal >= 1899 ? 2 : paidSubtotal >= 1299 ? 1 : 0;
       const paidItems = prev.filter((item) => !item.isGift);
       const nextGiftItems = tierGiftAccessories.slice(0, allowedGiftCount).map((gift) => ({
         id: `gift-${gift.id}`,

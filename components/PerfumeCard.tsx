@@ -88,6 +88,23 @@ const PerfumeCard = ({
     });
   };
 
+  const handleProductClick = () => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(
+      new CustomEvent("hume:tracking", {
+        detail: {
+          eventType: "product_click",
+          payload: {
+            productId: id,
+            productName: name,
+            inspiration,
+            productPath,
+          },
+        },
+      }),
+    );
+  };
+
   return (
     <motion.article
       initial={{ opacity: 0, y: 30 }}
@@ -100,6 +117,7 @@ const PerfumeCard = ({
         href={productPath}
         className="block h-full"
         onMouseEnter={() => router.prefetch(productPath)}
+        onClick={handleProductClick}
       >
         <div className="relative overflow-hidden bg-secondary mb-6">
           <Image

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Minus, Plus, MessageCircle, Trash2, Gift, ChevronDown, ChevronUp } from "lucide-react";
+import { X, Minus, Plus, Trash2, Gift, ChevronDown, ChevronUp } from "lucide-react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
@@ -31,8 +31,8 @@ const CartDrawer = () => {
 
   const freeDeliveryThreshold = 800;
   const deliveryChargeBelowThreshold = 100;
-  const firstGiftThreshold = 799;
-  const secondGiftThreshold = 1399;
+  const firstGiftThreshold = 1299;
+  const secondGiftThreshold = 1899;
 
   const [isBreakupOpen, setIsBreakupOpen] = useState(false);
   const [visibleCoupons, setVisibleCoupons] = useState<Coupon[]>([]);
@@ -267,26 +267,10 @@ const CartDrawer = () => {
     });
   };
 
-  const generateOrderMessage = () => {
-    const orderLines = items
-      .map(
-        (item) =>
-          `* ${item.name}${item.isGift ? " [FREE GIFT]" : ""} (${item.size ?? "50ml"}, Inspired by ${item.inspiration}) x${item.quantity} - ${formatINR(item.price * item.quantity)}`
-      )
-      .join("\n");
-
-    const couponLine =
-      appliedCoupon && normalizedCouponDiscount > 0
-        ? `\nCoupon (${appliedCoupon.code}): -${formatINR(normalizedCouponDiscount)}`
-        : "";
-
-    return `Hello HUME Perfumes\n\nI would like to place an order:\n\n${orderLines}\n\nSubtotal: ${formatINR(subtotal)}${couponLine}\nDelivery: ${shippingFee === 0 ? "FREE" : formatINR(shippingFee)}\nGrand Total: ${formatINR(grandTotal)}\nAuto Gifts: ${claimedGiftCount}/${unlockedGiftCount} added based on subtotal tiers (${formatINR(firstGiftThreshold)} and ${formatINR(secondGiftThreshold)}).\n\nPlease let me know how to proceed with the payment.`;
-  };
-
-  const handleWhatsAppCheckout = () => {
-    const message = encodeURIComponent(generateOrderMessage());
-    window.open(`https://wa.me/919559024822?text=${message}`, "_blank");
-    toast({ title: "Opening WhatsApp", description: "Complete your order via WhatsApp." });
+  const handleContinueCheckout = () => {
+    setIsCartOpen(false);
+    router.push("/checkout");
+    toast({ title: "Continue to checkout", description: "Add your delivery details to place the order." });
   };
 
   return (
@@ -612,9 +596,13 @@ const CartDrawer = () => {
                   </div>
                 )}
 
-                <Button onClick={handleWhatsAppCheckout} className="h-11 w-full rounded-md bg-[#25D366] hover:bg-[#20bd5a] text-white text-[14px] font-semibold">
-                  <MessageCircle size={18} className="mr-2" />
-                  Order via WhatsApp
+                <Button onClick={handleContinueCheckout} className="relative h-12 w-full rounded-full bg-[#25D366] text-[14px] font-semibold text-white hover:bg-[#20bd5a]">
+                  <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                    Continue
+                  </span>
+                  <span className="pointer-events-none absolute left-[calc(50%+2.15rem)] top-1/2 -translate-y-1/2 inline-flex ml-2 items-center leading-none" aria-hidden="true">
+                    <span className="text-base font-light">→</span>
+                  </span>
                 </Button>
               </div>
             )}
