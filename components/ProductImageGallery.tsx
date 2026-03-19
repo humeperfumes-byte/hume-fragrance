@@ -77,6 +77,8 @@ const ProductImageGallery = ({ images, videos = [], name }: ProductImageGalleryP
                     alt={`${name} - Image ${index + 1}`}
                     fill
                     sizes="(min-width: 1024px) 50vw, 100vw"
+                    priority={index === 0}
+                    fetchPriority={index === 0 ? "high" : "auto"}
                     className="object-contain"
                     placeholder="blur"
                     blurDataURL={blurDataURL}

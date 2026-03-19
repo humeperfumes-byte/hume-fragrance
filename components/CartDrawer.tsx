@@ -182,6 +182,11 @@ const CartDrawer = () => {
   }, []);
 
   useEffect(() => {
+    if (!isCartOpen || items.length === 0) return;
+    router.prefetch("/checkout");
+  }, [isCartOpen, items.length, router]);
+
+  useEffect(() => {
     if (!appliedCouponCode) return;
     if (!appliedCoupon) {
       setAppliedCouponCode(null);
@@ -269,6 +274,7 @@ const CartDrawer = () => {
 
   const handleContinueCheckout = () => {
     setIsCartOpen(false);
+    router.prefetch("/checkout");
     router.push("/checkout");
     toast({ title: "Continue to checkout", description: "Add your delivery details to place the order." });
   };

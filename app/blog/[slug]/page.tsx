@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import Image from "next/image";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { JsonLd } from "@/components/JsonLd";
@@ -8,6 +9,7 @@ import { getBreadcrumbSchema } from "@/lib/seo";
 import { getBlogPostBySlug, getAllBlogPosts } from "@/lib/db/blog";
 import { getAllProducts } from "@/lib/db/products";
 import { getProductPath } from "@/lib/product-route";
+import { withCloudinaryTransforms } from "@/lib/cloudinary";
 
 export const dynamic = "force-dynamic";
 
@@ -185,11 +187,15 @@ export default async function BlogPostPage({
 
           {post.imageUrl ? (
             <div className="mb-10 border border-border overflow-hidden bg-secondary/30">
-              <img
-                src={post.imageUrl}
+              <Image
+                src={withCloudinaryTransforms(post.imageUrl, { width: 1200 })}
                 alt={post.title}
+                width={1200}
+                height={720}
+                priority
+                fetchPriority="high"
+                sizes="(max-width: 768px) 100vw, 768px"
                 className="w-full h-[360px] object-cover"
-                loading="lazy"
               />
             </div>
           ) : (

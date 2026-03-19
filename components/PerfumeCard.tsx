@@ -54,8 +54,9 @@ const PerfumeCard = ({
   });
   const blurDataURL =
     "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iNDIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjQyIiBmaWxsPSIjZWVlY2VjIi8+PC9zdmc+";
-  const cardImage = withCloudinaryTransforms(image, { width: 640 });
+  const cardImage = withCloudinaryTransforms(image, { width: 515 });
   const displayPrice = formatINR(price);
+  const isPriorityCard = index === 0;
 
   const categoryLine = (() => {
     const labels = new Set<string>();
@@ -127,6 +128,8 @@ const PerfumeCard = ({
             height={533}
             sizes="(max-width: 640px) 90vw, (max-width: 1200px) 33vw, 25vw"
             quality={60}
+            priority={isPriorityCard}
+            fetchPriority={isPriorityCard ? "high" : "auto"}
             className="w-full aspect-[3/4] object-cover transition-transform duration-700 group-hover:scale-105"
             placeholder="blur"
             blurDataURL={blurDataURL}

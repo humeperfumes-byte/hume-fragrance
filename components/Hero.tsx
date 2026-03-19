@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
 import { detectGeoRegionClient, getGeoExperience } from "@/lib/geo";
+import { withCloudinaryTransforms } from "@/lib/cloudinary";
 
 const fallbackSlides = [
   { url: "/images/collection-hero.jpg", label: "HUME collection", link: "/shop" },
@@ -146,33 +147,36 @@ const Hero = () => {
               <CarouselContent className="-ml-0">
                 {slides.map((slide, index) => {
                   const isLcpCandidate = index === 0 || slide.url.includes("collection-hero.jpg");
+                  const optimizedSlideUrl = withCloudinaryTransforms(slide.url, { width: 900 });
                   return (
                     <CarouselItem key={`${slide.url}-${index}`} className="pl-0">
                       <div className="relative w-full aspect-square">
                         {slide.link?.startsWith("http") ? (
                           <a href={slide.link} className="block w-full h-full" target="_blank" rel="noreferrer">
                             <Image
-                              src={slide.url}
+                              src={optimizedSlideUrl}
                               alt={slide.label}
                               fill
-                              sizes="(max-width: 640px) 100vw, 50vw"
+                              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 50vw"
                               className="object-cover"
                               loading={isLcpCandidate ? "eager" : "lazy"}
                               fetchPriority={isLcpCandidate ? "high" : "auto"}
                               priority={isLcpCandidate}
+                              quality={60}
                             />
                           </a>
                         ) : (
                           <Link href={slide.link ?? "/shop"} className="block w-full h-full">
                             <Image
-                              src={slide.url}
+                              src={optimizedSlideUrl}
                               alt={slide.label}
                               fill
-                              sizes="(max-width: 640px) 100vw, 50vw"
+                              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 50vw"
                               className="object-cover"
                               loading={isLcpCandidate ? "eager" : "lazy"}
                               fetchPriority={isLcpCandidate ? "high" : "auto"}
                               priority={isLcpCandidate}
+                              quality={60}
                             />
                           </Link>
                         )}

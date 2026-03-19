@@ -8,6 +8,7 @@ import PerfumeCard from "@/components/PerfumeCard";
 import { JsonLd } from "@/components/JsonLd";
 import SeoEmailCapture from "@/components/SeoEmailCapture";
 import { getAllProducts } from "@/lib/db/products";
+import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import {
   FESTIVAL_SEO_PAGES,
   buildFestivalLongContent,
@@ -455,10 +456,13 @@ export default async function FestivalSeoPage({ params }: Props) {
               <div className="grid gap-6 lg:grid-cols-[340px_1fr] items-start">
                 <div className="relative aspect-square overflow-hidden rounded-xl border border-border bg-card">
                   <Image
-                    src={spotlightImage}
+                    src={withCloudinaryTransforms(spotlightImage, { width: 680 })}
                     alt={`${page.festivalName} fragrance mood`}
                     fill
                     sizes="(max-width: 1024px) 100vw, 340px"
+                    priority
+                    fetchPriority="high"
+                    quality={60}
                     className="object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
