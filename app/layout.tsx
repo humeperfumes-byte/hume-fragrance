@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Script from "next/script";
+import dynamic from "next/dynamic";
 import { cookies } from "next/headers";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
-import EarlyBirdPopup from "@/components/EarlyBirdPopup";
-import AIChatBot from "@/components/AIChatBot";
 import ConsentCaptureBanner from "@/components/ConsentCaptureBanner";
 import ConsentTimelineTracker from "@/components/ConsentTimelineTracker";
 import CartAnalyticsTracker from "@/components/CartAnalyticsTracker";
 import { SITE_URL } from "@/lib/site";
+
+const AIChatBot = dynamic(() => import("@/components/AIChatBot"), { ssr: false });
+const EarlyBirdPopup = dynamic(() => import("@/components/EarlyBirdPopup"), { ssr: false });
 
 const inter = Inter({
   subsets: ["latin"],

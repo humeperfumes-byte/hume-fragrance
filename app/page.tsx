@@ -10,6 +10,7 @@ import nextDynamic from "next/dynamic";
 import { JsonLd } from "@/components/JsonLd";
 import { getOrganizationSchema, getWebSiteSchema, getFAQSchema } from "@/lib/seo";
 import { getAllProducts } from "@/lib/db/products";
+import type { HomepagePerfumeCardData } from "@/types/homepage";
 
 export const revalidate = 120;
 
@@ -25,6 +26,21 @@ const About = nextDynamic(() => import("@/components/About"), {
 
 export default async function Home() {
   const perfumes = await getAllProducts();
+  const homepagePerfumes: HomepagePerfumeCardData[] = perfumes.map((product) => ({
+    id: product.id,
+    name: product.name,
+    inspiration: product.inspiration,
+    inspirationBrand: product.inspirationBrand,
+    category: product.category,
+    categoryId: product.categoryId,
+    categoryTags: product.categoryTags,
+    categoryIds: product.categoryIds,
+    dbCategoryTags: product.dbCategoryTags,
+    dbCategoryIds: product.dbCategoryIds,
+    images: product.images.slice(0, 1),
+    price: product.price,
+    badges: product.badges,
+  }));
   const jsonLd = [
     getOrganizationSchema(),
     getWebSiteSchema(),
@@ -36,14 +52,28 @@ export default async function Home() {
       <JsonLd data={jsonLd} />
       <Header />
       <Hero />
-      <Collection perfumes={perfumes} />
-      <HumeSpecialSection perfumes={perfumes} />
-      <BestsellerSection perfumes={perfumes} />
-      <RefillProgramSection />
-      <SeoHubTeaser />
-      <Craft />
-      <LatestJournal />
-      <About />
+      <Collection perfumes={homepagePerfumes} />
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1400px" }}>
+        <HumeSpecialSection perfumes={homepagePerfumes} />
+      </div>
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1400px" }}>
+        <BestsellerSection perfumes={homepagePerfumes} />
+      </div>
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1100px" }}>
+        <RefillProgramSection />
+      </div>
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "900px" }}>
+        <SeoHubTeaser />
+      </div>
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }}>
+        <Craft />
+      </div>
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }}>
+        <LatestJournal />
+      </div>
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }}>
+        <About />
+      </div>
       <Footer />
     </main>
   );

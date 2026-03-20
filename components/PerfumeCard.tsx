@@ -26,6 +26,7 @@ interface PerfumeCardProps {
   humeSpecial?: boolean;
   limitedStock?: boolean;
   hidePrice?: boolean;
+  prioritizeImage?: boolean;
 }
 
 const PerfumeCard = ({
@@ -43,6 +44,7 @@ const PerfumeCard = ({
   humeSpecial,
   limitedStock,
   hidePrice = false,
+  prioritizeImage,
 }: PerfumeCardProps) => {
   const { addItem } = useCart();
   const router = useRouter();
@@ -56,7 +58,7 @@ const PerfumeCard = ({
     "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iNDIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjQyIiBmaWxsPSIjZWVlY2VjIi8+PC9zdmc+";
   const cardImage = withCloudinaryTransforms(image, { width: 515 });
   const displayPrice = formatINR(price);
-  const isPriorityCard = index === 0;
+  const isPriorityCard = prioritizeImage ?? index === 0;
 
   const categoryLine = (() => {
     const labels = new Set<string>();

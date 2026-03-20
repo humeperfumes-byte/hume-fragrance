@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,34 +17,10 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [celebImageByLabel, setCelebImageByLabel] = useState<Record<string, string>>({});
   const { totalItems, setIsCartOpen } = useCart();
   const router = useRouter();
 
   const displayCartCount = totalItems > 99 ? "99+" : `${totalItems}`;
-
-  useEffect(() => {
-    let mounted = true;
-    fetch("/api/products")
-      .then((res) => res.json())
-      .then((data) => {
-        if (!mounted || !Array.isArray(data)) return;
-        const byId = new Map<string, { woreByImageUrl?: string }>(
-          data.map((p: { id: string; woreByImageUrl?: string }) => [p.id, p])
-        );
-        const mapped = Object.fromEntries(
-          celebrityFavorites.map((c) => [
-            c.label,
-            byId.get(c.perfumeIds[0])?.woreByImageUrl || c.image,
-          ])
-        );
-        setCelebImageByLabel(mapped);
-      })
-      .catch(() => {});
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   useEffect(() => {
     if (!isMenuOpen) return;
@@ -338,7 +314,7 @@ const Header = () => {
                         className="text-left"
                       >
                         <img
-                          src={withCloudinaryTransforms(celebImageByLabel[celeb.label] || celeb.image, { width: 320 })}
+                          src={withCloudinaryTransforms(celeb.image, { width: 320 })}
                           alt={celeb.label}
                           className="aspect-[3/4] w-full object-cover border border-border/60"
                           loading="lazy"

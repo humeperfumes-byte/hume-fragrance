@@ -4,10 +4,10 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import PerfumeCard from "./PerfumeCard";
-import type { PerfumeData } from "@/data/perfumes";
 import { isVisibleNatureCategory } from "@/lib/nature-categories";
+import type { HomepagePerfumeCardData } from "@/types/homepage";
 
-const Collection = ({ perfumes }: { perfumes: PerfumeData[] }) => {
+const Collection = ({ perfumes }: { perfumes: HomepagePerfumeCardData[] }) => {
   const [activeCategory, setActiveCategory] = useState("all");
   const categories = useMemo(() => {
     const map = new Map<string, string>();
@@ -122,6 +122,7 @@ const Collection = ({ perfumes }: { perfumes: PerfumeData[] }) => {
                 bestSeller={perfume.badges?.bestSeller}
                 humeSpecial={perfume.badges?.humeSpecial}
                 limitedStock={perfume.badges?.limitedStock}
+                prioritizeImage={index === 0}
               />
             </div>
           ))}

@@ -1,8 +1,8 @@
 import Link from "next/link";
-import type { PerfumeData } from "@/data/perfumes";
 import PerfumeCard from "@/components/PerfumeCard";
+import type { HomepagePerfumeCardData } from "@/types/homepage";
 
-export default function HumeSpecialSection({ perfumes }: { perfumes: PerfumeData[] }) {
+export default function HumeSpecialSection({ perfumes }: { perfumes: HomepagePerfumeCardData[] }) {
   const humeSpecialProducts = perfumes.filter((p) => p.badges?.humeSpecial).slice(0, 4);
 
   if (humeSpecialProducts.length === 0) return null;
@@ -40,6 +40,7 @@ export default function HumeSpecialSection({ perfumes }: { perfumes: PerfumeData
                 bestSeller={perfume.badges?.bestSeller}
                 humeSpecial={perfume.badges?.humeSpecial}
                 limitedStock={perfume.badges?.limitedStock}
+                prioritizeImage={false}
               />
             </div>
           ))}

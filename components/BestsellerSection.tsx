@@ -1,8 +1,8 @@
 import Link from "next/link";
-import type { PerfumeData } from "@/data/perfumes";
 import PerfumeCard from "@/components/PerfumeCard";
+import type { HomepagePerfumeCardData } from "@/types/homepage";
 
-export default function BestsellerSection({ perfumes }: { perfumes: PerfumeData[] }) {
+export default function BestsellerSection({ perfumes }: { perfumes: HomepagePerfumeCardData[] }) {
   const bestsellerProducts = perfumes.filter((p) => p.badges?.bestSeller).slice(0, 4);
 
   if (bestsellerProducts.length === 0) return null;
@@ -40,6 +40,7 @@ export default function BestsellerSection({ perfumes }: { perfumes: PerfumeData[
                 bestSeller={perfume.badges?.bestSeller}
                 humeSpecial={perfume.badges?.humeSpecial}
                 limitedStock={perfume.badges?.limitedStock}
+                prioritizeImage={false}
               />
             </div>
           ))}

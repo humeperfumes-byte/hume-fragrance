@@ -11,7 +11,7 @@ import { getAllProducts } from "@/lib/db/products";
 import { getProductPath } from "@/lib/product-route";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export async function generateMetadata({
   params,
@@ -194,7 +194,8 @@ export default async function BlogPostPage({
                 height={720}
                 priority
                 fetchPriority="high"
-                sizes="(max-width: 768px) 100vw, 768px"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 768px"
+                quality={60}
                 className="w-full h-[360px] object-cover"
               />
             </div>
