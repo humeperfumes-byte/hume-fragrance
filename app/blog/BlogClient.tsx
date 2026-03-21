@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import type { BlogPost } from "@/data/blogPosts";
+import { withCloudinaryTransforms } from "@/lib/cloudinary";
 
 export default function BlogClient({
   blogPosts,
@@ -60,9 +62,12 @@ export default function BlogClient({
                 >
                   <div className="mb-5 border border-border/70 bg-secondary/30 h-44 overflow-hidden">
                     {post.imageUrl ? (
-                      <img
-                        src={post.imageUrl}
+                      <Image
+                        src={withCloudinaryTransforms(post.imageUrl, { width: 720 })}
                         alt={post.title}
+                        width={720}
+                        height={176}
+                        sizes="(max-width: 768px) 100vw, 50vw"
                         className="w-full h-full object-cover"
                         loading="lazy"
                       />
@@ -101,9 +106,12 @@ export default function BlogClient({
             >
               <div className="mb-4 border border-border/70 bg-secondary/30 h-36 overflow-hidden">
                 {post.imageUrl ? (
-                  <img
-                    src={post.imageUrl}
+                  <Image
+                    src={withCloudinaryTransforms(post.imageUrl, { width: 480 })}
                     alt={post.title}
+                    width={480}
+                    height={144}
+                    sizes="(max-width: 768px) 100vw, 33vw"
                     className="w-full h-full object-cover"
                     loading="lazy"
                   />

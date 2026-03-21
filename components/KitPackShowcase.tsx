@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { Plus, X } from "lucide-react";
 import { useCart } from "@/context/CartContext";
@@ -151,12 +152,14 @@ export default function KitPackShowcase() {
                   >
                     <div className="h-10 w-10 border border-white/30 bg-white/10 flex items-center justify-center">
                       {slot ? (
-                        <img
+                        <Image
                           src={withCloudinaryTransforms(slot.images?.[0] || "/images/logo.png?v=2", { width: 80 })}
                           alt={slot.name}
+                          width={40}
+                          height={40}
+                          sizes="40px"
                           className="h-10 w-10 object-cover"
                           loading="lazy"
-                          decoding="async"
                         />
                       ) : (
                         <Plus size={16} className="text-white/70" />
@@ -233,12 +236,14 @@ export default function KitPackShowcase() {
                   onClick={() => handleSelectPerfume(perfume)}
                   className="text-left border border-border/60 bg-background hover:bg-secondary/20 transition-colors p-3"
                 >
-                  <img
+                  <Image
                     src={withCloudinaryTransforms(perfume.images?.[0] || "/images/logo.png?v=2", { width: 320 })}
                     alt={perfume.name}
+                    width={320}
+                    height={320}
+                    sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                     className="aspect-square w-full object-cover bg-secondary"
                     loading="lazy"
-                    decoding="async"
                   />
                   <div className="mt-3">
                     <p className="font-serif text-base">{perfume.name}</p>

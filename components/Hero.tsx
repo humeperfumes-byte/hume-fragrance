@@ -7,28 +7,26 @@ import { useEffect, useState } from "react";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
 import { detectGeoRegionClient, getGeoExperience } from "@/lib/geo";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
+import type { HeroSlide } from "@/lib/db/images";
 
 const fallbackSlides = [
   { url: "/images/collection-hero.jpg", label: "HUME collection", link: "/shop" },
   { url: "/images/hero-perfume.jpg", label: "HUME luxury perfume", link: "/shop" },
   { url: "/images/hero-perfume.jpg", label: "HUME offers", link: "/shop" },
 ];
-const Hero = () => {
+const Hero = ({ initialSlides = fallbackSlides }: { initialSlides?: HeroSlide[] }) => {
   const geoCopy = getGeoExperience(detectGeoRegionClient());
   const rotatingOffers = geoCopy.offers;
   const [api, setApi] = useState<CarouselApi | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [slideCount, setSlideCount] = useState(fallbackSlides.length);
-  const [slides, setSlides] = useState(fallbackSlides);
+  const [slides] = useState(initialSlides.length > 0 ? initialSlides : fallbackSlides);
   const [offerIndex, setOfferIndex] = useState(0);
+  const slideCount = slides.length;
 
   useEffect(() => {
     if (!api) {
       return;
     }
-
-    setSlideCount(api.scrollSnapList().length);
-    setSelectedIndex(api.selectedScrollSnap());
 
     const handleSelect = () => {
       setSelectedIndex(api.selectedScrollSnap());
@@ -36,6 +34,7 @@ const Hero = () => {
 
     api.on("select", handleSelect);
     api.on("reInit", handleSelect);
+    requestAnimationFrame(handleSelect);
 
     const interval = setInterval(() => {
       api.scrollNext();
@@ -47,35 +46,6 @@ const Hero = () => {
       clearInterval(interval);
     };
   }, [api]);
-
-  useEffect(() => {
-    let active = true;
-    const loadSlides = async () => {
-      try {
-        const response = await fetch("/api/images?usage=hero");
-        if (!response.ok) {
-          throw new Error("Failed to load hero slides");
-        }
-        const data = (await response.json()) as { url: string; label: string; link?: string }[];
-        if (active && Array.isArray(data) && data.length > 0) {
-          const mapped = data.map((item) => ({
-            url: item.url,
-            label: item.label ?? "HUME offer",
-            link: item.link ?? "/shop",
-          }));
-          setSlides(mapped);
-          setSlideCount(mapped.length);
-        }
-      } catch (error) {
-        console.error("Failed to load hero slides:", error);
-      }
-    };
-
-    loadSlides();
-    return () => {
-      active = false;
-    };
-  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {

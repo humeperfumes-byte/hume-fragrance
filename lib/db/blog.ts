@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { blogPosts, products } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { cache } from "react";
 import { blogPosts as localBlogPosts, type BlogPost } from "@/data/blogPosts";
 
 // Transform database blog post to BlogPost format
@@ -26,8 +27,7 @@ function transformBlogPost(post: BlogPostRow): BlogPost {
   };
 }
 
-// Get all blog posts
-export async function getAllBlogPosts(): Promise<BlogPost[]> {
+const getAllBlogPostsCached = cache(async (): Promise<BlogPost[]> => {
   try {
     const posts = await db
       .select()
@@ -39,12 +39,14 @@ export async function getAllBlogPosts(): Promise<BlogPost[]> {
     console.error("Error loading blog posts from DB, using local fallback:", error);
     return localBlogPosts;
   }
+});
+
+// Get all blog posts
+export async function getAllBlogPosts(): Promise<BlogPost[]> {
+  return getAllBlogPostsCached();
 }
 
-// Get blog post by slug
-export async function getBlogPostBySlug(
-  slug: string
-): Promise<BlogPost | null> {
+const getBlogPostBySlugCached = cache(async (slug: string): Promise<BlogPost | null> => {
   try {
     const [post] = await db
       .select()
@@ -61,6 +63,13 @@ export async function getBlogPostBySlug(
     console.error(`Error loading blog post ${slug} from DB, using local fallback:`, error);
     return localBlogPosts.find((post) => post.slug === slug) ?? null;
   }
+});
+
+// Get blog post by slug
+export async function getBlogPostBySlug(
+  slug: string
+): Promise<BlogPost | null> {
+  return getBlogPostBySlugCached(slug);
 }
 
 // Get blog posts by category

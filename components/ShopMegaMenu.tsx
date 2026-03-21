@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Sun, Star, Sparkles, ExternalLink } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import ImageWithFallback from "@/components/ImageWithFallback";
 import { useRouter } from "next/navigation";
 import { celebrityFavorites } from "@/lib/celebrity-favorites";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
@@ -272,16 +273,15 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
                               className="group block w-full max-w-[150px] text-left cursor-pointer"
                             >
                               {item.image ? (
-                                <img
+                                <ImageWithFallback
                                   src={withCloudinaryTransforms(item.image, { width: 320 })}
+                                  fallbackSrc="/images/celebrities/srk.png"
                                   alt={item.label}
+                                  width={320}
+                                  height={427}
+                                  sizes="150px"
                                   className="w-full aspect-[3/4] object-cover border border-border"
                                   loading="lazy"
-                                  decoding="async"
-                                  onError={(e) => {
-                                    e.currentTarget.onerror = null;
-                                    e.currentTarget.src = "/images/celebrities/srk.png";
-                                  }}
                                 />
                               ) : null}
                               <span className="mt-1.5 block text-[0.95rem] font-light text-foreground group-hover:text-muted-foreground transition-luxury">
@@ -324,16 +324,15 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
                                 >
                                   <span className="flex items-center gap-3">
                                     {item.image ? (
-                                      <img
+                                      <ImageWithFallback
                                         src={withCloudinaryTransforms(item.image, { width: 120 })}
+                                        fallbackSrc="/images/celebrities/srk.png"
                                         alt={item.label}
+                                        width={48}
+                                        height={48}
+                                        sizes="48px"
                                         className="w-12 h-12 rounded-sm object-cover border border-border"
                                         loading="lazy"
-                                        decoding="async"
-                                        onError={(e) => {
-                                          e.currentTarget.onerror = null;
-                                          e.currentTarget.src = "/images/celebrities/srk.png";
-                                        }}
                                       />
                                     ) : null}
                                     <span>

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { getAllBottles } from "@/lib/db/bottles";
 import { formatINR } from "@/lib/currency";
 
@@ -25,9 +26,12 @@ export default async function BottlesPage() {
               key={bottle.id}
               className="border border-border/60 bg-secondary/10 p-4"
             >
-              <img
+              <Image
                 src={bottle.imageUrl}
                 alt={bottle.name}
+                width={400}
+                height={176}
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                 className="h-44 w-full object-cover bg-secondary"
               />
               <div className="mt-4 space-y-2">

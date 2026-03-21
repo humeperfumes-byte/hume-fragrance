@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Minus, Plus, Trash2, Gift, ChevronDown, ChevronUp } from "lucide-react";
 import Image from "next/image";
@@ -8,6 +8,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import ImageWithFallback from "@/components/ImageWithFallback";
 import { formatINR } from "@/lib/currency";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { stripRegionPrefix } from "@/lib/region-routing";
@@ -147,12 +148,12 @@ const CartDrawer = () => {
         ? `Add ${formatINR(amountToSecondGift)} more for Gift 2`
         : "Gift 1 and Gift 2 unlocked";
 
-  const isCouponEligible = (coupon: Coupon) => {
+  const isCouponEligible = useCallback((coupon: Coupon) => {
     if (subtotal < coupon.minSubtotal) return false;
     const buyGet = parseBuyGetConfig(coupon);
     if (buyGet && paidItemCount < buyGet.buy + buyGet.get) return false;
     return true;
-  };
+  }, [paidItemCount, subtotal]);
 
   useEffect(() => {
     let active = true;
@@ -195,7 +196,7 @@ const CartDrawer = () => {
     if (subtotal < appliedCoupon.minSubtotal || !isCouponEligible(appliedCoupon)) {
       setAppliedCouponCode(null);
     }
-  }, [appliedCoupon, appliedCouponCode, subtotal, paidItemCount]);
+  }, [appliedCoupon, appliedCouponCode, isCouponEligible, subtotal]);
 
   const handleApplyToggleCoupon = (coupon: Coupon) => {
     if (appliedCouponCode === coupon.code) {
@@ -378,16 +379,15 @@ const CartDrawer = () => {
                         router.push(`/accessory/${item.id.replace(/^gift-/, "")}`);
                       }}
                     >
-                      <img
+                      <ImageWithFallback
                         src={withCloudinaryTransforms(item.image || "/images/logo.png?v=2", { width: 160 })}
+                        fallbackSrc="/images/logo.png?v=2"
                         alt={item.name}
+                        width={80}
+                        height={80}
+                        sizes="80px"
                         className="w-20 h-20 rounded-md object-cover bg-secondary"
                         loading="lazy"
-                        decoding="async"
-                        onError={(e) => {
-                          e.currentTarget.onerror = null;
-                          e.currentTarget.src = "/images/logo.png?v=2";
-                        }}
                       />
                       <div className="flex-1 min-w-0">
                         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">

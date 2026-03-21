@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import ImageWithFallback from "@/components/ImageWithFallback";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -313,16 +314,15 @@ const Header = () => {
                         }}
                         className="text-left"
                       >
-                        <img
+                        <ImageWithFallback
                           src={withCloudinaryTransforms(celeb.image, { width: 320 })}
+                          fallbackSrc="/images/celebrities/srk.png"
                           alt={celeb.label}
+                          width={320}
+                          height={427}
+                          sizes="50vw"
                           className="aspect-[3/4] w-full object-cover border border-border/60"
                           loading="lazy"
-                          decoding="async"
-                          onError={(e) => {
-                            e.currentTarget.onerror = null;
-                            e.currentTarget.src = "/images/celebrities/srk.png";
-                          }}
                         />
                         <p className="mt-2 text-[14px] text-gray-700 leading-none">{celeb.label}</p>
                         <p className="mt-1 text-[5px] uppercase tracking-[0.14em] text-muted-foreground">

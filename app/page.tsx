@@ -10,6 +10,7 @@ import nextDynamic from "next/dynamic";
 import { JsonLd } from "@/components/JsonLd";
 import { getOrganizationSchema, getWebSiteSchema, getFAQSchema } from "@/lib/seo";
 import { getAllProducts } from "@/lib/db/products";
+import { getImagesByUsage } from "@/lib/db/images";
 import type { HomepagePerfumeCardData } from "@/types/homepage";
 
 export const revalidate = 120;
@@ -25,7 +26,10 @@ const About = nextDynamic(() => import("@/components/About"), {
 });
 
 export default async function Home() {
-  const perfumes = await getAllProducts();
+  const [perfumes, heroSlides] = await Promise.all([
+    getAllProducts(),
+    getImagesByUsage("hero"),
+  ]);
   const homepagePerfumes: HomepagePerfumeCardData[] = perfumes.map((product) => ({
     id: product.id,
     name: product.name,
@@ -51,7 +55,7 @@ export default async function Home() {
     <main className="bg-background min-h-screen">
       <JsonLd data={jsonLd} />
       <Header />
-      <Hero />
+      <Hero initialSlides={heroSlides} />
       <Collection perfumes={homepagePerfumes} />
       <div style={{ contentVisibility: "auto", containIntrinsicSize: "1400px" }}>
         <HumeSpecialSection perfumes={homepagePerfumes} />
