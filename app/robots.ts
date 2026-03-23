@@ -1,16 +1,13 @@
 import type { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
-  const allowRules = [
-    "/",
-    "/sitemap.xml",
-    "/llms.txt",
-    "/fragrance-guides",
-    "/shop",
-    "/hume-special",
-    "/bestseller",
+  const allowRules = ["/"];
+  const disallowRules = [
+    "/_next/",
+    "/api/",
+    "/admin",
+    "/checkout",
   ];
-  const disallowRules = ["/_next/image", "/api/"];
 
   return {
     rules: [

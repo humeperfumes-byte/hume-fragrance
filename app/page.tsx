@@ -5,6 +5,8 @@ import BestsellerSection from "@/components/BestsellerSection";
 import RefillProgramSection from "@/components/RefillProgramSection";
 import SeoHubTeaser from "@/components/SeoHubTeaser";
 import Collection from "@/components/Collection";
+import HomeFaqSection from "@/components/HomeFaqSection";
+import HomeReviewsSection from "@/components/HomeReviewsSection";
 import Footer from "@/components/Footer";
 import nextDynamic from "next/dynamic";
 import { JsonLd } from "@/components/JsonLd";
@@ -43,6 +45,7 @@ export default async function Home() {
     dbCategoryIds: product.dbCategoryIds,
     images: product.images.slice(0, 1),
     price: product.price,
+    reviews: product.reviews,
     badges: product.badges,
   }));
   const jsonLd = [
@@ -65,6 +68,12 @@ export default async function Home() {
       </div>
       <div style={{ contentVisibility: "auto", containIntrinsicSize: "1100px" }}>
         <RefillProgramSection />
+      </div>
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1300px" }}>
+        <HomeReviewsSection perfumes={homepagePerfumes} />
+      </div>
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1400px" }}>
+        <HomeFaqSection />
       </div>
       <div style={{ contentVisibility: "auto", containIntrinsicSize: "900px" }}>
         <SeoHubTeaser />

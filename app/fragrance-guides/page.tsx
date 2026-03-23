@@ -112,6 +112,14 @@ export default function FragranceGuidesHubPage() {
   ].filter((item) => item.links.length > 0);
 
   const totalLinks = sections.reduce((sum, item) => sum + item.links.length, 0);
+  const featuredShortcuts = [
+    { href: "/best-perfume-for-men-india", label: "Best Perfume for Men India" },
+    { href: "/long-lasting-perfume-men-india", label: "Long Lasting Perfume Men India" },
+    { href: "/perfume-for-office", label: "Perfume for Office" },
+    { href: "/perfume-for-date-night", label: "Perfume for Date Night" },
+    { href: "/dior-sauvage-inspired-perfume", label: "Dior Sauvage Inspired Perfume" },
+    { href: "/replica-jazz-club-inspired-perfume", label: "Replica Jazz Club Inspired Perfume" },
+  ];
   const jsonLd = [
     {
       "@context": "https://schema.org",
@@ -156,6 +164,25 @@ export default function FragranceGuidesHubPage() {
           <p className="mt-3 text-sm text-muted-foreground">
             Total indexed-target links listed here: <span className="font-medium text-foreground">{totalLinks}</span>
           </p>
+          <div className="mt-8 rounded-[28px] border border-border/60 bg-gradient-to-b from-white to-secondary/20 p-6 shadow-[0_18px_45px_rgba(15,15,20,0.04)]">
+            <p className="text-caption text-muted-foreground mb-3">Quick Answer</p>
+            <p className="text-body text-foreground max-w-4xl leading-relaxed">
+              If you are looking for the best HUME pages for search, AI assistants, and product discovery,
+              start with broad recommendation hubs, then move into inspired-by, alternatives-to, budget, note-family,
+              and comparison pages before landing on the final product page.
+            </p>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {featuredShortcuts.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-2xl border border-border/60 bg-background/80 px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-foreground/15 hover:text-foreground"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 

@@ -183,43 +183,70 @@ export const getItemListSchema = (
   })),
 });
 
+export const homeFaqItems = [
+  {
+    question: "What are inspired perfumes?",
+    answer:
+      "Inspired perfumes are fragrances created to capture the overall character and feel of iconic scent profiles. HUME crafts refined interpretations using premium ingredients and a modern EDP approach.",
+  },
+  {
+    question: "How long do HUME perfumes last?",
+    answer:
+      "Most HUME perfumes are designed for 6 to 12+ hours of wear depending on the scent family, weather, skin type, and spray count. Richer woody, amber, oud, and gourmand profiles usually last the longest.",
+  },
+  {
+    question: "Are HUME perfumes strong enough for Indian weather?",
+    answer:
+      "Yes. HUME fragrances are built with Indian weather in mind, so they are designed to project well and remain noticeable through heat, humidity, office wear, and evening outings.",
+  },
+  {
+    question: "Are HUME perfumes the same as designer originals?",
+    answer:
+      "No. HUME perfumes are inspired by iconic fragrance directions, but they are not exact copies. The goal is to recreate the vibe, character, and experience in a HUME formulation.",
+  },
+  {
+    question: "Which HUME perfumes are best sellers?",
+    answer:
+      "Our best sellers usually include versatile and compliment-getting profiles such as fresh blue fragrances, spicy evening scents, and rich gourmand blends. You can explore them directly in the Best Seller section on the homepage.",
+  },
+  {
+    question: "Do you offer perfumes for office, date night, and daily wear?",
+    answer:
+      "Yes. HUME has fragrances suited for office, daily wear, parties, travel, weddings, date nights, gym freshness, and colder evening occasions. You can browse by occasion and scent family across the site.",
+  },
+  {
+    question: "Can I try smaller formats before choosing a full bottle?",
+    answer:
+      "Yes. HUME offers build-your-kit and smaller-format discovery options so you can try multiple scent profiles before deciding on your full-bottle favorites.",
+  },
+  {
+    question: "Do you offer refill options?",
+    answer:
+      "Yes. HUME has a refill program for customers who want a more sustainable and premium repurchase experience. You can explore it from the Refill section on the website.",
+  },
+  {
+    question: "How do I choose the right HUME perfume for me?",
+    answer:
+      "The best way is to choose based on your preferred scent family, occasion, and performance style. Fresh and clean lovers can start with blue or citrus profiles, while richer evening wear usually leans toward amber, oud, leather, tobacco, or gourmand styles.",
+  },
+  {
+    question: "Does HUME deliver across India?",
+    answer:
+      "Yes. HUME serves customers across India, with dispatch on ready-stock orders and clear WhatsApp support for order help and fragrance guidance.",
+  },
+] as const;
+
 export const getFAQSchema = () => ({
   "@context": "https://schema.org",
   "@type": "FAQPage",
-  mainEntity: [
-    {
-      "@type": "Question",
-      name: "What are inspired perfumes?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Inspired perfumes are fragrances crafted to capture the essence and character of iconic luxury scents. HUME Perfumes uses premium ingredients to create refined alternatives with a modern, elevated profile.",
-      },
+  mainEntity: homeFaqItems.map((item) => ({
+    "@type": "Question",
+    name: item.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: item.answer,
     },
-    {
-      "@type": "Question",
-      name: "How long do HUME perfumes last?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "HUME perfumes are formulated for exceptional longevity, typically lasting 6-12+ hours depending on the fragrance. Our oriental and oud-based scents offer the longest performance.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Are HUME perfumes the same as designer originals?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "HUME perfumes are inspired by iconic fragrance profiles and crafted to capture their essence. While they share similar scent profiles, they are unique formulations by HUME with a modern, elevated character.", 
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Which brands does HUME have inspired alternatives for?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "HUME offers inspired alternatives across a curated range of luxury scent profiles, with new interpretations added regularly.", 
-      },
-    },
-  ],
+  })),
 });
 
 type ProductFaqInput = {
