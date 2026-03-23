@@ -1,7 +1,7 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CelebrityFavoriteCard from "@/components/CelebrityFavoriteCard";
-import { getAllProducts } from "@/lib/db/products";
+import { getAllPublicProducts } from "@/lib/db/products";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ export default async function CelebritiesFavoritesPage({
   searchParams: Promise<{ celebrity?: string }>;
 }) {
   const { celebrity } = await searchParams;
-  const allPerfumes = await getAllProducts();
+  const allPerfumes = await getAllPublicProducts();
   const favoritePerfumes = allPerfumes
     .filter((perfume) => Boolean(perfume.woreBy))
     .filter((perfume) =>

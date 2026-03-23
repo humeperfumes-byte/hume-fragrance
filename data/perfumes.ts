@@ -21,6 +21,7 @@ export interface PerfumeData {
   name: string;
   inspiration: string;
   inspirationBrand: string;
+  visibility?: "public" | "seo_only";
   woreBy?: string;
   woreByImageUrl?: string;
   category: string;

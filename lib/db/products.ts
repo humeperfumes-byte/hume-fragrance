@@ -15,6 +15,7 @@ type ProductBadges = Partial<{
   humeSpecial: boolean;
   limitedStock: boolean;
 }>;
+type ProductVisibility = "public" | "seo_only";
 
 function getStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
@@ -98,6 +99,7 @@ function transformProduct(
     name: product.name,
     inspiration: product.inspiration,
     inspirationBrand: product.inspirationBrand,
+    visibility: (product.visibility ?? "public") as ProductVisibility,
     woreBy: product.woreBy ?? undefined,
     woreByImageUrl: withCloudinaryTransforms(product.woreByImageUrl ?? defaultCelebImage),
     category: product.category,
@@ -199,6 +201,22 @@ export const getAllProducts = cache(async (): Promise<PerfumeData[]> => {
   return getAllProductsCached();
 });
 
+const getAllPublicProductsCached = unstable_cache(
+  async (): Promise<PerfumeData[]> => {
+    const all = await getAllProductsRaw();
+    return all.filter((product) => (product.visibility ?? "public") === "public");
+  },
+  ["products:public"],
+  {
+    revalidate: 120,
+    tags: ["products"],
+  }
+);
+
+export const getAllPublicProducts = cache(async (): Promise<PerfumeData[]> => {
+  return getAllPublicProductsCached();
+});
+
 // Get product by ID
 export async function getProductById(id: string): Promise<PerfumeData | null> {
   try {
@@ -254,7 +272,7 @@ export async function getProductsByCategory(
   categoryId: string
 ): Promise<PerfumeData[]> {
   try {
-    const all = await getAllProducts();
+    const all = await getAllPublicProducts();
     return all.filter((p) => (p.categoryIds ?? [p.categoryId]).includes(categoryId));
   } catch (error) {
     console.error(`Error loading category ${categoryId} from DB:`, error);

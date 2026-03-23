@@ -3,6 +3,7 @@ export type HomepagePerfumeCardData = {
   name: string;
   inspiration: string;
   inspirationBrand?: string;
+  visibility?: "public" | "seo_only";
   category: string;
   categoryId: string;
   categoryTags?: Array<{ id: string; label?: string }>;

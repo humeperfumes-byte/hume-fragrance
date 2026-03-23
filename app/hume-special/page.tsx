@@ -4,7 +4,7 @@ import Footer from "@/components/Footer";
 import PerfumeCard from "@/components/PerfumeCard";
 import SeoHubTeaser from "@/components/SeoHubTeaser";
 import { JsonLd } from "@/components/JsonLd";
-import { getAllProducts } from "@/lib/db/products";
+import { getAllPublicProducts } from "@/lib/db/products";
 import { getBreadcrumbSchema, getItemListSchema } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export const revalidate = 120;
 
 export default async function HumeSpecialPage() {
-  const products = await getAllProducts();
+  const products = await getAllPublicProducts();
   const specialProducts = products.filter((p) => p.badges?.humeSpecial);
   const jsonLd = [
     getItemListSchema("HUME Special Fragrances", "/hume-special", specialProducts),

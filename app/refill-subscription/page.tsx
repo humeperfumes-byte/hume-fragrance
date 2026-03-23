@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, Home, ShoppingBag, Sparkles, User, MoreHorizontal } from "lucide-react";
-import { getAllProducts } from "@/lib/db/products";
+import { getAllPublicProducts } from "@/lib/db/products";
 import FragranceCardScroller from "@/components/refill/FragranceCardScroller";
 
 export const metadata: Metadata = {
@@ -26,7 +26,7 @@ const steps = [
 ];
 
 export default async function RefillSubscriptionPage() {
-  const products = await getAllProducts();
+  const products = await getAllPublicProducts();
   const refillOptions = products.map((product) => ({
     id: product.id,
     name: product.name,

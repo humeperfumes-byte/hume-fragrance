@@ -10,7 +10,7 @@ import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import type { HeroSlide } from "@/lib/db/images";
 
 const fallbackSlides = [
-  { url: "/images/collection-hero.jpg", label: "HUME collection", link: "/shop" },
+  { url: "/images/collection-hero.png", label: "HUME collection", link: "/shop" },
   { url: "/images/hero-perfume.jpg", label: "HUME luxury perfume", link: "/shop" },
   { url: "/images/hero-perfume.jpg", label: "HUME offers", link: "/shop" },
 ];
@@ -116,7 +116,7 @@ const Hero = ({ initialSlides = fallbackSlides }: { initialSlides?: HeroSlide[] 
             >
               <CarouselContent className="-ml-0">
                 {slides.map((slide, index) => {
-                  const isLcpCandidate = index === 0 || slide.url.includes("collection-hero.jpg");
+                  const isLcpCandidate = index === 0 || slide.url.includes("collection-hero.png");
                   const optimizedSlideUrl = withCloudinaryTransforms(slide.url, { width: 900 });
                   return (
                     <CarouselItem key={`${slide.url}-${index}`} className="pl-0">

@@ -3,14 +3,14 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { JsonLd } from "@/components/JsonLd";
 import { getCollectionPageSchema, getBreadcrumbSchema } from "@/lib/seo";
-import { getAllProducts } from "@/lib/db/products";
+import { getAllPublicProducts } from "@/lib/db/products";
 import ShopContent from "./ShopContent";
 import SeoHubTeaser from "@/components/SeoHubTeaser";
 
 export const revalidate = 120;
 
 export default async function ShopPage() {
-  const perfumes = await getAllProducts();
+  const perfumes = await getAllPublicProducts();
 
   const shopJsonLd = [
     getCollectionPageSchema(perfumes),

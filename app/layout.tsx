@@ -85,7 +85,7 @@ export default async function RootLayout({
         <link
           rel="preload"
           as="image"
-          href="/images/collection-hero.jpg"
+          href="/images/collection-hero.png"
           fetchPriority="high"
         />
         <link rel="icon" href="/images/logo.png?v=3" type="image/png" />

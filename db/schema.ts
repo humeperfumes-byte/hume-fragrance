@@ -2,6 +2,7 @@ import { pgTable, text, varchar, decimal, jsonb, boolean, timestamp, pgEnum, int
 
 // Enums
 export const genderEnum = pgEnum("gender", ["Men", "Women", "Unisex"]);
+export const productVisibilityEnum = pgEnum("product_visibility", ["public", "seo_only"]);
 
 // Products/Perfumes Table
 export const products = pgTable("products", {
@@ -43,6 +44,7 @@ export const products = pgTable("products", {
   }>().notNull(),
   size: varchar("size", { length: 50 }).notNull(),
   primaryBlogSlug: varchar("primary_blog_slug", { length: 255 }),
+  visibility: productVisibilityEnum("visibility").notNull().default("public"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

@@ -11,7 +11,7 @@ import Footer from "@/components/Footer";
 import nextDynamic from "next/dynamic";
 import { JsonLd } from "@/components/JsonLd";
 import { getOrganizationSchema, getWebSiteSchema, getFAQSchema } from "@/lib/seo";
-import { getAllProducts } from "@/lib/db/products";
+import { getAllPublicProducts } from "@/lib/db/products";
 import { getImagesByUsage } from "@/lib/db/images";
 import type { HomepagePerfumeCardData } from "@/types/homepage";
 
@@ -29,7 +29,7 @@ const About = nextDynamic(() => import("@/components/About"), {
 
 export default async function Home() {
   const [perfumes, heroSlides] = await Promise.all([
-    getAllProducts(),
+    getAllPublicProducts(),
     getImagesByUsage("hero"),
   ]);
   const homepagePerfumes: HomepagePerfumeCardData[] = perfumes.map((product) => ({

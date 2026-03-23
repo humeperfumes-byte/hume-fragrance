@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ScentQuiz from "@/components/ScentQuiz";
-import { getAllProducts } from "@/lib/db/products";
+import { getAllPublicProducts } from "@/lib/db/products";
 
 export const metadata: Metadata = {
   title: "Scent Quiz - Find Your Fragrance in 60s",
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function ScentQuizPage() {
-  const perfumes = await getAllProducts();
+  const perfumes = await getAllPublicProducts();
 
   return (
     <main className="bg-background min-h-screen">
@@ -22,4 +22,3 @@ export default async function ScentQuizPage() {
     </main>
   );
 }
-

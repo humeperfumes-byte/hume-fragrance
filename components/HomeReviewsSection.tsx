@@ -41,6 +41,19 @@ function formatReviewDate(dateString: string) {
   return `${months[month - 1]} ${year}`;
 }
 
+function getReviewProductSlug(perfume: HomepagePerfumeCardData) {
+  if (!perfume.inspirationBrand) {
+    return perfume.id;
+  }
+
+  return getProductSeoSlug({
+    id: perfume.id,
+    name: perfume.name,
+    inspiration: perfume.inspiration,
+    inspirationBrand: perfume.inspirationBrand,
+  });
+}
+
 function getHomeReviewCards(perfumes: HomepagePerfumeCardData[]): ReviewCard[] {
   return perfumes
     .flatMap((perfume) =>
@@ -51,7 +64,7 @@ function getHomeReviewCards(perfumes: HomepagePerfumeCardData[]): ReviewCard[] {
         date: review.date,
         content: review.content,
         productName: perfume.name,
-        productSlug: perfume.inspirationBrand ? getProductSeoSlug(perfume) : perfume.id,
+        productSlug: getReviewProductSlug(perfume),
         inspiration: perfume.inspiration,
       }))
     )

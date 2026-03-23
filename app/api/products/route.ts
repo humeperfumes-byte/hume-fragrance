@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { products, productCategories } from "@/db/schema";
 import { z } from "zod";
 import { requireAdminToken } from "@/lib/admin-auth";
-import { getAllProducts } from "@/lib/db/products";
+import { getAllProducts, getAllPublicProducts } from "@/lib/db/products";
 
 const imageUrlSchema = z
   .array(z.string().trim().url())
@@ -16,7 +16,11 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const categoryId = searchParams.get("categoryId");
     const gender = searchParams.get("gender");
-    const allProducts = await getAllProducts();
+    const includeHidden = searchParams.get("includeHidden") === "1";
+    const unauthorized = includeHidden ? requireAdminToken(request) : null;
+    if (unauthorized) return unauthorized;
+
+    const allProducts = includeHidden ? await getAllProducts() : await getAllPublicProducts();
     const filtered = allProducts.filter((product) => {
       const byCategory =
         !categoryId ||
@@ -70,6 +74,7 @@ export async function POST(request: NextRequest) {
         occasion: z.array(z.string()),
       }),
       size: z.string(),
+      visibility: z.enum(["public", "seo_only"]).optional().default("public"),
     });
 
     const validatedData = productSchema.parse(body);

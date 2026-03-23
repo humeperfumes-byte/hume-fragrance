@@ -18,6 +18,7 @@ type ProductForm = {
   name: string;
   inspiration: string;
   inspirationBrand: string;
+  visibility: "public" | "seo_only";
   woreBy: string;
   woreByImageUrl: string;
   category: string;
@@ -134,6 +135,7 @@ const initialProductForm: ProductForm = {
   name: "",
   inspiration: "",
   inspirationBrand: "",
+  visibility: "public",
   woreBy: "",
   woreByImageUrl: "https://placehold.co/600x600?text=Celeb",
   category: "",
@@ -350,9 +352,12 @@ export default function AdminDashboard() {
     setCheckoutDrafts(Array.isArray(data) ? data : []);
   }, [adminToken, timeWindowHours]);
 
-  async function loadAll() {
+  const loadAll = useCallback(async () => {
+    const productEndpoint = adminToken.trim() ? "/api/products?includeHidden=1" : "/api/products";
     const [productsRes, postsRes] = await Promise.all([
-      fetch("/api/products"),
+      fetch(productEndpoint, {
+        headers: adminToken.trim() ? { "x-admin-token": adminToken.trim() } : undefined,
+      }),
       fetch("/api/blog"),
     ]);
 
@@ -363,14 +368,14 @@ export default function AdminDashboard() {
 
     setProducts(Array.isArray(productsData) ? productsData : []);
     setPosts(Array.isArray(postsData) ? postsData : []);
-  }
+  }, [adminToken]);
 
   useEffect(() => {
     loadAll().catch((error) => {
       console.error(error);
       setStatus("Failed to load existing data.");
     });
-  }, []);
+  }, [loadAll]);
 
   useEffect(() => {
     if (!adminToken.trim()) return;
@@ -400,6 +405,7 @@ export default function AdminDashboard() {
       name: productForm.name,
       inspiration: productForm.inspiration,
       inspirationBrand: productForm.inspirationBrand,
+      visibility: productForm.visibility,
       woreBy: productForm.woreBy || null,
       woreByImageUrl:
         productForm.woreByImageUrl || "https://placehold.co/600x600?text=Celeb",
@@ -863,6 +869,17 @@ export default function AdminDashboard() {
                 <Input placeholder="Name" value={productForm.name} onChange={(e) => setProductForm((s) => ({ ...s, name: e.target.value }))} required />
                 <Input placeholder="Inspiration" value={productForm.inspiration} onChange={(e) => setProductForm((s) => ({ ...s, inspiration: e.target.value }))} required />
                 <Input placeholder="Inspiration Brand" value={productForm.inspirationBrand} onChange={(e) => setProductForm((s) => ({ ...s, inspirationBrand: e.target.value }))} required />
+                <Input
+                  placeholder="Visibility: public or seo_only"
+                  value={productForm.visibility}
+                  onChange={(e) =>
+                    setProductForm((s) => ({
+                      ...s,
+                      visibility: (e.target.value as ProductForm["visibility"]) || "public",
+                    }))
+                  }
+                  required
+                />
                 <Input placeholder="Worn by (optional celeb name)" value={productForm.woreBy} onChange={(e) => setProductForm((s) => ({ ...s, woreBy: e.target.value }))} />
                 <Input placeholder="Worn by image URL (Cloudinary)" value={productForm.woreByImageUrl} onChange={(e) => setProductForm((s) => ({ ...s, woreByImageUrl: e.target.value }))} required />
                 <Input
@@ -931,6 +948,9 @@ export default function AdminDashboard() {
                   <div>
                     <p className="font-medium">{product.name}</p>
                     <p className="text-sm text-muted-foreground">{product.id}</p>
+                    <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                      {product.visibility ?? "public"}
+                    </p>
                   </div>
                   <Button variant="destructive" size="sm" onClick={() => onDeleteProduct(product.id)} disabled={busy}>
                     Delete

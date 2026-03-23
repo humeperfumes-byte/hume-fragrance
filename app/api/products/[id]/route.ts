@@ -41,6 +41,7 @@ const productSchema = z.object({
     })
     .optional(),
   size: z.string().optional(),
+  visibility: z.enum(["public", "seo_only"]).optional(),
 });
 
 type ProductUpdateInput = z.infer<typeof productSchema>;

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getAllProducts } from "@/lib/db/products";
+import { getAllPublicProducts } from "@/lib/db/products";
 import { isVisibleNatureCategory } from "@/lib/nature-categories";
 
 function prettyCategory(label: string) {
@@ -10,7 +10,7 @@ function prettyCategory(label: string) {
 }
 
 export default async function Footer() {
-  const products = await getAllProducts();
+  const products = await getAllPublicProducts();
 
   const categoryMap = new Map<string, string>();
   products.forEach((product) => {
