@@ -116,8 +116,10 @@ const Hero = ({ initialSlides = fallbackSlides }: { initialSlides?: HeroSlide[] 
             >
               <CarouselContent className="-ml-0">
                 {slides.map((slide, index) => {
-                  const isLcpCandidate = index === 0 || slide.url.includes("collection-hero.png");
-                  const optimizedSlideUrl = withCloudinaryTransforms(slide.url, { width: 900 });
+                  const isLcpCandidate = index === 0;
+                  const optimizedSlideUrl = withCloudinaryTransforms(slide.url, {
+                    width: isLcpCandidate ? 760 : 680,
+                  });
                   return (
                     <CarouselItem key={`${slide.url}-${index}`} className="pl-0">
                       <div className="relative w-full aspect-square">
@@ -132,7 +134,7 @@ const Hero = ({ initialSlides = fallbackSlides }: { initialSlides?: HeroSlide[] 
                               loading={isLcpCandidate ? "eager" : "lazy"}
                               fetchPriority={isLcpCandidate ? "high" : "auto"}
                               priority={isLcpCandidate}
-                              quality={60}
+                              quality={55}
                             />
                           </a>
                         ) : (
@@ -146,7 +148,7 @@ const Hero = ({ initialSlides = fallbackSlides }: { initialSlides?: HeroSlide[] 
                               loading={isLcpCandidate ? "eager" : "lazy"}
                               fetchPriority={isLcpCandidate ? "high" : "auto"}
                               priority={isLcpCandidate}
-                              quality={60}
+                              quality={55}
                             />
                           </Link>
                         )}

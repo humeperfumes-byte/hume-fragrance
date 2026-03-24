@@ -5,6 +5,7 @@ import { LiaCartPlusSolid } from "react-icons/lia";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { toast } from "@/hooks/use-toast";
 import { formatINR } from "@/lib/currency";
@@ -48,6 +49,7 @@ const PerfumeCard = ({
 }: PerfumeCardProps) => {
   const { addItem } = useCart();
   const router = useRouter();
+  const [upgradeImage, setUpgradeImage] = useState(false);
   const productPath = getProductPath({
     id,
     name,
@@ -56,9 +58,17 @@ const PerfumeCard = ({
   });
   const blurDataURL =
     "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iNDIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjQyIiBmaWxsPSIjZWVlY2VjIi8+PC9zdmc+";
-  const cardImage = withCloudinaryTransforms(image, { width: 515 });
+  const cardImage = withCloudinaryTransforms(image, { width: upgradeImage ? 1200 : 720 });
   const displayPrice = formatINR(price);
   const isPriorityCard = prioritizeImage ?? index === 0;
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setUpgradeImage(true);
+    }, 3200);
+
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const categoryLine = (() => {
     const labels = new Set<string>();
@@ -129,7 +139,7 @@ const PerfumeCard = ({
             width={400}
             height={533}
             sizes="(max-width: 640px) 90vw, (max-width: 1200px) 33vw, 25vw"
-            quality={60}
+            quality={upgradeImage ? 92 : 75}
             priority={isPriorityCard}
             fetchPriority={isPriorityCard ? "high" : "auto"}
             className="w-full aspect-[3/4] object-cover transition-transform duration-700 group-hover:scale-105"
