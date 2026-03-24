@@ -1,14 +1,14 @@
 import Link from "next/link";
 
 const featuredLinks = [
-  { href: "/best-perfume-for-men-india", label: "Best Perfume For Men India" },
-  { href: "/long-lasting-perfume-men-india", label: "Long Lasting Perfume Men India" },
-  { href: "/perfume-for-office", label: "Perfume For Office" },
-  { href: "/perfume-for-date-night", label: "Perfume For Date Night" },
-  { href: "/perfume-for-diwali", label: "Perfume For Diwali" },
-  { href: "/perfume-under-999", label: "Perfume Under 999" },
-  { href: "/dior-sauvage-inspired-perfume", label: "Dior Sauvage Inspired Perfume" },
-  { href: "/replica-jazz-club-inspired-perfume", label: "Replica Jazz Club Inspired Perfume" },
+  { href: "/best-perfumes-for-men-available-online-in-india", label: "Best Perfumes For Men Available Online In India", tone: "AI Search" },
+  { href: "/best-long-lasting-perfumes-for-men", label: "Best Long-Lasting Perfumes For Men", tone: "AI Search" },
+  { href: "/difference-between-edp-and-edt", label: "Difference Between EDP And EDT", tone: "Education" },
+  { href: "/fragrance-families-explained", label: "Fragrance Families Explained", tone: "Education" },
+  { href: "/how-to-apply-perfume-for-maximum-longevity", label: "How To Apply Perfume For Maximum Longevity", tone: "How-To" },
+  { href: "/how-to-choose-a-signature-scent-from-popular-perfume-brands", label: "How To Choose A Signature Scent", tone: "How-To" },
+  { href: "/affordable-long-lasting-perfumes-under-1500-inr", label: "Affordable Long-Lasting Perfumes Under 1500 INR", tone: "Budget" },
+  { href: "/affordable-luxury-perfume-brands-for-women", label: "Affordable Luxury Perfume Brands For Women", tone: "Women" },
 ];
 
 export default function SeoHubTeaser() {
@@ -36,7 +36,7 @@ export default function SeoHubTeaser() {
               className="group relative overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-b from-white to-secondary/20 px-4 py-4 text-sm text-muted-foreground shadow-[0_14px_32px_rgba(15,15,20,0.04)] transition-all duration-300 hover:-translate-y-0.5 hover:border-foreground/15 hover:text-foreground hover:shadow-[0_18px_40px_rgba(15,15,20,0.08)]"
             >
               <span className="block text-[10px] uppercase tracking-[0.24em] text-muted-foreground/70 mb-2">
-                Guide
+                {link.tone}
               </span>
               <span className="block pr-5 leading-snug">{link.label}</span>
               <span className="absolute bottom-4 right-4 text-base text-foreground/35 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:text-foreground/65">

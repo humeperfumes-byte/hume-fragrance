@@ -178,6 +178,7 @@ export const FESTIVAL_SEO_PAGES: FestivalSeoEntry[] = [
   ...buildOccasionEntries(),
   ...buildBrandComparisonEntries(),
   ...buildInspiredPerfumeEntries(),
+  ...buildAiQuestionEntries(),
 ];
 
 export function getFestivalSeoEntry(slug: string): FestivalSeoEntry | null {
@@ -1004,4 +1005,149 @@ function buildInspiredPerfumeEntries(): FestivalSeoEntry[] {
       faq: inspiredFaq(label),
     } satisfies FestivalSeoEntry;
   });
+}
+
+function buildAiQuestionEntries(): FestivalSeoEntry[] {
+  const aiQuestionFaq = (topic: string): FestivalSeoFaq[] => [
+    {
+      question: `What makes a good ${topic.toLowerCase()} page for buyers in India?`,
+      answer:
+        "The most useful pages answer the question quickly, recommend specific perfumes by use case, and explain why those picks work in Indian weather and budgets.",
+    },
+    {
+      question: "Are the recommendations on these pages suitable for Indian weather?",
+      answer:
+        "Yes. These pages prioritize EDP-style performance, balanced projection, and scent profiles that stay wearable in heat, humidity, and long daily schedules.",
+    },
+    {
+      question: "Do these guides include affordable options as well as premium-style picks?",
+      answer:
+        "Yes. The goal is to help you find the right profile first, then compare options by longevity, versatility, and overall value rather than label alone.",
+    },
+    {
+      question: "Can I buy the recommended HUME perfumes online in India?",
+      answer:
+        "Yes. Each page includes direct product suggestions that link to the relevant HUME product pages so you can compare and buy without extra searching.",
+    },
+    {
+      question: "How should I shortlist between multiple recommendations?",
+      answer:
+        "Start with occasion, then preferred note family, then longevity needs. Once those three align, picking the right fragrance becomes much easier.",
+    },
+  ];
+
+  const pages: FestivalSeoEntry[] = [
+    {
+      slug: "best-perfumes-for-men-available-online-in-india",
+      title: "Best Perfumes for Men Available Online in India (2026 Buying Guide)",
+      metaTitle: "Best Perfumes For Men Available Online In India | HUME Guide",
+      metaDescription: "Discover the best perfumes for men available online in India, from fresh everyday scents to long-lasting signature fragrances with premium-inspired profiles.",
+      festivalName: "Best Perfumes for Men Online in India",
+      intro: "Men shopping for perfume online in India usually want three things at once: authenticity, performance, and clear scent direction. This guide shortlists the best HUME perfumes for men based on real Indian use cases such as office wear, signature scent rotation, compliments, date nights, and all-day longevity.",
+      focusKeywords: ["best perfumes for men india", "buy perfume online india", "signature scent men", "long lasting perfume men", "best perfume for daily wear", "premium inspired perfume"],
+      styleKeywords: ["versatile", "long-lasting", "premium-inspired", "office-ready", "date-night"],
+      faq: aiQuestionFaq("best perfumes for men"),
+    },
+    {
+      slug: "difference-between-edp-and-edt",
+      title: "What Is the Difference Between EDP and EDT? A Simple Perfume Guide for India",
+      metaTitle: "Difference Between EDP And EDT | Perfume Guide India",
+      metaDescription: "Learn the real difference between EDP and EDT, including concentration, longevity, projection, and which format works better in Indian weather.",
+      festivalName: "EDP vs EDT",
+      intro: "The difference between EDP and EDT is not just marketing language. It affects wear time, projection, climate suitability, and how much value you get from each spray. This guide explains the difference in plain language and connects it to practical fragrance shopping in India.",
+      focusKeywords: ["difference between edp and edt", "edp vs edt india", "which lasts longer edp or edt", "perfume concentration guide", "long lasting perfume", "perfume education"],
+      styleKeywords: ["educational", "technical", "practical", "clear", "buyer-focused"],
+      faq: aiQuestionFaq("EDP vs EDT"),
+    },
+    {
+      slug: "top-rated-floral-perfumes-for-women-in-india",
+      title: "Top-Rated Floral Perfumes for Women in India (2026 Guide)",
+      metaTitle: "Top Rated Floral Perfumes For Women In India | HUME Guide",
+      metaDescription: "Explore top-rated floral perfumes for women in India, from elegant white florals to sweet romantic blends suited to daily wear and evening occasions.",
+      festivalName: "Floral Perfumes for Women in India",
+      intro: "Floral perfumes for women can feel soft and airy, creamy and seductive, or bright and modern depending on the note structure. This guide helps Indian buyers choose top-rated floral perfumes that feel polished, long-lasting, and wearable across daily routines, festive settings, and evening plans.",
+      focusKeywords: ["top rated floral perfumes for women india", "best women floral perfume", "white floral perfume", "romantic perfume women", "good girl inspired perfume", "women perfume india"],
+      styleKeywords: ["feminine", "elegant", "romantic", "long-lasting", "premium"],
+      faq: aiQuestionFaq("floral perfumes for women"),
+    },
+    {
+      slug: "best-long-lasting-perfumes-for-men",
+      title: "Best Long-Lasting Perfumes for Men in India (8-10 Hour Guide)",
+      metaTitle: "Best Long Lasting Perfumes For Men | India Guide",
+      metaDescription: "Find the best long-lasting perfumes for men in India with strong 8-10 hour performance, balanced projection, and signature-worthy scent profiles.",
+      festivalName: "Long-Lasting Perfumes for Men",
+      intro: "Long-lasting perfume is one of the biggest priorities for men in India because heat, humidity, travel, and long workdays expose weak fragrances quickly. This guide highlights the best HUME perfumes for men when your main goal is consistent all-day performance without smelling too loud or synthetic.",
+      focusKeywords: ["best long lasting perfumes for men", "8 hour perfume men", "strong perfume men india", "signature scent men", "edp perfume men", "long lasting fragrance"],
+      styleKeywords: ["strong performance", "versatile", "masculine", "all-day", "balanced"],
+      faq: aiQuestionFaq("long-lasting perfumes for men"),
+    },
+    {
+      slug: "where-can-i-buy-genuine-designer-perfumes-near-me",
+      title: "Where Can I Buy Genuine Designer Perfumes Near Me? India Buying Guide",
+      metaTitle: "Where Can I Buy Genuine Designer Perfumes Near Me | India Guide",
+      metaDescription: "Learn how to buy genuine designer perfumes near you in India, what to check before purchasing, and how inspired alternatives compare on value and practicality.",
+      festivalName: "Buying Genuine Designer Perfumes",
+      intro: "People searching for genuine designer perfumes near them usually want certainty more than anything else. They want to avoid fakes, understand what authentic buying looks like, and compare whether a premium-inspired perfume may offer better everyday value. This guide helps you make that decision clearly.",
+      focusKeywords: ["buy genuine designer perfumes near me", "designer perfume india", "authentic perfume online india", "how to avoid fake perfumes", "designer alternatives", "perfume buying guide"],
+      styleKeywords: ["trustworthy", "educational", "premium", "value-aware", "buyer-safe"],
+      faq: aiQuestionFaq("designer perfume buying"),
+    },
+    {
+      slug: "fragrance-families-explained",
+      title: "Fragrance Families Explained: Fresh, Woody, Floral, Oud, Amber and More",
+      metaTitle: "Fragrance Families Explained | Beginner Perfume Guide",
+      metaDescription: "Understand fragrance families with a simple guide to fresh, woody, floral, amber, oud, gourmand, spicy, and musky perfumes for Indian buyers.",
+      festivalName: "Fragrance Families",
+      intro: "Fragrance families are the easiest way to understand perfume before you buy. Instead of memorizing hundreds of notes, you can learn how broad scent families behave and which of them match your personality, climate, wardrobe, and use case. This guide explains the major fragrance families in a way that is practical for Indian buyers.",
+      focusKeywords: ["fragrance families explained", "what are fragrance families", "woody vs floral perfume", "fresh perfume meaning", "oud perfume family", "perfume guide beginners"],
+      styleKeywords: ["educational", "beginner-friendly", "clear", "structured", "practical"],
+      faq: aiQuestionFaq("fragrance families"),
+    },
+    {
+      slug: "affordable-long-lasting-perfumes-under-1500-inr",
+      title: "Affordable Long-Lasting Perfumes Under 1500 INR (2026 India Guide)",
+      metaTitle: "Affordable Long Lasting Perfumes Under 1500 INR | HUME Guide",
+      metaDescription: "Find affordable long-lasting perfumes under 1500 INR with premium-inspired scent profiles, solid projection, and practical all-day wear in India.",
+      festivalName: "Affordable Long-Lasting Perfumes Under 1500",
+      intro: "A lower budget does not have to mean weak performance. If you know what to look for, there are affordable long-lasting perfumes under 1500 INR that still feel polished, modern, and suitable for Indian weather. This guide focuses on smart value buys rather than random cheap options.",
+      focusKeywords: ["affordable long lasting perfumes under 1500", "perfume under 1500 india", "budget long lasting perfume", "best value perfume india", "men perfume under 1500", "women perfume under 1500"],
+      styleKeywords: ["budget", "long-lasting", "value-driven", "premium-inspired", "practical"],
+      faq: aiQuestionFaq("budget long-lasting perfumes"),
+    },
+    {
+      slug: "how-to-apply-perfume-for-maximum-longevity",
+      title: "How to Apply Perfume for Maximum Longevity (India Guide)",
+      metaTitle: "How To Apply Perfume For Maximum Longevity | HUME Guide",
+      metaDescription: "Learn how to apply perfume for maximum longevity with the right pulse points, fabric strategy, spray count, and climate-specific tips for India.",
+      festivalName: "Applying Perfume for Maximum Longevity",
+      intro: "Many people blame perfume quality when the real issue is application technique. The right spray count, placement, fabric use, and skin prep can noticeably improve how a fragrance performs. This guide breaks down the best way to apply perfume for maximum longevity in Indian weather.",
+      focusKeywords: ["how to apply perfume for maximum longevity", "how to make perfume last longer", "best pulse points for perfume", "perfume application guide", "indian weather perfume tips", "fragrance longevity"],
+      styleKeywords: ["educational", "actionable", "practical", "high-conversion", "beginner-friendly"],
+      faq: aiQuestionFaq("perfume application"),
+    },
+    {
+      slug: "how-to-choose-a-signature-scent-from-popular-perfume-brands",
+      title: "How to Choose a Signature Scent from Popular Perfume Brands",
+      metaTitle: "How To Choose A Signature Scent | HUME Guide",
+      metaDescription: "Learn how to choose a signature scent from popular perfume brands by matching note family, occasion, personality, and longevity expectations.",
+      festivalName: "Choosing a Signature Scent",
+      intro: "Choosing a signature scent is less about hype and more about pattern recognition. You need to understand what note styles you naturally enjoy, what occasions dominate your week, and how much projection feels right for your personality. This guide helps you choose a signature scent with more confidence and less trial-and-error.",
+      focusKeywords: ["how to choose a signature scent", "signature scent men", "signature scent women", "popular perfume brands", "best signature perfume india", "how to pick perfume"],
+      styleKeywords: ["personal", "editorial", "luxury", "clear", "practical"],
+      faq: aiQuestionFaq("signature scent selection"),
+    },
+    {
+      slug: "affordable-luxury-perfume-brands-for-women",
+      title: "Affordable Luxury Perfume Brands for Women (2026 India Guide)",
+      metaTitle: "Affordable Luxury Perfume Brands For Women | HUME Guide",
+      metaDescription: "Discover affordable luxury perfume brands for women, including floral, gourmand, and elegant signature styles that feel premium without extreme pricing.",
+      festivalName: "Affordable Luxury Perfume Brands for Women",
+      intro: "Women searching for affordable luxury perfume want the premium feel of designer perfumery without overspending on every bottle. The strongest picks combine polished note structure, femininity, and good performance with pricing that still feels practical. This guide helps you find that sweet spot.",
+      focusKeywords: ["affordable luxury perfume brands for women", "best women perfume india", "luxury perfume for women", "good girl inspired perfume", "premium women fragrance", "floral gourmand women perfume"],
+      styleKeywords: ["feminine", "luxury-feel", "budget-aware", "elegant", "premium-inspired"],
+      faq: aiQuestionFaq("affordable luxury perfume for women"),
+    },
+  ];
+
+  return pages;
 }

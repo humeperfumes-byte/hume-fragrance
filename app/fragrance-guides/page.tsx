@@ -50,6 +50,22 @@ function renderLinks(items: LinkItem[]) {
 }
 
 export default function FragranceGuidesHubPage() {
+  const aiSearchGuides = [
+    "best-perfumes-for-men-available-online-in-india",
+    "difference-between-edp-and-edt",
+    "top-rated-floral-perfumes-for-women-in-india",
+    "best-long-lasting-perfumes-for-men",
+    "where-can-i-buy-genuine-designer-perfumes-near-me",
+    "fragrance-families-explained",
+    "affordable-long-lasting-perfumes-under-1500-inr",
+    "how-to-apply-perfume-for-maximum-longevity",
+    "how-to-choose-a-signature-scent-from-popular-perfume-brands",
+    "affordable-luxury-perfume-brands-for-women",
+  ]
+    .map((slug) => FESTIVAL_SEO_PAGES.find((item) => item.slug === slug))
+    .filter((item): item is NonNullable<(typeof FESTIVAL_SEO_PAGES)[number]> => Boolean(item))
+    .map((item) => ({ href: `/${item.slug}`, label: item.title }));
+
   const occasionGuides = FESTIVAL_SEO_PAGES.filter(
     (item) => item.slug.startsWith("perfume-for-") || item.slug.startsWith("best-office-perfume")
   ).map((item) => ({ href: `/${item.slug}`, label: item.title }));
@@ -100,6 +116,7 @@ export default function FragranceGuidesHubPage() {
   }));
 
   const sections = [
+    section("AI Search Guides", aiSearchGuides),
     section("Occasion Guides", occasionGuides),
     section("Budget Guides", budgetGuides),
     section("Note & Family Guides", noteGuides),
@@ -113,12 +130,12 @@ export default function FragranceGuidesHubPage() {
 
   const totalLinks = sections.reduce((sum, item) => sum + item.links.length, 0);
   const featuredShortcuts = [
-    { href: "/best-perfume-for-men-india", label: "Best Perfume for Men India" },
-    { href: "/long-lasting-perfume-men-india", label: "Long Lasting Perfume Men India" },
-    { href: "/perfume-for-office", label: "Perfume for Office" },
-    { href: "/perfume-for-date-night", label: "Perfume for Date Night" },
-    { href: "/dior-sauvage-inspired-perfume", label: "Dior Sauvage Inspired Perfume" },
-    { href: "/replica-jazz-club-inspired-perfume", label: "Replica Jazz Club Inspired Perfume" },
+    { href: "/best-perfumes-for-men-available-online-in-india", label: "Best Perfumes for Men Available Online in India" },
+    { href: "/best-long-lasting-perfumes-for-men", label: "Best Long-Lasting Perfumes for Men" },
+    { href: "/difference-between-edp-and-edt", label: "Difference Between EDP and EDT" },
+    { href: "/fragrance-families-explained", label: "Fragrance Families Explained" },
+    { href: "/how-to-apply-perfume-for-maximum-longevity", label: "How to Apply Perfume for Maximum Longevity" },
+    { href: "/how-to-choose-a-signature-scent-from-popular-perfume-brands", label: "How to Choose a Signature Scent" },
   ];
   const jsonLd = [
     {
@@ -181,6 +198,32 @@ export default function FragranceGuidesHubPage() {
                   {item.label}
                 </Link>
               ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="pb-14">
+        <div className="container-luxury">
+          <div className="rounded-[30px] border border-border/60 bg-gradient-to-br from-white via-secondary/10 to-secondary/25 p-6 md:p-8 shadow-[0_18px_45px_rgba(15,15,20,0.05)]">
+            <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+              <div className="max-w-3xl">
+                <p className="text-caption text-muted-foreground">AI Search Layer</p>
+                <h2 className="mt-3 font-serif text-3xl md:text-4xl">Most-Asked Perfume Questions</h2>
+                <p className="mt-3 text-body text-muted-foreground">
+                  These pages are built around the exact questions users ask ChatGPT, Gemini, and other AI assistants.
+                  They combine direct answers, product suggestions, and structured explanations for stronger AI citation pickup.
+                </p>
+              </div>
+              <Link
+                href="/best-perfumes-for-men-available-online-in-india"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-foreground/15 px-5 text-sm tracking-[0.12em] uppercase text-foreground transition-colors hover:bg-foreground hover:text-background"
+              >
+                Open Featured AI Guide
+              </Link>
+            </div>
+            <div className="mt-6">
+              {renderLinks(aiSearchGuides)}
             </div>
           </div>
         </div>

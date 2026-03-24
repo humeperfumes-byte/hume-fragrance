@@ -203,6 +203,16 @@ const ROUTE_CATEGORY_PREFERENCES: Record<string, string[]> = {
   "lattafa-asad-vs-dior-sauvage": ["spicy", "ambroxan", "woody", "bold"],
   "armaf-club-de-nuit-vs-creed-aventus": ["fresh fruity", "pineapple", "smoky", "woody"],
   "rasasi-hawas-vs-versace-eros": ["sweet", "fresh", "party", "strong projection"],
+  "best-perfumes-for-men-available-online-in-india": ["fresh", "woody", "versatile", "best seller"],
+  "difference-between-edp-and-edt": ["long lasting", "edp", "versatile", "all season"],
+  "top-rated-floral-perfumes-for-women-in-india": ["floral", "sweet", "gourmand", "feminine"],
+  "best-long-lasting-perfumes-for-men": ["strong projection", "woody", "amber", "long lasting"],
+  "where-can-i-buy-genuine-designer-perfumes-near-me": ["premium-inspired", "best seller", "versatile", "luxury"],
+  "fragrance-families-explained": ["fresh", "woody", "floral", "oud"],
+  "affordable-long-lasting-perfumes-under-1500-inr": ["budget", "long lasting", "fresh", "woody"],
+  "how-to-apply-perfume-for-maximum-longevity": ["long lasting", "woody", "amber", "versatile"],
+  "how-to-choose-a-signature-scent-from-popular-perfume-brands": ["signature", "versatile", "fresh", "woody"],
+  "affordable-luxury-perfume-brands-for-women": ["floral", "sweet", "gourmand", "luxury"],
 };
 
 const sortRecommendedProducts = (
