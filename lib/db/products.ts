@@ -204,7 +204,15 @@ export const getAllProducts = cache(async (): Promise<PerfumeData[]> => {
 const getAllPublicProductsCached = unstable_cache(
   async (): Promise<PerfumeData[]> => {
     const all = await getAllProductsRaw();
-    return all.filter((product) => (product.visibility ?? "public") === "public");
+    const visible = all.filter((product) => (product.visibility ?? "public") === "public");
+
+    // Safety fallback: if visibility flags are misconfigured in DB,
+    // do not return an empty storefront.
+    if (visible.length === 0 && all.length > 0) {
+      return all;
+    }
+
+    return visible;
   },
   ["products:public"],
   {

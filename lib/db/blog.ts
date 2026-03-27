@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { blogPosts, products } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { blogPosts as localBlogPosts, type BlogPost } from "@/data/blogPosts";
 
 // Transform database blog post to BlogPost format
@@ -27,14 +28,30 @@ function transformBlogPost(post: BlogPostRow): BlogPost {
   };
 }
 
+const getAllBlogPostsPersistent = unstable_cache(
+  async (): Promise<BlogPost[]> => {
+    try {
+      const posts = await db
+        .select()
+        .from(blogPosts)
+        .orderBy(desc(blogPosts.createdAt));
+
+      return posts.map(transformBlogPost);
+    } catch (error) {
+      console.error("Error loading blog posts from DB, using local fallback:", error);
+      return localBlogPosts;
+    }
+  },
+  ["blog:all"],
+  {
+    revalidate: 300,
+    tags: ["blog"],
+  }
+);
+
 const getAllBlogPostsCached = cache(async (): Promise<BlogPost[]> => {
   try {
-    const posts = await db
-      .select()
-      .from(blogPosts)
-      .orderBy(desc(blogPosts.createdAt));
-
-    return posts.map(transformBlogPost);
+    return await getAllBlogPostsPersistent();
   } catch (error) {
     console.error("Error loading blog posts from DB, using local fallback:", error);
     return localBlogPosts;

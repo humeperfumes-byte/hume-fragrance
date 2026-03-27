@@ -30,7 +30,11 @@ export async function GET(request: NextRequest) {
       return byCategory && byGender;
     });
 
-    return NextResponse.json(filtered);
+    return NextResponse.json(filtered, {
+      headers: includeHidden
+        ? { "Cache-Control": "private, no-store" }
+        : { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=1800" },
+    });
   } catch (error) {
     console.error("Error fetching products:", error);
     return NextResponse.json([]);

@@ -80,11 +80,12 @@ export default function CelebrityFavoriteCard({
   const tags = mappedTags.length > 0 ? mappedTags : getStyleTags(category, inspiration);
   const productFirst = index % 2 === 0;
   const productPath = getProductPath({ id, name, inspirationBrand, inspiration });
-  const productImage = withCloudinaryTransforms(image, { width: 640 });
+  const productImage = withCloudinaryTransforms(image, { width: index === 0 ? 560 : 480 });
   const celebPortrait = withCloudinaryTransforms(celebrityImage || "https://placehold.co/600x600?text=Celeb", {
-    width: 640,
+    width: index === 0 ? 560 : 480,
   });
   const displayPrice = formatINR(price);
+  const prioritizeMedia = index === 0;
 
   const handleAddToCart = () => {
     addItem({ id, name, inspiration, category, image, price, size: "50ml" });
@@ -116,7 +117,9 @@ export default function CelebrityFavoriteCard({
             alt={name}
             fill
             sizes="(max-width: 640px) 44vw, 180px"
-            quality={60}
+            priority={prioritizeMedia}
+            fetchPriority={prioritizeMedia ? "high" : "auto"}
+            quality={55}
             className="object-cover"
           />
         </div>
@@ -127,7 +130,7 @@ export default function CelebrityFavoriteCard({
             alt={celebrityName || "Celebrity"}
             fill
             sizes="(max-width: 640px) 44vw, 180px"
-            quality={60}
+            quality={55}
             className="object-cover"
           />
         </div>

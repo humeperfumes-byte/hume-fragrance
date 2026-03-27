@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { PerfumeData } from "@/data/perfumes";
+import { getClientCachedProducts } from "@/lib/client-products-cache";
 
 export default function KitPackShowcase() {
   const { addItem } = useCart();
@@ -31,9 +32,7 @@ export default function KitPackShowcase() {
     let active = true;
     const loadPerfumes = async () => {
       try {
-        const response = await fetch("/api/products");
-        if (!response.ok) throw new Error("Failed to load perfumes");
-        const data = (await response.json()) as PerfumeData[];
+        const data = await getClientCachedProducts();
         if (active) setAllPerfumes(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error("Failed to load perfumes:", error);

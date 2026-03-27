@@ -7,6 +7,7 @@ import ImageWithFallback from "@/components/ImageWithFallback";
 import { useRouter } from "next/navigation";
 import { celebrityFavorites } from "@/lib/celebrity-favorites";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
+import { getClientCachedProducts } from "@/lib/client-products-cache";
 
 type FilterType = "nature" | "gender" | "occasion" | "celebrity";
 
@@ -87,8 +88,7 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
 
   useEffect(() => {
     let mounted = true;
-    fetch("/api/products")
-      .then((res) => res.json())
+    getClientCachedProducts()
       .then((data) => {
         if (!mounted || !Array.isArray(data)) return;
         const byId = new Map<string, { woreByImageUrl?: string }>(

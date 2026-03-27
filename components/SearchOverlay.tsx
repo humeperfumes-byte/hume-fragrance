@@ -10,6 +10,7 @@ import { PerfumeData, getAverageRating } from "@/data/perfumes";
 import { formatINR } from "@/lib/currency";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getProductPath } from "@/lib/product-route";
+import { getClientCachedProducts } from "@/lib/client-products-cache";
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -23,8 +24,7 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
 
   useEffect(() => {
     let mounted = true;
-    fetch("/api/products")
-      .then((res) => res.json())
+    getClientCachedProducts()
       .then((data) => {
         if (!mounted || !Array.isArray(data)) return;
         setProducts(data);

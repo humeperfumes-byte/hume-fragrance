@@ -6,7 +6,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { getAccessoryById } from "@/lib/db/accessories";
 import AccessoryDetailClient from "./AccessoryDetailClient";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export async function generateMetadata({
   params,

@@ -1,31 +1,8 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { BlogPost } from "@/data/blogPosts";
+import { getAllBlogPosts } from "@/lib/db/blog";
 
-const LatestJournal = () => {
-  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
-
-  useEffect(() => {
-    async function fetchBlogPosts() {
-      try {
-        const response = await fetch("/api/blog");
-        if (!response.ok) {
-          throw new Error(`Failed to fetch blog posts: ${response.status}`);
-        }
-
-        const data = await response.json();
-        setBlogPosts(Array.isArray(data) ? data : []);
-      } catch (error) {
-        console.error("Error fetching blog posts:", error);
-        setBlogPosts([]);
-      }
-    }
-
-    fetchBlogPosts();
-  }, []);
-
+const LatestJournal = async () => {
+  const blogPosts = await getAllBlogPosts();
   const latest = blogPosts.slice(0, 6);
 
   return (

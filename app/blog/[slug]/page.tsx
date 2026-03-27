@@ -188,14 +188,14 @@ export default async function BlogPostPage({
           {post.imageUrl ? (
             <div className="mb-10 border border-border overflow-hidden bg-secondary/30">
               <Image
-                src={withCloudinaryTransforms(post.imageUrl, { width: 1200 })}
+                src={withCloudinaryTransforms(post.imageUrl, { width: 960 })}
                 alt={post.title}
-                width={1200}
-                height={720}
+                width={960}
+                height={576}
                 priority
                 fetchPriority="high"
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 768px"
-                quality={60}
+                quality={55}
                 className="w-full h-[360px] object-cover"
               />
             </div>

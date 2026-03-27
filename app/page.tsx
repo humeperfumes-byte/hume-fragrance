@@ -7,6 +7,7 @@ import SeoHubTeaser from "@/components/SeoHubTeaser";
 import Collection from "@/components/Collection";
 import HomeFaqSection from "@/components/HomeFaqSection";
 import HomeReviewsSection from "@/components/HomeReviewsSection";
+import LatestJournal from "@/components/LatestJournal";
 import Footer from "@/components/Footer";
 import nextDynamic from "next/dynamic";
 import { JsonLd } from "@/components/JsonLd";
@@ -18,9 +19,6 @@ import type { HomepagePerfumeCardData } from "@/types/homepage";
 export const revalidate = 120;
 
 const Craft = nextDynamic(() => import("@/components/Craft"), {
-  loading: () => <div className="py-24 md:py-32" />,
-});
-const LatestJournal = nextDynamic(() => import("@/components/LatestJournal"), {
   loading: () => <div className="py-24 md:py-32" />,
 });
 const About = nextDynamic(() => import("@/components/About"), {

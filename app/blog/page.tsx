@@ -6,7 +6,7 @@ import { getBreadcrumbSchema } from "@/lib/seo";
 import { getAllBlogPosts } from "@/lib/db/blog";
 import BlogClient from "./BlogClient";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Blog — Fragrance Guides, Tips & Comparisons",

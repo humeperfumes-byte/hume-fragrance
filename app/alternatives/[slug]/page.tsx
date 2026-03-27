@@ -9,7 +9,7 @@ import { getBreadcrumbSchema } from "@/lib/seo";
 import { getAllProducts } from "@/lib/db/products";
 import { getIntentPageBySlug, intentPages } from "@/lib/intent-pages";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export async function generateStaticParams() {
   return intentPages.map((page) => ({ slug: page.slug }));

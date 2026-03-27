@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description: "Answer a few quick questions and discover the best HUME fragrance matches for your style.",
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export default async function ScentQuizPage() {
   const perfumes = await getAllPublicProducts();

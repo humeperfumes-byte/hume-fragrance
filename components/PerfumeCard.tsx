@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { motion } from "framer-motion";
 import { LiaCartPlusSolid } from "react-icons/lia";
@@ -88,7 +88,7 @@ const PerfumeCard = ({
 
     if (labels.size === 0 && category) labels.add(category);
 
-    return Array.from(labels).slice(0, 3).join(" • ");
+    return Array.from(labels).slice(0, 3).join("  |  ");
   })();
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -132,7 +132,7 @@ const PerfumeCard = ({
         onMouseEnter={() => router.prefetch(productPath)}
         onClick={handleProductClick}
       >
-        <div className="relative overflow-hidden bg-secondary mb-6">
+        <div className="relative mb-6 overflow-hidden bg-secondary shadow-[0_12px_30px_rgba(12,14,18,0.12)]">
           <Image
             src={cardImage}
             alt={name}
@@ -200,3 +200,4 @@ const PerfumeCard = ({
 };
 
 export default PerfumeCard;
+
