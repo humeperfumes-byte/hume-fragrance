@@ -1,12 +1,16 @@
-"use client";
+﻿"use client";
 
 import { motion } from "framer-motion";
 import { Star } from "lucide-react";
+import { User } from "lucide-react";
+import Image from "next/image";
 import { Review, getAverageRating } from "@/data/perfumes";
+import { withCloudinaryTransforms } from "@/lib/cloudinary";
 
 interface ProductReviewsProps {
   reviews: Review[];
   productName: string;
+  inspiration?: string;
 }
 
 const StarRating = ({ rating }: { rating: number }) => {
@@ -16,18 +20,16 @@ const StarRating = ({ rating }: { rating: number }) => {
         <Star
           key={star}
           size={14}
-          className={
-            star <= rating
-              ? "fill-primary text-primary"
-              : "fill-muted text-muted"
-          }
+          className={star <= rating ? "fill-primary text-primary" : "fill-muted text-muted"}
         />
       ))}
     </div>
   );
 };
 
-const ProductReviews = ({ reviews, productName }: ProductReviewsProps) => {
+const ProductReviews = ({ reviews, productName, inspiration }: ProductReviewsProps) => {
+  if (reviews.length === 0) return null;
+
   const averageRating = getAverageRating(reviews);
   const totalReviews = reviews.length;
 
@@ -64,21 +66,15 @@ const ProductReviews = ({ reviews, productName }: ProductReviewsProps) => {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          {/* Section Header */}
           <div className="text-center mb-10">
-            <p className="text-caption text-muted-foreground mb-4">
-              Customer Reviews
-            </p>
-            <h2 className="text-headline mb-3">
-              Real Buyers, Real Feedback
-            </h2>
+            <p className="text-caption text-muted-foreground mb-4">Customer Reviews</p>
+            <h2 className="text-headline mb-3">Real Buyers, Real Feedback</h2>
             <p className="text-body text-muted-foreground">
-              {averageRating} / 5 • {totalReviews} reviews
+              {averageRating} / 5 ({totalReviews} reviews)
             </p>
           </div>
 
-          {/* Reviews Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {reviews.map((review, index) => (
               <motion.article
                 key={review.id}
@@ -86,41 +82,68 @@ const ProductReviews = ({ reviews, productName }: ProductReviewsProps) => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="border border-border p-6 bg-background"
+                className="group relative flex h-full flex-col justify-between overflow-hidden rounded-[28px] border border-border/60 bg-gradient-to-b from-white to-secondary/20 p-5 shadow-[0_18px_45px_rgba(15,15,20,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,15,20,0.10)]"
                 itemScope
                 itemType="https://schema.org/Review"
               >
-                {/* Hidden SEO data */}
                 <meta itemProp="itemReviewed" content={productName} />
                 <meta itemProp="author" content={review.author} />
-                <div
-                  itemProp="reviewRating"
-                  itemScope
-                  itemType="https://schema.org/Rating"
-                >
+                <div itemProp="reviewRating" itemScope itemType="https://schema.org/Rating">
                   <meta itemProp="ratingValue" content={String(review.rating)} />
                   <meta itemProp="bestRating" content="5" />
                 </div>
 
-                {/* Rating */}
-                <div className="mb-4">
+                <div className="mb-4 flex items-center justify-between gap-3">
                   <StarRating rating={review.rating} />
+                  <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-700">
+                    Verified
+                  </span>
                 </div>
 
-                {/* Review Content */}
-                <p
-                  className="text-body text-muted-foreground mb-5 leading-relaxed"
-                  itemProp="reviewBody"
-                >
-                  {review.content}
+                <p className="text-body text-muted-foreground mb-5 leading-relaxed" itemProp="reviewBody">
+                  &ldquo;{review.content}&rdquo;
                 </p>
 
-                {/* Author & Date */}
-                <div className="flex items-center justify-between text-caption text-muted-foreground pt-4 border-t border-border">
-                  <span className="text-foreground">{review.author}</span>
-                  <time dateTime={review.date} itemProp="datePublished">
+                <div className="mt-6 border-t border-border/60 pt-4">
+                  <div className="flex items-center justify-between gap-4 text-caption text-muted-foreground">
+                  <div className="flex min-w-0 items-center gap-3">
+                    {review.avatarUrl ? (
+                      <div className="relative h-9 w-9 overflow-hidden rounded-full ring-1 ring-border/70">
+                        <Image
+                          src={withCloudinaryTransforms(review.avatarUrl, { width: 96 })}
+                          alt={`${review.author} profile`}
+                          fill
+                          sizes="36px"
+                          unoptimized
+                          className="object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full border border-border/70 bg-secondary/70 text-muted-foreground">
+                        <User size={14} />
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate text-base text-foreground">{review.author}</p>
+                      <p className="truncate text-[10px] font-light uppercase tracking-[0.14em] text-muted-foreground/80">
+                        {review.reviewerCity
+                          ? `${formatDate(review.date)} • ${review.reviewerCity}`
+                          : formatDate(review.date)}
+                      </p>
+                    </div>
+                  </div>
+                  <time className="sr-only" dateTime={review.date} itemProp="datePublished">
                     {formatDate(review.date)}
                   </time>
+                  </div>
+
+                  <div className="mt-4 rounded-2xl bg-background/80 p-3 ring-1 ring-border/50">
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">Reviewed</p>
+                    <p className="mt-1 font-serif text-2xl font-light">{productName}</p>
+                    {inspiration ? (
+                      <p className="mt-1 text-sm italic text-muted-foreground">Inspired by {inspiration}</p>
+                    ) : null}
+                  </div>
                 </div>
               </motion.article>
             ))}
@@ -132,3 +155,4 @@ const ProductReviews = ({ reviews, productName }: ProductReviewsProps) => {
 };
 
 export default ProductReviews;
+

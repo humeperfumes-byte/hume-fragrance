@@ -1,11 +1,16 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Star } from "lucide-react";
 import { getProductSeoSlug } from "@/lib/product-route";
+import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import type { HomepagePerfumeCardData } from "@/types/homepage";
 
 type ReviewCard = {
   id: string;
   author: string;
+  avatarUrl?: string;
+  reviewerCity?: string;
+  reviewerLanguage?: string;
   rating: number;
   date: string;
   content: string;
@@ -57,9 +62,14 @@ function getReviewProductSlug(perfume: HomepagePerfumeCardData) {
 function getHomeReviewCards(perfumes: HomepagePerfumeCardData[]): ReviewCard[] {
   return perfumes
     .flatMap((perfume) =>
-      (perfume.reviews ?? []).map((review) => ({
+      (perfume.reviews ?? [])
+        .filter((review) => review.verified ?? true)
+        .map((review) => ({
         id: `${perfume.id}-${review.id}`,
         author: review.author,
+        avatarUrl: review.avatarUrl,
+        reviewerCity: review.reviewerCity,
+        reviewerLanguage: review.reviewerLanguage,
         rating: review.rating,
         date: review.date,
         content: review.content,
@@ -136,10 +146,28 @@ export default function HomeReviewsSection({
                     <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
                       {formatReviewDate(review.date)}
                     </p>
+                    {(review.reviewerCity || review.reviewerLanguage) && (
+                      <p className="mt-1 text-xs text-muted-foreground/90">
+                        {[review.reviewerCity, review.reviewerLanguage].filter(Boolean).join(" • ")}
+                      </p>
+                    )}
                   </div>
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-foreground text-[13px] font-medium text-background shadow-sm">
-                    {review.author.charAt(0)}
-                  </div>
+                  {review.avatarUrl ? (
+                    <div className="relative h-11 w-11 overflow-hidden rounded-full ring-1 ring-border/70 shadow-sm">
+                      <Image
+                        src={withCloudinaryTransforms(review.avatarUrl, { width: 120 })}
+                        alt={`${review.author} profile`}
+                        fill
+                        sizes="44px"
+                        unoptimized
+                        className="object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-foreground text-[13px] font-medium text-background shadow-sm">
+                      {review.author.charAt(0)}
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-4 rounded-2xl bg-background/80 p-3 ring-1 ring-border/50">

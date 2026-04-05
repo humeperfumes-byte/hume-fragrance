@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { products, reviews, productCategories } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { requireAdminToken } from "@/lib/admin-auth";
 
@@ -47,6 +47,32 @@ const productSchema = z.object({
 type ProductUpdateInput = z.infer<typeof productSchema>;
 type ProductUpdateRecord = Partial<typeof products.$inferInsert> & { updatedAt: Date };
 
+async function fetchProductReviews(id: string) {
+  try {
+    return await db.select().from(reviews).where(eq(reviews.productId, id));
+  } catch (error) {
+    console.warn("Falling back to legacy product reviews query.", error);
+    const result = await db.execute(sql`
+      select
+        id,
+        product_id as "productId",
+        author,
+        null::varchar as "avatarUrl",
+        null::varchar as "reviewerCity",
+        null::varchar as "reviewerLanguage",
+        rating,
+        date,
+        title,
+        content,
+        verified,
+        created_at as "createdAt"
+      from reviews
+      where product_id = ${id}
+    `);
+    return result.rows as Array<typeof reviews.$inferSelect>;
+  }
+}
+
 // GET single product by ID
 export async function GET(
   request: NextRequest,
@@ -67,10 +93,7 @@ export async function GET(
       );
     }
 
-    const productReviews = await db
-      .select()
-      .from(reviews)
-      .where(eq(reviews.productId, id));
+    const productReviews = await fetchProductReviews(id);
 
     let mappedCategoryIds: string[] = [product.categoryId];
     try {

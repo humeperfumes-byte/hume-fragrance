@@ -56,6 +56,9 @@ export const reviews = pgTable("reviews", {
     .notNull()
     .references(() => products.id, { onDelete: "cascade" }),
   author: varchar("author", { length: 255 }).notNull(),
+  avatarUrl: varchar("avatar_url", { length: 2048 }),
+  reviewerCity: varchar("reviewer_city", { length: 255 }),
+  reviewerLanguage: varchar("reviewer_language", { length: 50 }),
   rating: decimal("rating", { precision: 2, scale: 1 }).notNull(),
   date: varchar("date", { length: 50 }).notNull(),
   title: varchar("title", { length: 255 }).notNull(),

@@ -9,6 +9,9 @@ export type Gender = "Men" | "Women" | "Unisex";
 export interface Review {
   id: string;
   author: string;
+  avatarUrl?: string;
+  reviewerCity?: string;
+  reviewerLanguage?: string;
   rating: number;
   date: string;
   title: string;

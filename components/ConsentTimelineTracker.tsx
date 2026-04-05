@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { detectAcquisitionSource } from "@/lib/acquisition-source";
+import { isConsentTrackingEnabled } from "@/lib/consent-config";
 
 const CONSENT_DECISION_KEY = "hume_consent_decision";
 const CONSENT_SESSION_KEY = "hume_consent_session_id";
@@ -28,6 +29,7 @@ export default function ConsentTimelineTracker() {
 
   const sendEvent = async (eventType: string, payload?: Record<string, unknown>) => {
     try {
+      if (!isConsentTrackingEnabled) return;
       if (localStorage.getItem(CONSENT_DECISION_KEY) !== "allow") return;
 
       const sessionId = getSessionId();
@@ -51,6 +53,8 @@ export default function ConsentTimelineTracker() {
   };
 
   useEffect(() => {
+    if (!isConsentTrackingEnabled) return;
+
     const toPath = `${pathname}${searchParams?.toString() ? `?${searchParams.toString()}` : ""}`;
     const fromPath = previousPathRef.current;
     previousPathRef.current = toPath;
@@ -91,6 +95,8 @@ export default function ConsentTimelineTracker() {
   }, [pathname, searchParams]);
 
   useEffect(() => {
+    if (!isConsentTrackingEnabled) return;
+
     const handler = (event: Event) => {
       const customEvent = event as CustomEvent<TrackingDetail>;
       if (!customEvent.detail?.eventType) return;

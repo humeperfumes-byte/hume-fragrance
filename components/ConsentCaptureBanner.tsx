@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { isConsentTrackingEnabled } from "@/lib/consent-config";
 
 const CONSENT_DECISION_KEY = "hume_consent_decision";
 const CONSENT_SESSION_KEY = "hume_consent_session_id";
@@ -15,6 +16,8 @@ function getOrCreateSessionId() {
 
 export default function ConsentCaptureBanner() {
   useEffect(() => {
+    if (!isConsentTrackingEnabled) return;
+
     const current = localStorage.getItem(CONSENT_DECISION_KEY);
     if (current === "allow") return;
 

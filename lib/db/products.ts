@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { products, reviews, productCategories } from "@/db/schema";
-import { eq, inArray } from "drizzle-orm";
-import { type PerfumeData, type Review } from "@/data/perfumes";
+import { eq, inArray, sql } from "drizzle-orm";
+import { type PerfumeData } from "@/data/perfumes";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getProductSeoSlug } from "@/lib/product-route";
 import { unstable_cache } from "next/cache";
@@ -16,55 +16,47 @@ type ProductBadges = Partial<{
   limitedStock: boolean;
 }>;
 type ProductVisibility = "public" | "seo_only";
+let hasLoggedLegacyReviewsFallback = false;
+
+async function fetchReviewsByProductIds(productIds: string[]): Promise<ReviewRow[]> {
+  if (productIds.length === 0) return [];
+  try {
+    return await db.select().from(reviews).where(inArray(reviews.productId, productIds));
+  } catch {
+    if (!hasLoggedLegacyReviewsFallback) {
+      hasLoggedLegacyReviewsFallback = true;
+      console.warn("Using legacy reviews query until new review profile columns are added in DB.");
+    }
+    const result = await db.execute(sql`
+      select
+        id,
+        product_id as "productId",
+        author,
+        null::varchar as "avatarUrl",
+        null::varchar as "reviewerCity",
+        null::varchar as "reviewerLanguage",
+        rating,
+        date,
+        title,
+        content,
+        verified,
+        created_at as "createdAt"
+      from reviews
+      where product_id in (${sql.join(
+        productIds.map((productId) => sql`${productId}`),
+        sql`, `
+      )})
+    `);
+    return result.rows as ReviewRow[];
+  }
+}
+
+async function fetchReviewsByProductId(productId: string): Promise<ReviewRow[]> {
+  return fetchReviewsByProductIds([productId]);
+}
 
 function getStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
-}
-
-function buildDefaultReviews(product: ProductRow): Review[] {
-  const productLabel = product.name ?? product.inspiration ?? "this fragrance";
-  const entries: Array<Pick<Review, "author" | "rating" | "date" | "content">> = [
-    {
-      author: "Arjun M.",
-      rating: 5,
-      date: "2026-01-12",
-      content: `Amazing longevity. ${productLabel} lasts all day even in Mumbai humidity.`,
-    },
-    {
-      author: "Ritika S.",
-      rating: 5,
-      date: "2026-01-24",
-      content: "Very premium blend for the price. Smooth opening and beautiful dry down.",
-    },
-    {
-      author: "Vikram R.",
-      rating: 4,
-      date: "2026-02-02",
-      content: "Projection is strong for the first few hours, then sits close and elegant.",
-    },
-    {
-      author: "Neha P.",
-      rating: 5,
-      date: "2026-02-09",
-      content: "Received compliments in office and at dinner both. Great signature scent.",
-    },
-    {
-      author: "Karan D.",
-      rating: 4,
-      date: "2026-02-15",
-      content: "Quality feels consistent and bottle performance is excellent for daily wear.",
-    },
-  ];
-
-  return entries.map((entry, index) => ({
-    id: `default-${product.id}-${index + 1}`,
-    author: entry.author,
-    rating: entry.rating,
-    date: entry.date,
-    title: "Verified Buyer Review",
-    content: entry.content,
-    verified: true,
-  }));
 }
 
 // Transform database product to PerfumeData format
@@ -78,21 +70,18 @@ function transformProduct(
   const imageUrls = getStringArray(product.images);
   const seoKeywords = getStringArray(product.seoKeywords);
 
-  const fallbackReviews = buildDefaultReviews(product);
   const mappedReviews = productReviews.map((r) => ({
     id: r.id,
     author: r.author,
+    avatarUrl: r.avatarUrl ?? undefined,
+    reviewerCity: r.reviewerCity ?? undefined,
+    reviewerLanguage: r.reviewerLanguage ?? undefined,
     rating: parseFloat(r.rating),
     date: r.date,
     title: r.title,
     content: r.content,
     verified: r.verified,
   }));
-
-  const normalizedReviews =
-    mappedReviews.length >= 5
-      ? mappedReviews.slice(0, 7)
-      : [...mappedReviews, ...fallbackReviews].slice(0, 5);
 
   return {
     id: product.id,
@@ -138,7 +127,7 @@ function transformProduct(
     notes: product.notes as PerfumeData["notes"],
     longevity: product.longevity as PerfumeData["longevity"],
     size: product.size,
-    reviews: normalizedReviews,
+    reviews: mappedReviews.slice(0, 12),
   };
 }
 
@@ -150,7 +139,7 @@ async function getAllProductsRaw(): Promise<PerfumeData[]> {
 
     const productIds = allProducts.map((product) => product.id);
     const [allReviews, allCategoryRows] = await Promise.all([
-      db.select().from(reviews).where(inArray(reviews.productId, productIds)),
+      fetchReviewsByProductIds(productIds),
       db
         .select({
           productId: productCategories.productId,
@@ -238,10 +227,7 @@ export async function getProductById(id: string): Promise<PerfumeData | null> {
       return null;
     }
 
-    const productReviews = await db
-      .select()
-      .from(reviews)
-      .where(eq(reviews.productId, id));
+    const productReviews = await fetchReviewsByProductId(id);
 
     let mappedCategories: Array<{ id: string; label?: string }> = [];
     try {

@@ -1,7 +1,6 @@
 ﻿"use client";
 
 import { motion } from "framer-motion";
-import { LiaCartPlusSolid } from "react-icons/lia";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -168,10 +167,10 @@ const PerfumeCard = ({
           <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/5 transition-all duration-500" />
           <button
             onClick={handleAddToCart}
-            className="absolute bottom-2 right-2 z-10 inline-flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-white text-foreground shadow-[0_8px_24px_rgba(0,0,0,0.18)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(0,0,0,0.24)]"
+            className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 z-10 inline-flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-[14px] border border-[#1f2a36]/75 bg-[#1f2a36] text-white ring-1 ring-white/65 shadow-[0_16px_32px_rgba(20,26,35,0.42)] transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.03] hover:bg-[#253445] hover:shadow-[0_20px_36px_rgba(20,26,35,0.5)]"
             aria-label={`Add ${name} to bag`}
           >
-            <LiaCartPlusSolid className="h-[22px] w-[22px] sm:h-[22px] sm:w-[22px]" />
+            <span className="text-[2rem] leading-none font-light -mt-[2px]">+</span>
           </button>
         </div>
         <div className="flex flex-col h-[170px]">

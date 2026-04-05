@@ -15,6 +15,9 @@ export type HomepagePerfumeCardData = {
   reviews?: Array<{
     id: string;
     author: string;
+    avatarUrl?: string;
+    reviewerCity?: string;
+    reviewerLanguage?: string;
     rating: number;
     date: string;
     title?: string;

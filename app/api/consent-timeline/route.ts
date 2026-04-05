@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { consentEvents } from "@/db/schema";
+import { isServerConsentTrackingEnabled } from "@/lib/consent-config";
 
 const timelineSchema = z.object({
   sessionId: z.string().min(4).max(255),
@@ -13,6 +14,10 @@ const timelineSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  if (!isServerConsentTrackingEnabled) {
+    return NextResponse.json({ ok: true, skipped: true });
+  }
+
   try {
     const body = await request.json();
     const payload = timelineSchema.parse(body);
@@ -48,4 +53,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to capture timeline event" }, { status: 500 });
   }
 }
-

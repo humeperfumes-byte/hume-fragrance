@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { reviews } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 // GET all reviews for a product
@@ -11,10 +11,30 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const productReviews = await db
-      .select()
-      .from(reviews)
-      .where(eq(reviews.productId, id));
+    let productReviews: Array<typeof reviews.$inferSelect> = [];
+    try {
+      productReviews = await db.select().from(reviews).where(eq(reviews.productId, id));
+    } catch (error) {
+      console.warn("Falling back to legacy product reviews API query.", error);
+      const result = await db.execute(sql`
+        select
+          id,
+          product_id as "productId",
+          author,
+          null::varchar as "avatarUrl",
+          null::varchar as "reviewerCity",
+          null::varchar as "reviewerLanguage",
+          rating,
+          date,
+          title,
+          content,
+          verified,
+          created_at as "createdAt"
+        from reviews
+        where product_id = ${id}
+      `);
+      productReviews = result.rows as Array<typeof reviews.$inferSelect>;
+    }
 
     return NextResponse.json(
       productReviews.map((r) => ({
@@ -43,6 +63,9 @@ export async function POST(
     const reviewSchema = z.object({
       id: z.string(),
       author: z.string(),
+      avatarUrl: z.string().url().optional(),
+      reviewerCity: z.string().max(255).optional(),
+      reviewerLanguage: z.string().max(50).optional(),
       rating: z.number().min(1).max(5),
       date: z.string(),
       title: z.string(),
@@ -52,14 +75,35 @@ export async function POST(
 
     const validatedData = reviewSchema.parse(body);
 
-    const [newReview] = await db
-      .insert(reviews)
-      .values({
-        ...validatedData,
-        productId: id,
-        rating: validatedData.rating.toString(),
-      })
-      .returning();
+    let newReview: typeof reviews.$inferSelect;
+    try {
+      [newReview] = await db
+        .insert(reviews)
+        .values({
+          ...validatedData,
+          productId: id,
+          avatarUrl: validatedData.avatarUrl ?? null,
+          reviewerCity: validatedData.reviewerCity ?? null,
+          reviewerLanguage: validatedData.reviewerLanguage ?? null,
+          rating: validatedData.rating.toString(),
+        })
+        .returning();
+    } catch (error) {
+      console.warn("Falling back to legacy review insert (without profile fields).", error);
+      [newReview] = await db
+        .insert(reviews)
+        .values({
+          id: validatedData.id,
+          productId: id,
+          author: validatedData.author,
+          rating: validatedData.rating.toString(),
+          date: validatedData.date,
+          title: validatedData.title,
+          content: validatedData.content,
+          verified: validatedData.verified,
+        })
+        .returning();
+    }
 
     return NextResponse.json(
       {

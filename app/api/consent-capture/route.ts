@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { consentEvents } from "@/db/schema";
 import { z } from "zod";
+import { isServerConsentTrackingEnabled } from "@/lib/consent-config";
 
 const payloadSchema = z.object({
   decision: z.enum(["allow", "deny"]),
@@ -18,6 +19,10 @@ const payloadSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  if (!isServerConsentTrackingEnabled) {
+    return NextResponse.json({ ok: true, skipped: true });
+  }
+
   try {
     const body = await request.json();
     const payload = payloadSchema.parse(body);
@@ -49,4 +54,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to capture consent event" }, { status: 500 });
   }
 }
-
