@@ -25,6 +25,8 @@ interface Coupon {
   displayInCart?: boolean;
 }
 
+const APPLIED_COUPON_STORAGE_KEY = "hume_applied_coupon_code";
+
 const CartDrawer = () => {
   const router = useRouter();
   const pathname = usePathname();
@@ -197,6 +199,15 @@ const CartDrawer = () => {
       setAppliedCouponCode(null);
     }
   }, [appliedCoupon, appliedCouponCode, isCouponEligible, subtotal]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!appliedCouponCode) {
+      window.localStorage.removeItem(APPLIED_COUPON_STORAGE_KEY);
+      return;
+    }
+    window.localStorage.setItem(APPLIED_COUPON_STORAGE_KEY, appliedCouponCode);
+  }, [appliedCouponCode]);
 
   const handleApplyToggleCoupon = (coupon: Coupon) => {
     if (appliedCouponCode === coupon.code) {

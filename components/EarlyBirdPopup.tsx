@@ -10,11 +10,33 @@ import {
 } from "@/components/ui/dialog";
 
 const STORAGE_KEY = "hume_early_bird_dismissed";
+const CHECKOUT_SESSION_KEY = "hume_checkout_session_id";
+
+function getOrCreateSessionId() {
+  const existing =
+    typeof window !== "undefined" ? window.localStorage.getItem(CHECKOUT_SESSION_KEY) : null;
+  if (existing) return existing;
+  const next = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(CHECKOUT_SESSION_KEY, next);
+  }
+  return next;
+}
+
+type CouponSendResponse = {
+  ok?: boolean;
+  couponCode?: string;
+  emailSent?: boolean;
+  whatsappLink?: string;
+};
 
 const EarlyBirdPopup = () => {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [startingCode, setStartingCode] = useState<string>("CASH5");
+  const [emailSent, setEmailSent] = useState(false);
+  const [whatsappLink, setWhatsappLink] = useState("");
 
   useEffect(() => {
     const dismissed =
@@ -35,14 +57,69 @@ const EarlyBirdPopup = () => {
     setOpen(false);
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!email.trim()) return;
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) return;
+
+    const sessionId = getOrCreateSessionId();
+
+    try {
+      const response = await fetch("/api/coupon-code/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: normalizedEmail,
+          sessionId,
+          path: typeof window !== "undefined" ? window.location.pathname : undefined,
+          referrer: typeof document !== "undefined" ? document.referrer : undefined,
+          source: "early_bird_popup",
+        }),
+      });
+
+      if (response.ok) {
+        const data = (await response.json()) as CouponSendResponse;
+        setStartingCode(data.couponCode || "CASH5");
+        setEmailSent(Boolean(data.emailSent));
+        setWhatsappLink(data.whatsappLink || "");
+      }
+    } catch (error) {
+      console.error("Failed to send starting code:", error);
+    }
+
     setSubmitted(true);
     if (typeof window !== "undefined") {
       window.localStorage.setItem(STORAGE_KEY, "true");
     }
-    setTimeout(() => setOpen(false), 1200);
+    setTimeout(() => setOpen(false), 1800);
+  };
+
+  const handleWhatsAppCode = () => {
+    if (!whatsappLink) return;
+
+    const sessionId = getOrCreateSessionId();
+    void fetch("/api/coupon-code-events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify({
+        sessionId,
+        channel: "whatsapp",
+        eventType: "sent",
+        couponCode: startingCode,
+        destination: "919559024822",
+        path: typeof window !== "undefined" ? window.location.pathname : undefined,
+        referrer: typeof document !== "undefined" ? document.referrer : undefined,
+        payload: {
+          source: "early_bird_popup",
+          purpose: "starting_coupon",
+        },
+      }),
+    }).catch((error) => {
+      console.error("Failed to capture WhatsApp starting code event:", error);
+    });
+
+    window.open(whatsappLink, "_blank");
   };
 
   return (
@@ -53,13 +130,25 @@ const EarlyBirdPopup = () => {
             Early Bird Offer
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Get 10% off your first order — enter your email.
+            Get 10% off your first order - enter your email.
           </DialogDescription>
         </DialogHeader>
 
         {submitted ? (
-          <div className="mt-4 text-sm text-foreground">
-            Thanks! Your welcome offer is on the way.
+          <div className="mt-4 space-y-2 text-sm text-foreground">
+            <p>{emailSent ? "Code sent to your email." : "Email not delivered yet. Use WhatsApp to get code now."}</p>
+            <p>
+              Starting code: <span className="font-semibold tracking-[0.08em]">{startingCode}</span>
+            </p>
+            {!emailSent ? (
+              <button
+                type="button"
+                onClick={handleWhatsAppCode}
+                className="mt-2 w-full bg-emerald-500 py-2 text-xs uppercase tracking-[0.22em] text-white transition hover:bg-emerald-600"
+              >
+                Get Code on WhatsApp
+              </button>
+            ) : null}
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="mt-4 space-y-3">
@@ -73,7 +162,7 @@ const EarlyBirdPopup = () => {
             />
             <button
               type="submit"
-              className="w-full bg-foreground text-background py-2 text-xs uppercase tracking-[0.28em]"
+              className="w-full bg-foreground py-2 text-xs uppercase tracking-[0.28em] text-background"
             >
               Claim 10% Off
             </button>

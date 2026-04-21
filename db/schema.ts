@@ -233,6 +233,23 @@ export const checkoutDrafts = pgTable("checkout_drafts", {
   whatsappInitiatedAt: timestamp("whatsapp_initiated_at"),
 });
 
+// Coupon code send / share events (email + whatsapp)
+export const couponCodeEvents = pgTable("coupon_code_events", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  sessionId: varchar("session_id", { length: 255 }),
+  channel: varchar("channel", { length: 30 }).notNull(), // email | whatsapp
+  eventType: varchar("event_type", { length: 50 }).notNull().default("sent"), // sent | requested
+  couponCode: varchar("coupon_code", { length: 100 }),
+  destination: varchar("destination", { length: 255 }), // email or phone
+  path: varchar("path", { length: 2048 }),
+  referrer: varchar("referrer", { length: 2048 }),
+  country: varchar("country", { length: 8 }),
+  ipAddress: varchar("ip_address", { length: 255 }),
+  userAgent: text("user_agent"),
+  payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Export types
 export type Product = typeof products.$inferSelect;
 export type NewProduct = typeof products.$inferInsert;
@@ -256,3 +273,5 @@ export type CartEvent = typeof cartEvents.$inferSelect;
 export type NewCartEvent = typeof cartEvents.$inferInsert;
 export type CheckoutDraft = typeof checkoutDrafts.$inferSelect;
 export type NewCheckoutDraft = typeof checkoutDrafts.$inferInsert;
+export type CouponCodeEvent = typeof couponCodeEvents.$inferSelect;
+export type NewCouponCodeEvent = typeof couponCodeEvents.$inferInsert;

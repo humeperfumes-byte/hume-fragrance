@@ -14,6 +14,7 @@ import { toast } from "@/hooks/use-toast";
 const CHECKOUT_STORAGE_KEY = "hume_checkout_details_v1";
 const CHECKOUT_SESSION_KEY = "hume_checkout_session_id";
 const FIRST_TOUCH_SOURCE_KEY = "hume_first_touch_source";
+const APPLIED_COUPON_STORAGE_KEY = "hume_applied_coupon_code";
 const FREE_DELIVERY_THRESHOLD = 800;
 const DELIVERY_FEE_BELOW_THRESHOLD = 100;
 
@@ -124,6 +125,10 @@ export default function CheckoutClient() {
   const grandTotal = totalPrice + shippingFee;
 
   const giftItems = useMemo(() => items.filter((item) => item.isGift), [items]);
+  const appliedCouponCode = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem(APPLIED_COUPON_STORAGE_KEY)?.trim().toUpperCase() ?? null;
+  }, []);
 
   const buildDraftPayload = useCallback(
     (
@@ -312,6 +317,7 @@ export default function CheckoutClient() {
       `Subtotal: ${formatINR(totalPrice)}`,
       `Delivery: ${shippingFee === 0 ? "FREE" : formatINR(shippingFee)}`,
       `Grand Total: ${formatINR(grandTotal)}`,
+      appliedCouponCode ? `Coupon Code: ${appliedCouponCode}` : null,
       giftItems.length > 0 ? `Free Gifts: ${giftItems.map((item) => item.name).join(", ")}` : null,
       "",
       "Customer details:",
@@ -341,6 +347,33 @@ export default function CheckoutClient() {
 
     const encodedMessage = encodeURIComponent(buildOrderMessage());
     window.open(`https://wa.me/919559024822?text=${encodedMessage}`, "_blank");
+
+    if (appliedCouponCode) {
+      const sessionId = checkoutSessionIdRef.current ?? getOrCreateCheckoutSessionId();
+      void fetch("/api/coupon-code-events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        keepalive: true,
+        body: JSON.stringify({
+          sessionId,
+          channel: "whatsapp",
+          eventType: "sent",
+          couponCode: appliedCouponCode,
+          destination: "919559024822",
+          path: pathname,
+          referrer: typeof document !== "undefined" ? document.referrer : undefined,
+          payload: {
+            subtotal: totalPrice,
+            shippingFee,
+            grandTotal,
+            itemCount: items.length,
+          },
+        }),
+      }).catch((error) => {
+        console.error("Failed to capture WhatsApp coupon event:", error);
+      });
+    }
+
     toast({
       title: "Opening WhatsApp",
       description: "Your order details have been prefilled for WhatsApp.",
