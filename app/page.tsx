@@ -24,6 +24,9 @@ const Craft = nextDynamic(() => import("@/components/Craft"), {
 const About = nextDynamic(() => import("@/components/About"), {
   loading: () => <div className="py-24 md:py-32" />,
 });
+const KitPackShowcase = nextDynamic(() => import("@/components/KitPackShowcase"), {
+  loading: () => <div className="py-24 md:py-32" />,
+});
 
 export default async function Home() {
   const [perfumes, heroSlides] = await Promise.all([
@@ -63,6 +66,9 @@ export default async function Home() {
       </div>
       <div style={{ contentVisibility: "auto", containIntrinsicSize: "1400px" }}>
         <BestsellerSection perfumes={homepagePerfumes} />
+      </div>
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1500px" }}>
+        <KitPackShowcase />
       </div>
       <div style={{ contentVisibility: "auto", containIntrinsicSize: "1100px" }}>
         <RefillProgramSection />

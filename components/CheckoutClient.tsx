@@ -537,7 +537,7 @@ export default function CheckoutClient() {
                 <div key={item.id} className="flex gap-3 border-b border-border/60 pb-4">
                   <div className="relative h-20 w-20 overflow-hidden rounded-md bg-secondary">
                     <Image
-                      src={withCloudinaryTransforms(item.image || "/images/logo.png?v=2", { width: 160 })}
+                      src={withCloudinaryTransforms(item.image || "/images/logo.png", { width: 160 })}
                       alt={item.name}
                       fill
                       sizes="80px"

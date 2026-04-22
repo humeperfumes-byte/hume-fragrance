@@ -391,8 +391,8 @@ const CartDrawer = () => {
                       }}
                     >
                       <ImageWithFallback
-                        src={withCloudinaryTransforms(item.image || "/images/logo.png?v=2", { width: 160 })}
-                        fallbackSrc="/images/logo.png?v=2"
+                        src={withCloudinaryTransforms(item.image || "/images/logo.png", { width: 160 })}
+                        fallbackSrc="/images/logo.png"
                         alt={item.name}
                         width={80}
                         height={80}

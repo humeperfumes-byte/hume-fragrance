@@ -133,9 +133,12 @@ export default function KitPackShowcase() {
               <p className="text-xs uppercase tracking-[0.15em] mb-3 opacity-80">
                 Limited-Time Kit
               </p>
-              <h2 className="font-serif text-3xl md:text-4xl font-light mb-4">
+              <h2 className="font-serif text-3xl md:text-4xl font-light mb-10">
                 4 x 20ml Perfume Pack
               </h2>
+              <p className="text-xl md:text-2xl font-semibold uppercase tracking-[0.12em] text-white">
+                {formatINR(kitTotal)}
+              </p>
             </div>
 
             <div className="space-y-3">
@@ -152,7 +155,7 @@ export default function KitPackShowcase() {
                     <div className="h-10 w-10 border border-white/30 bg-white/10 flex items-center justify-center">
                       {slot ? (
                         <Image
-                          src={withCloudinaryTransforms(slot.images?.[0] || "/images/logo.png?v=2", { width: 80 })}
+                          src={withCloudinaryTransforms(slot.images?.[0] || "/images/logo.png", { width: 80 })}
                           alt={slot.name}
                           width={40}
                           height={40}
@@ -236,7 +239,7 @@ export default function KitPackShowcase() {
                   className="text-left border border-border/60 bg-background hover:bg-secondary/20 transition-colors p-3"
                 >
                   <Image
-                    src={withCloudinaryTransforms(perfume.images?.[0] || "/images/logo.png?v=2", { width: 320 })}
+                    src={withCloudinaryTransforms(perfume.images?.[0] || "/images/logo.png", { width: 320 })}
                     alt={perfume.name}
                     width={320}
                     height={320}
@@ -246,7 +249,7 @@ export default function KitPackShowcase() {
                   />
                   <div className="mt-3">
                     <p className="font-serif text-base">{perfume.name}</p>
-                    <p className="text-xs text-muted-foreground">{perfume.category}</p>
+                    <p className="text-xs text-muted-foreground">Inspired by {perfume.inspiration}</p>
                   </div>
                 </button>
               ))}
