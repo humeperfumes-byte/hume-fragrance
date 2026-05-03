@@ -5,11 +5,11 @@ import { eq } from "drizzle-orm";
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { status } = await req.json();
-    const orderId = params.id;
+    const { id: orderId } = await params;
 
     if (!orderId || !status) {
       return NextResponse.json({ error: "Order ID and status are required" }, { status: 400 });
