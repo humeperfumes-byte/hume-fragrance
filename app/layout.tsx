@@ -9,6 +9,7 @@ import ClientGlobalOverlays from "@/components/ClientGlobalOverlays";
 import ConsentCaptureBanner from "@/components/ConsentCaptureBanner";
 import ConsentTimelineTracker from "@/components/ConsentTimelineTracker";
 import CartAnalyticsTracker from "@/components/CartAnalyticsTracker";
+import { BehavioralTracker } from "@/components/analytics/BehavioralTracker";
 import { SITE_URL } from "@/lib/site";
 
 const inter = Inter({
@@ -106,6 +107,9 @@ export default async function RootLayout({
           </Suspense>
           <Suspense fallback={null}>
             <CartAnalyticsTracker />
+          </Suspense>
+          <Suspense fallback={null}>
+            <BehavioralTracker />
           </Suspense>
         </Providers>
         {cloudflareBeaconToken ? (

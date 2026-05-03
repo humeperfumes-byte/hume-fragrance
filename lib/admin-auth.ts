@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 function getIncomingToken(request: NextRequest): string | null {
   const headerToken = request.headers.get("x-admin-token");
   if (headerToken) return headerToken;
 
   const authHeader = request.headers.get("authorization");
-  if (!authHeader) return null;
+  if (authHeader) {
+    const match = authHeader.match(/^Bearer\s+(.+)$/i);
+    if (match) return match[1];
+  }
 
-  const match = authHeader.match(/^Bearer\s+(.+)$/i);
-  return match ? match[1] : null;
+  const cookieToken = request.cookies.get("admin_token")?.value;
+  if (cookieToken) return cookieToken;
+
+  return null;
 }
 
 export function requireAdminToken(request: NextRequest): NextResponse | null {
@@ -25,3 +31,11 @@ export function requireAdminToken(request: NextRequest): NextResponse | null {
   return null;
 }
 
+export async function checkAdminToken(): Promise<boolean> {
+  const expectedToken = process.env.ADMIN_API_TOKEN;
+  if (!expectedToken) return true;
+
+  const cookieStore = await cookies();
+  const token = cookieStore.get("admin_token")?.value;
+  return token === expectedToken;
+}

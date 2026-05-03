@@ -59,36 +59,40 @@ export default async function Home() {
     <main className="bg-background min-h-screen">
       <JsonLd data={jsonLd} />
       <Header />
-      <Hero initialSlides={heroSlides} />
-      <Collection perfumes={homepagePerfumes} />
-      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1400px" }}>
+      <div data-analytics-section="hero">
+        <Hero initialSlides={heroSlides} />
+      </div>
+      <div data-analytics-section="collection">
+        <Collection perfumes={homepagePerfumes} />
+      </div>
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1400px" }} data-analytics-section="hume_special">
         <HumeSpecialSection perfumes={homepagePerfumes} />
       </div>
-      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1400px" }}>
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1400px" }} data-analytics-section="bestsellers">
         <BestsellerSection perfumes={homepagePerfumes} />
       </div>
-      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1500px" }}>
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1500px" }} data-analytics-section="kit_pack">
         <KitPackShowcase />
       </div>
-      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1100px" }}>
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1100px" }} data-analytics-section="refill">
         <RefillProgramSection />
       </div>
-      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1300px" }}>
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1300px" }} data-analytics-section="reviews">
         <HomeReviewsSection perfumes={homepagePerfumes} />
       </div>
-      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1400px" }}>
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1400px" }} data-analytics-section="faq">
         <HomeFaqSection />
       </div>
-      <div style={{ contentVisibility: "auto", containIntrinsicSize: "900px" }}>
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "900px" }} data-analytics-section="seo_teaser">
         <SeoHubTeaser />
       </div>
-      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }}>
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }} data-analytics-section="craft">
         <Craft />
       </div>
-      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }}>
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }} data-analytics-section="journal">
         <LatestJournal />
       </div>
-      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }}>
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }} data-analytics-section="about">
         <About />
       </div>
       <Footer />

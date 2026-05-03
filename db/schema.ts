@@ -233,6 +233,56 @@ export const checkoutDrafts = pgTable("checkout_drafts", {
   whatsappInitiatedAt: timestamp("whatsapp_initiated_at"),
 });
 
+// Order intents captured when customer proceeds to WhatsApp checkout
+export const orders = pgTable("orders", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  orderNumber: varchar("order_number", { length: 50 }).notNull().unique(),
+  sessionId: varchar("session_id", { length: 255 }).notNull(),
+  status: varchar("status", { length: 50 }).notNull().default("whatsapp_initiated"),
+  checkoutChannel: varchar("checkout_channel", { length: 50 }).notNull().default("whatsapp"),
+  paymentMethod: varchar("payment_method", { length: 100 }),
+  shippingMethod: varchar("shipping_method", { length: 100 }),
+  path: varchar("path", { length: 2048 }),
+  acquisitionSource: varchar("acquisition_source", { length: 100 }),
+  acquisitionCategory: varchar("acquisition_category", { length: 50 }),
+  acquisitionReferrerHost: varchar("acquisition_referrer_host", { length: 255 }),
+  fullName: varchar("full_name", { length: 255 }),
+  phone: varchar("phone", { length: 50 }),
+  email: varchar("email", { length: 255 }),
+  addressLine1: text("address_line_1"),
+  addressLine2: text("address_line_2"),
+  city: varchar("city", { length: 255 }),
+  state: varchar("state", { length: 255 }),
+  pincode: varchar("pincode", { length: 20 }),
+  notes: text("notes"),
+  appliedCouponCode: varchar("applied_coupon_code", { length: 50 }),
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }),
+  shippingFee: decimal("shipping_fee", { precision: 10, scale: 2 }),
+  grandTotal: decimal("grand_total", { precision: 10, scale: 2 }),
+  whatsappMessage: text("whatsapp_message"),
+  cartSnapshot: jsonb("cart_snapshot")
+    .$type<
+      Array<{
+        id: string;
+        name: string;
+        inspiration?: string;
+        size?: string;
+        quantity: number;
+        price: number;
+        isGift?: boolean;
+      }>
+    >()
+    .notNull()
+    .default([]),
+  giftItems: jsonb("gift_items").$type<string[]>().notNull().default([]),
+  country: varchar("country", { length: 8 }),
+  ipAddress: varchar("ip_address", { length: 255 }),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  whatsappInitiatedAt: timestamp("whatsapp_initiated_at").defaultNow().notNull(),
+});
+
 // Coupon code send / share events (email + whatsapp)
 export const couponCodeEvents = pgTable("coupon_code_events", {
   id: varchar("id", { length: 255 }).primaryKey(),
@@ -273,5 +323,82 @@ export type CartEvent = typeof cartEvents.$inferSelect;
 export type NewCartEvent = typeof cartEvents.$inferInsert;
 export type CheckoutDraft = typeof checkoutDrafts.$inferSelect;
 export type NewCheckoutDraft = typeof checkoutDrafts.$inferInsert;
+export type Order = typeof orders.$inferSelect;
+export type NewOrder = typeof orders.$inferInsert;
+// Behavioral Analytics & Behavioral Events
+export const behavioralEvents = pgTable("behavioral_events", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  sessionId: varchar("session_id", { length: 255 }).notNull(),
+  eventType: varchar("event_type", { length: 100 }).notNull(), // click | scroll | hover | section_view | exit_intent
+  path: varchar("path", { length: 2048 }),
+  elementId: varchar("element_id", { length: 255 }),
+  elementText: text("element_text"),
+  sectionName: varchar("section_name", { length: 255 }), // hero | products | notes | reviews
+  scrollDepth: integer("scroll_depth"), // 10 | 25 | 50 | 75 | 100
+  dwellTimeMs: integer("dwell_time_ms"), 
+  ipAddress: varchar("ip_address", { length: 255 }),
+  userAgent: text("user_agent"),
+  payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Real-time Session Intelligence (Intent & Prediction)
+export const sessionIntelligence = pgTable("session_intelligence", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  sessionId: varchar("session_id", { length: 255 }).notNull().unique(),
+  intentScore: integer("intent_score").notNull().default(0), // 0-100
+  abandonmentRisk: integer("abandonment_risk").notNull().default(0), // 0-100
+  predictedNextAction: varchar("predicted_next_action", { length: 100 }), // checkout | exit | add_cart
+  topAbandonmentCause: varchar("top_abandonment_cause", { length: 100 }), // price | shipping | trust
+  currentSection: varchar("current_section", { length: 255 }),
+  totalInteractions: integer("total_interactions").notNull().default(0),
+  lastActiveAt: timestamp("last_active_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Section Attribution Scoring
+export const sectionAttribution = pgTable("section_attribution", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  path: varchar("path", { length: 2048 }).notNull(),
+  sectionName: varchar("section_name", { length: 255 }).notNull(),
+  views: integer("views").notNull().default(0),
+  interactions: integer("interactions").notNull().default(0),
+  conversions: integer("conversions").notNull().default(0), // How many users added to cart after seeing this section
+  attributionScore: decimal("attribution_score", { precision: 5, scale: 2 }).notNull().default("0"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Export types
+export type Product = typeof products.$inferSelect;
+export type NewProduct = typeof products.$inferInsert;
+export type Review = typeof reviews.$inferSelect;
+export type NewReview = typeof reviews.$inferInsert;
+export type BlogPost = typeof blogPosts.$inferSelect;
+export type NewBlogPost = typeof blogPosts.$inferInsert;
+export type Bottle = typeof bottles.$inferSelect;
+export type NewBottle = typeof bottles.$inferInsert;
+export type Accessory = typeof accessories.$inferSelect;
+export type NewAccessory = typeof accessories.$inferInsert;
+export type ImageAsset = typeof images.$inferSelect;
+export type NewImageAsset = typeof images.$inferInsert;
+export type Coupon = typeof coupons.$inferSelect;
+export type NewCoupon = typeof coupons.$inferInsert;
+export type ProductCategory = typeof productCategories.$inferSelect;
+export type NewProductCategory = typeof productCategories.$inferInsert;
+export type ConsentEvent = typeof consentEvents.$inferSelect;
+export type NewConsentEvent = typeof consentEvents.$inferInsert;
+export type CartEvent = typeof cartEvents.$inferSelect;
+export type NewCartEvent = typeof cartEvents.$inferInsert;
+export type CheckoutDraft = typeof checkoutDrafts.$inferSelect;
+export type NewCheckoutDraft = typeof checkoutDrafts.$inferInsert;
+export type Order = typeof orders.$inferSelect;
+export type NewOrder = typeof orders.$inferInsert;
 export type CouponCodeEvent = typeof couponCodeEvents.$inferSelect;
 export type NewCouponCodeEvent = typeof couponCodeEvents.$inferInsert;
+export type BehavioralEvent = typeof behavioralEvents.$inferSelect;
+export type NewBehavioralEvent = typeof behavioralEvents.$inferInsert;
+export type SessionIntelligence = typeof sessionIntelligence.$inferSelect;
+export type NewSessionIntelligence = typeof sessionIntelligence.$inferInsert;
+export type SectionAttribution = typeof sectionAttribution.$inferSelect;
+export type NewSectionAttribution = typeof sectionAttribution.$inferInsert;

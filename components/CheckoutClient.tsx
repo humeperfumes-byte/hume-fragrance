@@ -15,6 +15,9 @@ const CHECKOUT_STORAGE_KEY = "hume_checkout_details_v1";
 const CHECKOUT_SESSION_KEY = "hume_checkout_session_id";
 const FIRST_TOUCH_SOURCE_KEY = "hume_first_touch_source";
 const APPLIED_COUPON_STORAGE_KEY = "hume_applied_coupon_code";
+const LAST_ORDER_SIGNATURE_KEY = "hume_last_order_signature_v1";
+const LAST_ORDER_ID_KEY = "hume_last_order_id_v1";
+const LAST_ORDER_NUMBER_KEY = "hume_last_order_number_v1";
 const FREE_DELIVERY_THRESHOLD = 800;
 const DELIVERY_FEE_BELOW_THRESHOLD = 100;
 
@@ -90,6 +93,12 @@ function getFirstTouchSource(): FirstTouchSource | null {
     console.error("Failed to read first-touch source:", error);
     return null;
   }
+}
+
+function createOrderNumber() {
+  const year = new Date().getFullYear();
+  const suffix = Math.floor(100000 + Math.random() * 900000);
+  return `HF-${year}-${suffix}`;
 }
 
 export default function CheckoutClient() {
@@ -331,7 +340,90 @@ export default function CheckoutClient() {
       .join("\n");
   };
 
-  const handleWhatsAppOrder = () => {
+  const getOrderIdentity = () => {
+    const signature = JSON.stringify({
+      details,
+      items: items.map((item) => ({
+        id: item.id,
+        quantity: item.quantity,
+        price: item.price,
+        isGift: item.isGift,
+      })),
+      subtotal: totalPrice,
+      shippingFee,
+      grandTotal,
+      appliedCouponCode,
+    });
+
+    const previousSignature = window.localStorage.getItem(LAST_ORDER_SIGNATURE_KEY);
+    const previousOrderId = window.localStorage.getItem(LAST_ORDER_ID_KEY);
+    const previousOrderNumber = window.localStorage.getItem(LAST_ORDER_NUMBER_KEY);
+
+    if (previousSignature === signature && previousOrderId && previousOrderNumber) {
+      return { id: previousOrderId, orderNumber: previousOrderNumber, signature };
+    }
+
+    const nextId = crypto.randomUUID();
+    const nextOrderNumber = createOrderNumber();
+    window.localStorage.setItem(LAST_ORDER_SIGNATURE_KEY, signature);
+    window.localStorage.setItem(LAST_ORDER_ID_KEY, nextId);
+    window.localStorage.setItem(LAST_ORDER_NUMBER_KEY, nextOrderNumber);
+
+    return { id: nextId, orderNumber: nextOrderNumber, signature };
+  };
+
+  const persistOrder = async (whatsappMessage: string) => {
+    if (typeof window === "undefined") return false;
+
+    const firstTouch = getFirstTouchSource();
+    const sessionId =
+      checkoutSessionIdRef.current ?? getOrCreateCheckoutSessionId();
+    const identity = getOrderIdentity();
+
+    try {
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        keepalive: true,
+        body: JSON.stringify({
+          id: identity.id,
+          orderNumber: identity.orderNumber,
+          sessionId,
+          status: "whatsapp_initiated",
+          checkoutChannel: "whatsapp",
+          paymentMethod: "WhatsApp Confirmation",
+          shippingMethod: shippingFee === 0 ? "Free Delivery" : "Standard Shipping",
+          path: pathname,
+          acquisitionSource: firstTouch?.source,
+          acquisitionCategory: firstTouch?.category,
+          acquisitionReferrerHost: firstTouch?.referrerHost ?? undefined,
+          appliedCouponCode: appliedCouponCode ?? undefined,
+          subtotal: totalPrice,
+          shippingFee,
+          grandTotal,
+          whatsappMessage,
+          cartSnapshot: items.map((item) => ({
+            id: item.id,
+            name: item.name,
+            inspiration: item.inspiration,
+            size: item.size,
+            quantity: item.quantity,
+            price: item.price,
+            isGift: item.isGift,
+          })),
+          giftItems: giftItems.map((item) => item.name),
+          details,
+        }),
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error("Order save failed:", error);
+      return false;
+    }
+  };
+
+  const handleWhatsAppOrder = async () => {
     if (items.length === 0) {
       toast({
         title: "Your cart is empty",
@@ -343,9 +435,11 @@ export default function CheckoutClient() {
 
     if (!validate()) return;
 
-    void persistDraft(undefined, "whatsapp_initiated", true);
+    const whatsappMessage = buildOrderMessage();
+    await persistDraft(undefined, "whatsapp_initiated", true);
+    const orderSaved = await persistOrder(whatsappMessage);
 
-    const encodedMessage = encodeURIComponent(buildOrderMessage());
+    const encodedMessage = encodeURIComponent(whatsappMessage);
     window.open(`https://wa.me/919559024822?text=${encodedMessage}`, "_blank");
 
     if (appliedCouponCode) {
@@ -376,7 +470,9 @@ export default function CheckoutClient() {
 
     toast({
       title: "Opening WhatsApp",
-      description: "Your order details have been prefilled for WhatsApp.",
+      description: orderSaved
+        ? "Your order details have been saved and prefilled for WhatsApp."
+        : "WhatsApp opened, but the order record could not be saved this time.",
     });
   };
 
