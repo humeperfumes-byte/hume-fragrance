@@ -300,31 +300,6 @@ export const couponCodeEvents = pgTable("coupon_code_events", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Export types
-export type Product = typeof products.$inferSelect;
-export type NewProduct = typeof products.$inferInsert;
-export type Review = typeof reviews.$inferSelect;
-export type NewReview = typeof reviews.$inferInsert;
-export type BlogPost = typeof blogPosts.$inferSelect;
-export type NewBlogPost = typeof blogPosts.$inferInsert;
-export type Bottle = typeof bottles.$inferSelect;
-export type NewBottle = typeof bottles.$inferInsert;
-export type Accessory = typeof accessories.$inferSelect;
-export type NewAccessory = typeof accessories.$inferInsert;
-export type ImageAsset = typeof images.$inferSelect;
-export type NewImageAsset = typeof images.$inferInsert;
-export type Coupon = typeof coupons.$inferSelect;
-export type NewCoupon = typeof coupons.$inferInsert;
-export type ProductCategory = typeof productCategories.$inferSelect;
-export type NewProductCategory = typeof productCategories.$inferInsert;
-export type ConsentEvent = typeof consentEvents.$inferSelect;
-export type NewConsentEvent = typeof consentEvents.$inferInsert;
-export type CartEvent = typeof cartEvents.$inferSelect;
-export type NewCartEvent = typeof cartEvents.$inferInsert;
-export type CheckoutDraft = typeof checkoutDrafts.$inferSelect;
-export type NewCheckoutDraft = typeof checkoutDrafts.$inferInsert;
-export type Order = typeof orders.$inferSelect;
-export type NewOrder = typeof orders.$inferInsert;
 // Behavioral Analytics & Behavioral Events
 export const behavioralEvents = pgTable("behavioral_events", {
   id: varchar("id", { length: 255 }).primaryKey(),

@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Package } from "lucide-react";
 
 export function formatINR(amount: number | string): string {
   return new Intl.NumberFormat("en-IN", {
