@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { checkoutDrafts, orders } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { nanoid } from "nanoid";
+import { randomUUID } from "crypto";
 
 export async function POST(req: Request) {
   try {
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 
     // 3. Create the Order
     await db.insert(orders).values({
-      id: nanoid(),
+      id: randomUUID(),
       orderNumber,
       sessionId: draft.sessionId,
       status: "processing", // Manual orders start at processing

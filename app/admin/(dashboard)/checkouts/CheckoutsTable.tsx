@@ -6,7 +6,7 @@ import { CheckoutDraft } from "@/db/schema";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Copy, Clock, Phone, AlertCircle } from "lucide-react";
+import { MessageCircle, Copy, Clock, Phone, AlertCircle, ShoppingCart } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatINR } from "@/lib/currency";
 
