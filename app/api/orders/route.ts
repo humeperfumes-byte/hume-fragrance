@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { sendOrderConfirmationEmail } from "@/lib/email/send-order-confirmation";
+import { resolveIndiaAwareCountry } from "@/lib/admin-market";
 
 const cartItemSchema = z.object({
   id: z.string().min(1).max(255),
@@ -26,6 +27,11 @@ const orderSchema = z.object({
   acquisitionSource: z.string().max(100).optional(),
   acquisitionCategory: z.string().max(50).optional(),
   acquisitionReferrerHost: z.string().max(255).optional(),
+  utmSource: z.string().max(120).optional(),
+  utmMedium: z.string().max(120).optional(),
+  utmCampaign: z.string().max(180).optional(),
+  utmTerm: z.string().max(180).optional(),
+  utmContent: z.string().max(180).optional(),
   appliedCouponCode: z.string().max(50).optional(),
   subtotal: z.number().nonnegative().optional(),
   shippingFee: z.number().nonnegative().optional(),
@@ -57,10 +63,16 @@ export async function POST(request: NextRequest) {
     const realIp = request.headers.get("x-real-ip");
     const ipAddress = forwardedFor?.split(",")[0]?.trim() || realIp || null;
     const userAgent = request.headers.get("user-agent");
-    const country =
+    const headerCountry =
       request.headers.get("x-vercel-ip-country") ||
       request.headers.get("cf-ipcountry") ||
       null;
+    const country = resolveIndiaAwareCountry({
+      headerCountry,
+      phone: data.details.phone,
+      pincode: data.details.pincode,
+      state: data.details.state,
+    });
 
     await db
       .insert(orders)
@@ -76,6 +88,11 @@ export async function POST(request: NextRequest) {
         acquisitionSource: data.acquisitionSource ?? null,
         acquisitionCategory: data.acquisitionCategory ?? null,
         acquisitionReferrerHost: data.acquisitionReferrerHost ?? null,
+        utmSource: data.utmSource ?? null,
+        utmMedium: data.utmMedium ?? null,
+        utmCampaign: data.utmCampaign ?? null,
+        utmTerm: data.utmTerm ?? null,
+        utmContent: data.utmContent ?? null,
         fullName: data.details.fullName?.trim() || null,
         phone: data.details.phone?.trim() || null,
         email: data.details.email?.trim() || null,
@@ -111,6 +128,11 @@ export async function POST(request: NextRequest) {
           acquisitionSource: data.acquisitionSource ?? null,
           acquisitionCategory: data.acquisitionCategory ?? null,
           acquisitionReferrerHost: data.acquisitionReferrerHost ?? null,
+          utmSource: data.utmSource ?? null,
+          utmMedium: data.utmMedium ?? null,
+          utmCampaign: data.utmCampaign ?? null,
+          utmTerm: data.utmTerm ?? null,
+          utmContent: data.utmContent ?? null,
           fullName: data.details.fullName?.trim() || null,
           phone: data.details.phone?.trim() || null,
           email: data.details.email?.trim() || null,

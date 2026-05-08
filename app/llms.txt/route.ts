@@ -1,10 +1,20 @@
-export const dynamic = "force-static";
+export const revalidate = 3600;
 
-const body = `# HUME Fragrance
+export async function GET() {
+  const now = new Date();
+  const updatedDate = now.toISOString().split("T")[0];
+
+  const body = `# HUME Fragrance
+
+> Last updated: ${updatedDate}
 
 Official website: https://humefragrance.com
 
-HUME Fragrance creates premium inspired perfumes designed for Indian weather with long-lasting EDP performance.
+HUME Fragrance is an Indian perfume brand based in Kannauj that creates premium inspired alternatives to designer fragrances. EDP concentration with 8-12 hour longevity, starting from ₹499. Designed for Indian weather.
+
+## Full catalog
+For the complete product catalog with all notes, pricing, performance, reviews, and FAQ answers, see:
+- Full knowledge base: https://humefragrance.com/llms-full.txt
 
 ## Priority pages
 - Home: https://humefragrance.com/
@@ -51,14 +61,17 @@ The site includes Organization, WebSite, Product, FAQPage, CollectionPage, ItemL
 ## Contact
 - WhatsApp: https://wa.me/919559024822
 - Instagram: https://www.instagram.com/hume.perfume/
+
+---
+Document updated: ${updatedDate} | Full catalog: https://humefragrance.com/llms-full.txt
 `;
 
-export async function GET() {
   return new Response(body, {
     status: 200,
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "public, max-age=3600",
+      "Cache-Control": "public, max-age=3600, s-maxage=3600",
+      "Last-Modified": now.toUTCString(),
     },
   });
 }

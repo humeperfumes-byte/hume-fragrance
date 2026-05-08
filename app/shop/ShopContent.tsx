@@ -371,7 +371,7 @@ export default function ShopContent({ perfumes }: { perfumes: PerfumeData[] }) {
                 className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8 items-start"
               >
                 {filteredPerfumes.map((perfume, index) => (
-                  <div key={perfume.id} className={index % 2 === 1 ? "mt-24 md:mt-0" : ""}>
+                  <div key={perfume.id}>
                     <PerfumeCard
                       id={perfume.id}
                       name={perfume.name}

@@ -25,7 +25,7 @@ export const getOrganizationSchema = () => ({
   url: SITE_URL,
   logo: siteUrl("/images/logo.png"),
   description:
-    "Premium inspired perfumes crafted to celebrate iconic scent profiles with refined quality and modern luxury.",
+    "HUME Fragrance is an Indian perfume brand from Kannauj that creates premium inspired alternatives to designer fragrances. EDP concentration with 8-12 hour longevity, designed for Indian weather. Starting ₹499.",
   sameAs: ["https://instagram.com/humefragrance", "https://wa.me/919559024822"],
   contactPoint: {
     "@type": "ContactPoint",
@@ -45,7 +45,10 @@ export const getOrganizationSchema = () => ({
 export const getWebSiteSchema = () => ({
   "@context": "https://schema.org",
   "@type": "WebSite",
+  name: "HUME Fragrance",
   url: SITE_URL,
+  description: "Premium inspired perfumes for Indian weather with 8-12 hour longevity. Starting ₹499.",
+  dateModified: new Date().toISOString(),
   potentialAction: {
     "@type": "SearchAction",
     target: siteUrl("/search?q={search_term_string}"),

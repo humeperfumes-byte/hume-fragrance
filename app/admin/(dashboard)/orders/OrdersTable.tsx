@@ -109,7 +109,7 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
                       <Package className="h-8 w-8 text-white/20" />
                     </div>
                     <div className="space-y-1">
-                      <p className="text-xl font-serif text-white/40">No confirmed orders</p>
+                      <p className="text-xl text-white/40">No confirmed orders</p>
                       <p className="text-[10px] text-white/20 uppercase tracking-[0.2em] font-bold">System is ready for new orders</p>
                     </div>
                   </div>
@@ -134,12 +134,12 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-lg font-serif text-white group-hover:text-primary transition-colors">{order.fullName || "Guest"}</span>
+                        <span className="text-lg text-white group-hover:text-primary transition-colors">{order.fullName || "Guest"}</span>
                         <span className="text-[11px] text-white/30 font-medium tracking-tight">{order.phone || order.email || "No contact"}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-[12px] text-white/40 font-medium">{totalItems} items</TableCell>
-                    <TableCell className="text-right font-serif text-lg text-white px-6">
+                    <TableCell className="text-right text-lg text-white px-6">
                       {formatINR(Number(order.grandTotal))}
                     </TableCell>
                     <TableCell className="text-center px-6">
@@ -159,12 +159,12 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
           setIsEditing(false);
         }
       }}>
-        <SheetContent className="sm:max-w-md w-full overflow-y-auto bg-[#0a0a0a] border-l border-white/5 text-white">
+        <SheetContent className="sm:max-w-md w-full overflow-y-auto bg-[#0a0a0a] border-l border-white/5 text-white font-sans">
           {selectedOrder && (
             <>
               <SheetHeader className="mb-8 mt-4">
                 <div className="flex items-center justify-between">
-                  <SheetTitle className="font-serif text-4xl tracking-tight text-white">Order #{selectedOrder.orderNumber}</SheetTitle>
+                  <SheetTitle className="text-xl font-semibold text-white">Order #{selectedOrder.orderNumber}</SheetTitle>
                   <Button 
                     variant="ghost" 
                     size="sm" 

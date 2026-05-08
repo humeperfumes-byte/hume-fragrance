@@ -20,8 +20,13 @@ function getIncomingToken(request: NextRequest): string | null {
 export function requireAdminToken(request: NextRequest): NextResponse | null {
   const expectedToken = process.env.ADMIN_API_TOKEN;
 
-  // If no token configured, keep write endpoints open for local development.
-  if (!expectedToken) return null;
+  // If no token is configured, keep local development flexible but fail closed in production.
+  if (!expectedToken) {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json({ error: "Admin token is not configured" }, { status: 503 });
+    }
+    return null;
+  }
 
   const incomingToken = getIncomingToken(request);
   if (incomingToken !== expectedToken) {
@@ -33,7 +38,7 @@ export function requireAdminToken(request: NextRequest): NextResponse | null {
 
 export async function checkAdminToken(): Promise<boolean> {
   const expectedToken = process.env.ADMIN_API_TOKEN;
-  if (!expectedToken) return true;
+  if (!expectedToken) return process.env.NODE_ENV !== "production";
 
   const cookieStore = await cookies();
   const token = cookieStore.get("admin_token")?.value;

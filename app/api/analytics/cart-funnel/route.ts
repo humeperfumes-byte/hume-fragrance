@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       .limit(5000)) as EventRow[];
 
     const tracked = rows.filter((row) =>
-      ["add_to_cart", "update_cart_quantity", "remove_from_cart", "cart_open"].includes(
+      ["add_to_cart", "update_cart_quantity", "remove_from_cart", "cart_open", "coupon_auto_applied"].includes(
         row.eventType
       )
     );
@@ -75,6 +75,7 @@ export async function GET(request: NextRequest) {
         addToCart: byEvent.add_to_cart || 0,
         quantityUpdates: byEvent.update_cart_quantity || 0,
         removeFromCart: byEvent.remove_from_cart || 0,
+        couponAutoApplied: byEvent.coupon_auto_applied || 0,
       },
       topProducts,
       eventsCount: tracked.length,

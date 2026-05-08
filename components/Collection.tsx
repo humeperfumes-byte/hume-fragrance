@@ -63,7 +63,7 @@ const Collection = ({ perfumes }: { perfumes: HomepagePerfumeCardData[] }) => {
           <div className="divider-elegant mx-auto mb-6" />
           <p className="text-body text-muted-foreground max-w-xl mx-auto">
             Each fragrance is a tribute to the world&apos;s most iconic scents,
-            crafted with precision and passion in the heart of England.
+            blended for everyday confidence, strong value, and memorable wear.
           </p>
         </motion.div>
 
@@ -106,7 +106,7 @@ const Collection = ({ perfumes }: { perfumes: HomepagePerfumeCardData[] }) => {
           {visiblePerfumes.map((perfume, index) => (
             <div
               key={perfume.id}
-              className={`${index % 2 === 1 ? "mt-24 md:mt-0" : ""} ${index >= 6 ? "hidden md:block" : ""}`}
+              className={index >= 6 ? "hidden md:block" : ""}
             >
               <PerfumeCard
                 id={perfume.id}

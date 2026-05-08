@@ -16,9 +16,10 @@ export default function HomeFaqSection() {
         </div>
 
         <div className="mx-auto grid max-w-5xl gap-4 md:grid-cols-2">
-          {homeFaqItems.map((item) => (
+          {homeFaqItems.map((item, index) => (
             <details
               key={item.question}
+              open={index < 3 ? true : undefined}
               className="group relative overflow-hidden rounded-[28px] border border-border/60 bg-gradient-to-b from-white to-secondary/20 p-5 shadow-[0_18px_45px_rgba(15,15,20,0.05)] transition-all duration-300 hover:-translate-y-1 hover:border-foreground/15 hover:shadow-[0_24px_60px_rgba(15,15,20,0.08)]"
             >
               <div className="pointer-events-none absolute right-5 top-5 h-10 w-10 rounded-full bg-foreground/[0.04]" />

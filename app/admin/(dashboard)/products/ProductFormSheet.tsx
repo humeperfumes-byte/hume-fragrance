@@ -100,9 +100,9 @@ export function ProductFormSheet({ open, onOpenChange, onSuccess }: ProductFormS
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-2xl w-full overflow-y-auto p-0 flex flex-col h-full border-l border-border/50">
+      <SheetContent className="sm:max-w-2xl w-full overflow-y-auto p-0 flex flex-col h-full border-l border-border/50 font-sans">
         <div className="p-6 border-b border-border/50 bg-secondary/10">
-          <SheetTitle className="font-serif text-3xl">New Fragrance</SheetTitle>
+          <SheetTitle className="text-xl font-semibold">New Fragrance</SheetTitle>
           <SheetDescription>Add a new product to your catalog.</SheetDescription>
         </div>
 

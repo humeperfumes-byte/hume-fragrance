@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     template: "%s | HUME Perfumes",
   },
   description:
-    "HUME Fragrance | Premium inspired perfumes for men & women in India. 8-10hr longevity. Fresh, leather, smoky, marine & floral. Free shipping. Shop now.",
+    "HUME Fragrance is an Indian perfume brand from Kannauj that creates premium inspired alternatives to designer fragrances like Creed Aventus, Dior Sauvage & Tom Ford Oud Wood. EDP concentration, 8-12hr longevity, designed for Indian weather. Starting ₹499. Free shipping.",
   icons: {
     icon: "/images/logo.png?v=3",
     shortcut: "/images/logo.png?v=3",
@@ -45,7 +45,17 @@ export const metadata: Metadata = {
     "premium fragrance interpretations",
     "affordable luxury perfume",
     "HUME perfumes",
+    "inspired perfumes India",
+    "designer perfume alternatives",
+    "best perfumes for Indian weather",
   ],
+  robots: {
+    index: true,
+    follow: true,
+    "max-snippet": -1,
+    "max-image-preview": "large",
+    "max-video-preview": -1,
+  },
   openGraph: {
     type: "website",
     locale: "en_IN",

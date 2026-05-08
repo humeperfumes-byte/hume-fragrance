@@ -12,11 +12,16 @@ export type HeroSlide = {
 
 const getImagesByUsageCached = unstable_cache(
   async (usage: string) => {
-    const rows = await db.select().from(images).where(eq(images.usage, usage));
+    const rows = await db
+      .select({
+        url: images.url,
+        label: images.label,
+      })
+      .from(images)
+      .where(eq(images.usage, usage));
     return rows.map((row) => ({
       url: withCloudinaryTransforms(row.url),
       label: row.label || "HUME offer",
-      link: row.link ?? undefined,
     }));
   },
   ["images-by-usage"],

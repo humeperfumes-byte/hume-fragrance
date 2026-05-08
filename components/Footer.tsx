@@ -36,7 +36,6 @@ export default async function Footer() {
 
   const shopLinks = [
     { href: "/shop", label: "Shop All Perfumes" },
-    { href: "/bottles", label: "Choose Your Bottle" },
     { href: "/kit-pack", label: "Build Your Kit" },
     { href: "/celebrities-favorites", label: "Celebrities' Favorites" },
   ];

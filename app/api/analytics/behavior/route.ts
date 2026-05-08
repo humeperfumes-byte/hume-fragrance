@@ -87,11 +87,9 @@ export async function POST(req: Request) {
     // ── 2. Calculate cumulative intent & risk from batch ────
     let totalIntentGain = 0;
     let exitIntentDetected = false;
-    let abandonmentCauses = new Map<string, number>();
+    const abandonmentCauses = new Map<string, number>();
     let latestSection: string | null = null;
     let hasFormInteraction = false;
-    let totalDwellMs = 0;
-    let highIntentSectionViews = 0;
 
     for (const evt of eventList) {
       const { eventType, scrollDepth, sectionName, dwellTimeMs } = evt;
@@ -108,7 +106,6 @@ export async function POST(req: Request) {
       } else if (eventType === "section_view" && sectionName) {
         totalIntentGain += INTENT_WEIGHTS[`section_view_${sectionName}`] || 3;
         latestSection = sectionName;
-        if (HIGH_INTENT_SECTIONS.has(sectionName)) highIntentSectionViews++;
         // Check abandonment signals
         const signalKey = `section_view_${sectionName}`;
         if (ABANDONMENT_SIGNALS[signalKey]) {
@@ -116,7 +113,6 @@ export async function POST(req: Request) {
           abandonmentCauses.set(sig.cause, (abandonmentCauses.get(sig.cause) || 0) + sig.weight);
         }
       } else if (eventType === "section_dwell" && dwellTimeMs) {
-        totalDwellMs += dwellTimeMs;
         // Long dwell on high-intent sections = very positive
         if (sectionName && HIGH_INTENT_SECTIONS.has(sectionName)) {
           totalIntentGain += Math.min(15, Math.round(dwellTimeMs / 2000)); // +1 per 2s, max 15
@@ -227,28 +223,32 @@ export async function POST(req: Request) {
       sectionUpdates.set(key, current);
     }
 
-    for (const [key, data] of sectionUpdates) {
-      const sectionName = key.split("_").slice(1).join("_"); // Remove path prefix
-      await db
-        .insert(sectionAttribution)
-        .values({
+    if (sectionUpdates.size > 0) {
+      const insertData = Array.from(sectionUpdates.entries()).map(([key, data]) => {
+        const sectionName = key.split("_").slice(1).join("_"); // Remove path prefix
+        return {
           id: key,
           path: data.path,
           sectionName,
           views: data.views,
           interactions: data.interactions,
           attributionScore: "0",
-        })
+        };
+      });
+
+      await db
+        .insert(sectionAttribution)
+        .values(insertData)
         .onConflictDoUpdate({
           target: [sectionAttribution.id],
           set: {
-            views: sql`${sectionAttribution.views} + ${data.views}`,
-            interactions: sql`${sectionAttribution.interactions} + ${data.interactions}`,
+            views: sql`${sectionAttribution.views} + EXCLUDED.views`,
+            interactions: sql`${sectionAttribution.interactions} + EXCLUDED.interactions`,
             // Calculate attribution score: (interactions / views) * 10, capped at 10
             attributionScore: sql`LEAST(10, ROUND(
               CASE
-                WHEN (${sectionAttribution.views} + ${data.views}) > 0
-                THEN ((${sectionAttribution.interactions} + ${data.interactions})::numeric / (${sectionAttribution.views} + ${data.views})::numeric) * 10
+                WHEN (${sectionAttribution.views} + EXCLUDED.views) > 0
+                THEN ((${sectionAttribution.interactions} + EXCLUDED.interactions)::numeric / (${sectionAttribution.views} + EXCLUDED.views)::numeric) * 10
                 ELSE 0
               END, 2
             ))`,

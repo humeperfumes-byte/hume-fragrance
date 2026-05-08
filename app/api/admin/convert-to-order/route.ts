@@ -1,10 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { checkoutDrafts, orders } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
+import { requireAdminToken } from "@/lib/admin-auth";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const unauthorized = requireAdminToken(req);
+  if (unauthorized) return unauthorized;
+
   try {
     const { draftId } = await req.json();
 
@@ -29,6 +33,15 @@ export async function POST(req: Request) {
       sessionId: draft.sessionId,
       status: "processing", // Manual orders start at processing
       checkoutChannel: "manual_admin",
+      path: draft.path,
+      acquisitionSource: draft.acquisitionSource,
+      acquisitionCategory: draft.acquisitionCategory,
+      acquisitionReferrerHost: draft.acquisitionReferrerHost,
+      utmSource: draft.utmSource,
+      utmMedium: draft.utmMedium,
+      utmCampaign: draft.utmCampaign,
+      utmTerm: draft.utmTerm,
+      utmContent: draft.utmContent,
       fullName: draft.fullName,
       phone: draft.phone,
       email: draft.email,
@@ -49,7 +62,7 @@ export async function POST(req: Request) {
 
     // 4. Update Draft Status
     await db.update(checkoutDrafts)
-      .set({ status: "promoted", updatedAt: new Date() })
+      .set({ status: "promoted", leadStatus: "converted", updatedAt: new Date() })
       .where(eq(checkoutDrafts.id, draftId));
 
     return NextResponse.json({ ok: true, orderNumber });

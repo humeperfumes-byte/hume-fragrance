@@ -27,14 +27,14 @@ export function SectionPerformance({ sections }: { sections: SectionAttribution[
                   <span className="text-[9px] uppercase tracking-[0.2em] text-white/30 font-bold mb-1">
                     Rank #{index + 1}
                   </span>
-                  <h4 className="text-base font-serif text-white group-hover:text-primary transition-colors capitalize">
+                  <h4 className="text-base text-white group-hover:text-primary transition-colors capitalize">
                     {section.sectionName.replace("_", " ")}
                   </h4>
                 </div>
                 <div className="flex flex-col items-end">
                   <div className="flex items-center gap-1 text-primary">
                     <Award className="h-3 w-3" />
-                    <span className="text-lg font-serif">{section.attributionScore}</span>
+                    <span className="text-lg">{section.attributionScore}</span>
                   </div>
                   <span className="text-[8px] uppercase tracking-widest text-primary/40 font-bold">Credit Score</span>
                 </div>

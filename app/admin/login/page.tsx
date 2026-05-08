@@ -29,27 +29,27 @@ export default function AdminLogin() {
   }
 
   return (
-    <main className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md border-border/70 rounded-[2rem] shadow-xl">
-        <CardHeader className="text-center space-y-2 pb-6">
-          <CardTitle className="font-serif text-4xl">HUME Control</CardTitle>
-          <CardDescription>Enter your secure API token to access the dashboard.</CardDescription>
+    <main className="admin-shell flex min-h-screen items-center justify-center bg-[#f6f6f6] p-4">
+      <Card className="w-full max-w-md rounded-lg border-neutral-200 shadow-none">
+        <CardHeader className="space-y-2 pb-6 text-center">
+          <CardTitle className="text-2xl font-semibold">HUME Admin</CardTitle>
+          <CardDescription>Enter your API token to access operations.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="token" className="text-xs uppercase tracking-widest text-muted-foreground">API Token</Label>
+              <Label htmlFor="token" className="text-sm font-medium text-muted-foreground">API Token</Label>
               <Input 
                 id="token" 
                 type="password" 
                 value={token} 
                 onChange={e => setToken(e.target.value)} 
                 placeholder="Paste your secure token"
-                className="rounded-xl bg-secondary/30 h-12"
+                className="h-11 rounded-md bg-background"
                 required
               />
             </div>
-            <Button type="submit" className="w-full rounded-xl h-12" disabled={loading}>
+            <Button type="submit" className="h-11 w-full rounded-md" disabled={loading}>
               {loading ? "Authenticating..." : "Secure Login"}
             </Button>
           </form>

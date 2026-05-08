@@ -1,0 +1,1 @@
+import { db } from "./db"; import { behavioralEvents, cartEvents } from "./db/schema"; async function main() { const b = await db.select().from(behavioralEvents).limit(5); console.log("Behavioral:", b); const c = await db.select().from(cartEvents).limit(5); console.log("Cart:", c); } main();

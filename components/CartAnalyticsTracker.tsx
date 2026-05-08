@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 const CART_SESSION_KEY = "hume_cart_session_id";
+const LEAD_SESSION_KEY = "hume_checkout_session_id";
 
 type TrackingDetail = {
   eventType: string;
@@ -11,10 +12,21 @@ type TrackingDetail = {
 };
 
 function getSessionId() {
+  const leadSession = localStorage.getItem(LEAD_SESSION_KEY);
+  if (leadSession) {
+    localStorage.setItem(CART_SESSION_KEY, leadSession);
+    return leadSession;
+  }
+
   const existing = localStorage.getItem(CART_SESSION_KEY);
-  if (existing) return existing;
+  if (existing) {
+    localStorage.setItem(LEAD_SESSION_KEY, existing);
+    return existing;
+  }
+
   const next = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   localStorage.setItem(CART_SESSION_KEY, next);
+  localStorage.setItem(LEAD_SESSION_KEY, next);
   return next;
 }
 
@@ -24,6 +36,7 @@ function isCartEvent(eventType: string) {
     "add_to_cart",
     "update_cart_quantity",
     "remove_from_cart",
+    "coupon_auto_applied",
   ].includes(eventType);
 }
 
@@ -65,4 +78,3 @@ export default function CartAnalyticsTracker() {
 
   return null;
 }
-

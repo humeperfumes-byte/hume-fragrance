@@ -684,7 +684,7 @@ export default function AdminDashboard() {
         <TabsContent value="dashboard" className="space-y-6">
           <Card className="overflow-hidden rounded-[2rem] border-border/80">
             <CardHeader className="border-b border-border/60 bg-gradient-to-r from-secondary/50 via-background to-secondary/20">
-              <CardTitle className="font-serif text-3xl">HUME Control Room</CardTitle>
+              <CardTitle className=" text-2xl">HUME Control Room</CardTitle>
               <p className="text-sm text-muted-foreground">
                 Your live snapshot of traffic, cart intent, product interest, and recovery opportunities.
               </p>
@@ -699,22 +699,22 @@ export default function AdminDashboard() {
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <div className="rounded-2xl border border-border/70 bg-card p-5">
                       <p className="text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground">Unique Viewers</p>
-                      <p className="mt-2 text-3xl font-semibold">{dashboardAnalytics?.overview.uniqueViewers ?? 0}</p>
+                      <p className="mt-2 text-2xl font-semibold">{dashboardAnalytics?.overview.uniqueViewers ?? 0}</p>
                       <p className="mt-1 text-sm text-muted-foreground">Distinct visitors who viewed pages in the tracked window.</p>
                     </div>
                     <div className="rounded-2xl border border-border/70 bg-card p-5">
                       <p className="text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground">Unique Cart Visitors</p>
-                      <p className="mt-2 text-3xl font-semibold">{dashboardAnalytics?.overview.uniqueCartVisitors ?? 0}</p>
+                      <p className="mt-2 text-2xl font-semibold">{dashboardAnalytics?.overview.uniqueCartVisitors ?? 0}</p>
                       <p className="mt-1 text-sm text-muted-foreground">Distinct visitors who tapped the cart button.</p>
                     </div>
                     <div className="rounded-2xl border border-border/70 bg-card p-5">
                       <p className="text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground">Add To Cart</p>
-                      <p className="mt-2 text-3xl font-semibold">{dashboardAnalytics?.overview.totalAddToCart ?? 0}</p>
+                      <p className="mt-2 text-2xl font-semibold">{dashboardAnalytics?.overview.totalAddToCart ?? 0}</p>
                       <p className="mt-1 text-sm text-muted-foreground">Total product adds recorded across the site.</p>
                     </div>
                     <div className="rounded-2xl border border-border/70 bg-card p-5">
                       <p className="text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground">Abandoned Draft Value</p>
-                      <p className="mt-2 text-3xl font-semibold">INR {Math.round(dashboardAnalytics?.overview.abandonedDraftValue ?? 0)}</p>
+                      <p className="mt-2 text-2xl font-semibold">INR {Math.round(dashboardAnalytics?.overview.abandonedDraftValue ?? 0)}</p>
                       <p className="mt-1 text-sm text-muted-foreground">Potential order value sitting in incomplete checkouts.</p>
                     </div>
                   </div>

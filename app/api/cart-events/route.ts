@@ -10,6 +10,7 @@ const cartEventSchema = z.object({
     "add_to_cart",
     "update_cart_quantity",
     "remove_from_cart",
+    "coupon_auto_applied",
   ]),
   path: z.string().max(2048).optional(),
   productId: z.string().max(255).optional(),
@@ -56,4 +57,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 500 });
   }
 }
-

@@ -52,7 +52,7 @@ const Header = () => {
           <div className="flex items-center gap-6">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden p-1"
+              className="inline-flex h-9 w-9 items-center justify-center md:hidden"
               aria-label="Toggle menu"
             >
               {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
@@ -80,11 +80,11 @@ const Header = () => {
             </nav>
           </div>
 
-          <Link href="/" className="absolute left-1/2 -translate-x-1/2 flex items-baseline gap-1.5">
-            <span className="font-serif text-2xl md:text-3xl font-light tracking-widest">
+          <Link href="/" className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 leading-none">
+            <span className="font-serif text-2xl md:text-3xl font-light leading-none tracking-widest">
               HUME
             </span>
-            <span className="text-caption text-muted-foreground hidden sm:inline">
+            <span className="text-caption text-muted-foreground hidden leading-none sm:inline">
               Fragrance
             </span>
           </Link>
@@ -106,7 +106,7 @@ const Header = () => {
             </nav>
             <button
               onClick={() => setIsSearchOpen(true)}
-              className="p-2 hover:bg-muted transition-colors"
+              className="inline-flex h-9 w-9 items-center justify-center hover:bg-muted transition-colors"
               aria-label="Search"
             >
               <Search size={18} />
@@ -122,7 +122,7 @@ const Header = () => {
                 }
                 setIsCartOpen(true);
               }}
-              className="relative p-2 hover:bg-muted transition-colors"
+              className="relative inline-flex h-9 w-9 items-center justify-center hover:bg-muted transition-colors"
               aria-label="Open cart"
             >
               <motion.span

@@ -80,9 +80,9 @@ export function BlogFormSheet({ open, onOpenChange, onSuccess }: BlogFormSheetPr
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-3xl w-full overflow-y-auto p-0 flex flex-col h-full border-l border-border/50">
+      <SheetContent className="sm:max-w-3xl w-full overflow-y-auto p-0 flex flex-col h-full border-l border-border/50 font-sans">
         <div className="p-6 border-b border-border/50 bg-secondary/10">
-          <SheetTitle className="font-serif text-3xl">New Editorial Article</SheetTitle>
+          <SheetTitle className="text-xl font-semibold">New Editorial Article</SheetTitle>
           <SheetDescription>Write and publish content to the HUME blog.</SheetDescription>
         </div>
 
@@ -97,7 +97,7 @@ export function BlogFormSheet({ open, onOpenChange, onSuccess }: BlogFormSheetPr
               <TabsContent value="editor" className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="title">Article Title</Label>
-                  <Input id="title" value={form.title} onChange={handleChange} className="rounded-xl text-lg font-serif h-12" required />
+                  <Input id="title" value={form.title} onChange={handleChange} className="rounded-xl text-lg h-12" required />
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">

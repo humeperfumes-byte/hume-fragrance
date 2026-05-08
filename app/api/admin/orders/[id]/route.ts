@@ -1,12 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { requireAdminToken } from "@/lib/admin-auth";
 
 export async function PATCH(
-  req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const unauthorized = requireAdminToken(req);
+  if (unauthorized) return unauthorized;
+
   try {
     const data = await req.json();
     const { id: orderId } = await params;
@@ -16,7 +20,7 @@ export async function PATCH(
     }
 
     // Filter out restricted fields if any, but for admin we allow most
-    const { id, orderNumber, createdAt, ...updateData } = data;
+    const { id: _id, orderNumber: _orderNumber, createdAt: _createdAt, ...updateData } = data;
 
     await db.update(orders)
       .set({ ...updateData, updatedAt: new Date() })

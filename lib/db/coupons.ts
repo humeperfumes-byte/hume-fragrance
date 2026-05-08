@@ -5,6 +5,24 @@ import type { CouponData } from "@/data/coupons";
 
 type CouponRow = typeof coupons.$inferSelect;
 
+const SPECIAL5_COUPON: CouponData = {
+  id: "special-5",
+  code: "SPECIAL-5",
+  title: "Private 5% off",
+  description: "Private cart recovery offer with 5% off and free delivery",
+  type: "percent",
+  value: 5,
+  minSubtotal: 0,
+  active: true,
+  displayInCart: false,
+};
+
+function withHiddenSpecialCoupon(rows: CouponData[], cartOnly: boolean) {
+  if (cartOnly) return rows;
+  if (rows.some((coupon) => coupon.code.toUpperCase() === SPECIAL5_COUPON.code)) return rows;
+  return [...rows, SPECIAL5_COUPON];
+}
+
 function transformCoupon(row: CouponRow): CouponData {
   return {
     id: row.id,
@@ -27,10 +45,10 @@ export async function getActiveCoupons(options?: { cartOnly?: boolean }): Promis
       : eq(coupons.active, true);
 
     const rows = await db.select().from(coupons).where(whereClause);
-    return rows.map(transformCoupon);
+    return withHiddenSpecialCoupon(rows.map(transformCoupon), cartOnly);
   } catch (error) {
     console.error("Error loading coupons from DB:", error);
-    return [];
+    return withHiddenSpecialCoupon([], cartOnly);
   }
 }
 

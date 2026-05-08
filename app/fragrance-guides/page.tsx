@@ -144,7 +144,8 @@ export default function FragranceGuidesHubPage() {
       name: "Fragrance Guides Hub | HUME",
       url: `${baseUrl}/fragrance-guides`,
       description:
-        "Hub page linking all HUME fragrance guides, alternatives, inspired pages and seasonal recommendations.",
+        "Complete directory of HUME fragrance guides: occasion picks, inspired alternatives, budget lists, comparison pages and scent family recommendations.",
+      dateModified: new Date().toISOString(),
     },
     {
       "@context": "https://schema.org",
@@ -173,20 +174,20 @@ export default function FragranceGuidesHubPage() {
       <Header />
       <section className="pt-28 pb-16">
         <div className="container-luxury">
-          <p className="text-caption text-muted-foreground mb-2">Internal Link Hub</p>
+          <p className="text-caption text-muted-foreground mb-2">Perfume Guide Directory</p>
           <h1 className="font-serif text-4xl md:text-5xl mb-4">Fragrance Guides</h1>
           <p className="text-body text-muted-foreground max-w-3xl">
-            This hub links all searchable fragrance landing pages so crawlers and users can discover every relevant guide.
+            Find the perfect scent with our complete collection of perfume guides — from occasion picks and budget lists to designer alternatives and scent family deep-dives.
           </p>
           <p className="mt-3 text-sm text-muted-foreground">
-            Total indexed-target links listed here: <span className="font-medium text-foreground">{totalLinks}</span>
+            {totalLinks} guides available • <span className="font-medium text-foreground">Updated regularly</span>
           </p>
           <div className="mt-8 rounded-[28px] border border-border/60 bg-gradient-to-b from-white to-secondary/20 p-6 shadow-[0_18px_45px_rgba(15,15,20,0.04)]">
             <p className="text-caption text-muted-foreground mb-3">Quick Answer</p>
             <p className="text-body text-foreground max-w-4xl leading-relaxed">
-              If you are looking for the best HUME pages for search, AI assistants, and product discovery,
-              start with broad recommendation hubs, then move into inspired-by, alternatives-to, budget, note-family,
-              and comparison pages before landing on the final product page.
+              Looking for a perfume recommendation? Start with our best-sellers and occasion guides for quick picks,
+              or explore inspired-by and alternatives pages if you already know a designer fragrance you love.
+              Each guide links directly to the matching HUME product with full notes, reviews, and pricing.
             </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {featuredShortcuts.map((item) => (

@@ -88,17 +88,6 @@ export const blogPosts = pgTable("blog_posts", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// Bottles Table
-export const bottles = pgTable("bottles", {
-  id: varchar("id", { length: 50 }).primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  imageUrl: varchar("image_url", { length: 2048 }).notNull(),
-  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
-  priceCurrency: varchar("price_currency", { length: 3 }).notNull().default("INR"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
 // Accessories Table
 export const accessories = pgTable("accessories", {
   id: varchar("id", { length: 255 }).primaryKey(),
@@ -175,7 +164,7 @@ export const consentEvents = pgTable("consent_events", {
 export const cartEvents = pgTable("cart_events", {
   id: varchar("id", { length: 255 }).primaryKey(),
   sessionId: varchar("session_id", { length: 255 }).notNull(),
-  eventType: varchar("event_type", { length: 80 }).notNull(), // cart_open | add_to_cart | update_cart_quantity | remove_from_cart
+  eventType: varchar("event_type", { length: 80 }).notNull(), // cart_open | add_to_cart | update_cart_quantity | remove_from_cart | coupon_auto_applied
   path: varchar("path", { length: 2048 }),
   productId: varchar("product_id", { length: 255 }),
   productName: varchar("product_name", { length: 255 }),
@@ -198,6 +187,11 @@ export const checkoutDrafts = pgTable("checkout_drafts", {
   acquisitionSource: varchar("acquisition_source", { length: 100 }),
   acquisitionCategory: varchar("acquisition_category", { length: 50 }),
   acquisitionReferrerHost: varchar("acquisition_referrer_host", { length: 255 }),
+  utmSource: varchar("utm_source", { length: 120 }),
+  utmMedium: varchar("utm_medium", { length: 120 }),
+  utmCampaign: varchar("utm_campaign", { length: 180 }),
+  utmTerm: varchar("utm_term", { length: 180 }),
+  utmContent: varchar("utm_content", { length: 180 }),
   fullName: varchar("full_name", { length: 255 }),
   phone: varchar("phone", { length: 50 }),
   email: varchar("email", { length: 255 }),
@@ -228,6 +222,10 @@ export const checkoutDrafts = pgTable("checkout_drafts", {
   country: varchar("country", { length: 8 }),
   ipAddress: varchar("ip_address", { length: 255 }),
   userAgent: text("user_agent"),
+  leadStatus: varchar("lead_status", { length: 50 }).notNull().default("new"),
+  leadNotes: text("lead_notes"),
+  lastContactedAt: timestamp("last_contacted_at"),
+  nextFollowUpAt: timestamp("next_follow_up_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   whatsappInitiatedAt: timestamp("whatsapp_initiated_at"),
@@ -246,6 +244,11 @@ export const orders = pgTable("orders", {
   acquisitionSource: varchar("acquisition_source", { length: 100 }),
   acquisitionCategory: varchar("acquisition_category", { length: 50 }),
   acquisitionReferrerHost: varchar("acquisition_referrer_host", { length: 255 }),
+  utmSource: varchar("utm_source", { length: 120 }),
+  utmMedium: varchar("utm_medium", { length: 120 }),
+  utmCampaign: varchar("utm_campaign", { length: 180 }),
+  utmTerm: varchar("utm_term", { length: 180 }),
+  utmContent: varchar("utm_content", { length: 180 }),
   fullName: varchar("full_name", { length: 255 }),
   phone: varchar("phone", { length: 50 }),
   email: varchar("email", { length: 255 }),
@@ -351,8 +354,6 @@ export type Review = typeof reviews.$inferSelect;
 export type NewReview = typeof reviews.$inferInsert;
 export type BlogPost = typeof blogPosts.$inferSelect;
 export type NewBlogPost = typeof blogPosts.$inferInsert;
-export type Bottle = typeof bottles.$inferSelect;
-export type NewBottle = typeof bottles.$inferInsert;
 export type Accessory = typeof accessories.$inferSelect;
 export type NewAccessory = typeof accessories.$inferInsert;
 export type ImageAsset = typeof images.$inferSelect;

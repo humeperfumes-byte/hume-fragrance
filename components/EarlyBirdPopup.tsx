@@ -11,14 +11,24 @@ import {
 
 const STORAGE_KEY = "hume_early_bird_dismissed";
 const CHECKOUT_SESSION_KEY = "hume_checkout_session_id";
+const CART_SESSION_KEY = "hume_cart_session_id";
 
 function getOrCreateSessionId() {
   const existing =
     typeof window !== "undefined" ? window.localStorage.getItem(CHECKOUT_SESSION_KEY) : null;
   if (existing) return existing;
+  const cartSession =
+    typeof window !== "undefined" ? window.localStorage.getItem(CART_SESSION_KEY) : null;
+  if (cartSession) {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(CHECKOUT_SESSION_KEY, cartSession);
+    }
+    return cartSession;
+  }
   const next = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   if (typeof window !== "undefined") {
     window.localStorage.setItem(CHECKOUT_SESSION_KEY, next);
+    window.localStorage.setItem(CART_SESSION_KEY, next);
   }
   return next;
 }

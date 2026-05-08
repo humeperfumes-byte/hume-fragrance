@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { couponCodeEvents } from "@/db/schema";
+import { resolveIndiaAwareCountry } from "@/lib/admin-market";
 
 const payloadSchema = z.object({
   sessionId: z.string().max(255).optional(),
@@ -23,10 +24,14 @@ export async function POST(request: NextRequest) {
     const realIp = request.headers.get("x-real-ip");
     const ipAddress = forwardedFor?.split(",")[0]?.trim() || realIp || null;
     const userAgent = request.headers.get("user-agent");
-    const country =
+    const headerCountry =
       request.headers.get("x-vercel-ip-country") ||
       request.headers.get("cf-ipcountry") ||
       null;
+    const country = resolveIndiaAwareCountry({
+      headerCountry,
+      destination: data.destination,
+    });
 
     await db.insert(couponCodeEvents).values({
       id: crypto.randomUUID(),
@@ -49,4 +54,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 500 });
   }
 }
-

@@ -10,9 +10,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import ImageWithFallback from "@/components/ImageWithFallback";
+import {
+  calculateCouponDiscount,
+  calculateWelcomeBackDiscount,
+  readWelcomeBackReward,
+  type WelcomeBackReward,
+} from "@/lib/cart-discounts";
 
 const CHECKOUT_STORAGE_KEY = "hume_checkout_details_v1";
 const CHECKOUT_SESSION_KEY = "hume_checkout_session_id";
+const CART_SESSION_KEY = "hume_cart_session_id";
 const FIRST_TOUCH_SOURCE_KEY = "hume_first_touch_source";
 const APPLIED_COUPON_STORAGE_KEY = "hume_applied_coupon_code";
 const LAST_ORDER_SIGNATURE_KEY = "hume_last_order_signature_v1";
@@ -37,7 +45,24 @@ type FirstTouchSource = {
   source: string;
   category: string;
   referrerHost: string | null;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmTerm?: string;
+  utmContent?: string;
   capturedAt?: string;
+};
+
+type Coupon = {
+  id: string;
+  code: string;
+  title: string;
+  description: string;
+  type: string;
+  value: number;
+  minSubtotal: number;
+  active: boolean;
+  displayInCart?: boolean;
 };
 
 const defaultDetails: CheckoutDetails = {
@@ -61,8 +86,14 @@ const checkoutTextareaClassName =
 function getOrCreateCheckoutSessionId() {
   const existing = window.localStorage.getItem(CHECKOUT_SESSION_KEY);
   if (existing) return existing;
+  const cartSession = window.localStorage.getItem(CART_SESSION_KEY);
+  if (cartSession) {
+    window.localStorage.setItem(CHECKOUT_SESSION_KEY, cartSession);
+    return cartSession;
+  }
   const next = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   window.localStorage.setItem(CHECKOUT_SESSION_KEY, next);
+  window.localStorage.setItem(CART_SESSION_KEY, next);
   return next;
 }
 
@@ -108,6 +139,8 @@ export default function CheckoutClient() {
   const checkoutSessionIdRef = useRef<string | null>(null);
   const autosaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedSignatureRef = useRef<string>("");
+  const [allCoupons, setAllCoupons] = useState<Coupon[]>([]);
+  const [welcomeBackReward, setWelcomeBackReward] = useState<WelcomeBackReward | null>(null);
   const [details, setDetails] = useState<CheckoutDetails>(() => {
     if (typeof window === "undefined") return defaultDetails;
     try {
@@ -129,14 +162,50 @@ export default function CheckoutClient() {
     }
   }, [details]);
 
-  const shippingFee =
-    totalPrice > 0 && totalPrice < FREE_DELIVERY_THRESHOLD ? DELIVERY_FEE_BELOW_THRESHOLD : 0;
-  const grandTotal = totalPrice + shippingFee;
-
-  const giftItems = useMemo(() => items.filter((item) => item.isGift), [items]);
   const appliedCouponCode = useMemo(() => {
     if (typeof window === "undefined") return null;
     return window.localStorage.getItem(APPLIED_COUPON_STORAGE_KEY)?.trim().toUpperCase() ?? null;
+  }, []);
+  const appliedCoupon = useMemo(
+    () => allCoupons.find((coupon) => coupon.code.toUpperCase() === (appliedCouponCode ?? "").toUpperCase()) ?? null,
+    [allCoupons, appliedCouponCode],
+  );
+  const couponResult = useMemo(
+    () => calculateCouponDiscount(appliedCoupon, items, totalPrice),
+    [appliedCoupon, items, totalPrice],
+  );
+  const couponDiscount = Math.min(totalPrice, couponResult.discount);
+  const welcomeBackDiscount = calculateWelcomeBackDiscount(welcomeBackReward, totalPrice, couponDiscount);
+  const regularShippingFee =
+    totalPrice > 0 && totalPrice < FREE_DELIVERY_THRESHOLD ? DELIVERY_FEE_BELOW_THRESHOLD : 0;
+  const shippingFee = welcomeBackReward ? 0 : regularShippingFee;
+  const shippingSavings = Math.max(0, regularShippingFee - shippingFee);
+  const grandTotal = Math.max(0, totalPrice - couponDiscount - welcomeBackDiscount) + shippingFee;
+  const appliedOfferCodes = [appliedCouponCode, welcomeBackReward?.code].filter(Boolean).join(" + ");
+
+  const giftItems = useMemo(() => items.filter((item) => item.isGift), [items]);
+
+  useEffect(() => {
+    let active = true;
+    const loadCoupons = async () => {
+      try {
+        const response = await fetch("/api/coupons?includeHidden=1");
+        if (!response.ok) throw new Error("Failed to fetch coupons");
+        const data = (await response.json()) as Coupon[];
+        if (active) setAllCoupons(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Failed to load checkout coupons:", error);
+      }
+    };
+    loadCoupons();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setWelcomeBackReward(readWelcomeBackReward(window.localStorage));
   }, []);
 
   const buildDraftPayload = useCallback(
@@ -155,6 +224,11 @@ export default function CheckoutClient() {
       acquisitionSource: firstTouch?.source,
       acquisitionCategory: firstTouch?.category,
       acquisitionReferrerHost: firstTouch?.referrerHost ?? undefined,
+      utmSource: firstTouch?.utmSource,
+      utmMedium: firstTouch?.utmMedium,
+      utmCampaign: firstTouch?.utmCampaign,
+      utmTerm: firstTouch?.utmTerm,
+      utmContent: firstTouch?.utmContent,
       subtotal: totalPrice,
       shippingFee,
       grandTotal,
@@ -324,9 +398,13 @@ export default function CheckoutClient() {
       itemLines,
       "",
       `Subtotal: ${formatINR(totalPrice)}`,
+      couponDiscount > 0 ? `Coupon Discount (${appliedCouponCode}): -${formatINR(couponDiscount)}` : null,
+      welcomeBackReward && welcomeBackDiscount > 0
+        ? `${welcomeBackReward.label}: -${formatINR(welcomeBackDiscount)}`
+        : null,
       `Delivery: ${shippingFee === 0 ? "FREE" : formatINR(shippingFee)}`,
       `Grand Total: ${formatINR(grandTotal)}`,
-      appliedCouponCode ? `Coupon Code: ${appliedCouponCode}` : null,
+      appliedOfferCodes ? `Offer Codes: ${appliedOfferCodes}` : null,
       giftItems.length > 0 ? `Free Gifts: ${giftItems.map((item) => item.name).join(", ")}` : null,
       "",
       "Customer details:",
@@ -350,9 +428,12 @@ export default function CheckoutClient() {
         isGift: item.isGift,
       })),
       subtotal: totalPrice,
+      couponDiscount,
+      welcomeBackDiscount,
+      shippingSavings,
       shippingFee,
       grandTotal,
-      appliedCouponCode,
+      appliedOfferCodes,
     });
 
     const previousSignature = window.localStorage.getItem(LAST_ORDER_SIGNATURE_KEY);
@@ -397,8 +478,16 @@ export default function CheckoutClient() {
           acquisitionSource: firstTouch?.source,
           acquisitionCategory: firstTouch?.category,
           acquisitionReferrerHost: firstTouch?.referrerHost ?? undefined,
-          appliedCouponCode: appliedCouponCode ?? undefined,
+          utmSource: firstTouch?.utmSource,
+          utmMedium: firstTouch?.utmMedium,
+          utmCampaign: firstTouch?.utmCampaign,
+          utmTerm: firstTouch?.utmTerm,
+          utmContent: firstTouch?.utmContent,
+          appliedCouponCode: appliedOfferCodes || undefined,
           subtotal: totalPrice,
+          couponDiscount,
+          welcomeBackDiscount,
+          shippingSavings,
           shippingFee,
           grandTotal,
           whatsappMessage,
@@ -442,7 +531,7 @@ export default function CheckoutClient() {
     const encodedMessage = encodeURIComponent(whatsappMessage);
     window.open(`https://wa.me/919559024822?text=${encodedMessage}`, "_blank");
 
-    if (appliedCouponCode) {
+    if (appliedOfferCodes) {
       const sessionId = checkoutSessionIdRef.current ?? getOrCreateCheckoutSessionId();
       void fetch("/api/coupon-code-events", {
         method: "POST",
@@ -452,7 +541,7 @@ export default function CheckoutClient() {
           sessionId,
           channel: "whatsapp",
           eventType: "sent",
-          couponCode: appliedCouponCode,
+          couponCode: appliedOfferCodes,
           destination: "919559024822",
           path: pathname,
           referrer: typeof document !== "undefined" ? document.referrer : undefined,
@@ -502,6 +591,19 @@ export default function CheckoutClient() {
           <p className="text-caption text-muted-foreground mb-3">Checkout</p>
           <h1 className="font-serif text-4xl md:text-5xl mb-4">Delivery Details</h1>
           <div className="mx-auto mb-6 h-px w-16 bg-border" />
+        </div>
+
+        <div className="mx-auto mb-8 max-w-5xl overflow-hidden rounded-[2rem] border border-border bg-secondary/20 shadow-[0_20px_60px_rgba(0,0,0,0.06)] md:max-w-3xl">
+          <div className="relative aspect-[16/9] w-full md:aspect-[16/6]">
+            <Image
+              src="/images/perfume-packaging.png"
+              alt="HUME Fragrance perfume packaging"
+              fill
+              sizes="(max-width: 768px) 100vw, 1024px"
+              className="object-cover"
+              priority
+            />
+          </div>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
@@ -631,13 +733,14 @@ export default function CheckoutClient() {
             <div className="space-y-4">
               {items.map((item) => (
                 <div key={item.id} className="flex gap-3 border-b border-border/60 pb-4">
-                  <div className="relative h-20 w-20 overflow-hidden rounded-md bg-secondary">
-                    <Image
+                  <div className={`relative h-20 w-20 overflow-hidden rounded-md ${item.isGift ? "bg-white p-2" : "bg-secondary"}`}>
+                    <ImageWithFallback
                       src={withCloudinaryTransforms(item.image || "/images/logo.png", { width: 160 })}
+                      fallbackSrc="/images/logo.png"
                       alt={item.name}
                       fill
                       sizes="80px"
-                      className="object-cover"
+                      className={item.isGift ? "object-contain" : "object-cover"}
                     />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -661,6 +764,26 @@ export default function CheckoutClient() {
                   <span className="text-muted-foreground">Subtotal</span>
                   <span>{formatINR(totalPrice)}</span>
                 </div>
+                {couponDiscount > 0 ? (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Coupon ({appliedCouponCode})</span>
+                    <span className="text-emerald-600">-{formatINR(couponDiscount)}</span>
+                  </div>
+                ) : null}
+                {welcomeBackReward && welcomeBackDiscount > 0 ? (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">{welcomeBackReward.label}</span>
+                    <span className="text-emerald-600">-{formatINR(welcomeBackDiscount)}</span>
+                  </div>
+                ) : null}
+                {shippingSavings > 0 ? (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">
+                      {welcomeBackReward ? "Welcome back free delivery" : "Free delivery unlocked"}
+                    </span>
+                    <span className="text-emerald-600">-{formatINR(shippingSavings)}</span>
+                  </div>
+                ) : null}
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Delivery</span>
                   <span className={shippingFee === 0 ? "text-emerald-600" : ""}>

@@ -14,6 +14,14 @@ const fallbackSlides = [
   { url: "/images/hero-perfume.jpg", label: "HUME luxury perfume", link: "/shop" },
   { url: "/images/hero-perfume.jpg", label: "HUME offers", link: "/shop" },
 ];
+
+const trustPoints = [
+  "24h dispatch",
+  "Free delivery over INR 799",
+  "UPI/cards",
+  "WhatsApp support",
+];
+
 const Hero = ({ initialSlides = fallbackSlides }: { initialSlides?: HeroSlide[] }) => {
   const geoCopy = getGeoExperience(detectGeoRegionClient());
   const rotatingOffers = geoCopy.offers;
@@ -55,59 +63,77 @@ const Hero = ({ initialSlides = fallbackSlides }: { initialSlides?: HeroSlide[] 
   }, [rotatingOffers.length]);
 
   return (
-    <section className="min-h-screen flex items-center pt-24">
+    <section className="min-h-screen flex items-center pt-20 md:pt-36">
       <div className="container-luxury w-full">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-center">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-20 items-center">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="order-2 lg:order-1 text-center"
+            className="order-2 text-center lg:order-1 lg:text-left"
           >
             <p className="text-caption text-muted-foreground/80 mb-4 tracking-[0.28em] uppercase">
-              The Art of Impression
+              Luxury-inspired perfumes
             </p>
-            <h1 className="font-serif text-[3.2rem] leading-[0.95] md:text-[5.1rem] md:leading-[0.92] mb-8">
-              Luxury
+            <h1 className="font-serif text-[3rem] leading-[0.98] md:text-[4.8rem] md:leading-[0.94] mb-6">
+              Smell premium
               <br />
-              <span className="italic font-light">Reimagined</span>
+              <span className="italic font-light">without designer prices</span>
             </h1>
-            <p className="hidden md:block mt-7 text-body text-muted-foreground max-w-lg mx-auto">
-              {geoCopy.heroBody}
+            <p className="mx-auto max-w-xl text-body leading-relaxed text-muted-foreground lg:mx-0">
+              Long-lasting EDPs inspired by iconic fragrance profiles, made for daily wear,
+              gifting, dates, office, and compliments.
             </p>
 
-            <div className="mx-auto max-w-lg border border-border/70 bg-background/90 px-6 py-6 shadow-[0_10px_24px_rgba(0,0,0,0.08)]">
-              <p className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground mb-3">
-                Limited Edition
-              </p>
-              <div className="mb-5 min-h-[3.9rem] md:min-h-[4.5rem]">
-                <motion.p
-                  key={offerIndex}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.45, ease: "easeOut" }}
-                  className="font-serif italic text-[1.85rem] leading-tight md:text-[2.25rem]"
-                >
-                  {rotatingOffers[offerIndex]}
-                </motion.p>
-              </div>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
+              <Link
+                href="/bestseller"
+                className="inline-flex items-center justify-center bg-foreground px-8 py-4 text-[11px] uppercase tracking-[0.24em] text-background transition-opacity hover:opacity-90"
+              >
+                Shop Best Sellers
+              </Link>
               <Link
                 href="/shop"
-                className="inline-flex w-full items-center justify-center bg-foreground px-8 py-3.5 text-[11px] uppercase tracking-[0.28em] text-background hover:opacity-90 transition-opacity"
+                className="inline-flex items-center justify-center border border-foreground px-8 py-4 text-[11px] uppercase tracking-[0.24em] text-foreground transition-colors hover:bg-foreground hover:text-background"
               >
-                Shop The Collection
+                Shop All Perfumes
               </Link>
             </div>
 
-            
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground lg:justify-start">
+              {trustPoints.map((point, index) => (
+                <span key={point} className="inline-flex items-center gap-3">
+                  {index > 0 && (
+                    <span className="hidden h-1 w-1 rounded-full bg-border sm:inline-block" aria-hidden="true" />
+                  )}
+                  <span>{point}</span>
+                </span>
+              ))}
+            </div>
+
+            <div className="mt-6 max-w-xl border border-border/70 bg-secondary/20 px-5 py-4 text-center shadow-[0_10px_24px_rgba(0,0,0,0.06)] lg:text-left">
+              <p className="text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
+                Live offer
+              </p>
+              <motion.p
+                key={offerIndex}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                className="mt-2 font-serif text-[1.45rem] leading-tight md:text-[1.75rem]"
+              >
+                {rotatingOffers[offerIndex]}
+              </motion.p>
+              <p className="mt-2 text-sm text-muted-foreground">{geoCopy.announcement}</p>
+            </div>
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1, delay: 0.4 }}
-            className="order-1 lg:order-2 -mx-6 sm:mx-0"
+            className="order-1 -mx-6 sm:mx-0 lg:order-2"
           >
             <Carousel
               setApi={setApi}

@@ -1,12 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { requireAdminToken } from "@/lib/admin-auth";
 
 export async function PATCH(
-  req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const unauthorized = requireAdminToken(req);
+  if (unauthorized) return unauthorized;
+
   try {
     const { status } = await req.json();
     const { id: orderId } = await params;

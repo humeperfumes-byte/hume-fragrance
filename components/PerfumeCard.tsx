@@ -87,7 +87,7 @@ const PerfumeCard = ({
 
     if (labels.size === 0 && category) labels.add(category);
 
-    return Array.from(labels).slice(0, 3).join("  |  ");
+    return Array.from(labels).slice(0, 3).join(" / ");
   })();
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -125,26 +125,29 @@ const PerfumeCard = ({
       transition={{ duration: 0.6, delay: index * 0.1 }}
       className="group h-full"
     >
-      <Link
-        href={productPath}
-        className="block h-full"
-        onMouseEnter={() => router.prefetch(productPath)}
-        onClick={handleProductClick}
-      >
-        <div className="relative mb-6 overflow-hidden bg-secondary shadow-[0_12px_30px_rgba(12,14,18,0.12)]">
-          <Image
-            src={cardImage}
-            alt={name}
-            width={400}
-            height={533}
-            sizes="(max-width: 640px) 90vw, (max-width: 1200px) 33vw, 25vw"
-            quality={upgradeImage ? 92 : 75}
-            priority={isPriorityCard}
-            fetchPriority={isPriorityCard ? "high" : "auto"}
-            className="w-full aspect-[3/4] object-cover transition-transform duration-700 group-hover:scale-105"
-            placeholder="blur"
-            blurDataURL={blurDataURL}
-          />
+      <div className="flex h-full flex-col">
+        <div className="relative mb-4 overflow-hidden bg-secondary shadow-[0_12px_30px_rgba(12,14,18,0.12)] sm:mb-5">
+          <Link
+            href={productPath}
+            className="block"
+            onMouseEnter={() => router.prefetch(productPath)}
+            onClick={handleProductClick}
+          >
+            <Image
+              src={cardImage}
+              alt={name}
+              width={400}
+              height={533}
+              sizes="(max-width: 640px) 90vw, (max-width: 1200px) 33vw, 25vw"
+              quality={upgradeImage ? 92 : 75}
+              priority={isPriorityCard}
+              fetchPriority={isPriorityCard ? "high" : "auto"}
+              className="w-full aspect-[3/4] object-cover transition-transform duration-700 group-hover:scale-105"
+              placeholder="blur"
+              blurDataURL={blurDataURL}
+            />
+            <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/5 transition-all duration-500" />
+          </Link>
           {(bestSeller || humeSpecial || limitedStock) && (
             <div className="absolute left-3 top-3 flex flex-col gap-2">
               {bestSeller && (
@@ -164,36 +167,48 @@ const PerfumeCard = ({
               )}
             </div>
           )}
-          <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/5 transition-all duration-500" />
           <button
             onClick={handleAddToCart}
-            className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 z-10 inline-flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-[14px] border border-[#1f2a36]/75 bg-[#1f2a36] text-white ring-1 ring-white/65 shadow-[0_16px_32px_rgba(20,26,35,0.42)] transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.03] hover:bg-[#253445] hover:shadow-[0_20px_36px_rgba(20,26,35,0.5)]"
+            className="absolute bottom-3 right-3 z-10 inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border border-white/45 bg-white/18 text-white shadow-[0_18px_36px_rgba(15,23,42,0.24),inset_0_1px_0_rgba(255,255,255,0.55),inset_0_-1px_0_rgba(255,255,255,0.18)] ring-1 ring-black/5 backdrop-blur-md backdrop-saturate-150 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/60 hover:bg-white/24 hover:shadow-[0_24px_46px_rgba(15,23,42,0.30),inset_0_1px_0_rgba(255,255,255,0.68)] active:translate-y-0 sm:h-12 sm:w-12"
             aria-label={`Add ${name} to bag`}
+            title="Add to bag"
           >
-            <span className="text-[2rem] leading-none font-light -mt-[2px]">+</span>
+            <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.46)_0%,rgba(255,255,255,0.12)_38%,rgba(255,255,255,0.04)_100%)]" />
+            <span className="pointer-events-none absolute -left-5 -top-5 h-12 w-12 rounded-full bg-white/35 blur-xl" />
+            <span className="relative text-[1.85rem] font-light leading-none -mt-[3px] drop-shadow-[0_2px_5px_rgba(0,0,0,0.45)]">
+              +
+            </span>
           </button>
         </div>
-        <div className="flex flex-col h-[170px]">
-          <p className="text-[11px] uppercase tracking-[0.28em] text-muted-foreground/80 mb-2">
-            {categoryLine}
-          </p>
-          <h3 className="font-serif text-[1.25rem] md:text-2xl font-light tracking-wide mb-1">
-            {name}
-          </h3>
-          <p className="h-14 overflow-hidden text-[0.86rem] sm:text-[clamp(0.92rem,0.95vw,1.25rem)] italic text-muted-foreground/90">
-            Inspired by {inspiration}
-          </p>
+
+        <div className="flex flex-1 flex-col">
+          <Link
+            href={productPath}
+            className="block min-h-[8rem] sm:min-h-[8.45rem]"
+            onMouseEnter={() => router.prefetch(productPath)}
+            onClick={handleProductClick}
+          >
+            <p className="mb-2 min-h-[2rem] text-[9px] uppercase leading-[1.45] tracking-[0.18em] text-muted-foreground/75 sm:text-[10px]">
+              {categoryLine}
+            </p>
+            <h3 className="mb-1 line-clamp-2 font-serif text-[1.22rem] font-light leading-tight tracking-wide md:text-2xl">
+              {name}
+            </h3>
+            <p className="line-clamp-2 text-[0.86rem] italic leading-snug text-muted-foreground/90 sm:text-[0.95rem]">
+              Inspired by {inspiration}
+            </p>
+          </Link>
           {!hidePrice && (
-            <div className="flex items-center justify-between gap-3 ">
+            <div className="mt-3">
               <p
-                className="text-[1.35rem] leading-none font-light tracking-tight text-foreground/90"
+                className="text-[1.28rem] leading-none font-light tracking-tight text-foreground/90 sm:text-[1.35rem]"
               >
                 {displayPrice}
               </p>
             </div>
           )}
         </div>
-      </Link>
+      </div>
     </motion.article>
   );
 };

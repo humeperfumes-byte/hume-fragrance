@@ -14,6 +14,18 @@ type TrackingDetail = {
   payload?: Record<string, unknown>;
 };
 
+type FirstTouchSource = {
+  source: string;
+  category: string;
+  referrerHost: string | null;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmTerm?: string;
+  utmContent?: string;
+  capturedAt: string;
+};
+
 function getSessionId() {
   const existing = localStorage.getItem(CONSENT_SESSION_KEY);
   if (existing) return existing;
@@ -53,32 +65,37 @@ export default function ConsentTimelineTracker() {
   };
 
   useEffect(() => {
-    if (!isConsentTrackingEnabled) return;
-
     const toPath = `${pathname}${searchParams?.toString() ? `?${searchParams.toString()}` : ""}`;
     const fromPath = previousPathRef.current;
     previousPathRef.current = toPath;
     const utmSource = searchParams?.get("utm_source");
     const utmMedium = searchParams?.get("utm_medium");
     const utmCampaign = searchParams?.get("utm_campaign");
+    const utmTerm = searchParams?.get("utm_term");
+    const utmContent = searchParams?.get("utm_content");
     const referrer = typeof document !== "undefined" ? document.referrer : "";
     const acquisition = detectAcquisitionSource({ utmSource, referrer });
 
     try {
       if (typeof window !== "undefined" && !window.localStorage.getItem(FIRST_TOUCH_SOURCE_KEY)) {
-        window.localStorage.setItem(
-          FIRST_TOUCH_SOURCE_KEY,
-          JSON.stringify({
-            source: acquisition.source,
-            category: acquisition.category,
-            referrerHost: acquisition.referrerHost,
-            capturedAt: new Date().toISOString(),
-          }),
-        );
+        const firstTouch: FirstTouchSource = {
+          source: acquisition.source,
+          category: acquisition.category,
+          referrerHost: acquisition.referrerHost,
+          utmSource: utmSource || undefined,
+          utmMedium: utmMedium || undefined,
+          utmCampaign: utmCampaign || undefined,
+          utmTerm: utmTerm || undefined,
+          utmContent: utmContent || undefined,
+          capturedAt: new Date().toISOString(),
+        };
+        window.localStorage.setItem(FIRST_TOUCH_SOURCE_KEY, JSON.stringify(firstTouch));
       }
     } catch (error) {
       console.error("Failed to persist first-touch source:", error);
     }
+
+    if (!isConsentTrackingEnabled) return;
 
     void sendEvent("page_view", {
       fromPath,
@@ -90,6 +107,8 @@ export default function ConsentTimelineTracker() {
       utmSource: utmSource || undefined,
       utmMedium: utmMedium || undefined,
       utmCampaign: utmCampaign || undefined,
+      utmTerm: utmTerm || undefined,
+      utmContent: utmContent || undefined,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, searchParams]);
