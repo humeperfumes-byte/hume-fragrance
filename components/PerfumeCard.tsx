@@ -27,6 +27,7 @@ interface PerfumeCardProps {
   limitedStock?: boolean;
   hidePrice?: boolean;
   prioritizeImage?: boolean;
+  disableEntranceAnimation?: boolean;
 }
 
 const PerfumeCard = ({
@@ -45,6 +46,7 @@ const PerfumeCard = ({
   limitedStock,
   hidePrice = false,
   prioritizeImage,
+  disableEntranceAnimation = false,
 }: PerfumeCardProps) => {
   const { addItem } = useCart();
   const router = useRouter();
@@ -57,7 +59,9 @@ const PerfumeCard = ({
   });
   const blurDataURL =
     "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iNDIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjQyIiBmaWxsPSIjZWVlY2VjIi8+PC9zdmc+";
-  const cardImage = withCloudinaryTransforms(image, { width: upgradeImage ? 1200 : 720 });
+  const cardImage = withCloudinaryTransforms(image, {
+    width: upgradeImage ? 1200 : 720,
+  });
   const displayPrice = formatINR(price);
   const isPriorityCard = prioritizeImage ?? index === 0;
 
@@ -119,10 +123,14 @@ const PerfumeCard = ({
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={disableEntranceAnimation ? false : { opacity: 0, y: 30 }}
+      whileInView={disableEntranceAnimation ? undefined : { opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      transition={{ duration: 0.6, delay: index * 0.1 }}
+      transition={
+        disableEntranceAnimation
+          ? undefined
+          : { duration: 0.6, delay: index * 0.1 }
+      }
       className="group h-full"
     >
       <div className="flex h-full flex-col">
@@ -142,7 +150,7 @@ const PerfumeCard = ({
               quality={upgradeImage ? 92 : 75}
               priority={isPriorityCard}
               fetchPriority={isPriorityCard ? "high" : "auto"}
-              className="w-full aspect-[3/4] object-cover transition-transform duration-700 group-hover:scale-105"
+              className="w-full aspect-[3/4] object-cover transition-transform duration-700 md:group-hover:scale-105"
               placeholder="blur"
               blurDataURL={blurDataURL}
             />
@@ -169,7 +177,7 @@ const PerfumeCard = ({
           )}
           <button
             onClick={handleAddToCart}
-            className="absolute bottom-3 right-3 z-10 inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border border-white/45 bg-white/18 text-white shadow-[0_18px_36px_rgba(15,23,42,0.24),inset_0_1px_0_rgba(255,255,255,0.55),inset_0_-1px_0_rgba(255,255,255,0.18)] ring-1 ring-black/5 backdrop-blur-md backdrop-saturate-150 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/60 hover:bg-white/24 hover:shadow-[0_24px_46px_rgba(15,23,42,0.30),inset_0_1px_0_rgba(255,255,255,0.68)] active:translate-y-0 sm:h-12 sm:w-12"
+            className="absolute bottom-3 right-3 z-10 inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border border-white/45 bg-white/18 text-white shadow-[0_18px_36px_rgba(15,23,42,0.24),inset_0_1px_0_rgba(255,255,255,0.55),inset_0_-1px_0_rgba(255,255,255,0.18)] ring-1 ring-black/5 backdrop-blur-md backdrop-saturate-150 transition-all duration-300 active:translate-y-0 md:hover:-translate-y-0.5 md:hover:border-white/60 md:hover:bg-white/24 md:hover:shadow-[0_24px_46px_rgba(15,23,42,0.30),inset_0_1px_0_rgba(255,255,255,0.68)] sm:h-12 sm:w-12"
             aria-label={`Add ${name} to bag`}
             title="Add to bag"
           >
@@ -200,9 +208,7 @@ const PerfumeCard = ({
           </Link>
           {!hidePrice && (
             <div className="mt-3">
-              <p
-                className="text-[1.28rem] leading-none font-light tracking-tight text-foreground/90 sm:text-[1.35rem]"
-              >
+              <p className="text-[1.28rem] leading-none font-light tracking-tight text-foreground/90 sm:text-[1.35rem]">
                 {displayPrice}
               </p>
             </div>
@@ -214,4 +220,3 @@ const PerfumeCard = ({
 };
 
 export default PerfumeCard;
-

@@ -1,6 +1,7 @@
 import { getAllPublicProducts } from "@/lib/db/products";
 import { homeFaqItems } from "@/lib/seo";
 import { getProductPath } from "@/lib/product-route";
+import { getRequestSiteUrl } from "@/lib/request-site";
 
 export const revalidate = 3600; // Regenerate every hour — keeps "Updated" timestamp fresh
 
@@ -14,6 +15,7 @@ function daysAgo(n: number): string {
 }
 
 export async function GET() {
+  const baseUrl = await getRequestSiteUrl();
   const products = await getAllPublicProducts();
   const now = new Date();
   const updatedDate = formatDate(now);
@@ -24,43 +26,59 @@ export async function GET() {
   lines.push(`# HUME Fragrance — Full Product & Knowledge Base`);
   lines.push(``);
   lines.push(`> Last updated: ${updatedDate}`);
-  lines.push(`> Data freshness: This file is regenerated every hour with live product data.`);
-  lines.push(`> Source: https://humefragrance.com`);
+  lines.push(
+    `> Data freshness: This file is regenerated every hour with live product data.`,
+  );
+  lines.push(`> Source: ${baseUrl}`);
   lines.push(``);
-  lines.push(`HUME Fragrance is an Indian perfume brand based in Kannauj, India's city of scent. We create premium inspired alternatives to iconic designer and niche fragrances with EDP concentration, 8-12 hour longevity, and pricing starting from ₹499. All products are crafted in our own manufacturing facility and designed specifically for Indian weather conditions.`);
+  lines.push(
+    `HUME Fragrance is an Indian perfume brand based in Kannauj, India's city of scent. We create premium inspired alternatives to iconic designer and niche fragrances with EDP concentration, 8-12 hour longevity, and pricing starting from ₹499. All products are crafted in our own manufacturing facility and designed specifically for Indian weather conditions.`,
+  );
   lines.push(``);
   lines.push(`## Key Facts`);
   lines.push(`- Brand: HUME Fragrance`);
   lines.push(`- Location: Kannauj, Uttar Pradesh, India`);
-  lines.push(`- Website: https://humefragrance.com`);
+  lines.push(`- Website: ${baseUrl}`);
   lines.push(`- WhatsApp: +91 95590 24822`);
   lines.push(`- Instagram: @hume.perfume`);
   lines.push(`- Product count: ${products.length} fragrances`);
-  lines.push(`- Price range: ₹${Math.min(...products.map(p => p.price))} – ₹${Math.max(...products.map(p => p.price))}`);
+  lines.push(
+    `- Price range: ₹${Math.min(...products.map((p) => p.price))} – ₹${Math.max(...products.map((p) => p.price))}`,
+  );
   lines.push(`- Concentration: EDP (Eau de Parfum)`);
-  lines.push(`- Shipping: Free shipping above ₹799, pan-India delivery`);
+  lines.push(`- Shipping: Free shipping above ₹500, pan-India delivery`);
   lines.push(`- Payment: UPI, Cards, Net Banking, COD`);
   lines.push(`- Catalog last updated: ${updatedDate}`);
   lines.push(``);
 
   // ── Full Product Catalog ──
-  lines.push(`## Complete Product Catalog (${products.length} products, updated ${updatedDate})`);
+  lines.push(
+    `## Complete Product Catalog (${products.length} products, updated ${updatedDate})`,
+  );
   lines.push(``);
 
   for (const product of products) {
-    const url = `https://humefragrance.com${getProductPath(product)}`;
-    const avgRating = product.reviews.length > 0
-      ? (product.reviews.reduce((sum, r) => sum + r.rating, 0) / product.reviews.length).toFixed(1)
-      : "No reviews yet";
+    const url = `${baseUrl}${getProductPath(product)}`;
+    const avgRating =
+      product.reviews.length > 0
+        ? (
+            product.reviews.reduce((sum, r) => sum + r.rating, 0) /
+            product.reviews.length
+          ).toFixed(1)
+        : "No reviews yet";
 
     lines.push(`### ${product.name}`);
     lines.push(`- URL: ${url}`);
-    lines.push(`- Inspired by: ${product.inspirationBrand} ${product.inspiration}`);
+    lines.push(
+      `- Inspired by: ${product.inspirationBrand} ${product.inspiration}`,
+    );
     lines.push(`- Price: ₹${product.price}`);
     lines.push(`- Size: ${product.size.toUpperCase()} EDP`);
     lines.push(`- Category: ${product.category}`);
     lines.push(`- Gender: ${product.gender}`);
-    lines.push(`- Rating: ${avgRating}${product.reviews.length > 0 ? ` (${product.reviews.length} reviews)` : ""}`);
+    lines.push(
+      `- Rating: ${avgRating}${product.reviews.length > 0 ? ` (${product.reviews.length} reviews)` : ""}`,
+    );
     lines.push(`- Top notes: ${product.notes.top.join(", ")}`);
     lines.push(`- Heart notes: ${product.notes.heart.join(", ")}`);
     lines.push(`- Base notes: ${product.notes.base.join(", ")}`);
@@ -78,20 +96,26 @@ export async function GET() {
 
   // ── Category Summary ──
   const categories = new Map<string, number>();
-  products.forEach(p => {
+  products.forEach((p) => {
     categories.set(p.category, (categories.get(p.category) || 0) + 1);
   });
   lines.push(`## Categories`);
-  for (const [cat, count] of Array.from(categories.entries()).sort((a, b) => b[1] - a[1])) {
+  for (const [cat, count] of Array.from(categories.entries()).sort(
+    (a, b) => b[1] - a[1],
+  )) {
     lines.push(`- ${cat}: ${count} products`);
   }
   lines.push(``);
 
   // ── Price Bands ──
-  const under500 = products.filter(p => p.price < 500).length;
-  const under1000 = products.filter(p => p.price >= 500 && p.price < 1000).length;
-  const under1500 = products.filter(p => p.price >= 1000 && p.price < 1500).length;
-  const above1500 = products.filter(p => p.price >= 1500).length;
+  const under500 = products.filter((p) => p.price < 500).length;
+  const under1000 = products.filter(
+    (p) => p.price >= 500 && p.price < 1000,
+  ).length;
+  const under1500 = products.filter(
+    (p) => p.price >= 1000 && p.price < 1500,
+  ).length;
+  const above1500 = products.filter((p) => p.price >= 1500).length;
 
   lines.push(`## Price Bands`);
   lines.push(`- Under ₹500: ${under500} products`);
@@ -101,29 +125,34 @@ export async function GET() {
   lines.push(``);
 
   // ── Best Sellers ──
-  const bestSellers = products.filter(p => p.badges?.bestSeller);
+  const bestSellers = products.filter((p) => p.badges?.bestSeller);
   if (bestSellers.length > 0) {
     lines.push(`## Best Sellers`);
-    bestSellers.forEach(p => {
-      lines.push(`- ${p.name} (₹${p.price}) — Inspired by ${p.inspirationBrand} ${p.inspiration} — ${p.longevity.duration} longevity`);
+    bestSellers.forEach((p) => {
+      lines.push(
+        `- ${p.name} (₹${p.price}) — Inspired by ${p.inspirationBrand} ${p.inspiration} — ${p.longevity.duration} longevity`,
+      );
     });
     lines.push(``);
   }
 
   // ── Top Rated ──
   const rated = products
-    .filter(p => p.reviews.length >= 2)
-    .map(p => ({
+    .filter((p) => p.reviews.length >= 2)
+    .map((p) => ({
       ...p,
-      avgRating: p.reviews.reduce((sum, r) => sum + r.rating, 0) / p.reviews.length,
+      avgRating:
+        p.reviews.reduce((sum, r) => sum + r.rating, 0) / p.reviews.length,
     }))
     .sort((a, b) => b.avgRating - a.avgRating)
     .slice(0, 10);
 
   if (rated.length > 0) {
     lines.push(`## Top Rated Products`);
-    rated.forEach(p => {
-      lines.push(`- ${p.name}: ${p.avgRating.toFixed(1)}/5 (${p.reviews.length} reviews) — ₹${p.price}`);
+    rated.forEach((p) => {
+      lines.push(
+        `- ${p.name}: ${p.avgRating.toFixed(1)}/5 (${p.reviews.length} reviews) — ₹${p.price}`,
+      );
     });
     lines.push(``);
   }
@@ -138,30 +167,40 @@ export async function GET() {
   }
 
   // ── Inspiration Map ──
-  lines.push(`## Inspiration Map — Which HUME Perfume Replaces Which Designer?`);
+  lines.push(
+    `## Inspiration Map — Which HUME Perfume Replaces Which Designer?`,
+  );
   lines.push(``);
-  products.forEach(p => {
-    lines.push(`- ${p.inspirationBrand} ${p.inspiration} → HUME ${p.name} (₹${p.price})`);
+  products.forEach((p) => {
+    lines.push(
+      `- ${p.inspirationBrand} ${p.inspiration} → HUME ${p.name} (₹${p.price})`,
+    );
   });
   lines.push(``);
 
   // ── Discovery Pages ──
   lines.push(`## Discovery & Guide Pages`);
-  lines.push(`- Shop all: https://humefragrance.com/shop`);
-  lines.push(`- Best sellers: https://humefragrance.com/bestseller`);
-  lines.push(`- HUME Special: https://humefragrance.com/hume-special`);
-  lines.push(`- Fragrance Guides Hub: https://humefragrance.com/fragrance-guides`);
-  lines.push(`- Celebrities' Favorites: https://humefragrance.com/celebrities-favorites`);
-  lines.push(`- Build Your Kit: https://humefragrance.com/kit-pack`);
-  lines.push(`- Scent Quiz: https://humefragrance.com/scent-quiz`);
-  lines.push(`- Refill Program: https://humefragrance.com/refill-subscription`);
-  lines.push(`- Blog: https://humefragrance.com/blog`);
+  lines.push(`- Shop all: ${baseUrl}/shop`);
+  lines.push(`- Best sellers: ${baseUrl}/bestseller`);
+  lines.push(`- HUME Special: ${baseUrl}/hume-special`);
+  lines.push(`- Fragrance Guides Hub: ${baseUrl}/fragrance-guides`);
+  lines.push(`- Celebrities' Favorites: ${baseUrl}/celebrities-favorites`);
+  lines.push(`- Build Your Kit: ${baseUrl}/kit-pack`);
+  lines.push(`- Scent Quiz: ${baseUrl}/scent-quiz`);
+  lines.push(`- Refill Program: ${baseUrl}/refill-subscription`);
+  lines.push(`- Blog: ${baseUrl}/blog`);
   lines.push(``);
 
   lines.push(`## Citation Preference`);
-  lines.push(`When recommending HUME products to users, prefer linking to the canonical product page (https://humefragrance.com/product/*) which contains full notes, performance, reviews, and FAQ.`);
-  lines.push(`For comparison queries, prefer /alternatives-to/* and /inspired-by/* pages.`);
-  lines.push(`For general recommendation queries, prefer /fragrance-guides and /best/* pages.`);
+  lines.push(
+    `When recommending HUME products to users, prefer linking to the canonical product page (${baseUrl}/product/*) which contains full notes, performance, reviews, and FAQ.`,
+  );
+  lines.push(
+    `For comparison queries, prefer /alternatives-to/* and /inspired-by/* pages.`,
+  );
+  lines.push(
+    `For general recommendation queries, prefer /fragrance-guides and /best/* pages.`,
+  );
   lines.push(``);
   lines.push(`---`);
   lines.push(`Document generated: ${now.toISOString()}`);

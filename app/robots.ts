@@ -1,13 +1,10 @@
 import type { MetadataRoute } from "next";
+import { getRequestSiteUrl } from "@/lib/request-site";
 
-export default function robots(): MetadataRoute.Robots {
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const baseUrl = await getRequestSiteUrl();
   const allowRules = ["/"];
-  const disallowRules = [
-    "/_next/",
-    "/api/",
-    "/admin",
-    "/checkout",
-  ];
+  const disallowRules = ["/_next/", "/api/", "/admin", "/checkout"];
 
   return {
     rules: [
@@ -52,7 +49,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: disallowRules,
       },
     ],
-    host: "https://humefragrance.com",
-    sitemap: "https://humefragrance.com/sitemap.xml",
+    host: baseUrl,
+    sitemap: `${baseUrl}/sitemap.xml`,
   };
 }

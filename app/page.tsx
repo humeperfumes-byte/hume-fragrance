@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import HumeSpecialSection from "@/components/HumeSpecialSection";
@@ -11,16 +12,36 @@ import LatestJournal from "@/components/LatestJournal";
 import Footer from "@/components/Footer";
 import nextDynamic from "next/dynamic";
 import { JsonLd } from "@/components/JsonLd";
-import { getOrganizationSchema, getWebSiteSchema, getFAQSchema } from "@/lib/seo";
+import {
+  getOrganizationSchema,
+  getWebSiteSchema,
+  getFAQSchema,
+} from "@/lib/seo";
 import { getAllPublicProducts } from "@/lib/db/products";
 import { getImagesByUsage } from "@/lib/db/images";
 import type { HomepagePerfumeCardData } from "@/types/homepage";
 import { db } from "@/db";
-import { behavioralEvents, cartEvents, consentEvents, orders } from "@/db/schema";
+import {
+  behavioralEvents,
+  cartEvents,
+  consentEvents,
+  orders,
+} from "@/db/schema";
 import { and, desc, gte, sql } from "drizzle-orm";
 import { getProductPath } from "@/lib/product-route";
+import { getRequestSiteUrl } from "@/lib/request-site";
 
 export const revalidate = 120;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const baseUrl = await getRequestSiteUrl();
+
+  return {
+    alternates: {
+      canonical: baseUrl,
+    },
+  };
+}
 
 const Craft = nextDynamic(() => import("@/components/Craft"), {
   loading: () => <div className="py-24 md:py-32" />,
@@ -28,9 +49,12 @@ const Craft = nextDynamic(() => import("@/components/Craft"), {
 const About = nextDynamic(() => import("@/components/About"), {
   loading: () => <div className="py-24 md:py-32" />,
 });
-const KitPackShowcase = nextDynamic(() => import("@/components/KitPackShowcase"), {
-  loading: () => <div className="py-24 md:py-32" />,
-});
+const KitPackShowcase = nextDynamic(
+  () => import("@/components/KitPackShowcase"),
+  {
+    loading: () => <div className="py-24 md:py-32" />,
+  },
+);
 
 type ProductSignal = {
   views: number;
@@ -51,7 +75,10 @@ function createProductSignal(): ProductSignal {
 }
 
 function normalizeCartProductId(id: string | null | undefined) {
-  return String(id ?? "").split("::")[0].replace(/^gift-/, "").trim();
+  return String(id ?? "")
+    .split("::")[0]
+    .replace(/^gift-/, "")
+    .trim();
 }
 
 function addSignal(
@@ -66,58 +93,65 @@ function addSignal(
 }
 
 export default async function Home() {
+  const baseUrl = await getRequestSiteUrl();
   const signalWindow = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
 
-  const [perfumes, heroSlides, productViewStats, productClickRows, cartRows, orderRows] =
-    await Promise.all([
-      getAllPublicProducts(),
-      getImagesByUsage("hero"),
-      db
-        .select({
-          path: behavioralEvents.path,
-          views: sql<number>`count(*)`.as("views"),
-        })
-        .from(behavioralEvents)
-        .where(
-          and(
-            gte(behavioralEvents.createdAt, signalWindow),
-            sql`${behavioralEvents.path} LIKE '/product/%'`,
-          ),
-        )
-        .groupBy(behavioralEvents.path)
-        .orderBy(desc(sql`views`))
-        .catch(() => []),
-      db
-        .select({
-          data: consentEvents.data,
-          createdAt: consentEvents.createdAt,
-        })
-        .from(consentEvents)
-        .where(gte(consentEvents.createdAt, signalWindow))
-        .orderBy(desc(consentEvents.createdAt))
-        .limit(10000)
-        .catch(() => []),
-      db
-        .select({
-          eventType: cartEvents.eventType,
-          productId: cartEvents.productId,
-        })
-        .from(cartEvents)
-        .where(gte(cartEvents.createdAt, signalWindow))
-        .orderBy(desc(cartEvents.createdAt))
-        .limit(10000)
-        .catch(() => []),
-      db
-        .select({
-          status: orders.status,
-          cartSnapshot: orders.cartSnapshot,
-        })
-        .from(orders)
-        .where(gte(orders.createdAt, signalWindow))
-        .orderBy(desc(orders.createdAt))
-        .limit(5000)
-        .catch(() => []),
-    ]);
+  const [
+    perfumes,
+    heroSlides,
+    productViewStats,
+    productClickRows,
+    cartRows,
+    orderRows,
+  ] = await Promise.all([
+    getAllPublicProducts(),
+    getImagesByUsage("hero"),
+    db
+      .select({
+        path: behavioralEvents.path,
+        views: sql<number>`count(*)`.as("views"),
+      })
+      .from(behavioralEvents)
+      .where(
+        and(
+          gte(behavioralEvents.createdAt, signalWindow),
+          sql`${behavioralEvents.path} LIKE '/product/%'`,
+        ),
+      )
+      .groupBy(behavioralEvents.path)
+      .orderBy(desc(sql`views`))
+      .catch(() => []),
+    db
+      .select({
+        data: consentEvents.data,
+        createdAt: consentEvents.createdAt,
+      })
+      .from(consentEvents)
+      .where(gte(consentEvents.createdAt, signalWindow))
+      .orderBy(desc(consentEvents.createdAt))
+      .limit(10000)
+      .catch(() => []),
+    db
+      .select({
+        eventType: cartEvents.eventType,
+        productId: cartEvents.productId,
+      })
+      .from(cartEvents)
+      .where(gte(cartEvents.createdAt, signalWindow))
+      .orderBy(desc(cartEvents.createdAt))
+      .limit(10000)
+      .catch(() => []),
+    db
+      .select({
+        status: orders.status,
+        cartSnapshot: orders.cartSnapshot,
+      })
+      .from(orders)
+      .where(gte(orders.createdAt, signalWindow))
+      .orderBy(desc(orders.createdAt))
+      .limit(5000)
+      .catch(() => []),
+  ]);
 
   const productSignals = new Map<string, ProductSignal>();
   const productPathToId = new Map<string, string>();
@@ -177,7 +211,11 @@ export default async function Home() {
     badges?: { bestSeller?: boolean; humeSpecial?: boolean };
   }) {
     const signal = productSignals.get(product.id) ?? createProductSignal();
-    const badgeBoost = product.badges?.bestSeller ? 35 : product.badges?.humeSpecial ? 18 : 0;
+    const badgeBoost = product.badges?.bestSeller
+      ? 35
+      : product.badges?.humeSpecial
+        ? 18
+        : 0;
 
     return (
       signal.orderedUnits * 120 +
@@ -209,12 +247,13 @@ export default async function Home() {
     .sort((a, b) => {
       const scoreDiff = getProductScore(b) - getProductScore(a);
       if (scoreDiff !== 0) return scoreDiff;
-      if (b.badges?.bestSeller !== a.badges?.bestSeller) return b.badges?.bestSeller ? 1 : -1;
+      if (b.badges?.bestSeller !== a.badges?.bestSeller)
+        return b.badges?.bestSeller ? 1 : -1;
       return a.name.localeCompare(b.name);
     });
   const jsonLd = [
-    getOrganizationSchema(),
-    getWebSiteSchema(),
+    getOrganizationSchema(baseUrl),
+    getWebSiteSchema(baseUrl),
     getFAQSchema(),
   ];
 
@@ -228,16 +267,25 @@ export default async function Home() {
       <div data-analytics-section="bestsellers">
         <BestsellerSection perfumes={homepagePerfumes} />
       </div>
-      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1400px" }} data-analytics-section="hume_special">
+      <div
+        style={{ contentVisibility: "auto", containIntrinsicSize: "1400px" }}
+        data-analytics-section="hume_special"
+      >
         <HumeSpecialSection perfumes={homepagePerfumes} />
       </div>
       <div data-analytics-section="collection">
         <Collection perfumes={homepagePerfumes} />
       </div>
-      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1500px" }} data-analytics-section="kit_pack">
+      <div
+        style={{ contentVisibility: "auto", containIntrinsicSize: "1500px" }}
+        data-analytics-section="kit_pack"
+      >
         <KitPackShowcase />
       </div>
-      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1100px" }} data-analytics-section="refill">
+      <div
+        style={{ contentVisibility: "auto", containIntrinsicSize: "1100px" }}
+        data-analytics-section="refill"
+      >
         <RefillProgramSection />
       </div>
       <div data-analytics-section="reviews">
@@ -246,16 +294,28 @@ export default async function Home() {
       <div data-analytics-section="faq">
         <HomeFaqSection />
       </div>
-      <div style={{ contentVisibility: "auto", containIntrinsicSize: "900px" }} data-analytics-section="seo_teaser">
+      <div
+        style={{ contentVisibility: "auto", containIntrinsicSize: "900px" }}
+        data-analytics-section="seo_teaser"
+      >
         <SeoHubTeaser />
       </div>
-      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }} data-analytics-section="craft">
+      <div
+        style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }}
+        data-analytics-section="craft"
+      >
         <Craft />
       </div>
-      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }} data-analytics-section="journal">
+      <div
+        style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }}
+        data-analytics-section="journal"
+      >
         <LatestJournal />
       </div>
-      <div style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }} data-analytics-section="about">
+      <div
+        style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }}
+        data-analytics-section="about"
+      >
         <About />
       </div>
       <Footer />

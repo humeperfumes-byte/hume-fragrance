@@ -13,6 +13,7 @@ import {
   getProductReviewSchema,
 } from "@/lib/seo";
 import { getProductPath, getProductSeoSlug } from "@/lib/product-route";
+import { getRequestSiteUrl } from "@/lib/request-site";
 
 export const revalidate = 120;
 
@@ -25,7 +26,8 @@ export async function generateMetadata({
   const perfume = await getProductByRouteSegment(id);
   if (!perfume) return { title: "Product Not Found" };
 
-  const canonicalUrl = `https://humefragrance.com${getProductPath(perfume)}`;
+  const baseUrl = await getRequestSiteUrl();
+  const canonicalUrl = `${baseUrl}${getProductPath(perfume)}`;
 
   return {
     title: `${perfume.name} - ${perfume.inspirationBrand} ${perfume.inspiration} Inspired Perfume`,
@@ -58,15 +60,16 @@ export default async function ProductPage({
   }
 
   const relatedBlogs = await getRelatedBlogPostsByProductId(perfume.id, 3);
+  const baseUrl = await getRequestSiteUrl();
 
   const productJsonLd = [
-    getProductSchema(perfume),
+    getProductSchema(perfume, baseUrl),
     getProductFAQSchema(perfume),
-    getProductReviewSchema(perfume),
+    getProductReviewSchema(perfume, baseUrl),
     getBreadcrumbSchema([
-      { name: "Home", url: "https://humefragrance.com" },
-      { name: "Shop", url: "https://humefragrance.com/shop" },
-      { name: perfume.name, url: `https://humefragrance.com${getProductPath(perfume)}` },
+      { name: "Home", url: baseUrl },
+      { name: "Shop", url: `${baseUrl}/shop` },
+      { name: perfume.name, url: `${baseUrl}${getProductPath(perfume)}` },
     ]),
   ];
 

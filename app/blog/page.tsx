@@ -5,6 +5,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/seo";
 import { getAllBlogPosts } from "@/lib/db/blog";
 import BlogClient from "./BlogClient";
+import { getRequestSiteUrl } from "@/lib/request-site";
 
 export const revalidate = 300;
 
@@ -22,6 +23,7 @@ const blogCategories = [
 ];
 
 export default async function BlogPage() {
+  const baseUrl = await getRequestSiteUrl();
   const blogPosts = await getAllBlogPosts();
 
   const blogListSchema = {
@@ -30,7 +32,7 @@ export default async function BlogPage() {
     name: "HUME Perfumes Blog",
     description:
       "Expert guides, comparisons, and tips on inspired perfumes. Discover the best alternatives to Dior, Chanel, Tom Ford, Creed, YSL and more.",
-    url: "https://humefragrance.com/blog",
+    url: `${baseUrl}/blog`,
     publisher: {
       "@type": "Organization",
       name: "HUME Perfumes",
@@ -38,7 +40,7 @@ export default async function BlogPage() {
     blogPost: blogPosts.map((post) => ({
       "@type": "BlogPosting",
       headline: post.title,
-      url: `https://humefragrance.com/blog/${post.slug}`,
+      url: `${baseUrl}/blog/${post.slug}`,
       datePublished: post.date,
       author: { "@type": "Person", name: post.author },
       description: post.excerpt,
@@ -48,8 +50,8 @@ export default async function BlogPage() {
   const jsonLd = [
     blogListSchema,
     getBreadcrumbSchema([
-      { name: "Home", url: "https://humefragrance.com" },
-      { name: "Blog", url: "https://humefragrance.com/blog" },
+      { name: "Home", url: baseUrl },
+      { name: "Blog", url: `${baseUrl}/blog` },
     ]),
   ];
 
@@ -57,10 +59,7 @@ export default async function BlogPage() {
     <main className="bg-background min-h-screen">
       <JsonLd data={jsonLd} />
       <Header />
-      <BlogClient
-        blogPosts={blogPosts}
-        blogCategories={blogCategories}
-      />
+      <BlogClient blogPosts={blogPosts} blogCategories={blogCategories} />
       <Footer />
     </main>
   );

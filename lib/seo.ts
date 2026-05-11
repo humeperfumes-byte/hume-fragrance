@@ -1,29 +1,35 @@
 import { getProductPath } from "@/lib/product-route";
-import { SITE_URL, siteUrl } from "@/lib/site";
+import { SITE_URL, siteUrlForBase } from "@/lib/site";
 
-function getSeoProductUrl(product: {
-  id: string;
-  name: string;
-  inspiration?: string;
-  inspirationBrand?: string;
-}) {
+function getSeoProductUrl(
+  product: {
+    id: string;
+    name: string;
+    inspiration?: string;
+    inspirationBrand?: string;
+  },
+  baseUrl = SITE_URL,
+) {
   if (product.inspiration && product.inspirationBrand) {
-    return `${SITE_URL}${getProductPath({
-      id: product.id,
-      name: product.name,
-      inspiration: product.inspiration,
-      inspirationBrand: product.inspirationBrand,
-    })}`;
+    return siteUrlForBase(
+      baseUrl,
+      getProductPath({
+        id: product.id,
+        name: product.name,
+        inspiration: product.inspiration,
+        inspirationBrand: product.inspirationBrand,
+      }),
+    );
   }
-  return siteUrl(`/product/${product.id}`);
+  return siteUrlForBase(baseUrl, `/product/${product.id}`);
 }
 
-export const getOrganizationSchema = () => ({
+export const getOrganizationSchema = (baseUrl = SITE_URL) => ({
   "@context": "https://schema.org",
   "@type": "Organization",
   name: "HUME Fragrance",
-  url: SITE_URL,
-  logo: siteUrl("/images/logo.png"),
+  url: baseUrl,
+  logo: siteUrlForBase(baseUrl, "/images/logo.png"),
   description:
     "HUME Fragrance is an Indian perfume brand from Kannauj that creates premium inspired alternatives to designer fragrances. EDP concentration with 8-12 hour longevity, designed for Indian weather. Starting ₹499.",
   sameAs: ["https://instagram.com/humefragrance", "https://wa.me/919559024822"],
@@ -42,35 +48,45 @@ export const getOrganizationSchema = () => ({
   },
 });
 
-export const getWebSiteSchema = () => ({
+export const getWebSiteSchema = (baseUrl = SITE_URL) => ({
   "@context": "https://schema.org",
   "@type": "WebSite",
   name: "HUME Fragrance",
-  url: SITE_URL,
-  description: "Premium inspired perfumes for Indian weather with 8-12 hour longevity. Starting ₹499.",
+  url: baseUrl,
+  description:
+    "Premium inspired perfumes for Indian weather with 8-12 hour longevity. Starting ₹499.",
   dateModified: new Date().toISOString(),
   potentialAction: {
     "@type": "SearchAction",
-    target: siteUrl("/search?q={search_term_string}"),
+    target: siteUrlForBase(baseUrl, "/search?q={search_term_string}"),
     "query-input": "required name=search_term_string",
   },
 });
 
-export const getProductSchema = (product: {
-  name: string;
-  description: string;
-  seoDescription: string;
-  price: number;
-  images: string[];
-  inspiration: string;
-  inspirationBrand: string;
-  id: string;
-  reviews: { rating: number; author: string; content: string; date: string }[];
-  category: string;
-}) => {
+export const getProductSchema = (
+  product: {
+    name: string;
+    description: string;
+    seoDescription: string;
+    price: number;
+    images: string[];
+    inspiration: string;
+    inspirationBrand: string;
+    id: string;
+    reviews: {
+      rating: number;
+      author: string;
+      content: string;
+      date: string;
+    }[];
+    category: string;
+  },
+  baseUrl = SITE_URL,
+) => {
   const averageRating =
     product.reviews.length > 0
-      ? product.reviews.reduce((sum, r) => sum + r.rating, 0) / product.reviews.length
+      ? product.reviews.reduce((sum, r) => sum + r.rating, 0) /
+        product.reviews.length
       : 0;
 
   return {
@@ -81,13 +97,13 @@ export const getProductSchema = (product: {
     image: product.images[0],
     brand: { "@type": "Brand", name: "HUME Fragrance" },
     category: `Fragrances > ${product.category}`,
-    url: getSeoProductUrl(product),
+    url: getSeoProductUrl(product, baseUrl),
     offers: {
       "@type": "Offer",
       price: product.price.toFixed(2),
       priceCurrency: "INR",
       availability: "https://schema.org/InStock",
-      url: getSeoProductUrl(product),
+      url: getSeoProductUrl(product, baseUrl),
       seller: { "@type": "Organization", name: "HUME Fragrance" },
     },
     aggregateRating:
@@ -110,7 +126,9 @@ export const getProductSchema = (product: {
   };
 };
 
-export const getBreadcrumbSchema = (items: { name: string; url?: string }[]) => ({
+export const getBreadcrumbSchema = (
+  items: { name: string; url?: string }[],
+) => ({
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
   itemListElement: items.map((item, i) => {
@@ -138,26 +156,30 @@ export const getCollectionPageSchema = (
     price: number;
     inspiration: string;
     inspirationBrand?: string;
-  }[]
+  }[],
+  baseUrl = SITE_URL,
 ) => ({
   "@context": "https://schema.org",
   "@type": "CollectionPage",
   name: "Shop All Fragrances - HUME Fragrance",
   description:
     "Browse our complete collection of premium fragrance interpretations and modern luxury scents.",
-  url: siteUrl("/shop"),
+  url: siteUrlForBase(baseUrl, "/shop"),
   mainEntity: {
     "@type": "ItemList",
     numberOfItems: products.length,
     itemListElement: products.map((p, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      url: getSeoProductUrl({
-        id: p.id,
-        name: p.name,
-        inspiration: p.inspiration,
-        inspirationBrand: p.inspirationBrand,
-      }),
+      url: getSeoProductUrl(
+        {
+          id: p.id,
+          name: p.name,
+          inspiration: p.inspiration,
+          inspirationBrand: p.inspirationBrand,
+        },
+        baseUrl,
+      ),
       name: `${p.name} - Luxury Fragrance`,
     })),
   },
@@ -171,17 +193,18 @@ export const getItemListSchema = (
     name: string;
     inspiration?: string;
     inspirationBrand?: string;
-  }[]
+  }[],
+  baseUrl = SITE_URL,
 ) => ({
   "@context": "https://schema.org",
   "@type": "ItemList",
   name,
-  url: siteUrl(urlPath),
+  url: siteUrlForBase(baseUrl, urlPath),
   numberOfItems: items.length,
   itemListElement: items.map((item, index) => ({
     "@type": "ListItem",
     position: index + 1,
-    url: getSeoProductUrl(item),
+    url: getSeoProductUrl(item, baseUrl),
     name: item.name,
   })),
 });
@@ -294,7 +317,7 @@ export const getProductFaqItems = (product: ProductFaqInput) => {
     {
       question: "Do you ship across India?",
       answer:
-        "Yes, free shipping on orders above INR 799. Dispatched within 24 hours.",
+        "Yes, free shipping on orders above INR 500. Dispatched within 24 hours.",
     },
   ];
 };
@@ -312,13 +335,21 @@ export const getProductFAQSchema = (product: ProductFaqInput) => ({
   })),
 });
 
-export const getProductReviewSchema = (product: {
-  id: string;
-  name: string;
-  inspiration: string;
-  inspirationBrand: string;
-  reviews: { rating: number; author: string; content: string; date: string }[];
-}) => ({
+export const getProductReviewSchema = (
+  product: {
+    id: string;
+    name: string;
+    inspiration: string;
+    inspirationBrand: string;
+    reviews: {
+      rating: number;
+      author: string;
+      content: string;
+      date: string;
+    }[];
+  },
+  baseUrl = SITE_URL,
+) => ({
   "@context": "https://schema.org",
   "@type": "ItemList",
   name: `${product.name} Reviews`,
@@ -330,18 +361,16 @@ export const getProductReviewSchema = (product: {
       itemReviewed: {
         "@type": "Product",
         name: product.name,
-        url: getSeoProductUrl(product),
+        url: getSeoProductUrl(product, baseUrl),
       },
       author: { "@type": "Person", name: review.author },
       datePublished: review.date,
       reviewBody: review.content,
-      reviewRating: { "@type": "Rating", ratingValue: review.rating, bestRating: 5 },
+      reviewRating: {
+        "@type": "Rating",
+        ratingValue: review.rating,
+        bestRating: 5,
+      },
     },
   })),
 });
-
-
-
-
-
-

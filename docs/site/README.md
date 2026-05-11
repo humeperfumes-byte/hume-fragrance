@@ -32,6 +32,16 @@ Main app router areas:
 - APIs: `app/api/*`
 - SEO/programmatic pages: `app/(programmatic)/*`, `app/(seasonal-seo)/*`
 
+SEO/domain helpers:
+
+- `lib/site.ts` defines the supported HUME hosts and URL builders.
+- `lib/request-site.ts` reads the current request host and returns the matching
+  public base URL.
+- `app/sitemap.ts` and `app/robots.ts` are host-aware. A `.in` request must
+  return `.in` URLs, and a `.com` request must return `.com` URLs.
+- Page-level structured data and important canonicals should use the request
+  base URL instead of hardcoding one domain.
+
 Global wrappers:
 
 - Root layout: `app/layout.tsx`
@@ -88,3 +98,16 @@ Every new feature should help one of these loops:
 - Admin decision to better storefront/offer/follow-up.
 
 Do not add automation before the data is trustworthy.
+
+## Domain Strategy
+
+HUME currently supports both `humefragrance.com` and `humefragrance.in`.
+
+- Do not redirect `.in` to `.com` while `.in` is ranking and being evaluated in
+  Search Console.
+- Submit `https://www.humefragrance.in/sitemap.xml` in the `.in` Search Console
+  property after deployment.
+- Submit/keep `https://www.humefragrance.com/sitemap.xml` in the `.com` Search
+  Console property.
+- If the brand later chooses one permanent domain, redirect the other domain only
+  after the chosen domain has stable indexing and clean Search Console signals.

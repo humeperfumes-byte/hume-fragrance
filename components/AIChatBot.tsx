@@ -37,7 +37,9 @@ function formatRecommendations(title: string, picks: Recommendation[]) {
     .join("\n")}`;
 }
 
-function getRecommendationReply(value: string): Omit<ChatMessage, "id" | "role"> | null {
+function getRecommendationReply(
+  value: string,
+): Omit<ChatMessage, "id" | "role"> | null {
   const isForWomen =
     value.includes("girlfriend") ||
     value.includes("gf") ||
@@ -76,26 +78,38 @@ function getRecommendationReply(value: string): Omit<ChatMessage, "id" | "role">
     value.includes("marine") ||
     value.includes("summer");
 
-  const office = value.includes("office") || value.includes("work") || value.includes("professional");
-  const dateNight = value.includes("date") || value.includes("romantic") || value.includes("night");
-  const oud = value.includes("oud") || value.includes("arabic") || value.includes("intense");
+  const office =
+    value.includes("office") ||
+    value.includes("work") ||
+    value.includes("professional");
+  const dateNight =
+    value.includes("date") ||
+    value.includes("romantic") ||
+    value.includes("night");
+  const oud =
+    value.includes("oud") ||
+    value.includes("arabic") ||
+    value.includes("intense");
 
   if (isForMen && boozy) {
     return {
-      text: formatRecommendations("Great match for a masculine boozy profile:", [
-        {
-          name: "Replica Jazz Club (Maison Martin Margiela inspired profile)",
-          why: "boozy-rum tobacco vibe, warm and classy for evening wear",
-        },
-        {
-          name: "Spicebomb style profile",
-          why: "spicy tobacco warmth with strong masculine character",
-        },
-        {
-          name: "Ombre Leather style profile",
-          why: "dark, bold and rugged; excellent for night outings",
-        },
-      ]),
+      text: formatRecommendations(
+        "Great match for a masculine boozy profile:",
+        [
+          {
+            name: "Replica Jazz Club (Maison Martin Margiela inspired profile)",
+            why: "boozy-rum tobacco vibe, warm and classy for evening wear",
+          },
+          {
+            name: "Spicebomb style profile",
+            why: "spicy tobacco warmth with strong masculine character",
+          },
+          {
+            name: "Ombre Leather style profile",
+            why: "dark, bold and rugged; excellent for night outings",
+          },
+        ],
+      ),
       links: [{ href: "/shop", label: "See Matches in Shop" }],
     };
   }
@@ -122,11 +136,23 @@ function getRecommendationReply(value: string): Omit<ChatMessage, "id" | "role">
 
   if (office && fresh) {
     return {
-      text: formatRecommendations("Best office-friendly fresh recommendations:", [
-        { name: "Aqua Marine", why: "clean marine freshness, safe for work settings" },
-        { name: "LV Imagination style profile", why: "elegant citrus-tea freshness" },
-        { name: "YSL Myself style profile", why: "fresh-modern signature for daily office use" },
-      ]),
+      text: formatRecommendations(
+        "Best office-friendly fresh recommendations:",
+        [
+          {
+            name: "Aqua Marine",
+            why: "clean marine freshness, safe for work settings",
+          },
+          {
+            name: "LV Imagination style profile",
+            why: "elegant citrus-tea freshness",
+          },
+          {
+            name: "YSL Myself style profile",
+            why: "fresh-modern signature for daily office use",
+          },
+        ],
+      ),
       links: [{ href: "/shop", label: "Shop Office Perfumes" }],
     };
   }
@@ -134,9 +160,18 @@ function getRecommendationReply(value: string): Omit<ChatMessage, "id" | "role">
   if (dateNight && (sweet || boozy || oud)) {
     return {
       text: formatRecommendations("Strong date-night picks:", [
-        { name: "Replica Jazz Club style profile", why: "boozy tobacco warmth, intimate and classy" },
-        { name: "Ombre Nomade style profile", why: "rich oud-rose-smoky trail, luxurious presence" },
-        { name: "Khamrah Qahwa style profile", why: "sweet spicy coffee gourmand for colder evenings" },
+        {
+          name: "Replica Jazz Club style profile",
+          why: "boozy tobacco warmth, intimate and classy",
+        },
+        {
+          name: "Ombre Nomade style profile",
+          why: "rich oud-rose-smoky trail, luxurious presence",
+        },
+        {
+          name: "Khamrah Qahwa style profile",
+          why: "sweet spicy coffee gourmand for colder evenings",
+        },
       ]),
       links: [{ href: "/shop", label: "Explore Date Night Perfumes" }],
     };
@@ -145,8 +180,14 @@ function getRecommendationReply(value: string): Omit<ChatMessage, "id" | "role">
   if (oud) {
     return {
       text: formatRecommendations("If you want oud-heavy fragrances:", [
-        { name: "Ombre Nomade style profile", why: "deep smoky oud with strong projection" },
-        { name: "Oud Wood style profile", why: "smoother woody-spicy oud direction" },
+        {
+          name: "Ombre Nomade style profile",
+          why: "deep smoky oud with strong projection",
+        },
+        {
+          name: "Oud Wood style profile",
+          why: "smoother woody-spicy oud direction",
+        },
       ]),
       links: [{ href: "/shop", label: "View Oud Profiles" }],
     };
@@ -155,8 +196,14 @@ function getRecommendationReply(value: string): Omit<ChatMessage, "id" | "role">
   if (fresh) {
     return {
       text: formatRecommendations("Fresh profile recommendations:", [
-        { name: "Aqua Marine", why: "marine-citrus clean profile, summer-ready" },
-        { name: "Sauvage style profile", why: "fresh spicy ambroxan, crowd-pleasing" },
+        {
+          name: "Aqua Marine",
+          why: "marine-citrus clean profile, summer-ready",
+        },
+        {
+          name: "Sauvage style profile",
+          why: "fresh spicy ambroxan, crowd-pleasing",
+        },
         { name: "Bleu style profile", why: "woody aromatic versatility" },
       ]),
       links: [{ href: "/shop", label: "Shop Fresh Perfumes" }],
@@ -202,19 +249,28 @@ function getBotReply(input: string): Omit<ChatMessage, "id" | "role"> {
 
   if (value.includes("ship") || value.includes("delivery")) {
     return {
-      text: "We offer fast delivery across India. Free shipping is available above ₹799.",
+      text: "We offer fast delivery across India. Free shipping is available above ₹500.",
       links: [{ href: "/shop", label: "Start Shopping" }],
     };
   }
 
-  if (value.includes("offer") || value.includes("coupon") || value.includes("discount")) {
+  if (
+    value.includes("offer") ||
+    value.includes("coupon") ||
+    value.includes("discount")
+  ) {
     return {
       text: "Available offers can be applied from the cart. You can also view all active offers there.",
       links: [{ href: "/shop", label: "Shop & Apply Offers" }],
     };
   }
 
-  if (value.includes("office") || value.includes("date") || value.includes("summer") || value.includes("winter")) {
+  if (
+    value.includes("office") ||
+    value.includes("date") ||
+    value.includes("summer") ||
+    value.includes("winter")
+  ) {
     return {
       text: "For recommendations by occasion and season, start from Shop filters or Celebrities’ Favorites.",
       links: [
@@ -224,7 +280,11 @@ function getBotReply(input: string): Omit<ChatMessage, "id" | "role"> {
     };
   }
 
-  if (value.includes("support") || value.includes("help") || value.includes("contact")) {
+  if (
+    value.includes("support") ||
+    value.includes("help") ||
+    value.includes("contact")
+  ) {
     return {
       text: "I can guide your shopping instantly. For direct help, you can also use our product page support links.",
       links: [{ href: "/shop", label: "Go to Shop" }],
@@ -256,8 +316,13 @@ export default function AIChatBot() {
   ]);
 
   const canSend = useMemo(() => input.trim().length > 0, [input]);
-  const normalizedPath = useMemo(() => stripRegionPrefix(pathname || "/").pathWithoutPrefix, [pathname]);
-  const shouldRender = (normalizedPath === "/" || normalizedPath.startsWith("/shop")) && !isCartOpen;
+  const normalizedPath = useMemo(
+    () => stripRegionPrefix(pathname || "/").pathWithoutPrefix,
+    [pathname],
+  );
+  const shouldRender =
+    (normalizedPath === "/" || normalizedPath.startsWith("/shop")) &&
+    !isCartOpen;
 
   if (!shouldRender) return null;
 
@@ -304,17 +369,26 @@ export default function AIChatBot() {
               <MessageCircle size={16} />
               <p className="text-sm font-medium">HUME AI Assistant</p>
             </div>
-            <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground" aria-label="Close">
+            <button
+              onClick={() => setOpen(false)}
+              className="text-muted-foreground hover:text-foreground"
+              aria-label="Close"
+            >
               <X size={16} />
             </button>
           </div>
 
           <div className="max-h-[340px] space-y-3 overflow-y-auto px-3 py-3">
             {messages.map((msg) => (
-              <div key={msg.id} className={msg.role === "user" ? "text-right" : "text-left"}>
+              <div
+                key={msg.id}
+                className={msg.role === "user" ? "text-right" : "text-left"}
+              >
                 <div
                   className={`inline-block max-w-[90%] rounded-lg px-3 py-2 text-sm ${
-                    msg.role === "user" ? "bg-black text-white" : "bg-secondary text-foreground"
+                    msg.role === "user"
+                      ? "bg-black text-white"
+                      : "bg-secondary text-foreground"
                   }`}
                 >
                   {msg.text}

@@ -9,17 +9,20 @@ import {
   getAllProgrammaticInspirations,
 } from "@/lib/programmatic-seo";
 import { FESTIVAL_SEO_PAGES } from "@/lib/festival-seo";
+import { getRequestSiteUrl } from "@/lib/request-site";
 
-const baseUrl = "https://humefragrance.com";
+export async function generateMetadata(): Promise<Metadata> {
+  const baseUrl = await getRequestSiteUrl();
 
-export const metadata: Metadata = {
-  title: "Fragrance Guides Hub | HUME",
-  description:
-    "Browse all HUME fragrance guides: occasion picks, inspired alternatives, budget lists, and note-based recommendations.",
-  alternates: {
-    canonical: `${baseUrl}/fragrance-guides`,
-  },
-};
+  return {
+    title: "Fragrance Guides Hub | HUME",
+    description:
+      "Browse all HUME fragrance guides: occasion picks, inspired alternatives, budget lists, and note-based recommendations.",
+    alternates: {
+      canonical: `${baseUrl}/fragrance-guides`,
+    },
+  };
+}
 
 type LinkItem = { href: string; label: string };
 
@@ -28,9 +31,7 @@ function section(title: string, links: LinkItem[]) {
 }
 
 function prettyFromSlug(slug: string) {
-  return slug
-    .replace(/-/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+  return slug.replace(/-/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function renderLinks(items: LinkItem[]) {
@@ -49,7 +50,8 @@ function renderLinks(items: LinkItem[]) {
   );
 }
 
-export default function FragranceGuidesHubPage() {
+export default async function FragranceGuidesHubPage() {
+  const baseUrl = await getRequestSiteUrl();
   const aiSearchGuides = [
     "best-perfumes-for-men-available-online-in-india",
     "difference-between-edp-and-edt",
@@ -63,19 +65,23 @@ export default function FragranceGuidesHubPage() {
     "affordable-luxury-perfume-brands-for-women",
   ]
     .map((slug) => FESTIVAL_SEO_PAGES.find((item) => item.slug === slug))
-    .filter((item): item is NonNullable<(typeof FESTIVAL_SEO_PAGES)[number]> => Boolean(item))
+    .filter((item): item is NonNullable<(typeof FESTIVAL_SEO_PAGES)[number]> =>
+      Boolean(item),
+    )
     .map((item) => ({ href: `/${item.slug}`, label: item.title }));
 
   const occasionGuides = FESTIVAL_SEO_PAGES.filter(
-    (item) => item.slug.startsWith("perfume-for-") || item.slug.startsWith("best-office-perfume")
+    (item) =>
+      item.slug.startsWith("perfume-for-") ||
+      item.slug.startsWith("best-office-perfume"),
   ).map((item) => ({ href: `/${item.slug}`, label: item.title }));
 
   const budgetGuides = FESTIVAL_SEO_PAGES.filter(
-    (item) => item.slug.includes("under-") || item.slug.includes("budget")
+    (item) => item.slug.includes("under-") || item.slug.includes("budget"),
   ).map((item) => ({ href: `/${item.slug}`, label: item.title }));
 
-  const noteGuides = FESTIVAL_SEO_PAGES.filter(
-    (item) => item.slug.endsWith("-perfume-men")
+  const noteGuides = FESTIVAL_SEO_PAGES.filter((item) =>
+    item.slug.endsWith("-perfume-men"),
   ).map((item) => ({ href: `/${item.slug}`, label: item.title }));
 
   const performanceGuides = FESTIVAL_SEO_PAGES.filter(
@@ -84,11 +90,11 @@ export default function FragranceGuidesHubPage() {
       item.slug.includes("lasting") ||
       item.slug.includes("projection") ||
       item.slug.includes("sillage") ||
-      item.slug.includes("beast-mode")
+      item.slug.includes("beast-mode"),
   ).map((item) => ({ href: `/${item.slug}`, label: item.title }));
 
   const inspiredGuides = FESTIVAL_SEO_PAGES.filter((item) =>
-    item.slug.endsWith("-inspired-perfume")
+    item.slug.endsWith("-inspired-perfume"),
   ).map((item) => ({ href: `/${item.slug}`, label: item.title }));
 
   const compareAndEducation = FESTIVAL_SEO_PAGES.filter(
@@ -97,7 +103,7 @@ export default function FragranceGuidesHubPage() {
       item.slug.startsWith("how-to-") ||
       item.slug.startsWith("where-to-") ||
       item.slug.includes("explained") ||
-      item.slug.includes("guide")
+      item.slug.includes("guide"),
   ).map((item) => ({ href: `/${item.slug}`, label: item.title }));
 
   const programmaticInspired = getAllProgrammaticInspirations().map((item) => ({
@@ -105,10 +111,12 @@ export default function FragranceGuidesHubPage() {
     label: `Inspired by ${item.originalBrand} ${item.originalName}`,
   }));
 
-  const programmaticAlternatives = getAllProgrammaticInspirations().map((item) => ({
-    href: `/alternatives-to/${item.slug}`,
-    label: `Alternative to ${item.originalName}`,
-  }));
+  const programmaticAlternatives = getAllProgrammaticInspirations().map(
+    (item) => ({
+      href: `/alternatives-to/${item.slug}`,
+      label: `Alternative to ${item.originalName}`,
+    }),
+  );
 
   const programmaticBest = getAllProgrammaticAlternatives().map((item) => ({
     href: `/best/${item.slug}`,
@@ -130,12 +138,30 @@ export default function FragranceGuidesHubPage() {
 
   const totalLinks = sections.reduce((sum, item) => sum + item.links.length, 0);
   const featuredShortcuts = [
-    { href: "/best-perfumes-for-men-available-online-in-india", label: "Best Perfumes for Men Available Online in India" },
-    { href: "/best-long-lasting-perfumes-for-men", label: "Best Long-Lasting Perfumes for Men" },
-    { href: "/difference-between-edp-and-edt", label: "Difference Between EDP and EDT" },
-    { href: "/fragrance-families-explained", label: "Fragrance Families Explained" },
-    { href: "/how-to-apply-perfume-for-maximum-longevity", label: "How to Apply Perfume for Maximum Longevity" },
-    { href: "/how-to-choose-a-signature-scent-from-popular-perfume-brands", label: "How to Choose a Signature Scent" },
+    {
+      href: "/best-perfumes-for-men-available-online-in-india",
+      label: "Best Perfumes for Men Available Online in India",
+    },
+    {
+      href: "/best-long-lasting-perfumes-for-men",
+      label: "Best Long-Lasting Perfumes for Men",
+    },
+    {
+      href: "/difference-between-edp-and-edt",
+      label: "Difference Between EDP and EDT",
+    },
+    {
+      href: "/fragrance-families-explained",
+      label: "Fragrance Families Explained",
+    },
+    {
+      href: "/how-to-apply-perfume-for-maximum-longevity",
+      label: "How to Apply Perfume for Maximum Longevity",
+    },
+    {
+      href: "/how-to-choose-a-signature-scent-from-popular-perfume-brands",
+      label: "How to Choose a Signature Scent",
+    },
   ];
   const jsonLd = [
     {
@@ -174,20 +200,33 @@ export default function FragranceGuidesHubPage() {
       <Header />
       <section className="pt-28 pb-16">
         <div className="container-luxury">
-          <p className="text-caption text-muted-foreground mb-2">Perfume Guide Directory</p>
-          <h1 className="font-serif text-4xl md:text-5xl mb-4">Fragrance Guides</h1>
+          <p className="text-caption text-muted-foreground mb-2">
+            Perfume Guide Directory
+          </p>
+          <h1 className="font-serif text-4xl md:text-5xl mb-4">
+            Fragrance Guides
+          </h1>
           <p className="text-body text-muted-foreground max-w-3xl">
-            Find the perfect scent with our complete collection of perfume guides — from occasion picks and budget lists to designer alternatives and scent family deep-dives.
+            Find the perfect scent with our complete collection of perfume
+            guides — from occasion picks and budget lists to designer
+            alternatives and scent family deep-dives.
           </p>
           <p className="mt-3 text-sm text-muted-foreground">
-            {totalLinks} guides available • <span className="font-medium text-foreground">Updated regularly</span>
+            {totalLinks} guides available •{" "}
+            <span className="font-medium text-foreground">
+              Updated regularly
+            </span>
           </p>
           <div className="mt-8 rounded-[28px] border border-border/60 bg-gradient-to-b from-white to-secondary/20 p-6 shadow-[0_18px_45px_rgba(15,15,20,0.04)]">
-            <p className="text-caption text-muted-foreground mb-3">Quick Answer</p>
+            <p className="text-caption text-muted-foreground mb-3">
+              Quick Answer
+            </p>
             <p className="text-body text-foreground max-w-4xl leading-relaxed">
-              Looking for a perfume recommendation? Start with our best-sellers and occasion guides for quick picks,
-              or explore inspired-by and alternatives pages if you already know a designer fragrance you love.
-              Each guide links directly to the matching HUME product with full notes, reviews, and pricing.
+              Looking for a perfume recommendation? Start with our best-sellers
+              and occasion guides for quick picks, or explore inspired-by and
+              alternatives pages if you already know a designer fragrance you
+              love. Each guide links directly to the matching HUME product with
+              full notes, reviews, and pricing.
             </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {featuredShortcuts.map((item) => (
@@ -209,11 +248,17 @@ export default function FragranceGuidesHubPage() {
           <div className="rounded-[30px] border border-border/60 bg-gradient-to-br from-white via-secondary/10 to-secondary/25 p-6 md:p-8 shadow-[0_18px_45px_rgba(15,15,20,0.05)]">
             <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
               <div className="max-w-3xl">
-                <p className="text-caption text-muted-foreground">AI Search Layer</p>
-                <h2 className="mt-3 font-serif text-3xl md:text-4xl">Most-Asked Perfume Questions</h2>
+                <p className="text-caption text-muted-foreground">
+                  AI Search Layer
+                </p>
+                <h2 className="mt-3 font-serif text-3xl md:text-4xl">
+                  Most-Asked Perfume Questions
+                </h2>
                 <p className="mt-3 text-body text-muted-foreground">
-                  These pages are built around the exact questions users ask ChatGPT, Gemini, and other AI assistants.
-                  They combine direct answers, product suggestions, and structured explanations for stronger AI citation pickup.
+                  These pages are built around the exact questions users ask
+                  ChatGPT, Gemini, and other AI assistants. They combine direct
+                  answers, product suggestions, and structured explanations for
+                  stronger AI citation pickup.
                 </p>
               </div>
               <Link
@@ -223,9 +268,7 @@ export default function FragranceGuidesHubPage() {
                 Open Featured AI Guide
               </Link>
             </div>
-            <div className="mt-6">
-              {renderLinks(aiSearchGuides)}
-            </div>
+            <div className="mt-6">{renderLinks(aiSearchGuides)}</div>
           </div>
         </div>
       </section>

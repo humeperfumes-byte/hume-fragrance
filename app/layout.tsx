@@ -10,7 +10,8 @@ import ConsentCaptureBanner from "@/components/ConsentCaptureBanner";
 import ConsentTimelineTracker from "@/components/ConsentTimelineTracker";
 import CartAnalyticsTracker from "@/components/CartAnalyticsTracker";
 import { BehavioralTracker } from "@/components/analytics/BehavioralTracker";
-import { SITE_URL } from "@/lib/site";
+import SmoothScroll from "@/components/SmoothScroll";
+import { getRequestSiteUrl } from "@/lib/request-site";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -26,58 +27,62 @@ const cormorant = Cormorant_Garamond({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: {
-    default: "HUME Fragrance | Premium Inspired Perfumes in India | Shop Now",
-    template: "%s | HUME Perfumes",
-  },
-  description:
-    "HUME Fragrance is an Indian perfume brand from Kannauj that creates premium inspired alternatives to designer fragrances like Creed Aventus, Dior Sauvage & Tom Ford Oud Wood. EDP concentration, 8-12hr longevity, designed for Indian weather. Starting ₹499. Free shipping.",
-  icons: {
-    icon: "/images/logo.png?v=3",
-    shortcut: "/images/logo.png?v=3",
-    apple: "/images/logo.png?v=3",
-  },
-  keywords: [
-    "luxury fragrances",
-    "modern perfume house",
-    "premium fragrance interpretations",
-    "affordable luxury perfume",
-    "HUME perfumes",
-    "inspired perfumes India",
-    "designer perfume alternatives",
-    "best perfumes for Indian weather",
-  ],
-  robots: {
-    index: true,
-    follow: true,
-    "max-snippet": -1,
-    "max-image-preview": "large",
-    "max-video-preview": -1,
-  },
-  openGraph: {
-    type: "website",
-    locale: "en_IN",
-    siteName: "HUME Fragrance",
-    url: SITE_URL,
-    images: [
-      {
-        url: "/images/logo.png?v=2",
-        width: 1024,
-        height: 1024,
-        alt: "HUME Fragrance",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "HUME Fragrance",
+export async function generateMetadata(): Promise<Metadata> {
+  const siteUrl = await getRequestSiteUrl();
+
+  return {
+    metadataBase: new URL(siteUrl),
+    title: {
+      default: "HUME Fragrance | Premium Inspired Perfumes in India | Shop Now",
+      template: "%s | HUME Perfumes",
+    },
     description:
-      "Premium inspired perfumes for men & women in India with refined quality and modern luxury.",
-    images: ["/images/logo.png?v=2"],
-  },
-};
+      "HUME Fragrance is an Indian perfume brand from Kannauj that creates premium inspired alternatives to designer fragrances like Creed Aventus, Dior Sauvage & Tom Ford Oud Wood. EDP concentration, 8-12hr longevity, designed for Indian weather. Starting ₹499. Free shipping.",
+    icons: {
+      icon: "/images/logo.png?v=3",
+      shortcut: "/images/logo.png?v=3",
+      apple: "/images/logo.png?v=3",
+    },
+    keywords: [
+      "luxury fragrances",
+      "modern perfume house",
+      "premium fragrance interpretations",
+      "affordable luxury perfume",
+      "HUME perfumes",
+      "inspired perfumes India",
+      "designer perfume alternatives",
+      "best perfumes for Indian weather",
+    ],
+    robots: {
+      index: true,
+      follow: true,
+      "max-snippet": -1,
+      "max-image-preview": "large",
+      "max-video-preview": -1,
+    },
+    openGraph: {
+      type: "website",
+      locale: "en_IN",
+      siteName: "HUME Fragrance",
+      url: siteUrl,
+      images: [
+        {
+          url: "/images/logo.png?v=2",
+          width: 1024,
+          height: 1024,
+          alt: "HUME Fragrance",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "HUME Fragrance",
+      description:
+        "Premium inspired perfumes for men & women in India with refined quality and modern luxury.",
+      images: ["/images/logo.png?v=2"],
+    },
+  };
+}
 
 export default async function RootLayout({
   children,
@@ -100,7 +105,11 @@ export default async function RootLayout({
           fetchPriority="high"
         />
         <link rel="icon" href="/images/logo.png?v=3" type="image/png" />
-        <link rel="shortcut icon" href="/images/logo.png?v=3" type="image/png" />
+        <link
+          rel="shortcut icon"
+          href="/images/logo.png?v=3"
+          type="image/png"
+        />
         <link rel="apple-touch-icon" href="/images/logo.png?v=3" />
       </head>
       <body
@@ -121,6 +130,7 @@ export default async function RootLayout({
           <Suspense fallback={null}>
             <BehavioralTracker />
           </Suspense>
+          <SmoothScroll />
         </Providers>
         {cloudflareBeaconToken ? (
           <Script

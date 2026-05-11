@@ -12,8 +12,7 @@ import {
   getAllProgrammaticAlternatives,
   getProgrammaticAlternativeBySlug,
 } from "@/lib/programmatic-seo";
-
-const baseUrl = "https://humefragrance.com";
+import { getRequestSiteUrl } from "@/lib/request-site";
 
 export async function generateStaticParams() {
   return getAllProgrammaticAlternatives().map((item) => ({ slug: item.slug }));
@@ -27,6 +26,8 @@ export async function generateMetadata({
   const { slug } = await params;
   const item = getProgrammaticAlternativeBySlug(slug);
   if (!item) return { title: "Not Found" };
+
+  const baseUrl = await getRequestSiteUrl();
 
   return {
     title: `${item.title} | HUME Fragrance`,
@@ -50,11 +51,14 @@ export default async function BestProgrammaticPage({
   const { slug } = await params;
   const item = getProgrammaticAlternativeBySlug(slug);
   if (!item) notFound();
+  const baseUrl = await getRequestSiteUrl();
 
   const products = await getAllProducts();
   const selected = item.humeProducts
     .map((productId) => products.find((product) => product.id === productId))
-    .filter((product): product is NonNullable<typeof product> => Boolean(product));
+    .filter((product): product is NonNullable<typeof product> =>
+      Boolean(product),
+    );
 
   const faq = buildBestPageFaq(item);
   const jsonLd = [
@@ -84,30 +88,47 @@ export default async function BestProgrammaticPage({
       <section className="pt-28 pb-20 md:pt-36 md:pb-24">
         <div className="container-luxury space-y-10">
           <div className="max-w-4xl">
-            <p className="text-caption text-muted-foreground mb-3">Buying Guide</p>
-            <h1 className="font-serif text-4xl md:text-5xl font-light mb-4">{item.title}</h1>
+            <p className="text-caption text-muted-foreground mb-3">
+              Buying Guide
+            </p>
+            <h1 className="font-serif text-4xl md:text-5xl font-light mb-4">
+              {item.title}
+            </h1>
             <p className="text-body text-muted-foreground mb-3">{item.intro}</p>
-            <p className="text-sm text-muted-foreground">{item.why_this_matters}</p>
+            <p className="text-sm text-muted-foreground">
+              {item.why_this_matters}
+            </p>
           </div>
 
           <div className="rounded-md border border-border bg-card p-4">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground mb-2">Quick Answer</p>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground mb-2">
+              Quick Answer
+            </p>
             <p className="text-sm text-muted-foreground">
-              For {item.targetKeyword}, choose EDP-style profiles with stable base notes and 8+ hour wear in Indian weather. This page prioritizes practical picks with strong value and balanced projection.
+              For {item.targetKeyword}, choose EDP-style profiles with stable
+              base notes and 8+ hour wear in Indian weather. This page
+              prioritizes practical picks with strong value and balanced
+              projection.
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-4">
             <div className="border border-border p-4">
-              <p className="text-xs text-muted-foreground uppercase tracking-[0.12em] mb-1">Target Keyword</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-[0.12em] mb-1">
+                Target Keyword
+              </p>
               <p className="text-sm">{item.targetKeyword}</p>
             </div>
             <div className="border border-border p-4">
-              <p className="text-xs text-muted-foreground uppercase tracking-[0.12em] mb-1">Search Intent</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-[0.12em] mb-1">
+                Search Intent
+              </p>
               <p className="text-sm">{item.searchIntent}</p>
             </div>
             <div className="border border-border p-4">
-              <p className="text-xs text-muted-foreground uppercase tracking-[0.12em] mb-1">Competition</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-[0.12em] mb-1">
+                Competition
+              </p>
               <p className="text-sm">
                 {item.difficulty} ({item.monthlySearches} monthly searches)
               </p>
@@ -139,7 +160,9 @@ export default async function BestProgrammaticPage({
             </div>
           ) : (
             <div className="border border-border p-6">
-              <p className="text-muted-foreground">Recommended products are being updated for this guide.</p>
+              <p className="text-muted-foreground">
+                Recommended products are being updated for this guide.
+              </p>
             </div>
           )}
 
@@ -149,7 +172,9 @@ export default async function BestProgrammaticPage({
               {faq.map((entry) => (
                 <div key={entry.question}>
                   <p className="font-medium mb-1">{entry.question}</p>
-                  <p className="text-sm text-muted-foreground">{entry.answer}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {entry.answer}
+                  </p>
                 </div>
               ))}
             </div>
@@ -157,7 +182,8 @@ export default async function BestProgrammaticPage({
 
           <div className="border border-border p-6 text-center">
             <p className="text-sm text-muted-foreground mb-4">
-              Explore complete product details, reviews, notes, and pricing in our main catalog.
+              Explore complete product details, reviews, notes, and pricing in
+              our main catalog.
             </p>
             <Button asChild>
               <Link href="/shop">Browse All Fragrances</Link>

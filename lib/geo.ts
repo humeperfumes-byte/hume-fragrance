@@ -1,7 +1,33 @@
 export type GeoRegion = "IN" | "US" | "CA" | "EU" | "AU" | "ME" | "INTL";
 
 const EU_COUNTRIES = new Set([
-  "AT","BE","BG","HR","CY","CZ","DK","EE","FI","FR","DE","GR","HU","IE","IT","LV","LT","LU","MT","NL","PL","PT","RO","SK","SI","ES","SE"
+  "AT",
+  "BE",
+  "BG",
+  "HR",
+  "CY",
+  "CZ",
+  "DK",
+  "EE",
+  "FI",
+  "FR",
+  "DE",
+  "GR",
+  "HU",
+  "IE",
+  "IT",
+  "LV",
+  "LT",
+  "LU",
+  "MT",
+  "NL",
+  "PL",
+  "PT",
+  "RO",
+  "SK",
+  "SI",
+  "ES",
+  "SE",
 ]);
 
 function getCookie(name: string): string | null {
@@ -37,7 +63,11 @@ export function getGeoExperience(region: GeoRegion) {
         "US shipping available - Use code HUME15 for 15% off your first order",
       heroBody:
         "Experience iconic fragrance profiles, meticulously reimagined. HUME delivers long-lasting luxury interpretations for modern everyday wear.",
-      offers: ["Buy 3. Get 1 Complimentary", "US Shipping Available", "Premium Inspired EDPs"],
+      offers: [
+        "Buy 3. Get 1 Complimentary",
+        "US Shipping Available",
+        "Premium Inspired EDPs",
+      ],
     };
   }
   if (region === "CA") {
@@ -46,7 +76,11 @@ export function getGeoExperience(region: GeoRegion) {
         "Canada shipping available - Use code HUME15 for 15% off your first order",
       heroBody:
         "Experience iconic fragrance profiles, meticulously reimagined. HUME crafts premium inspired EDPs with all-day performance.",
-      offers: ["Buy 3. Get 1 Complimentary", "Canada Shipping Available", "Premium Inspired EDPs"],
+      offers: [
+        "Buy 3. Get 1 Complimentary",
+        "Canada Shipping Available",
+        "Premium Inspired EDPs",
+      ],
     };
   }
   if (region === "EU") {
@@ -55,7 +89,11 @@ export function getGeoExperience(region: GeoRegion) {
         "EU shipping available - Use code HUME15 for 15% off your first order",
       heroBody:
         "Experience iconic fragrance profiles, meticulously reimagined. HUME creates refined luxury interpretations with reliable wear.",
-      offers: ["Buy 3. Get 1 Complimentary", "EU Shipping Available", "Premium Inspired EDPs"],
+      offers: [
+        "Buy 3. Get 1 Complimentary",
+        "EU Shipping Available",
+        "Premium Inspired EDPs",
+      ],
     };
   }
   if (region === "AU") {
@@ -64,7 +102,11 @@ export function getGeoExperience(region: GeoRegion) {
         "Australia shipping available - Use code HUME15 for 15% off your first order",
       heroBody:
         "Experience iconic fragrance profiles, meticulously reimagined. HUME delivers premium inspired scents designed for everyday confidence.",
-      offers: ["Buy 3. Get 1 Complimentary", "Australia Shipping Available", "Premium Inspired EDPs"],
+      offers: [
+        "Buy 3. Get 1 Complimentary",
+        "Australia Shipping Available",
+        "Premium Inspired EDPs",
+      ],
     };
   }
   if (region === "INTL") {
@@ -73,7 +115,11 @@ export function getGeoExperience(region: GeoRegion) {
         "International shipping available - premium inspired EDPs - Use code HUME15 for 15% off your first order",
       heroBody:
         "Experience iconic fragrance profiles, meticulously reimagined. HUME crafts refined luxury interpretations designed for everyday wear.",
-      offers: ["Buy 3. Get 1 Complimentary", "International Shipping", "Premium Inspired EDPs"],
+      offers: [
+        "Buy 3. Get 1 Complimentary",
+        "International Shipping",
+        "Premium Inspired EDPs",
+      ],
     };
   }
 
@@ -83,16 +129,24 @@ export function getGeoExperience(region: GeoRegion) {
         "Middle East shipping available - Use code HUME15 for 15% off your first order",
       heroBody:
         "Experience iconic fragrance profiles, meticulously reimagined. HUME creates premium inspired EDPs with rich, long-lasting character.",
-      offers: ["Buy 3. Get 1 Complimentary", "Middle East Shipping Available", "Premium Inspired EDPs"],
+      offers: [
+        "Buy 3. Get 1 Complimentary",
+        "Middle East Shipping Available",
+        "Premium Inspired EDPs",
+      ],
     };
   }
 
   // India - keep existing design/copy baseline.
   return {
     announcement:
-      "Complimentary shipping on all orders above INR 799 - Use code HUME15 for 15% off your first order",
+      "Complimentary shipping on all orders above INR 500 - Use code HUME15 for 15% off your first order",
     heroBody:
       "Experience iconic fragrance profiles, meticulously reimagined. HUME crafts refined luxury interpretations designed for everyday wear.",
-    offers: ["Buy 3. Get 1 Complimentary", "10% Off on 2 Perfumes", "30% Off on 3 Perfumes"],
+    offers: [
+      "Buy 3. Get 1 Complimentary",
+      "10% Off on 2 Perfumes",
+      "30% Off on 3 Perfumes",
+    ],
   };
 }

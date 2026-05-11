@@ -5,6 +5,7 @@ import Footer from "@/components/Footer";
 import { JsonLd } from "@/components/JsonLd";
 import { getAccessoryById } from "@/lib/db/accessories";
 import AccessoryDetailClient from "./AccessoryDetailClient";
+import { getRequestSiteUrl } from "@/lib/request-site";
 
 export const revalidate = 300;
 
@@ -16,7 +17,8 @@ export async function generateMetadata({
   const { id } = await params;
   const accessory = await getAccessoryById(id);
   if (!accessory) return { title: "Accessory Not Found" };
-  const canonicalUrl = `https://humefragrance.com/accessory/${accessory.id}`;
+  const baseUrl = await getRequestSiteUrl();
+  const canonicalUrl = `${baseUrl}/accessory/${accessory.id}`;
   return {
     title: `${accessory.name} | HUME Accessories`,
     description: accessory.shortDescription,
@@ -44,6 +46,8 @@ export default async function AccessoryPage({
     notFound();
   }
 
+  const baseUrl = await getRequestSiteUrl();
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -56,7 +60,7 @@ export default async function AccessoryPage({
       price: accessory.price.toFixed(2),
       priceCurrency: "INR",
       availability: "https://schema.org/InStock",
-      url: `https://humefragrance.com/accessory/${accessory.id}`,
+      url: `${baseUrl}/accessory/${accessory.id}`,
     },
     brand: { "@type": "Brand", name: "HUME Fragrance" },
   };

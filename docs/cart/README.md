@@ -142,7 +142,7 @@ Current reward stages:
   - Extra 5 percent off
   - Free delivery
   - 24-hour timer
-- Visit 5: `Welcome Back 10`
+- Visit 4: `Welcome Back 10`
   - Code preserved internally as `WELCOME-BACK-10`
   - Extra 10 percent off
   - Free delivery
@@ -154,6 +154,8 @@ Visit counting:
 - A new visit requires a meaningful time gap.
 - Current minimum gap: 30 minutes.
 - Refreshing repeatedly in the same session should not increase the visit count.
+- If the fourth-visit upgrade is still too late in real data, the same logic can
+  be moved to visit 3 in `lib/cart-discounts.ts`.
 
 Relevant localStorage keys live in `lib/cart-discounts.ts`:
 

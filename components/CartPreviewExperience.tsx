@@ -29,7 +29,7 @@ type RewardPreview = {
   tease: string;
 };
 
-const FREE_DELIVERY_THRESHOLD = 800;
+const FREE_DELIVERY_THRESHOLD = 500;
 const DELIVERY_FEE_BELOW_THRESHOLD = 100;
 const FIRST_GIFT_THRESHOLD = 1299;
 const SECOND_GIFT_THRESHOLD = 1899;
@@ -81,7 +81,7 @@ const rewardPreviews: RewardPreview[] = [
     code: "WELCOME-BACK-10",
     percent: 10,
     initialSeconds: 23 * 60 * 60 + 59 * 60 + 18,
-    caption: "Fifth meaningful visit",
+    caption: "Fourth meaningful visit",
     tease: "Still deciding? Bigger secret unlocked ;)",
   },
 ];
@@ -92,13 +92,21 @@ function itemTotal(item: PreviewItem) {
 
 function RewardPreviewDrawer({ reward }: { reward: RewardPreview }) {
   const router = useRouter();
-  const [remainingSeconds, setRemainingSeconds] = useState(reward.initialSeconds);
+  const [remainingSeconds, setRemainingSeconds] = useState(
+    reward.initialSeconds,
+  );
   const paidItems = sampleItems.filter((item) => !item.isGift);
   const subtotal = paidItems.reduce((sum, item) => sum + itemTotal(item), 0);
   const couponDiscount = APPLIED_COUPON_DISCOUNT;
   const welcomeBackDiscount = Math.round(subtotal * (reward.percent / 100));
-  const regularShipping = subtotal > 0 && subtotal < FREE_DELIVERY_THRESHOLD ? DELIVERY_FEE_BELOW_THRESHOLD : 0;
-  const grandTotal = Math.max(0, subtotal - couponDiscount - welcomeBackDiscount);
+  const regularShipping =
+    subtotal > 0 && subtotal < FREE_DELIVERY_THRESHOLD
+      ? DELIVERY_FEE_BELOW_THRESHOLD
+      : 0;
+  const grandTotal = Math.max(
+    0,
+    subtotal - couponDiscount - welcomeBackDiscount,
+  );
   const giftProgress = Math.min(100, (subtotal / SECOND_GIFT_THRESHOLD) * 100);
   const amountToGift = Math.max(0, SECOND_GIFT_THRESHOLD - subtotal);
   const totalSavings = couponDiscount + welcomeBackDiscount + regularShipping;
@@ -115,7 +123,9 @@ function RewardPreviewDrawer({ reward }: { reward: RewardPreview }) {
       <header className="border-b border-black/10 px-5 pb-4 pt-5">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="font-serif text-[1.7rem] leading-none tracking-tight">Your Selection</h2>
+            <h2 className="font-serif text-[1.7rem] leading-none tracking-tight">
+              Your Selection
+            </h2>
             <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.13em] text-black/45">
               {APPLIED_COUPON_CODE} + {reward.code}
             </p>
@@ -150,25 +160,37 @@ function RewardPreviewDrawer({ reward }: { reward: RewardPreview }) {
               </div>
             </div>
             <p className="mt-1.5 w-full text-xs leading-snug text-white/65">
-              <span className="mr-1.5 text-[13px] text-white opacity-100">🤫</span>
+              <span className="mr-1.5 text-[13px] text-white opacity-100">
+                🤫
+              </span>
               <span>{reward.tease}</span>
             </p>
           </div>
-          <div className="h-1 bg-amber-200" style={{ width: reward.percent === 5 ? "99%" : "100%" }} />
+          <div
+            className="h-1 bg-amber-200"
+            style={{ width: reward.percent === 5 ? "99%" : "100%" }}
+          />
         </section>
 
         <section className="rounded-[4px] border border-black/10 bg-[#f4f0f5] p-3 shadow-sm">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-black/60">Unlock Gift 2</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-black/60">
+                Unlock Gift 2
+              </p>
               <p className="mt-1 text-sm text-black/70">
-                {amountToGift > 0 ? `Add ${formatINR(amountToGift)} more for Gift 2` : "Gift 1 and Gift 2 unlocked"}
+                {amountToGift > 0
+                  ? `Add ${formatINR(amountToGift)} more for Gift 2`
+                  : "Gift 1 and Gift 2 unlocked"}
               </p>
             </div>
             <Gift className="h-4 w-4 text-emerald-700" />
           </div>
           <div className="mt-4 h-2 overflow-hidden bg-black/10">
-            <div className="h-full bg-[#0f3a2b]" style={{ width: `${giftProgress}%` }} />
+            <div
+              className="h-full bg-[#0f3a2b]"
+              style={{ width: `${giftProgress}%` }}
+            />
           </div>
           <div className="mt-2 flex justify-between text-[11px] font-semibold text-black/35">
             <span>{formatINR(0)}</span>
@@ -180,14 +202,25 @@ function RewardPreviewDrawer({ reward }: { reward: RewardPreview }) {
         <section className="mt-5 divide-y divide-black/10 border-y border-black/10">
           {sampleItems.map((item) => {
             const lineTotal = itemTotal(item);
-            const stackedPercentDiscount = item.isGift ? 0 : Math.round(lineTotal * (reward.percent / 100));
-            const discountedLineTotal = Math.max(0, lineTotal - stackedPercentDiscount);
+            const stackedPercentDiscount = item.isGift
+              ? 0
+              : Math.round(lineTotal * (reward.percent / 100));
+            const discountedLineTotal = Math.max(
+              0,
+              lineTotal - stackedPercentDiscount,
+            );
 
             return (
-              <article key={item.id} className="grid grid-cols-[82px_minmax(0,1fr)_auto] gap-3 py-4">
+              <article
+                key={item.id}
+                className="grid grid-cols-[82px_minmax(0,1fr)_auto] gap-3 py-4"
+              >
                 <div className="relative h-20 w-20 overflow-hidden bg-[#eee9e3]">
                   <Image
-                    src={withCloudinaryTransforms(item.image || "/images/logo.png", { width: 180 })}
+                    src={withCloudinaryTransforms(
+                      item.image || "/images/logo.png",
+                      { width: 180 },
+                    )}
                     alt={item.name}
                     fill
                     sizes="82px"
@@ -196,7 +229,9 @@ function RewardPreviewDrawer({ reward }: { reward: RewardPreview }) {
                 </div>
 
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold leading-tight">{item.name}</p>
+                  <p className="truncate text-sm font-semibold leading-tight">
+                    {item.name}
+                  </p>
                   <p className="mt-1 line-clamp-2 text-xs leading-snug text-black/50">
                     {item.inspiration} {item.size ? `- ${item.size}` : ""}
                   </p>
@@ -206,7 +241,9 @@ function RewardPreviewDrawer({ reward }: { reward: RewardPreview }) {
                       <span className="bg-[#0f3a2b] px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.11em] text-white">
                         Unlocked
                       </span>
-                      <span className="text-xs text-black/45">Qty {item.quantity}</span>
+                      <span className="text-xs text-black/45">
+                        Qty {item.quantity}
+                      </span>
                     </div>
                   ) : (
                     <div className="mt-3 inline-flex h-8 items-center border border-black/10 bg-white">
@@ -241,11 +278,17 @@ function RewardPreviewDrawer({ reward }: { reward: RewardPreview }) {
                   </button>
                   <div className="text-right">
                     {item.isGift ? (
-                      <p className="text-sm font-semibold text-[#0f3a2b]">Free</p>
+                      <p className="text-sm font-semibold text-[#0f3a2b]">
+                        Free
+                      </p>
                     ) : (
                       <div>
-                        <p className="text-[11px] font-medium text-black/35 line-through">{formatINR(lineTotal)}</p>
-                        <p className="text-sm font-semibold">{formatINR(discountedLineTotal)}</p>
+                        <p className="text-[11px] font-medium text-black/35 line-through">
+                          {formatINR(lineTotal)}
+                        </p>
+                        <p className="text-sm font-semibold">
+                          {formatINR(discountedLineTotal)}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -287,8 +330,12 @@ function RewardPreviewDrawer({ reward }: { reward: RewardPreview }) {
           <div className="divide-y divide-[#e4dde2]">
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 opacity-60">
               <div className="min-w-0">
-                <p className="text-sm font-semibold uppercase tracking-[0.02em]">B3G1</p>
-                <p className="mt-0.5 text-xs leading-snug text-black/55">Buy 3 Get 1 Free on all 50ml EDPs</p>
+                <p className="text-sm font-semibold uppercase tracking-[0.02em]">
+                  B3G1
+                </p>
+                <p className="mt-0.5 text-xs leading-snug text-black/55">
+                  Buy 3 Get 1 Free on all 50ml EDPs
+                </p>
               </div>
               <button
                 type="button"
@@ -299,8 +346,12 @@ function RewardPreviewDrawer({ reward }: { reward: RewardPreview }) {
             </div>
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3">
               <div className="min-w-0">
-                <p className="text-sm font-semibold uppercase tracking-[0.02em]">HUME200</p>
-                <p className="mt-0.5 text-xs leading-snug text-black/55">Flat {formatINR(200)} off on bigger carts</p>
+                <p className="text-sm font-semibold uppercase tracking-[0.02em]">
+                  HUME200
+                </p>
+                <p className="mt-0.5 text-xs leading-snug text-black/55">
+                  Flat {formatINR(200)} off on bigger carts
+                </p>
               </div>
               <button
                 type="button"
@@ -321,21 +372,31 @@ function RewardPreviewDrawer({ reward }: { reward: RewardPreview }) {
           </div>
           <div className="flex justify-between">
             <span className="text-black/55">Offer ({APPLIED_COUPON_CODE})</span>
-            <span className="font-semibold text-[#0f6b46]">-{formatINR(couponDiscount)}</span>
+            <span className="font-semibold text-[#0f6b46]">
+              -{formatINR(couponDiscount)}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-black/55">{reward.label}</span>
-            <span className="font-semibold text-[#0f6b46]">-{formatINR(welcomeBackDiscount)}</span>
+            <span className="font-semibold text-[#0f6b46]">
+              -{formatINR(welcomeBackDiscount)}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-black/55">Shipping</span>
             <span className="font-semibold text-[#0f6b46]">
-              Free{regularShipping > 0 ? ` (${formatINR(regularShipping)} saved)` : ""}
+              Free
+              {regularShipping > 0
+                ? ` (${formatINR(regularShipping)} saved)`
+                : ""}
             </span>
           </div>
         </div>
 
-        <button type="button" className="flex w-full justify-between pt-3 text-left text-sm">
+        <button
+          type="button"
+          className="flex w-full justify-between pt-3 text-left text-sm"
+        >
           <span className="font-semibold">Estimated Total</span>
           <span className="inline-flex items-center gap-2 font-semibold">
             <span className="text-sm font-medium text-black/35 line-through">
@@ -366,11 +427,16 @@ export default function CartPreviewExperience() {
     <main className="min-h-screen bg-[#f3f0ee] px-4 py-8 text-[#171717]">
       <div className="mx-auto max-w-6xl">
         <div className="mb-6">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-black/45">Cart Preview</p>
-          <h1 className="mt-2 font-serif text-3xl leading-tight">Welcome Back Reward Flow</h1>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-black/45">
+            Cart Preview
+          </p>
+          <h1 className="mt-2 font-serif text-3xl leading-tight">
+            Welcome Back Reward Flow
+          </h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-black/55">
-            This preview is separate from the live cart. First is the second-visit 5% reward,
-            then the fifth-visit 10% upgrade with the same cart structure.
+            This preview is separate from the live cart. First is the
+            second-visit 5% reward, then the fourth-visit 10% upgrade with the
+            same cart structure.
           </p>
         </div>
 

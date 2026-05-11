@@ -29,9 +29,11 @@ export type WelcomeBackReward = {
 };
 
 export const WELCOME_BACK_VISIT_COUNT_KEY = "hume_welcome_back_visit_count_v1";
-export const WELCOME_BACK_LAST_VISIT_AT_KEY = "hume_welcome_back_last_visit_at_v1";
+export const WELCOME_BACK_LAST_VISIT_AT_KEY =
+  "hume_welcome_back_last_visit_at_v1";
 export const WELCOME_BACK_REWARD_KEY = "hume_welcome_back_reward_v1";
-export const WELCOME_BACK_CELEBRATED_REWARD_KEY = "hume_welcome_back_celebrated_reward_v1";
+export const WELCOME_BACK_CELEBRATED_REWARD_KEY =
+  "hume_welcome_back_celebrated_reward_v1";
 export const WELCOME_BACK_MIN_VISIT_GAP_MS = 30 * 60 * 1000;
 export const WELCOME_BACK_DURATION_MS = 24 * 60 * 60 * 1000;
 
@@ -40,7 +42,9 @@ function numeric(value: string | null): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-export function parseBuyGetConfig(coupon: Pick<CouponLike, "code" | "description" | "type"> | null) {
+export function parseBuyGetConfig(
+  coupon: Pick<CouponLike, "code" | "description" | "type"> | null,
+) {
   if (!coupon) return null;
 
   const parseFromText = (text: string) => {
@@ -49,25 +53,41 @@ export function parseBuyGetConfig(coupon: Pick<CouponLike, "code" | "description
     if (!match) return null;
     const buy = Number(match[1]);
     const get = Number(match[2]);
-    if (!Number.isFinite(buy) || !Number.isFinite(get) || buy <= 0 || get <= 0) return null;
+    if (!Number.isFinite(buy) || !Number.isFinite(get) || buy <= 0 || get <= 0)
+      return null;
     return { buy, get };
   };
 
-  return parseFromText(coupon.type) || parseFromText(coupon.code) || parseFromText(coupon.description);
+  return (
+    parseFromText(coupon.type) ||
+    parseFromText(coupon.code) ||
+    parseFromText(coupon.description)
+  );
 }
 
 export function getPaidItemCount(items: CartDiscountItem[]) {
-  return items.reduce((sum, item) => sum + (item.isGift ? 0 : item.quantity), 0);
+  return items.reduce(
+    (sum, item) => sum + (item.isGift ? 0 : item.quantity),
+    0,
+  );
 }
 
-export function isCouponEligible(coupon: CouponLike, items: CartDiscountItem[], subtotal: number) {
+export function isCouponEligible(
+  coupon: CouponLike,
+  items: CartDiscountItem[],
+  subtotal: number,
+) {
   if (subtotal < coupon.minSubtotal) return false;
   const buyGet = parseBuyGetConfig(coupon);
   if (buyGet && getPaidItemCount(items) < buyGet.buy + buyGet.get) return false;
   return true;
 }
 
-export function calculateCouponDiscount(coupon: CouponLike | null, items: CartDiscountItem[], subtotal: number) {
+export function calculateCouponDiscount(
+  coupon: CouponLike | null,
+  items: CartDiscountItem[],
+  subtotal: number,
+) {
   const emptyFreeUnitMap = new Map<string, number>();
   if (!coupon || !isCouponEligible(coupon, items, subtotal)) {
     return {
@@ -146,7 +166,10 @@ export function calculateCouponDiscount(coupon: CouponLike | null, items: CartDi
 
   const discount = items
     .filter((item) => !item.isGift)
-    .reduce((sum, item) => sum + (freeUnitByItemId.get(item.id) ?? 0) * item.price, 0);
+    .reduce(
+      (sum, item) => sum + (freeUnitByItemId.get(item.id) ?? 0) * item.price,
+      0,
+    );
 
   return {
     discount,
@@ -157,7 +180,11 @@ export function calculateCouponDiscount(coupon: CouponLike | null, items: CartDi
   };
 }
 
-export function createWelcomeBackReward(tier: 5 | 10, now: number, visitCount: number): WelcomeBackReward {
+export function createWelcomeBackReward(
+  tier: 5 | 10,
+  now: number,
+  visitCount: number,
+): WelcomeBackReward {
   return {
     code: tier === 10 ? "WELCOME-BACK-10" : "WELCOME-BACK-5",
     label: tier === 10 ? "Welcome Back 10" : "Welcome Back 5",
@@ -169,7 +196,10 @@ export function createWelcomeBackReward(tier: 5 | 10, now: number, visitCount: n
   };
 }
 
-export function readWelcomeBackReward(storage: Storage, now = Date.now()): WelcomeBackReward | null {
+export function readWelcomeBackReward(
+  storage: Storage,
+  now = Date.now(),
+): WelcomeBackReward | null {
   try {
     const raw = storage.getItem(WELCOME_BACK_REWARD_KEY);
     if (!raw) return null;
@@ -184,19 +214,26 @@ export function readWelcomeBackReward(storage: Storage, now = Date.now()): Welco
 
 export function trackWelcomeBackVisit(storage: Storage, now = Date.now()) {
   const lastVisitAt = numeric(storage.getItem(WELCOME_BACK_LAST_VISIT_AT_KEY));
-  const currentVisitCount = numeric(storage.getItem(WELCOME_BACK_VISIT_COUNT_KEY));
+  const currentVisitCount = numeric(
+    storage.getItem(WELCOME_BACK_VISIT_COUNT_KEY),
+  );
   const activeReward = readWelcomeBackReward(storage, now);
 
   if (lastVisitAt && now - lastVisitAt < WELCOME_BACK_MIN_VISIT_GAP_MS) {
-    return { reward: activeReward, justUnlocked: false, visitCount: currentVisitCount };
+    return {
+      reward: activeReward,
+      justUnlocked: false,
+      visitCount: currentVisitCount,
+    };
   }
 
   const visitCount = currentVisitCount + 1;
   storage.setItem(WELCOME_BACK_VISIT_COUNT_KEY, String(visitCount));
   storage.setItem(WELCOME_BACK_LAST_VISIT_AT_KEY, String(now));
 
-  const targetTier = visitCount >= 5 ? 10 : visitCount >= 2 ? 5 : null;
-  if (!targetTier) return { reward: activeReward, justUnlocked: false, visitCount };
+  const targetTier = visitCount >= 4 ? 10 : visitCount >= 2 ? 5 : null;
+  if (!targetTier)
+    return { reward: activeReward, justUnlocked: false, visitCount };
 
   if (activeReward && activeReward.tier >= targetTier) {
     return { reward: activeReward, justUnlocked: false, visitCount };
@@ -226,5 +263,7 @@ export function formatRewardTimeRemaining(ms: number) {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  return [hours, minutes, seconds].map((value) => String(value).padStart(2, "0")).join(":");
+  return [hours, minutes, seconds]
+    .map((value) => String(value).padStart(2, "0"))
+    .join(":");
 }

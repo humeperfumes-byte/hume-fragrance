@@ -6,17 +6,19 @@ import { getCollectionPageSchema, getBreadcrumbSchema } from "@/lib/seo";
 import { getAllPublicProducts } from "@/lib/db/products";
 import ShopContent from "./ShopContent";
 import SeoHubTeaser from "@/components/SeoHubTeaser";
+import { getRequestSiteUrl } from "@/lib/request-site";
 
 export const revalidate = 120;
 
 export default async function ShopPage() {
+  const baseUrl = await getRequestSiteUrl();
   const perfumes = await getAllPublicProducts();
 
   const shopJsonLd = [
-    getCollectionPageSchema(perfumes),
+    getCollectionPageSchema(perfumes, baseUrl),
     getBreadcrumbSchema([
-      { name: "Home", url: "https://humefragrance.com" },
-      { name: "Shop", url: "https://humefragrance.com/shop" },
+      { name: "Home", url: baseUrl },
+      { name: "Shop", url: `${baseUrl}/shop` },
     ]),
   ];
 
@@ -24,11 +26,13 @@ export default async function ShopPage() {
     <div className="min-h-screen bg-background">
       <JsonLd data={shopJsonLd} />
       <Header />
-      <Suspense fallback={
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      }>
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-background flex items-center justify-center">
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        }
+      >
         <ShopContent perfumes={perfumes} />
       </Suspense>
       <SeoHubTeaser />

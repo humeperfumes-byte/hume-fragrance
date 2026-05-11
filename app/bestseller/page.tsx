@@ -6,6 +6,7 @@ import SeoHubTeaser from "@/components/SeoHubTeaser";
 import { JsonLd } from "@/components/JsonLd";
 import { getAllPublicProducts } from "@/lib/db/products";
 import { getBreadcrumbSchema, getItemListSchema } from "@/lib/seo";
+import { getRequestSiteUrl } from "@/lib/request-site";
 
 export const metadata: Metadata = {
   title: "Best Seller",
@@ -16,13 +17,19 @@ export const metadata: Metadata = {
 export const revalidate = 120;
 
 export default async function BestsellerPage() {
+  const baseUrl = await getRequestSiteUrl();
   const products = await getAllPublicProducts();
   const bestsellerProducts = products.filter((p) => p.badges?.bestSeller);
   const jsonLd = [
-    getItemListSchema("HUME Best Seller Fragrances", "/bestseller", bestsellerProducts),
+    getItemListSchema(
+      "HUME Best Seller Fragrances",
+      "/bestseller",
+      bestsellerProducts,
+      baseUrl,
+    ),
     getBreadcrumbSchema([
-      { name: "Home", url: "https://humefragrance.com" },
-      { name: "Best Seller", url: "https://humefragrance.com/bestseller" },
+      { name: "Home", url: baseUrl },
+      { name: "Best Seller", url: `${baseUrl}/bestseller` },
     ]),
   ];
 

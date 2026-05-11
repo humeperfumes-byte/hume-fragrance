@@ -4,30 +4,49 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  type CarouselApi,
+} from "@/components/ui/carousel";
 import { detectGeoRegionClient, getGeoExperience } from "@/lib/geo";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import type { HeroSlide } from "@/lib/db/images";
 
 const fallbackSlides = [
-  { url: "/images/collection-hero.png", label: "HUME collection", link: "/shop" },
-  { url: "/images/hero-perfume.jpg", label: "HUME luxury perfume", link: "/shop" },
+  {
+    url: "/images/collection-hero.png",
+    label: "HUME collection",
+    link: "/shop",
+  },
+  {
+    url: "/images/hero-perfume.jpg",
+    label: "HUME luxury perfume",
+    link: "/shop",
+  },
   { url: "/images/hero-perfume.jpg", label: "HUME offers", link: "/shop" },
 ];
 
 const trustPoints = [
   "24h dispatch",
-  "Free delivery over INR 799",
+  "Free delivery over INR 500",
   "UPI/cards",
   "WhatsApp support",
 ];
 
-const Hero = ({ initialSlides = fallbackSlides }: { initialSlides?: HeroSlide[] }) => {
+const Hero = ({
+  initialSlides = fallbackSlides,
+}: {
+  initialSlides?: HeroSlide[];
+}) => {
   const geoCopy = getGeoExperience(detectGeoRegionClient());
   const rotatingOffers = geoCopy.offers;
   const [api, setApi] = useState<CarouselApi | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [slides] = useState(initialSlides.length > 0 ? initialSlides : fallbackSlides);
+  const [slides] = useState(
+    initialSlides.length > 0 ? initialSlides : fallbackSlides,
+  );
   const [offerIndex, setOfferIndex] = useState(0);
   const slideCount = slides.length;
 
@@ -81,8 +100,8 @@ const Hero = ({ initialSlides = fallbackSlides }: { initialSlides?: HeroSlide[] 
               <span className="italic font-light">without designer prices</span>
             </h1>
             <p className="mx-auto max-w-xl text-body leading-relaxed text-muted-foreground lg:mx-0">
-              Long-lasting EDPs inspired by iconic fragrance profiles, made for daily wear,
-              gifting, dates, office, and compliments.
+              Long-lasting EDPs inspired by iconic fragrance profiles, made for
+              daily wear, gifting, dates, office, and compliments.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
@@ -104,7 +123,10 @@ const Hero = ({ initialSlides = fallbackSlides }: { initialSlides?: HeroSlide[] 
               {trustPoints.map((point, index) => (
                 <span key={point} className="inline-flex items-center gap-3">
                   {index > 0 && (
-                    <span className="hidden h-1 w-1 rounded-full bg-border sm:inline-block" aria-hidden="true" />
+                    <span
+                      className="hidden h-1 w-1 rounded-full bg-border sm:inline-block"
+                      aria-hidden="true"
+                    />
                   )}
                   <span>{point}</span>
                 </span>
@@ -125,7 +147,9 @@ const Hero = ({ initialSlides = fallbackSlides }: { initialSlides?: HeroSlide[] 
               >
                 {rotatingOffers[offerIndex]}
               </motion.p>
-              <p className="mt-2 text-sm text-muted-foreground">{geoCopy.announcement}</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {geoCopy.announcement}
+              </p>
             </div>
           </motion.div>
 
@@ -143,14 +167,25 @@ const Hero = ({ initialSlides = fallbackSlides }: { initialSlides?: HeroSlide[] 
               <CarouselContent className="-ml-0">
                 {slides.map((slide, index) => {
                   const isLcpCandidate = index === 0;
-                  const optimizedSlideUrl = withCloudinaryTransforms(slide.url, {
-                    width: isLcpCandidate ? 760 : 680,
-                  });
+                  const optimizedSlideUrl = withCloudinaryTransforms(
+                    slide.url,
+                    {
+                      width: isLcpCandidate ? 760 : 680,
+                    },
+                  );
                   return (
-                    <CarouselItem key={`${slide.url}-${index}`} className="pl-0">
+                    <CarouselItem
+                      key={`${slide.url}-${index}`}
+                      className="pl-0"
+                    >
                       <div className="relative w-full aspect-square">
                         {slide.link?.startsWith("http") ? (
-                          <a href={slide.link} className="block w-full h-full" target="_blank" rel="noreferrer">
+                          <a
+                            href={slide.link}
+                            className="block w-full h-full"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
                             <Image
                               src={optimizedSlideUrl}
                               alt={slide.label}
@@ -164,7 +199,10 @@ const Hero = ({ initialSlides = fallbackSlides }: { initialSlides?: HeroSlide[] 
                             />
                           </a>
                         ) : (
-                          <Link href={slide.link ?? "/shop"} className="block w-full h-full">
+                          <Link
+                            href={slide.link ?? "/shop"}
+                            className="block w-full h-full"
+                          >
                             <Image
                               src={optimizedSlideUrl}
                               alt={slide.label}

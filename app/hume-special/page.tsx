@@ -6,6 +6,7 @@ import SeoHubTeaser from "@/components/SeoHubTeaser";
 import { JsonLd } from "@/components/JsonLd";
 import { getAllPublicProducts } from "@/lib/db/products";
 import { getBreadcrumbSchema, getItemListSchema } from "@/lib/seo";
+import { getRequestSiteUrl } from "@/lib/request-site";
 
 export const metadata: Metadata = {
   title: "HUME Special",
@@ -16,13 +17,19 @@ export const metadata: Metadata = {
 export const revalidate = 120;
 
 export default async function HumeSpecialPage() {
+  const baseUrl = await getRequestSiteUrl();
   const products = await getAllPublicProducts();
   const specialProducts = products.filter((p) => p.badges?.humeSpecial);
   const jsonLd = [
-    getItemListSchema("HUME Special Fragrances", "/hume-special", specialProducts),
+    getItemListSchema(
+      "HUME Special Fragrances",
+      "/hume-special",
+      specialProducts,
+      baseUrl,
+    ),
     getBreadcrumbSchema([
-      { name: "Home", url: "https://humefragrance.com" },
-      { name: "HUME Special", url: "https://humefragrance.com/hume-special" },
+      { name: "Home", url: baseUrl },
+      { name: "HUME Special", url: `${baseUrl}/hume-special` },
     ]),
   ];
 
@@ -34,7 +41,9 @@ export default async function HumeSpecialPage() {
       <section className="pt-28 pb-20 md:pt-36 md:pb-24">
         <div className="container-luxury">
           <div className="text-center mb-12 md:mb-16">
-            <p className="text-caption text-muted-foreground mb-4">Curated Edit</p>
+            <p className="text-caption text-muted-foreground mb-4">
+              Curated Edit
+            </p>
             <h1 className="text-headline mb-4">
               HUME <span className="italic">Special</span>
             </h1>

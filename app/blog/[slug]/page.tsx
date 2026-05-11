@@ -10,6 +10,7 @@ import { getBlogPostBySlug, getAllBlogPosts } from "@/lib/db/blog";
 import { getAllProducts } from "@/lib/db/products";
 import { getProductPath } from "@/lib/product-route";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
+import { getRequestSiteUrl } from "@/lib/request-site";
 
 export const revalidate = 300;
 
@@ -21,7 +22,8 @@ export async function generateMetadata({
   const { slug } = await params;
   const post = await getBlogPostBySlug(slug);
   if (!post) return { title: "Not Found" };
-  const canonicalUrl = `https://humefragrance.com/blog/${post.slug}`;
+  const baseUrl = await getRequestSiteUrl();
+  const canonicalUrl = `${baseUrl}/blog/${post.slug}`;
   return {
     title: post.seoTitle,
     description: post.seoDescription,
@@ -56,11 +58,11 @@ export default async function BlogPostPage({
 
   const allPosts = await getAllBlogPosts();
   const allProducts = await getAllProducts();
-  const related = allPosts
-    .filter((p) => p.id !== post.id)
-    .slice(0, 3);
+  const baseUrl = await getRequestSiteUrl();
+  const related = allPosts.filter((p) => p.id !== post.id).slice(0, 3);
 
-  const searchablePostText = `${post.title} ${post.excerpt} ${post.content} ${post.seoKeywords.join(" ")}`.toLowerCase();
+  const searchablePostText =
+    `${post.title} ${post.excerpt} ${post.content} ${post.seoKeywords.join(" ")}`.toLowerCase();
   const relatedProducts = allProducts
     .map((product) => {
       const terms = [
@@ -102,7 +104,7 @@ export default async function BlogPostPage({
       if (pattern.test(html)) {
         html = html.replace(
           pattern,
-          `<a href="${target.href}" class="underline underline-offset-4">$&</a>`
+          `<a href="${target.href}" class="underline underline-offset-4">$&</a>`,
         );
       }
     }
@@ -114,7 +116,7 @@ export default async function BlogPostPage({
     "@type": "BlogPosting",
     headline: post.title,
     description: post.seoDescription,
-    url: `https://humefragrance.com/blog/${post.slug}`,
+    url: `${baseUrl}/blog/${post.slug}`,
     datePublished: post.date,
     dateModified: post.date,
     author: {
@@ -124,22 +126,22 @@ export default async function BlogPostPage({
     publisher: {
       "@type": "Organization",
       name: "HUME Perfumes",
-      url: "https://humefragrance.com",
+      url: baseUrl,
     },
     mainEntityOfPage: {
       "@type": "WebPage",
-      "@id": `https://humefragrance.com/blog/${post.slug}`,
+      "@id": `${baseUrl}/blog/${post.slug}`,
     },
   };
 
   const jsonLd = [
     articleSchema,
     getBreadcrumbSchema([
-      { name: "Home", url: "https://humefragrance.com" },
-      { name: "Blog", url: "https://humefragrance.com/blog" },
+      { name: "Home", url: baseUrl },
+      { name: "Blog", url: `${baseUrl}/blog` },
       {
         name: post.title,
-        url: `https://humefragrance.com/blog/${post.slug}`,
+        url: `${baseUrl}/blog/${post.slug}`,
       },
     ]),
   ];
@@ -156,7 +158,10 @@ export default async function BlogPostPage({
               Home
             </Link>
             <span>/</span>
-            <Link href="/blog" className="hover:text-foreground transition-colors">
+            <Link
+              href="/blog"
+              className="hover:text-foreground transition-colors"
+            >
               Blog
             </Link>
             <span>/</span>
@@ -230,21 +235,36 @@ export default async function BlogPostPage({
                 );
               if (trimmed.startsWith("- **"))
                 return (
-                  <li key={i} className="ml-4 list-disc" dangerouslySetInnerHTML={{
-                    __html: linkifyContent(trimmed.slice(2)),
-                  }} />
+                  <li
+                    key={i}
+                    className="ml-4 list-disc"
+                    dangerouslySetInnerHTML={{
+                      __html: linkifyContent(trimmed.slice(2)),
+                    }}
+                  />
                 );
-              if (trimmed.startsWith("1. ") || trimmed.startsWith("2. ") || trimmed.startsWith("3. "))
+              if (
+                trimmed.startsWith("1. ") ||
+                trimmed.startsWith("2. ") ||
+                trimmed.startsWith("3. ")
+              )
                 return (
-                  <li key={i} className="ml-4 list-decimal" dangerouslySetInnerHTML={{
-                    __html: linkifyContent(trimmed.replace(/^\d+\.\s/, "")),
-                  }} />
+                  <li
+                    key={i}
+                    className="ml-4 list-decimal"
+                    dangerouslySetInnerHTML={{
+                      __html: linkifyContent(trimmed.replace(/^\d+\.\s/, "")),
+                    }}
+                  />
                 );
 
               return (
-                <p key={i} dangerouslySetInnerHTML={{
-                  __html: linkifyContent(trimmed),
-                }} />
+                <p
+                  key={i}
+                  dangerouslySetInnerHTML={{
+                    __html: linkifyContent(trimmed),
+                  }}
+                />
               );
             })}
           </div>
@@ -259,7 +279,8 @@ export default async function BlogPostPage({
                 className="group border border-border p-4 hover:border-foreground transition-luxury inline-block"
               >
                 <p className="text-xs text-muted-foreground uppercase tracking-[0.12em]">
-                  Inspired by {explicitProduct.inspirationBrand} {explicitProduct.inspiration}
+                  Inspired by {explicitProduct.inspirationBrand}{" "}
+                  {explicitProduct.inspiration}
                 </p>
                 <p className="font-serif text-lg mt-1 group-hover:opacity-70 transition-opacity">
                   {explicitProduct.name}
@@ -281,7 +302,8 @@ export default async function BlogPostPage({
                     className="group border border-border p-4 hover:border-foreground transition-luxury"
                   >
                     <p className="text-xs text-muted-foreground uppercase tracking-[0.12em]">
-                      Inspired by {product.inspirationBrand} {product.inspiration}
+                      Inspired by {product.inspirationBrand}{" "}
+                      {product.inspiration}
                     </p>
                     <p className="font-serif text-lg mt-1 group-hover:opacity-70 transition-opacity">
                       {product.name}
@@ -297,7 +319,8 @@ export default async function BlogPostPage({
               Explore Our Collection
             </h3>
             <p className="text-muted-foreground mb-6">
-              Discover premium inspired fragrances from INR 42. Free shipping above INR 799.
+              Discover premium inspired fragrances from INR 42. Free shipping
+              above INR 500.
             </p>
             <Link
               href="/shop"
@@ -344,6 +367,3 @@ export default async function BlogPostPage({
     </main>
   );
 }
-
-
-

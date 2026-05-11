@@ -13,8 +13,7 @@ import {
   getProgrammaticInspirationBySlug,
 } from "@/lib/programmatic-seo";
 import { getProductPath } from "@/lib/product-route";
-
-const baseUrl = "https://humefragrance.com";
+import { getRequestSiteUrl } from "@/lib/request-site";
 
 const formatPrice = (amount: number) =>
   new Intl.NumberFormat("en-IN", {
@@ -39,6 +38,8 @@ export async function generateMetadata({
   const product = await getProductById(item.humeProduct.slug);
   if (!product) return { title: "Not Found" };
 
+  const baseUrl = await getRequestSiteUrl();
+
   return {
     title: `${product.name}: Inspired by ${item.originalBrand} ${item.originalName} | HUME`,
     description: `Experience ${item.scent_profile.family} style inspired by ${item.originalName}. ${item.characteristics.longevity} longevity and premium EDP quality at ${formatPrice(product.price)}.`,
@@ -62,6 +63,7 @@ export default async function InspiredByPage({
   const { slug } = await params;
   const item = getProgrammaticInspirationBySlug(slug);
   if (!item) notFound();
+  const baseUrl = await getRequestSiteUrl();
 
   const [product, allProducts] = await Promise.all([
     getProductById(item.humeProduct.slug),
@@ -74,7 +76,7 @@ export default async function InspiredByPage({
     .filter(
       (p) =>
         p.categoryId === product.categoryId ||
-        p.inspirationBrand.toLowerCase() === item.originalBrand.toLowerCase()
+        p.inspirationBrand.toLowerCase() === item.originalBrand.toLowerCase(),
     )
     .slice(0, 4);
 
@@ -106,43 +108,65 @@ export default async function InspiredByPage({
       <section className="pt-28 pb-20 md:pt-36 md:pb-24">
         <div className="container-luxury space-y-12">
           <div className="max-w-3xl">
-            <p className="text-caption text-muted-foreground mb-3">Inspired Collection</p>
+            <p className="text-caption text-muted-foreground mb-3">
+              Inspired Collection
+            </p>
             <h1 className="font-serif text-4xl md:text-5xl font-light mb-4">
               {product.name}: Inspired by {item.originalName}
             </h1>
             <p className="text-body text-muted-foreground">
-              Experience {item.scent_profile.family} luxury at {formatPrice(product.price)} instead of{" "}
+              Experience {item.scent_profile.family} luxury at{" "}
+              {formatPrice(product.price)} instead of{" "}
               {formatPrice(item.original_price)}.
             </p>
           </div>
 
           <div className="rounded-md border border-border bg-card p-4">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground mb-2">Quick Answer</p>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground mb-2">
+              Quick Answer
+            </p>
             <p className="text-sm text-muted-foreground">
-              The closest daily-wear option here is <span className="font-medium text-foreground">{product.name}</span>, inspired by{" "}
-              {item.originalBrand} {item.originalName}, with {item.characteristics.longevity.toLowerCase()} and a{" "}
-              {item.scent_profile.family.toLowerCase()} profile at {formatPrice(product.price)}.
+              The closest daily-wear option here is{" "}
+              <span className="font-medium text-foreground">
+                {product.name}
+              </span>
+              , inspired by {item.originalBrand} {item.originalName}, with{" "}
+              {item.characteristics.longevity.toLowerCase()} and a{" "}
+              {item.scent_profile.family.toLowerCase()} profile at{" "}
+              {formatPrice(product.price)}.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
             <div className="border border-border p-6 bg-secondary/10">
-              <p className="text-caption text-muted-foreground mb-2">Original</p>
+              <p className="text-caption text-muted-foreground mb-2">
+                Original
+              </p>
               <h2 className="font-serif text-2xl mb-2">
                 {item.originalBrand} {item.originalName}
               </h2>
-              <p className="text-2xl font-semibold mb-2">{formatPrice(item.original_price)}</p>
-              <p className="text-sm text-muted-foreground">Premium designer pricing</p>
+              <p className="text-2xl font-semibold mb-2">
+                {formatPrice(item.original_price)}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Premium designer pricing
+              </p>
             </div>
             <div className="border border-border p-6 bg-secondary/10">
-              <p className="text-caption text-muted-foreground mb-2">HUME Alternative</p>
+              <p className="text-caption text-muted-foreground mb-2">
+                HUME Alternative
+              </p>
               <h2 className="font-serif text-2xl mb-2">{product.name}</h2>
-              <p className="text-2xl font-semibold mb-2">{formatPrice(product.price)}</p>
+              <p className="text-2xl font-semibold mb-2">
+                {formatPrice(product.price)}
+              </p>
               <p className="text-sm text-muted-foreground mb-4">
                 Save {formatPrice(item.savings)} with the same scent direction.
               </p>
               <Button asChild>
-                <Link href={getProductPath(product)}>View Full Product Details</Link>
+                <Link href={getProductPath(product)}>
+                  View Full Product Details
+                </Link>
               </Button>
             </div>
           </div>
@@ -150,41 +174,57 @@ export default async function InspiredByPage({
           <div className="grid md:grid-cols-3 gap-6">
             <div className="border border-border p-5">
               <h3 className="font-serif text-xl mb-3">Top Notes</h3>
-              <p className="text-sm text-muted-foreground">{item.scent_profile.top_notes.join(", ")}</p>
+              <p className="text-sm text-muted-foreground">
+                {item.scent_profile.top_notes.join(", ")}
+              </p>
             </div>
             <div className="border border-border p-5">
               <h3 className="font-serif text-xl mb-3">Heart Notes</h3>
-              <p className="text-sm text-muted-foreground">{item.scent_profile.heart_notes.join(", ")}</p>
+              <p className="text-sm text-muted-foreground">
+                {item.scent_profile.heart_notes.join(", ")}
+              </p>
             </div>
             <div className="border border-border p-5">
               <h3 className="font-serif text-xl mb-3">Base Notes</h3>
-              <p className="text-sm text-muted-foreground">{item.scent_profile.base_notes.join(", ")}</p>
+              <p className="text-sm text-muted-foreground">
+                {item.scent_profile.base_notes.join(", ")}
+              </p>
             </div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
             <div className="border border-border p-6">
               <h3 className="font-serif text-2xl mb-3">What Makes It Iconic</h3>
-              <p className="text-sm text-muted-foreground">{item.what_makes_original_iconic}</p>
+              <p className="text-sm text-muted-foreground">
+                {item.what_makes_original_iconic}
+              </p>
             </div>
             <div className="border border-border p-6">
               <h3 className="font-serif text-2xl mb-3">How HUME Captures It</h3>
-              <p className="text-sm text-muted-foreground">{item.how_hume_captures_essence}</p>
+              <p className="text-sm text-muted-foreground">
+                {item.how_hume_captures_essence}
+              </p>
             </div>
           </div>
 
           <div className="border border-border p-6">
             <h3 className="font-serif text-2xl mb-3">Formulated For India</h3>
-            <p className="text-sm text-muted-foreground">{item.formulated_for_india}</p>
+            <p className="text-sm text-muted-foreground">
+              {item.formulated_for_india}
+            </p>
           </div>
 
           <div className="border border-border p-6">
-            <h3 className="font-serif text-2xl mb-5">Frequently Asked Questions</h3>
+            <h3 className="font-serif text-2xl mb-5">
+              Frequently Asked Questions
+            </h3>
             <div className="space-y-4">
               {faq.map((entry) => (
                 <div key={entry.question}>
                   <p className="font-medium mb-1">{entry.question}</p>
-                  <p className="text-sm text-muted-foreground">{entry.answer}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {entry.answer}
+                  </p>
                 </div>
               ))}
             </div>

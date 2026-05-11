@@ -26,7 +26,7 @@ const APPLIED_COUPON_STORAGE_KEY = "hume_applied_coupon_code";
 const LAST_ORDER_SIGNATURE_KEY = "hume_last_order_signature_v1";
 const LAST_ORDER_ID_KEY = "hume_last_order_id_v1";
 const LAST_ORDER_NUMBER_KEY = "hume_last_order_number_v1";
-const FREE_DELIVERY_THRESHOLD = 800;
+const FREE_DELIVERY_THRESHOLD = 500;
 const DELIVERY_FEE_BELOW_THRESHOLD = 100;
 
 type CheckoutDetails = {
@@ -98,7 +98,9 @@ function getOrCreateCheckoutSessionId() {
 }
 
 function getDraftStatus(details: CheckoutDetails) {
-  const hasAnyValue = Object.values(details).some((value) => value.trim().length > 0);
+  const hasAnyValue = Object.values(details).some(
+    (value) => value.trim().length > 0,
+  );
   if (!hasAnyValue) return "started" as const;
 
   const requiredKeys: Array<keyof CheckoutDetails> = [
@@ -110,7 +112,9 @@ function getDraftStatus(details: CheckoutDetails) {
     "pincode",
   ];
 
-  const isComplete = requiredKeys.every((key) => details[key].trim().length > 0);
+  const isComplete = requiredKeys.every(
+    (key) => details[key].trim().length > 0,
+  );
   return isComplete ? ("complete" as const) : ("partial" as const);
 }
 
@@ -140,7 +144,8 @@ export default function CheckoutClient() {
   const autosaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedSignatureRef = useRef<string>("");
   const [allCoupons, setAllCoupons] = useState<Coupon[]>([]);
-  const [welcomeBackReward, setWelcomeBackReward] = useState<WelcomeBackReward | null>(null);
+  const [welcomeBackReward, setWelcomeBackReward] =
+    useState<WelcomeBackReward | null>(null);
   const [details, setDetails] = useState<CheckoutDetails>(() => {
     if (typeof window === "undefined") return defaultDetails;
     try {
@@ -156,7 +161,10 @@ export default function CheckoutClient() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(CHECKOUT_STORAGE_KEY, JSON.stringify(details));
+      window.localStorage.setItem(
+        CHECKOUT_STORAGE_KEY,
+        JSON.stringify(details),
+      );
     } catch (error) {
       console.error("Failed to persist checkout details:", error);
     }
@@ -164,10 +172,19 @@ export default function CheckoutClient() {
 
   const appliedCouponCode = useMemo(() => {
     if (typeof window === "undefined") return null;
-    return window.localStorage.getItem(APPLIED_COUPON_STORAGE_KEY)?.trim().toUpperCase() ?? null;
+    return (
+      window.localStorage
+        .getItem(APPLIED_COUPON_STORAGE_KEY)
+        ?.trim()
+        .toUpperCase() ?? null
+    );
   }, []);
   const appliedCoupon = useMemo(
-    () => allCoupons.find((coupon) => coupon.code.toUpperCase() === (appliedCouponCode ?? "").toUpperCase()) ?? null,
+    () =>
+      allCoupons.find(
+        (coupon) =>
+          coupon.code.toUpperCase() === (appliedCouponCode ?? "").toUpperCase(),
+      ) ?? null,
     [allCoupons, appliedCouponCode],
   );
   const couponResult = useMemo(
@@ -175,13 +192,23 @@ export default function CheckoutClient() {
     [appliedCoupon, items, totalPrice],
   );
   const couponDiscount = Math.min(totalPrice, couponResult.discount);
-  const welcomeBackDiscount = calculateWelcomeBackDiscount(welcomeBackReward, totalPrice, couponDiscount);
+  const welcomeBackDiscount = calculateWelcomeBackDiscount(
+    welcomeBackReward,
+    totalPrice,
+    couponDiscount,
+  );
   const regularShippingFee =
-    totalPrice > 0 && totalPrice < FREE_DELIVERY_THRESHOLD ? DELIVERY_FEE_BELOW_THRESHOLD : 0;
+    totalPrice > 0 && totalPrice < FREE_DELIVERY_THRESHOLD
+      ? DELIVERY_FEE_BELOW_THRESHOLD
+      : 0;
   const shippingFee = welcomeBackReward ? 0 : regularShippingFee;
   const shippingSavings = Math.max(0, regularShippingFee - shippingFee);
-  const grandTotal = Math.max(0, totalPrice - couponDiscount - welcomeBackDiscount) + shippingFee;
-  const appliedOfferCodes = [appliedCouponCode, welcomeBackReward?.code].filter(Boolean).join(" + ");
+  const grandTotal =
+    Math.max(0, totalPrice - couponDiscount - welcomeBackDiscount) +
+    shippingFee;
+  const appliedOfferCodes = [appliedCouponCode, welcomeBackReward?.code]
+    .filter(Boolean)
+    .join(" + ");
 
   const giftItems = useMemo(() => items.filter((item) => item.isGift), [items]);
 
@@ -211,37 +238,43 @@ export default function CheckoutClient() {
   const buildDraftPayload = useCallback(
     (
       lastEditedField?: keyof CheckoutDetails,
-      statusOverride?: "started" | "partial" | "complete" | "whatsapp_initiated",
+      statusOverride?:
+        | "started"
+        | "partial"
+        | "complete"
+        | "whatsapp_initiated",
     ) => {
       const firstTouch = getFirstTouchSource();
       return {
-      sessionId:
-        checkoutSessionIdRef.current ??
-        (typeof window !== "undefined" ? getOrCreateCheckoutSessionId() : "server"),
-      status: statusOverride ?? getDraftStatus(details),
-      path: pathname,
-      lastEditedField,
-      acquisitionSource: firstTouch?.source,
-      acquisitionCategory: firstTouch?.category,
-      acquisitionReferrerHost: firstTouch?.referrerHost ?? undefined,
-      utmSource: firstTouch?.utmSource,
-      utmMedium: firstTouch?.utmMedium,
-      utmCampaign: firstTouch?.utmCampaign,
-      utmTerm: firstTouch?.utmTerm,
-      utmContent: firstTouch?.utmContent,
-      subtotal: totalPrice,
-      shippingFee,
-      grandTotal,
-      cartSnapshot: items.map((item) => ({
-        id: item.id,
-        name: item.name,
-        inspiration: item.inspiration,
-        size: item.size,
-        quantity: item.quantity,
-        price: item.price,
-        isGift: item.isGift,
-      })),
-      details,
+        sessionId:
+          checkoutSessionIdRef.current ??
+          (typeof window !== "undefined"
+            ? getOrCreateCheckoutSessionId()
+            : "server"),
+        status: statusOverride ?? getDraftStatus(details),
+        path: pathname,
+        lastEditedField,
+        acquisitionSource: firstTouch?.source,
+        acquisitionCategory: firstTouch?.category,
+        acquisitionReferrerHost: firstTouch?.referrerHost ?? undefined,
+        utmSource: firstTouch?.utmSource,
+        utmMedium: firstTouch?.utmMedium,
+        utmCampaign: firstTouch?.utmCampaign,
+        utmTerm: firstTouch?.utmTerm,
+        utmContent: firstTouch?.utmContent,
+        subtotal: totalPrice,
+        shippingFee,
+        grandTotal,
+        cartSnapshot: items.map((item) => ({
+          id: item.id,
+          name: item.name,
+          inspiration: item.inspiration,
+          size: item.size,
+          quantity: item.quantity,
+          price: item.price,
+          isGift: item.isGift,
+        })),
+        details,
       };
     },
     [details, grandTotal, items, pathname, shippingFee, totalPrice],
@@ -250,7 +283,11 @@ export default function CheckoutClient() {
   const persistDraft = useCallback(
     async (
       lastEditedField?: keyof CheckoutDetails,
-      statusOverride?: "started" | "partial" | "complete" | "whatsapp_initiated",
+      statusOverride?:
+        | "started"
+        | "partial"
+        | "complete"
+        | "whatsapp_initiated",
       force = false,
     ) => {
       if (typeof window === "undefined") return;
@@ -335,20 +372,22 @@ export default function CheckoutClient() {
   }, [items.length, persistDraft]);
 
   const validate = () => {
-    const requiredFields: Array<{ key: keyof CheckoutDetails; label: string }> = [
-      { key: "fullName", label: "Full name" },
-      { key: "phone", label: "Phone number" },
-      { key: "addressLine1", label: "Address line 1" },
-      { key: "city", label: "City" },
-      { key: "state", label: "State" },
-      { key: "pincode", label: "Pincode" },
-    ];
+    const requiredFields: Array<{ key: keyof CheckoutDetails; label: string }> =
+      [
+        { key: "fullName", label: "Full name" },
+        { key: "phone", label: "Phone number" },
+        { key: "addressLine1", label: "Address line 1" },
+        { key: "city", label: "City" },
+        { key: "state", label: "State" },
+        { key: "pincode", label: "Pincode" },
+      ];
 
     const missing = requiredFields.find(({ key }) => !details[key].trim());
     if (missing) {
       toast({
         title: `${missing.label} is required`,
-        description: "Please complete all required order details before continuing.",
+        description:
+          "Please complete all required order details before continuing.",
       });
       return false;
     }
@@ -357,7 +396,8 @@ export default function CheckoutClient() {
     if (phoneDigits.length < 10) {
       toast({
         title: "Enter a valid phone number",
-        description: "A 10 digit mobile number works best for order confirmation.",
+        description:
+          "A 10 digit mobile number works best for order confirmation.",
       });
       return false;
     }
@@ -377,7 +417,9 @@ export default function CheckoutClient() {
   const buildOrderMessage = () => {
     const itemLines = items
       .map((item) => {
-        const linePrice = item.isGift ? "FREE" : formatINR(item.price * item.quantity);
+        const linePrice = item.isGift
+          ? "FREE"
+          : formatINR(item.price * item.quantity);
         return `* ${item.name}${item.isGift ? " [FREE GIFT]" : ""} (${item.size ?? "50ml"}, Inspired by ${item.inspiration}) x${item.quantity} - ${linePrice}`;
       })
       .join("\n");
@@ -398,14 +440,18 @@ export default function CheckoutClient() {
       itemLines,
       "",
       `Subtotal: ${formatINR(totalPrice)}`,
-      couponDiscount > 0 ? `Coupon Discount (${appliedCouponCode}): -${formatINR(couponDiscount)}` : null,
+      couponDiscount > 0
+        ? `Coupon Discount (${appliedCouponCode}): -${formatINR(couponDiscount)}`
+        : null,
       welcomeBackReward && welcomeBackDiscount > 0
         ? `${welcomeBackReward.label}: -${formatINR(welcomeBackDiscount)}`
         : null,
       `Delivery: ${shippingFee === 0 ? "FREE" : formatINR(shippingFee)}`,
       `Grand Total: ${formatINR(grandTotal)}`,
       appliedOfferCodes ? `Offer Codes: ${appliedOfferCodes}` : null,
-      giftItems.length > 0 ? `Free Gifts: ${giftItems.map((item) => item.name).join(", ")}` : null,
+      giftItems.length > 0
+        ? `Free Gifts: ${giftItems.map((item) => item.name).join(", ")}`
+        : null,
       "",
       "Customer details:",
       `Name: ${details.fullName.trim()}`,
@@ -436,12 +482,24 @@ export default function CheckoutClient() {
       appliedOfferCodes,
     });
 
-    const previousSignature = window.localStorage.getItem(LAST_ORDER_SIGNATURE_KEY);
+    const previousSignature = window.localStorage.getItem(
+      LAST_ORDER_SIGNATURE_KEY,
+    );
     const previousOrderId = window.localStorage.getItem(LAST_ORDER_ID_KEY);
-    const previousOrderNumber = window.localStorage.getItem(LAST_ORDER_NUMBER_KEY);
+    const previousOrderNumber = window.localStorage.getItem(
+      LAST_ORDER_NUMBER_KEY,
+    );
 
-    if (previousSignature === signature && previousOrderId && previousOrderNumber) {
-      return { id: previousOrderId, orderNumber: previousOrderNumber, signature };
+    if (
+      previousSignature === signature &&
+      previousOrderId &&
+      previousOrderNumber
+    ) {
+      return {
+        id: previousOrderId,
+        orderNumber: previousOrderNumber,
+        signature,
+      };
     }
 
     const nextId = crypto.randomUUID();
@@ -473,7 +531,8 @@ export default function CheckoutClient() {
           status: "whatsapp_initiated",
           checkoutChannel: "whatsapp",
           paymentMethod: "WhatsApp Confirmation",
-          shippingMethod: shippingFee === 0 ? "Free Delivery" : "Standard Shipping",
+          shippingMethod:
+            shippingFee === 0 ? "Free Delivery" : "Standard Shipping",
           path: pathname,
           acquisitionSource: firstTouch?.source,
           acquisitionCategory: firstTouch?.category,
@@ -532,7 +591,8 @@ export default function CheckoutClient() {
     window.open(`https://wa.me/919559024822?text=${encodedMessage}`, "_blank");
 
     if (appliedOfferCodes) {
-      const sessionId = checkoutSessionIdRef.current ?? getOrCreateCheckoutSessionId();
+      const sessionId =
+        checkoutSessionIdRef.current ?? getOrCreateCheckoutSessionId();
       void fetch("/api/coupon-code-events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -544,7 +604,8 @@ export default function CheckoutClient() {
           couponCode: appliedOfferCodes,
           destination: "919559024822",
           path: pathname,
-          referrer: typeof document !== "undefined" ? document.referrer : undefined,
+          referrer:
+            typeof document !== "undefined" ? document.referrer : undefined,
           payload: {
             subtotal: totalPrice,
             shippingFee,
@@ -589,7 +650,9 @@ export default function CheckoutClient() {
       <div className="container-luxury">
         <div className="mx-auto mb-10 max-w-3xl text-center">
           <p className="text-caption text-muted-foreground mb-3">Checkout</p>
-          <h1 className="font-serif text-4xl md:text-5xl mb-4">Delivery Details</h1>
+          <h1 className="font-serif text-4xl md:text-5xl mb-4">
+            Delivery Details
+          </h1>
           <div className="mx-auto mb-6 h-px w-16 bg-border" />
         </div>
 
@@ -610,14 +673,20 @@ export default function CheckoutClient() {
           <div className="rounded-[2rem] border border-border bg-card/95 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.05)] md:p-7">
             <div className="mb-6 border-b border-border/70 pb-5">
               <div>
-                <p className="text-[0.68rem] uppercase tracking-[0.28em] text-muted-foreground">Customer Details</p>
-                <h2 className="mt-2 font-serif text-3xl">Where should we send it?</h2>
+                <p className="text-[0.68rem] uppercase tracking-[0.28em] text-muted-foreground">
+                  Customer Details
+                </p>
+                <h2 className="mt-2 font-serif text-3xl">
+                  Where should we send it?
+                </h2>
               </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
-                <label className="mb-2 block text-[0.7rem] uppercase tracking-[0.24em] text-muted-foreground">Full Name</label>
+                <label className="mb-2 block text-[0.7rem] uppercase tracking-[0.24em] text-muted-foreground">
+                  Full Name
+                </label>
                 <Input
                   value={details.fullName}
                   onChange={(e) => updateField("fullName", e.target.value)}
@@ -627,7 +696,9 @@ export default function CheckoutClient() {
                 />
               </div>
               <div>
-                <label className="mb-2 block text-[0.7rem] uppercase tracking-[0.24em] text-muted-foreground">Phone Number</label>
+                <label className="mb-2 block text-[0.7rem] uppercase tracking-[0.24em] text-muted-foreground">
+                  Phone Number
+                </label>
                 <Input
                   value={details.phone}
                   onChange={(e) => updateField("phone", e.target.value)}
@@ -638,7 +709,9 @@ export default function CheckoutClient() {
                 />
               </div>
               <div>
-                <label className="mb-2 block text-[0.7rem] uppercase tracking-[0.24em] text-muted-foreground">Email</label>
+                <label className="mb-2 block text-[0.7rem] uppercase tracking-[0.24em] text-muted-foreground">
+                  Email
+                </label>
                 <Input
                   value={details.email}
                   onChange={(e) => updateField("email", e.target.value)}
@@ -649,7 +722,9 @@ export default function CheckoutClient() {
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="mb-2 block text-[0.7rem] uppercase tracking-[0.24em] text-muted-foreground">Address Line 1</label>
+                <label className="mb-2 block text-[0.7rem] uppercase tracking-[0.24em] text-muted-foreground">
+                  Address Line 1
+                </label>
                 <Input
                   value={details.addressLine1}
                   onChange={(e) => updateField("addressLine1", e.target.value)}
@@ -659,7 +734,9 @@ export default function CheckoutClient() {
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="mb-2 block text-[0.7rem] uppercase tracking-[0.24em] text-muted-foreground">Address Line 2 (Optional)</label>
+                <label className="mb-2 block text-[0.7rem] uppercase tracking-[0.24em] text-muted-foreground">
+                  Address Line 2 (Optional)
+                </label>
                 <Input
                   value={details.addressLine2}
                   onChange={(e) => updateField("addressLine2", e.target.value)}
@@ -669,7 +746,9 @@ export default function CheckoutClient() {
                 />
               </div>
               <div>
-                <label className="mb-2 block text-[0.7rem] uppercase tracking-[0.24em] text-muted-foreground">City</label>
+                <label className="mb-2 block text-[0.7rem] uppercase tracking-[0.24em] text-muted-foreground">
+                  City
+                </label>
                 <Input
                   value={details.city}
                   onChange={(e) => updateField("city", e.target.value)}
@@ -679,7 +758,9 @@ export default function CheckoutClient() {
                 />
               </div>
               <div>
-                <label className="mb-2 block text-[0.7rem] uppercase tracking-[0.24em] text-muted-foreground">State</label>
+                <label className="mb-2 block text-[0.7rem] uppercase tracking-[0.24em] text-muted-foreground">
+                  State
+                </label>
                 <Input
                   value={details.state}
                   onChange={(e) => updateField("state", e.target.value)}
@@ -689,7 +770,9 @@ export default function CheckoutClient() {
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="mb-2 block text-[0.7rem] uppercase tracking-[0.24em] text-muted-foreground">Pincode</label>
+                <label className="mb-2 block text-[0.7rem] uppercase tracking-[0.24em] text-muted-foreground">
+                  Pincode
+                </label>
                 <Input
                   value={details.pincode}
                   onChange={(e) => updateField("pincode", e.target.value)}
@@ -700,7 +783,9 @@ export default function CheckoutClient() {
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="mb-2 block text-[0.7rem] uppercase tracking-[0.24em] text-muted-foreground">Order Notes (Optional)</label>
+                <label className="mb-2 block text-[0.7rem] uppercase tracking-[0.24em] text-muted-foreground">
+                  Order Notes (Optional)
+                </label>
                 <Textarea
                   value={details.notes}
                   onChange={(e) => updateField("notes", e.target.value)}
@@ -712,10 +797,17 @@ export default function CheckoutClient() {
             </div>
 
             <div className="mt-6 flex flex-col gap-3">
-              <Button onClick={handleWhatsAppOrder} className="h-12 w-full rounded-full bg-[#25D366] px-5 text-white hover:bg-[#20bd5a]">
+              <Button
+                onClick={handleWhatsAppOrder}
+                className="h-12 w-full rounded-full bg-[#25D366] px-5 text-white hover:bg-[#20bd5a]"
+              >
                 ORDER
               </Button>
-              <Button variant="outline" onClick={() => router.push("/shop")} className="h-12 w-full rounded-full">
+              <Button
+                variant="outline"
+                onClick={() => router.push("/shop")}
+                className="h-12 w-full rounded-full"
+              >
                 Continue Shopping
               </Button>
             </div>
@@ -724,32 +816,58 @@ export default function CheckoutClient() {
           <div className="h-fit rounded-[2rem] border border-border bg-card/95 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.05)] md:sticky md:top-28 md:p-6">
             <div className="mb-5 flex items-center justify-between border-b border-border/70 pb-5">
               <div>
-                <p className="text-caption text-muted-foreground mb-1">Order Summary</p>
+                <p className="text-caption text-muted-foreground mb-1">
+                  Order Summary
+                </p>
                 <h2 className="font-serif text-3xl">Your Bag</h2>
               </div>
-              <span className="rounded-full bg-secondary px-3 py-1 text-sm text-muted-foreground">{items.length} items</span>
+              <span className="rounded-full bg-secondary px-3 py-1 text-sm text-muted-foreground">
+                {items.length} items
+              </span>
             </div>
 
             <div className="space-y-4">
               {items.map((item) => (
-                <div key={item.id} className="flex gap-3 border-b border-border/60 pb-4">
-                  <div className={`relative h-20 w-20 overflow-hidden rounded-md ${item.isGift ? "bg-white p-2" : "bg-secondary"}`}>
+                <div
+                  key={item.id}
+                  className="flex gap-3 border-b border-border/60 pb-4"
+                >
+                  <div
+                    className={`relative h-20 w-20 overflow-hidden rounded-md ${item.isGift ? "bg-white p-2" : "bg-secondary"}`}
+                  >
                     <ImageWithFallback
-                      src={withCloudinaryTransforms(item.image || "/images/logo.png", { width: 160 })}
+                      src={withCloudinaryTransforms(
+                        item.image || "/images/logo.png",
+                        { width: 160 },
+                      )}
                       fallbackSrc="/images/logo.png"
                       alt={item.name}
                       fill
                       sizes="80px"
-                      className={item.isGift ? "object-contain" : "object-cover"}
+                      className={
+                        item.isGift ? "object-contain" : "object-cover"
+                      }
                     />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-medium leading-tight">{item.name}</p>
-                    <p className="mt-1 text-sm italic text-muted-foreground">Inspired by {item.inspiration}</p>
+                    <p className="mt-1 text-sm italic text-muted-foreground">
+                      Inspired by {item.inspiration}
+                    </p>
                     <div className="mt-2 flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Qty {item.quantity}</span>
-                      <span className={item.isGift ? "font-semibold text-emerald-600" : "font-semibold"}>
-                        {item.isGift ? "FREE" : formatINR(item.price * item.quantity)}
+                      <span className="text-muted-foreground">
+                        Qty {item.quantity}
+                      </span>
+                      <span
+                        className={
+                          item.isGift
+                            ? "font-semibold text-emerald-600"
+                            : "font-semibold"
+                        }
+                      >
+                        {item.isGift
+                          ? "FREE"
+                          : formatINR(item.price * item.quantity)}
                       </span>
                     </div>
                   </div>
@@ -758,7 +876,9 @@ export default function CheckoutClient() {
             </div>
 
             <div className="mt-5 rounded-2xl bg-secondary/35 p-4">
-              <p className="text-[0.68rem] uppercase tracking-[0.28em] text-muted-foreground">Billing Snapshot</p>
+              <p className="text-[0.68rem] uppercase tracking-[0.28em] text-muted-foreground">
+                Billing Snapshot
+              </p>
               <div className="mt-4 space-y-2 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Subtotal</span>
@@ -766,22 +886,34 @@ export default function CheckoutClient() {
                 </div>
                 {couponDiscount > 0 ? (
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Coupon ({appliedCouponCode})</span>
-                    <span className="text-emerald-600">-{formatINR(couponDiscount)}</span>
+                    <span className="text-muted-foreground">
+                      Coupon ({appliedCouponCode})
+                    </span>
+                    <span className="text-emerald-600">
+                      -{formatINR(couponDiscount)}
+                    </span>
                   </div>
                 ) : null}
                 {welcomeBackReward && welcomeBackDiscount > 0 ? (
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">{welcomeBackReward.label}</span>
-                    <span className="text-emerald-600">-{formatINR(welcomeBackDiscount)}</span>
+                    <span className="text-muted-foreground">
+                      {welcomeBackReward.label}
+                    </span>
+                    <span className="text-emerald-600">
+                      -{formatINR(welcomeBackDiscount)}
+                    </span>
                   </div>
                 ) : null}
                 {shippingSavings > 0 ? (
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">
-                      {welcomeBackReward ? "Welcome back free delivery" : "Free delivery unlocked"}
+                      {welcomeBackReward
+                        ? "Welcome back free delivery"
+                        : "Free delivery unlocked"}
                     </span>
-                    <span className="text-emerald-600">-{formatINR(shippingSavings)}</span>
+                    <span className="text-emerald-600">
+                      -{formatINR(shippingSavings)}
+                    </span>
                   </div>
                 ) : null}
                 <div className="flex items-center justify-between">
@@ -792,10 +924,13 @@ export default function CheckoutClient() {
                 </div>
                 {shippingFee > 0 ? (
                   <p className="text-xs text-muted-foreground">
-                    Shop above {formatINR(FREE_DELIVERY_THRESHOLD)} for free delivery.
+                    Shop above {formatINR(FREE_DELIVERY_THRESHOLD)} for free
+                    delivery.
                   </p>
                 ) : (
-                  <p className="text-xs text-emerald-700">You have unlocked free delivery on this order.</p>
+                  <p className="text-xs text-emerald-700">
+                    You have unlocked free delivery on this order.
+                  </p>
                 )}
               </div>
             </div>
@@ -815,16 +950,28 @@ export default function CheckoutClient() {
 
         <div className="mt-8 grid gap-3 md:grid-cols-3">
           <div className="rounded-2xl border border-border bg-card/80 px-4 py-4 text-center">
-            <p className="text-[0.68rem] uppercase tracking-[0.28em] text-muted-foreground">Secure Checkout</p>
-            <p className="mt-2 text-sm text-foreground">Review your full order before sending it on WhatsApp.</p>
+            <p className="text-[0.68rem] uppercase tracking-[0.28em] text-muted-foreground">
+              Secure Checkout
+            </p>
+            <p className="mt-2 text-sm text-foreground">
+              Review your full order before sending it on WhatsApp.
+            </p>
           </div>
           <div className="rounded-2xl border border-border bg-card/80 px-4 py-4 text-center">
-            <p className="text-[0.68rem] uppercase tracking-[0.28em] text-muted-foreground">Fast Dispatch</p>
-            <p className="mt-2 text-sm text-foreground">Ready stock orders are usually prepared within 24 hours.</p>
+            <p className="text-[0.68rem] uppercase tracking-[0.28em] text-muted-foreground">
+              Fast Dispatch
+            </p>
+            <p className="mt-2 text-sm text-foreground">
+              Ready stock orders are usually prepared within 24 hours.
+            </p>
           </div>
           <div className="rounded-2xl border border-border bg-card/80 px-4 py-4 text-center">
-            <p className="text-[0.68rem] uppercase tracking-[0.28em] text-muted-foreground">Made By HUME</p>
-            <p className="mt-2 text-sm text-foreground">Filled and packed in our own manufacturing facility.</p>
+            <p className="text-[0.68rem] uppercase tracking-[0.28em] text-muted-foreground">
+              Made By HUME
+            </p>
+            <p className="mt-2 text-sm text-foreground">
+              Filled and packed in our own manufacturing facility.
+            </p>
           </div>
         </div>
       </div>

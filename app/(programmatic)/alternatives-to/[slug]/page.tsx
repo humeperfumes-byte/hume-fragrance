@@ -10,8 +10,7 @@ import {
   getAllProgrammaticInspirations,
   getAlternativeToBySlug,
 } from "@/lib/programmatic-seo";
-
-const baseUrl = "https://humefragrance.com";
+import { getRequestSiteUrl } from "@/lib/request-site";
 
 const formatPrice = (amount: number) =>
   new Intl.NumberFormat("en-IN", {
@@ -20,7 +19,9 @@ const formatPrice = (amount: number) =>
     maximumFractionDigits: 0,
   }).format(amount);
 
-async function resolveMappedProduct(item: NonNullable<ReturnType<typeof getAlternativeToBySlug>>) {
+async function resolveMappedProduct(
+  item: NonNullable<ReturnType<typeof getAlternativeToBySlug>>,
+) {
   const byId = await getProductById(item.humeProduct.slug);
   if (byId) return byId;
 
@@ -28,7 +29,7 @@ async function resolveMappedProduct(item: NonNullable<ReturnType<typeof getAlter
   const target = item.originalName.toLowerCase();
   return (
     allProducts.find((p) =>
-      `${p.inspirationBrand} ${p.inspiration}`.toLowerCase().includes(target)
+      `${p.inspirationBrand} ${p.inspiration}`.toLowerCase().includes(target),
     ) ?? null
   );
 }
@@ -48,6 +49,8 @@ export async function generateMetadata({
 
   const product = await resolveMappedProduct(item);
   if (!product) return { title: "Not Found" };
+
+  const baseUrl = await getRequestSiteUrl();
 
   return {
     title: `Best Alternative to ${item.originalName} in India | HUME`,
@@ -72,15 +75,24 @@ export default async function AlternativesToPage({
   const { slug } = await params;
   const item = getAlternativeToBySlug(slug);
   if (!item) notFound();
+  const baseUrl = await getRequestSiteUrl();
 
-  const [primary, products] = await Promise.all([resolveMappedProduct(item), getAllProducts()]);
+  const [primary, products] = await Promise.all([
+    resolveMappedProduct(item),
+    getAllProducts(),
+  ]);
   if (!primary) notFound();
 
   const related = products
     .filter((p) => p.id !== primary.id)
-    .filter((p) => (p.dbCategoryIds ?? p.categoryIds ?? [p.categoryId]).some((id) =>
-      (primary.dbCategoryIds ?? primary.categoryIds ?? [primary.categoryId]).includes(id)
-    ))
+    .filter((p) =>
+      (p.dbCategoryIds ?? p.categoryIds ?? [p.categoryId]).some((id) =>
+        (
+          primary.dbCategoryIds ??
+          primary.categoryIds ?? [primary.categoryId]
+        ).includes(id),
+      ),
+    )
     .slice(0, 4);
 
   const jsonLd = {
@@ -99,20 +111,34 @@ export default async function AlternativesToPage({
       <section className="pt-28 pb-20 md:pt-36 md:pb-24">
         <div className="container-luxury space-y-10">
           <div className="max-w-3xl">
-            <p className="text-caption text-muted-foreground mb-3">Alternatives Guide</p>
+            <p className="text-caption text-muted-foreground mb-3">
+              Alternatives Guide
+            </p>
             <h1 className="font-serif text-4xl md:text-5xl font-light mb-4">
               Best Alternative to {item.originalName} in India
             </h1>
-            <p className="text-body text-muted-foreground">{item.why_inspired}</p>
+            <p className="text-body text-muted-foreground">
+              {item.why_inspired}
+            </p>
           </div>
 
           <div className="rounded-md border border-border bg-card p-4">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground mb-2">Quick Answer</p>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground mb-2">
+              Quick Answer
+            </p>
             <p className="text-sm text-muted-foreground">
-              If you want a {item.originalName}-style profile with better daily value in India, choose{" "}
-              <span className="font-medium text-foreground">HUME {primary.name}</span> for{" "}
-              <span className="font-medium text-foreground">{formatPrice(primary.price)}</span>. It keeps the same{" "}
-              {item.scent_profile.family.toLowerCase()} direction with practical {item.characteristics.longevity.toLowerCase()} wear.
+              If you want a {item.originalName}-style profile with better daily
+              value in India, choose{" "}
+              <span className="font-medium text-foreground">
+                HUME {primary.name}
+              </span>{" "}
+              for{" "}
+              <span className="font-medium text-foreground">
+                {formatPrice(primary.price)}
+              </span>
+              . It keeps the same {item.scent_profile.family.toLowerCase()}{" "}
+              direction with practical{" "}
+              {item.characteristics.longevity.toLowerCase()} wear.
             </p>
           </div>
 
@@ -139,36 +165,47 @@ export default async function AlternativesToPage({
               <p className="text-sm text-muted-foreground mb-4">
                 Signature family: {item.scent_profile.family}
               </p>
-              <p className="text-xl font-semibold">{formatPrice(item.original_price)}</p>
+              <p className="text-xl font-semibold">
+                {formatPrice(item.original_price)}
+              </p>
             </div>
           </div>
 
           <div className="border border-border p-6">
             <h3 className="font-serif text-2xl mb-3">Why Buyers Switch</h3>
-            <p className="text-sm text-muted-foreground mb-3">{item.what_makes_original_iconic}</p>
-            <p className="text-sm text-muted-foreground">{item.how_hume_captures_essence}</p>
+            <p className="text-sm text-muted-foreground mb-3">
+              {item.what_makes_original_iconic}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {item.how_hume_captures_essence}
+            </p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
             <div className="border border-border p-6">
               <h3 className="font-serif text-2xl mb-3">Scent Notes</h3>
               <p className="text-sm text-muted-foreground mb-1">
-                <span className="font-medium text-foreground">Top:</span> {item.scent_profile.top_notes.join(", ")}
+                <span className="font-medium text-foreground">Top:</span>{" "}
+                {item.scent_profile.top_notes.join(", ")}
               </p>
               <p className="text-sm text-muted-foreground mb-1">
-                <span className="font-medium text-foreground">Heart:</span> {item.scent_profile.heart_notes.join(", ")}
+                <span className="font-medium text-foreground">Heart:</span>{" "}
+                {item.scent_profile.heart_notes.join(", ")}
               </p>
               <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Base:</span> {item.scent_profile.base_notes.join(", ")}
+                <span className="font-medium text-foreground">Base:</span>{" "}
+                {item.scent_profile.base_notes.join(", ")}
               </p>
             </div>
             <div className="border border-border p-6">
               <h3 className="font-serif text-2xl mb-3">Best Use Cases</h3>
               <p className="text-sm text-muted-foreground mb-1">
-                <span className="font-medium text-foreground">Seasons:</span> {item.characteristics.seasons.join(", ")}
+                <span className="font-medium text-foreground">Seasons:</span>{" "}
+                {item.characteristics.seasons.join(", ")}
               </p>
               <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Occasions:</span> {item.characteristics.occasions.join(", ")}
+                <span className="font-medium text-foreground">Occasions:</span>{" "}
+                {item.characteristics.occasions.join(", ")}
               </p>
             </div>
           </div>
@@ -200,7 +237,8 @@ export default async function AlternativesToPage({
 
           <div className="border border-border p-6 text-center">
             <p className="text-sm text-muted-foreground mb-4">
-              Looking for more options? Explore all inspired fragrances in our shop.
+              Looking for more options? Explore all inspired fragrances in our
+              shop.
             </p>
             <Link
               href="/shop"

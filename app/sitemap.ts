@@ -5,9 +5,10 @@ import { getAllAccessories } from "@/lib/db/accessories";
 import { getProgrammaticSitemapEntries } from "@/lib/programmatic-seo";
 import { getProductPath } from "@/lib/product-route";
 import { getFestivalSeoSlugs } from "@/lib/festival-seo";
+import { getRequestSiteUrl } from "@/lib/request-site";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = "https://humefragrance.com";
+  const baseUrl = await getRequestSiteUrl();
   const [products, blogPosts, accessories] = await Promise.all([
     getAllProducts(),
     getAllBlogPosts(),
@@ -44,18 +45,78 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   return [
-    { url: baseUrl, lastModified: new Date(), changeFrequency: "monthly", priority: 1.0 },
-    { url: `${baseUrl}/shop`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
-    { url: `${baseUrl}/hume-special`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
-    { url: `${baseUrl}/bestseller`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
-    { url: `${baseUrl}/llms.txt`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.4 },
-    { url: `${baseUrl}/llms-full.txt`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.5 },
-    { url: `${baseUrl}/refill-subscription`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
-    { url: `${baseUrl}/fragrance-guides`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
-    { url: `${baseUrl}/celebrities-favorites`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.7 },
-    { url: `${baseUrl}/kit-pack`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
-    { url: `${baseUrl}/scent-quiz`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
-    { url: `${baseUrl}/blog`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
+    {
+      url: baseUrl,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 1.0,
+    },
+    {
+      url: `${baseUrl}/shop`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/hume-special`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/bestseller`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/llms.txt`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.4,
+    },
+    {
+      url: `${baseUrl}/llms-full.txt`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/refill-subscription`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.6,
+    },
+    {
+      url: `${baseUrl}/fragrance-guides`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/celebrities-favorites`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/kit-pack`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/scent-quiz`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.6,
+    },
+    {
+      url: `${baseUrl}/blog`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.6,
+    },
     ...productEntries,
     ...accessoryEntries,
     ...blogEntries,

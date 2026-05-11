@@ -8,6 +8,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/seo";
 import { getAllProducts } from "@/lib/db/products";
 import { getIntentPageBySlug, intentPages } from "@/lib/intent-pages";
+import { getRequestSiteUrl } from "@/lib/request-site";
 
 export const revalidate = 300;
 
@@ -23,10 +24,14 @@ export async function generateMetadata({
   const { slug } = await params;
   const page = getIntentPageBySlug(slug);
   if (!page) return { title: "Not Found" };
+  const baseUrl = await getRequestSiteUrl();
 
   return {
     title: `${page.title} | HUME Perfumes`,
     description: page.description,
+    alternates: {
+      canonical: `${baseUrl}/alternatives/${page.slug}`,
+    },
   };
 }
 
@@ -47,6 +52,7 @@ export default async function AlternativeIntentPage({
   const { slug } = await params;
   const page = getIntentPageBySlug(slug);
   if (!page) notFound();
+  const baseUrl = await getRequestSiteUrl();
 
   const products = await getAllProducts();
   const ranked = products
@@ -71,12 +77,12 @@ export default async function AlternativeIntentPage({
       "@type": "CollectionPage",
       name: page.title,
       description: page.description,
-      url: `https://humefragrance.com/alternatives/${page.slug}`,
+      url: `${baseUrl}/alternatives/${page.slug}`,
     },
     getBreadcrumbSchema([
-      { name: "Home", url: "https://humefragrance.com" },
-      { name: "Alternatives", url: "https://humefragrance.com/alternatives" },
-      { name: page.title, url: `https://humefragrance.com/alternatives/${page.slug}` },
+      { name: "Home", url: baseUrl },
+      { name: "Alternatives", url: `${baseUrl}/alternatives` },
+      { name: page.title, url: `${baseUrl}/alternatives/${page.slug}` },
     ]),
   ];
 
@@ -88,8 +94,12 @@ export default async function AlternativeIntentPage({
       <section className="pt-28 pb-20 md:pt-36 md:pb-24">
         <div className="container-luxury">
           <div className="max-w-3xl mb-12">
-            <p className="text-caption text-muted-foreground mb-3">Programmatic Guide</p>
-            <h1 className="font-serif text-4xl md:text-5xl font-light mb-5">{page.heading}</h1>
+            <p className="text-caption text-muted-foreground mb-3">
+              Programmatic Guide
+            </p>
+            <h1 className="font-serif text-4xl md:text-5xl font-light mb-5">
+              {page.heading}
+            </h1>
             <p className="text-body text-muted-foreground">{page.intro}</p>
           </div>
 
@@ -118,7 +128,10 @@ export default async function AlternativeIntentPage({
               <p className="text-muted-foreground mb-4">
                 No exact matches found yet for this intent page.
               </p>
-              <Link href="/shop" className="text-caption link-underline text-foreground">
+              <Link
+                href="/shop"
+                className="text-caption link-underline text-foreground"
+              >
                 Browse All Perfumes
               </Link>
             </div>
