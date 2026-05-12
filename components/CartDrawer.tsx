@@ -279,6 +279,36 @@ const CartDrawer = () => {
   }, [isCartOpen, items.length, router]);
 
   useEffect(() => {
+    if (!isCartOpen || typeof window === "undefined") return;
+
+    const scrollY = window.scrollY;
+    const previousBodyStyles = {
+      overflow: document.body.style.overflow,
+      position: document.body.style.position,
+      top: document.body.style.top,
+      width: document.body.style.width,
+    };
+    const previousHtmlOverscroll =
+      document.documentElement.style.overscrollBehavior;
+
+    document.documentElement.style.overscrollBehavior = "none";
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+
+    return () => {
+      document.documentElement.style.overscrollBehavior =
+        previousHtmlOverscroll;
+      document.body.style.overflow = previousBodyStyles.overflow;
+      document.body.style.position = previousBodyStyles.position;
+      document.body.style.top = previousBodyStyles.top;
+      document.body.style.width = previousBodyStyles.width;
+      window.scrollTo(0, scrollY);
+    };
+  }, [isCartOpen]);
+
+  useEffect(() => {
     if (!appliedCouponCode) return;
     if (allCoupons.length === 0) return;
     if (!appliedCoupon) {
@@ -447,7 +477,7 @@ const CartDrawer = () => {
 
   const renderSidebarCartLayout = () => (
     <>
-      <header className="border-b border-black/10 px-5 pb-4 pt-5">
+      <header className="shrink-0 border-b border-black/10 px-5 pb-4 pt-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-serif text-[1.7rem] leading-none tracking-tight">
@@ -470,7 +500,11 @@ const CartDrawer = () => {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-5 py-4 scrollbar-none">
+      <div
+        className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain px-5 py-4 scrollbar-none"
+        onWheel={(event) => event.stopPropagation()}
+        onTouchMove={(event) => event.stopPropagation()}
+      >
         {items.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
             <p className="font-serif text-3xl leading-tight">
@@ -977,7 +1011,7 @@ const CartDrawer = () => {
       </div>
 
       {items.length > 0 && (
-        <footer className="border-t border-black/10 bg-[#fbfaf8] px-5 py-4">
+        <footer className="shrink-0 border-t border-black/10 bg-[#fbfaf8] px-5 py-4">
           <div className="text-sm">
             <button
               type="button"
@@ -1225,7 +1259,7 @@ const CartDrawer = () => {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "tween", duration: 0.3 }}
-            className="fixed right-0 top-0 z-50 flex h-full w-full max-w-[430px] flex-col border-l border-black/10 bg-[#fbfaf8] text-[#171717] shadow-[0_24px_90px_rgba(0,0,0,0.18)]"
+            className="fixed right-0 top-0 z-50 flex h-dvh max-h-dvh min-h-0 w-full max-w-[430px] flex-col border-l border-black/10 bg-[#fbfaf8] text-[#171717] shadow-[0_24px_90px_rgba(0,0,0,0.18)]"
           >
             {renderSidebarCartLayout()}
             {renderSpecialUnlockOverlay()}
