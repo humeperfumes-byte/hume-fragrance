@@ -1,12 +1,21 @@
 import { db } from "@/db";
 import { checkoutDrafts } from "@/db/schema";
-import { desc } from "drizzle-orm";
+import { desc, gte } from "drizzle-orm";
 import { CheckoutsTable } from "./CheckoutsTable";
 import { formatINR } from "@/lib/currency";
+import { AdminDateWindowControl } from "@/components/admin/AdminDateWindowControl";
+import { filterExcludedAdminRows, collectExcludedSessionIds } from "@/lib/admin-data-filters";
+import { parseAdminTimeWindow } from "@/lib/admin-time-window";
 
 export const dynamic = "force-dynamic";
 
-export default async function CheckoutsPage() {
+type AdminPageProps = {
+  searchParams?: Promise<{ hours?: string }> | { hours?: string };
+};
+
+export default async function CheckoutsPage({ searchParams }: AdminPageProps) {
+  const params = await searchParams;
+  const timeWindow = parseAdminTimeWindow(params?.hours);
   let drafts: (typeof checkoutDrafts.$inferSelect)[] = [];
   let dbError = false;
 
@@ -14,8 +23,10 @@ export default async function CheckoutsPage() {
     drafts = await db
       .select()
       .from(checkoutDrafts)
+      .where(gte(checkoutDrafts.updatedAt, timeWindow.since))
       .orderBy(desc(checkoutDrafts.updatedAt))
       .limit(500);
+    drafts = filterExcludedAdminRows(drafts, collectExcludedSessionIds(drafts));
   } catch (error) {
     console.error("Checkouts page DB error:", error);
     dbError = true;
@@ -52,12 +63,15 @@ export default async function CheckoutsPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-5">
-      <div>
-        <h1 className="text-2xl font-semibold text-white">Abandoned Checkouts CRM</h1>
-        <p className="mt-1 text-sm text-white/45">
-          Recover lost sales. Carts are scored by value and likelihood of recovery.
-        </p>
-        <p className="mt-1 text-xs text-white/35">Showing all checkout leads.</p>
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+        <div>
+          <h1 className="text-2xl font-semibold text-white">Abandoned Checkouts CRM</h1>
+          <p className="mt-1 text-sm text-white/45">
+            Recover lost sales. Carts are scored by value and likelihood of recovery.
+          </p>
+          <p className="mt-1 text-xs text-white/35">Showing checkout leads from {timeWindow.label.toLowerCase()}.</p>
+        </div>
+        <AdminDateWindowControl />
       </div>
 
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">

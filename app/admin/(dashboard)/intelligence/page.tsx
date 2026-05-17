@@ -7,8 +7,9 @@ import {
   orders,
   cartEvents,
   consentEvents,
+  behavioralEvents,
 } from "@/db/schema";
-import { desc, inArray } from "drizzle-orm";
+import { desc, gte, inArray } from "drizzle-orm";
 import { IntelligenceFeed } from "./IntelligenceFeed";
 import { SectionPerformance } from "./SectionPerformance";
 import { Brain, Zap, AlertTriangle, Target, ShoppingCart, Ticket, Package } from "lucide-react";
@@ -20,11 +21,14 @@ import {
   isIndiaTimezone,
   parseAdminMarket,
 } from "@/lib/admin-market";
+import { AdminDateWindowControl } from "@/components/admin/AdminDateWindowControl";
+import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-data-filters";
+import { parseAdminTimeWindow } from "@/lib/admin-time-window";
 
 export const revalidate = 0;
 
 type AdminPageProps = {
-  searchParams?: Promise<{ market?: string }> | { market?: string };
+  searchParams?: Promise<{ market?: string; hours?: string }> | { market?: string; hours?: string };
 };
 
 type EnrichedSession = Record<string, unknown> & {
@@ -44,6 +48,7 @@ function dataCountry(data: Record<string, unknown> | null | undefined) {
 export default async function IntelligencePage({ searchParams }: AdminPageProps) {
   const params = await searchParams;
   const market = parseAdminMarket(params?.market);
+  const timeWindow = parseAdminTimeWindow(params?.hours);
   const indiaOnly = isIndiaMarket(market);
   let sessions: (typeof sessionIntelligence.$inferSelect)[] = [];
   let sections: (typeof sectionAttribution.$inferSelect)[] = [];
@@ -51,7 +56,7 @@ export default async function IntelligencePage({ searchParams }: AdminPageProps)
 
   try {
     [sessions, sections] = await Promise.all([
-      db.select().from(sessionIntelligence).orderBy(desc(sessionIntelligence.updatedAt)).limit(100),
+      db.select().from(sessionIntelligence).where(gte(sessionIntelligence.updatedAt, timeWindow.since)).orderBy(desc(sessionIntelligence.updatedAt)).limit(100),
       db.select().from(sectionAttribution).orderBy(desc(sectionAttribution.attributionScore)).limit(10),
     ]);
   } catch (error) {
@@ -93,13 +98,15 @@ export default async function IntelligencePage({ searchParams }: AdminPageProps)
 
   try {
     if (sessionIds.length > 0) {
-      const [coupons, drafts, allOrders, carts, consents] = await Promise.all([
+      let [coupons, drafts, allOrders, carts, consents, behaviorRows] = await Promise.all([
         db.select({
           sessionId: couponCodeEvents.sessionId,
           couponCode: couponCodeEvents.couponCode,
           channel: couponCodeEvents.channel,
           destination: couponCodeEvents.destination,
           country: couponCodeEvents.country,
+          ipAddress: couponCodeEvents.ipAddress,
+          userAgent: couponCodeEvents.userAgent,
           createdAt: couponCodeEvents.createdAt,
         }).from(couponCodeEvents).where(inArray(couponCodeEvents.sessionId, sessionIds)),
         db.select({
@@ -115,6 +122,8 @@ export default async function IntelligencePage({ searchParams }: AdminPageProps)
           country: checkoutDrafts.country,
           pincode: checkoutDrafts.pincode,
           state: checkoutDrafts.state,
+          ipAddress: checkoutDrafts.ipAddress,
+          userAgent: checkoutDrafts.userAgent,
           updatedAt: checkoutDrafts.updatedAt,
         }).from(checkoutDrafts).where(inArray(checkoutDrafts.sessionId, sessionIds)),
         db.select({
@@ -125,6 +134,10 @@ export default async function IntelligencePage({ searchParams }: AdminPageProps)
           country: orders.country,
           pincode: orders.pincode,
           state: orders.state,
+          phone: orders.phone,
+          email: orders.email,
+          ipAddress: orders.ipAddress,
+          userAgent: orders.userAgent,
           createdAt: orders.createdAt,
         }).from(orders).where(inArray(orders.sessionId, sessionIds)),
         db.select({
@@ -132,29 +145,65 @@ export default async function IntelligencePage({ searchParams }: AdminPageProps)
           eventType: cartEvents.eventType,
           productName: cartEvents.productName,
           country: cartEvents.country,
+          ipAddress: cartEvents.ipAddress,
+          userAgent: cartEvents.userAgent,
           createdAt: cartEvents.createdAt,
         }).from(cartEvents).where(inArray(cartEvents.sessionId, sessionIds)).orderBy(desc(cartEvents.createdAt)).limit(500),
         db.select({
           sessionId: consentEvents.sessionId,
           timezone: consentEvents.timezone,
+          ipAddress: consentEvents.ipAddress,
+          userAgent: consentEvents.userAgent,
           data: consentEvents.data,
         }).from(consentEvents).where(inArray(consentEvents.sessionId, sessionIds)),
+        db.select({
+          sessionId: behavioralEvents.sessionId,
+          ipAddress: behavioralEvents.ipAddress,
+          userAgent: behavioralEvents.userAgent,
+          payload: behavioralEvents.payload,
+          createdAt: behavioralEvents.createdAt,
+        }).from(behavioralEvents).where(inArray(behavioralEvents.sessionId, sessionIds)).orderBy(desc(behavioralEvents.createdAt)).limit(1000),
       ]);
 
+      const excludedSessionIds = collectExcludedSessionIds(coupons, drafts, allOrders, carts, consents, behaviorRows);
+      sessions = sessions.filter((session) => !excludedSessionIds.has(session.sessionId));
+      coupons = filterExcludedAdminRows(coupons, excludedSessionIds);
+      drafts = filterExcludedAdminRows(drafts, excludedSessionIds);
+      allOrders = filterExcludedAdminRows(allOrders, excludedSessionIds);
+      carts = filterExcludedAdminRows(carts, excludedSessionIds);
+      consents = filterExcludedAdminRows(consents, excludedSessionIds);
+      behaviorRows = filterExcludedAdminRows(behaviorRows, excludedSessionIds);
+
       const indiaSessionIds = new Set<string>();
+      const explicitGeoSessionIds = new Set<string>();
+      const unknownBehaviorSessionIds = new Set<string>();
       if (indiaOnly) {
         for (const c of coupons) if (c.sessionId && isIndiaLeadSignal(c)) indiaSessionIds.add(c.sessionId);
         for (const d of drafts) if (isIndiaCheckoutSignal(d)) indiaSessionIds.add(d.sessionId);
         for (const o of allOrders) if (isIndiaCheckoutSignal(o)) indiaSessionIds.add(o.sessionId);
-        for (const c of carts) if (isIndiaOperationalCountry(c.country)) indiaSessionIds.add(c.sessionId);
+        for (const c of carts) {
+          if (c.country) explicitGeoSessionIds.add(c.sessionId);
+          if (isIndiaOperationalCountry(c.country)) indiaSessionIds.add(c.sessionId);
+        }
         for (const c of consents) {
+          if (c.timezone || dataCountry(c.data)) explicitGeoSessionIds.add(c.sessionId);
           if (isIndiaTimezone(c.timezone) || isIndiaOperationalCountry(dataCountry(c.data))) {
             indiaSessionIds.add(c.sessionId);
           }
         }
+        for (const row of behaviorRows) {
+          const payload = row.payload as Record<string, unknown> | null;
+          const timezone = typeof payload?.timezone === "string" ? payload.timezone : null;
+          const country = dataCountry(payload);
+          if (timezone || country) explicitGeoSessionIds.add(row.sessionId);
+          if (isIndiaTimezone(timezone) || isIndiaOperationalCountry(country)) indiaSessionIds.add(row.sessionId);
+          if (!explicitGeoSessionIds.has(row.sessionId)) unknownBehaviorSessionIds.add(row.sessionId);
+        }
       }
 
-      visibleSessions = indiaOnly ? sessions.filter((session) => indiaSessionIds.has(session.sessionId)) : sessions;
+      visibleSessions = indiaOnly
+        ? sessions.filter((session) => indiaSessionIds.has(session.sessionId) || unknownBehaviorSessionIds.has(session.sessionId))
+        : sessions;
 
       const couponMap = new Map<string, typeof coupons[0]>();
       for (const c of coupons) { if (c.sessionId) couponMap.set(c.sessionId, c); }
@@ -276,9 +325,12 @@ export default async function IntelligencePage({ searchParams }: AdminPageProps)
         <p className="text-white/40 text-sm font-medium uppercase tracking-[0.2em] ml-11">
           Real-time intent scoring • Full customer journey • Cross-referenced data
         </p>
-        <p className="ml-11 text-xs text-white/35">
-          Market: {market === "india" ? "India" : "All markets"}
-        </p>
+        <div className="ml-11 mt-2 flex flex-wrap items-center gap-3">
+          <p className="text-xs text-white/35">
+            Market: {market === "india" ? "India" : "All markets"} - {timeWindow.label}
+          </p>
+          <AdminDateWindowControl />
+        </div>
       </div>
 
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4 xl:grid-cols-7">
@@ -354,7 +406,7 @@ export default async function IntelligencePage({ searchParams }: AdminPageProps)
             </div>
           </div>
           {/* @ts-expect-error - enriched sessions have serialized dates */}
-          <IntelligenceFeed initialSessions={enrichedSessions} />
+          <IntelligenceFeed initialSessions={enrichedSessions} market={market} hours={timeWindow.hours} />
         </div>
 
         <div className="space-y-6">

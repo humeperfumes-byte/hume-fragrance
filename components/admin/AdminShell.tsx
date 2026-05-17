@@ -41,7 +41,11 @@ function AdminNav({ onNavigate }: { onNavigate?: () => void }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const market = parseAdminMarket(searchParams.get("market"));
-  const marketQuery = market === "all" ? "?market=all" : "?market=india";
+  const navParams = new URLSearchParams();
+  navParams.set("market", market);
+  const hours = searchParams.get("hours");
+  if (hours) navParams.set("hours", hours);
+  const marketQuery = `?${navParams.toString()}`;
 
   const handleLogout = async () => {
     await logoutAdmin();
@@ -109,14 +113,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="admin-shell dark min-h-screen bg-[#111111] text-foreground">
-      <div className="flex min-h-screen">
+    <div className="admin-shell dark min-h-screen overflow-x-hidden bg-[#111111] text-foreground">
+      <div className="flex min-h-screen min-w-0">
         <aside className="hidden w-60 shrink-0 border-r border-white/10 md:block">
           <AdminNav />
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-white/10 bg-[#111111]/95 px-4 backdrop-blur md:px-6">
+          <header className="sticky top-0 z-20 flex h-14 max-w-full shrink-0 items-center gap-2 border-b border-white/10 bg-[#111111]/95 px-3 backdrop-blur sm:gap-3 md:px-6">
             <Button
               type="button"
               variant="ghost"
@@ -128,13 +132,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <Menu className="h-5 w-5" />
             </Button>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-white/70">Operations Dashboard</p>
+              <p className="truncate text-xs font-medium text-white/70 sm:text-sm">Operations Dashboard</p>
             </div>
-            <div className="flex items-center gap-2 rounded-md border border-white/10 bg-white/[0.03] p-1">
+            <div className="flex shrink-0 items-center gap-1 rounded-md border border-white/10 bg-white/[0.03] p-1 sm:gap-2">
               <button
                 type="button"
                 onClick={() => updateMarket("india")}
-                className={`h-8 rounded px-3 text-xs font-semibold transition-colors ${
+                className={`h-8 rounded px-2 text-xs font-semibold transition-colors sm:px-3 ${
                   market === "india"
                     ? "bg-white text-black"
                     : "text-white/55 hover:bg-white/8 hover:text-white"
@@ -145,7 +149,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={() => updateMarket("all")}
-                className={`h-8 rounded px-3 text-xs font-semibold transition-colors ${
+                className={`h-8 rounded px-2 text-xs font-semibold transition-colors sm:px-3 ${
                   market === "all"
                     ? "bg-white text-black"
                     : "text-white/55 hover:bg-white/8 hover:text-white"
@@ -160,7 +164,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <main className="custom-scrollbar min-w-0 flex-1 overflow-y-auto p-4 md:p-8">
+          <main className="custom-scrollbar min-w-0 max-w-full flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 md:p-8">
             {children}
           </main>
         </div>

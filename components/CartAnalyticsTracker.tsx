@@ -5,11 +5,37 @@ import { usePathname, useSearchParams } from "next/navigation";
 
 const CART_SESSION_KEY = "hume_cart_session_id";
 const LEAD_SESSION_KEY = "hume_checkout_session_id";
+const WELCOME_BACK_REWARD_KEY = "hume_welcome_back_reward_v1";
 
 type TrackingDetail = {
   eventType: string;
   payload?: Record<string, unknown>;
 };
+
+function getActiveWelcomeBackReward() {
+  try {
+    const raw = localStorage.getItem(WELCOME_BACK_REWARD_KEY);
+    if (!raw) return null;
+    const reward = JSON.parse(raw) as {
+      code?: string;
+      label?: string;
+      percent?: number;
+      tier?: number;
+      expiresAt?: number;
+    };
+    if (!reward || !reward.expiresAt || reward.expiresAt <= Date.now()) return null;
+    if (reward.percent !== 5 && reward.percent !== 10) return null;
+    return {
+      code: reward.code,
+      label: reward.label,
+      percent: reward.percent,
+      tier: reward.tier,
+      expiresAt: reward.expiresAt,
+    };
+  } catch {
+    return null;
+  }
+}
 
 function getSessionId() {
   const leadSession = localStorage.getItem(LEAD_SESSION_KEY);
@@ -37,6 +63,7 @@ function isCartEvent(eventType: string) {
     "update_cart_quantity",
     "remove_from_cart",
     "coupon_auto_applied",
+    "reward_banner_click",
   ].includes(eventType);
 }
 
@@ -53,6 +80,8 @@ export default function CartAnalyticsTracker() {
       const sessionId = getSessionId();
       const path = `${pathname}${searchParams?.toString() ? `?${searchParams.toString()}` : ""}`;
       const payload = customEvent.detail?.payload ?? {};
+      if (eventType === "cart_open" && Number(payload.itemCount || 0) <= 0) return;
+      const welcomeBackReward = getActiveWelcomeBackReward();
 
       void fetch("/api/cart-events", {
         method: "POST",
@@ -67,7 +96,10 @@ export default function CartAnalyticsTracker() {
           price: payload.price,
           quantity: payload.quantity,
           isGift: payload.isGift,
-          payload,
+          payload: {
+            ...payload,
+            welcomeBackReward,
+          },
         }),
       });
     };

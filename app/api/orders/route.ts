@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { sendOrderConfirmationEmail } from "@/lib/email/send-order-confirmation";
 import { resolveIndiaAwareCountry } from "@/lib/admin-market";
+import { isInternalAdminRequest } from "@/lib/admin-data-filters";
 
 const cartItemSchema = z.object({
   id: z.string().min(1).max(255),
@@ -55,6 +56,10 @@ const orderSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  if (isInternalAdminRequest(request)) {
+    return NextResponse.json({ ok: true, skipped: "admin_traffic" });
+  }
+
   try {
     const body = await request.json();
     const data = orderSchema.parse(body);

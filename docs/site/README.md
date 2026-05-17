@@ -111,3 +111,36 @@ HUME currently supports both `humefragrance.com` and `humefragrance.in`.
   Console property.
 - If the brand later chooses one permanent domain, redirect the other domain only
   after the chosen domain has stable indexing and clean Search Console signals.
+
+## AI SEO / AEO
+
+AI-search crawlability should be treated as a product discovery surface.
+
+Current AI SEO assets:
+
+- `app/robots.ts` allows major useful crawlers including Googlebot, GPTBot,
+  OAI-SearchBot, PerplexityBot, ClaudeBot, Meta, and CCBot.
+- `app/llms.txt/route.ts` provides a short model-readable brand map.
+- `app/llms-full.txt/route.ts` provides live product facts, notes, prices,
+  reviews, FAQs, and citation preferences.
+- `app/fragrance-guides/page.tsx` links guide and recommendation clusters.
+- `app/recommendations/[slug]/page.tsx` contains answer-first recommendation
+  pages for high-intent perfume questions.
+- `app/search/page.tsx` exists so WebSite SearchAction schema points to a real
+  crawlable search route.
+
+Entity/schema rules:
+
+- Organization schema must use the real Instagram profile:
+  `https://www.instagram.com/hume.perfume/`.
+- Product schema should include price, INR currency, availability, shipping,
+  return policy, SKU, size, notes, reviews, and canonical product URL.
+- Recommendation pages should begin with a direct answer and then link to
+  canonical product pages.
+
+Backlink strategy:
+
+- Prioritize real mentions from perfume creators, Google Business Profile,
+  Instagram/YouTube captions, local Kannauj/business directories, fragrance
+  blogs, useful Reddit/Quora answers, and press.
+- Avoid spammy paid backlinks because they can hurt search trust.

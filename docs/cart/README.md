@@ -143,6 +143,7 @@ Current reward stages:
   - Free delivery
   - 24-hour timer
 - Visit 4: `Welcome Back 10`
+- Visit 3: `Welcome Back 10`
   - Code preserved internally as `WELCOME-BACK-10`
   - Extra 10 percent off
   - Free delivery
@@ -152,10 +153,9 @@ Current reward stages:
 Visit counting:
 
 - A new visit requires a meaningful time gap.
-- Current minimum gap: 30 minutes.
+- Current minimum gap: 10 minutes.
 - Refreshing repeatedly in the same session should not increase the visit count.
-- If the fourth-visit upgrade is still too late in real data, the same logic can
-  be moved to visit 3 in `lib/cart-discounts.ts`.
+- Visit 3 unlocks the 10 percent upgrade.
 
 Relevant localStorage keys live in `lib/cart-discounts.ts`:
 
@@ -169,6 +169,11 @@ Important:
 - Welcome-back rewards stack with manual coupons.
 - They do not replace `HUME100`, `HUME200`, `B3G1`, or gifts.
 - They are displayed as a timer/reward bar at the top of the cart.
+- They also show as a bottom floating storefront banner while the cart is
+  closed:
+  - 5 percent reward uses a green VIP banner.
+  - 10 percent reward uses a red VIP banner.
+  - The banner opens the cart with a `View Cart` action.
 - They are preserved into checkout/order context as additional offer codes.
 - Preview route shows both reward states safely without touching live cart:
   - `app/admin/cart-preview/page.tsx`

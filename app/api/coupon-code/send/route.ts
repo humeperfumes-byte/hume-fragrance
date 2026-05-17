@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { couponCodeEvents } from "@/db/schema";
 import { getActiveCoupons } from "@/lib/db/coupons";
 import { buildCouponEmailHtml, buildCouponEmailText } from "@/lib/email/coupon-template";
+import { isInternalAdminRequest } from "@/lib/admin-data-filters";
 
 const payloadSchema = z.object({
   email: z.string().email().max(255),
@@ -66,6 +67,10 @@ async function captureCouponEvent(
 }
 
 export async function POST(request: NextRequest) {
+  if (isInternalAdminRequest(request)) {
+    return NextResponse.json({ ok: true, skipped: "admin_traffic" });
+  }
+
   try {
     const body = await request.json();
     const data = payloadSchema.parse(body);

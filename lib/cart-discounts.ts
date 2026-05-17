@@ -34,7 +34,7 @@ export const WELCOME_BACK_LAST_VISIT_AT_KEY =
 export const WELCOME_BACK_REWARD_KEY = "hume_welcome_back_reward_v1";
 export const WELCOME_BACK_CELEBRATED_REWARD_KEY =
   "hume_welcome_back_celebrated_reward_v1";
-export const WELCOME_BACK_MIN_VISIT_GAP_MS = 30 * 60 * 1000;
+export const WELCOME_BACK_MIN_VISIT_GAP_MS = 10 * 60 * 1000;
 export const WELCOME_BACK_DURATION_MS = 24 * 60 * 60 * 1000;
 
 function numeric(value: string | null): number {
@@ -231,7 +231,7 @@ export function trackWelcomeBackVisit(storage: Storage, now = Date.now()) {
   storage.setItem(WELCOME_BACK_VISIT_COUNT_KEY, String(visitCount));
   storage.setItem(WELCOME_BACK_LAST_VISIT_AT_KEY, String(now));
 
-  const targetTier = visitCount >= 4 ? 10 : visitCount >= 2 ? 5 : null;
+  const targetTier = visitCount >= 3 ? 10 : visitCount >= 2 ? 5 : null;
   if (!targetTier)
     return { reward: activeReward, justUnlocked: false, visitCount };
 

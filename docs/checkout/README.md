@@ -78,7 +78,7 @@ Checkout must:
 Welcome-back rewards:
 
 - Visit 2 unlocks `Welcome Back 5` / `WELCOME-BACK-5`.
-- Visit 4 upgrades to `Welcome Back 10` / `WELCOME-BACK-10`.
+- Visit 3 upgrades to `Welcome Back 10` / `WELCOME-BACK-10`.
 - The reward lasts 24 hours.
 - The reward stacks with normal coupon codes and gifts.
 

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { couponCodeEvents } from "@/db/schema";
 import { resolveIndiaAwareCountry } from "@/lib/admin-market";
+import { isInternalAdminRequest } from "@/lib/admin-data-filters";
 
 const payloadSchema = z.object({
   sessionId: z.string().max(255).optional(),
@@ -16,6 +17,10 @@ const payloadSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  if (isInternalAdminRequest(request)) {
+    return NextResponse.json({ ok: true, skipped: "admin_traffic" });
+  }
+
   try {
     const body = await request.json();
     const data = payloadSchema.parse(body);

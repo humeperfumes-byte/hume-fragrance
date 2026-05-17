@@ -150,7 +150,7 @@ export default function DataExportPage() {
       </div>
 
       {/* Download All Buttons */}
-      <div className="rounded-3xl border border-primary/20 bg-primary/[0.03] p-7 backdrop-blur-xl">
+      <div className="rounded-2xl border border-primary/20 bg-primary/[0.03] p-5 backdrop-blur-xl sm:rounded-3xl sm:p-7">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold text-white">Download Everything</h2>
@@ -237,7 +237,7 @@ export default function DataExportPage() {
       </div>
 
       {/* AI Prompt Guide */}
-      <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-7 backdrop-blur-xl">
+      <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 backdrop-blur-xl sm:rounded-3xl sm:p-7">
         <h2 className="text-lg font-semibold text-white">AI Analysis Guide</h2>
         <p className="mt-1 text-sm text-white/40">
           Upload the exported files to ChatGPT, Claude, or Gemini and use these prompts:

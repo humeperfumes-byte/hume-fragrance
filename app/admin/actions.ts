@@ -15,6 +15,13 @@ export async function loginAdmin(token: string) {
       maxAge: 60 * 60 * 24 * 30, // 30 days
       path: "/",
     });
+    cookieStore.set("hume_admin_internal", "1", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 30,
+      path: "/",
+    });
     return { success: true };
   }
 
@@ -24,4 +31,5 @@ export async function loginAdmin(token: string) {
 export async function logoutAdmin() {
   const cookieStore = await cookies();
   cookieStore.delete("admin_token");
+  cookieStore.delete("hume_admin_internal");
 }

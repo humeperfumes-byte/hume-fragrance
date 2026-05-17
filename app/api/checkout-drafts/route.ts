@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { checkoutDrafts } from "@/db/schema";
 import { resolveIndiaAwareCountry } from "@/lib/admin-market";
+import { isInternalAdminRequest } from "@/lib/admin-data-filters";
 
 const cartItemSchema = z.object({
   id: z.string().min(1).max(255),
@@ -47,6 +48,10 @@ const checkoutDraftSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  if (isInternalAdminRequest(request)) {
+    return NextResponse.json({ ok: true, skipped: "admin_traffic" });
+  }
+
   try {
     const body = await request.json();
     const data = checkoutDraftSchema.parse(body);

@@ -26,6 +26,7 @@ Later priority:
 
 ## Current Notes
 
+- [Living Context](./CONTEXT.md)
 - [Site Overview](./site/README.md)
 - [Storefront Flow](./storefront/README.md)
 - [Cart Drawer](./cart/README.md)

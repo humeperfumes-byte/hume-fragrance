@@ -10,12 +10,15 @@ import {
   isIndiaTimezone,
   parseAdminMarket,
 } from "@/lib/admin-market";
+import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-data-filters";
 
 type TimelineRow = {
   sessionId: string;
   path: string | null;
   createdAt: Date;
   timezone: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
   data: Record<string, unknown>;
 };
 
@@ -25,6 +28,8 @@ type CartRow = {
   productId: string | null;
   productName: string | null;
   country: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
   createdAt: Date;
 };
 
@@ -39,6 +44,8 @@ type DraftRow = {
   fullName: string | null;
   grandTotal: string | null;
   country: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
   pincode: string | null;
   state: string | null;
   cartSnapshot: Array<{
@@ -64,6 +71,8 @@ type OrderRow = {
   email: string | null;
   grandTotal: string | null;
   country: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
   pincode: string | null;
   state: string | null;
   cartSnapshot: Array<{
@@ -111,6 +120,8 @@ export async function GET(request: NextRequest) {
           path: consentEvents.path,
           createdAt: consentEvents.createdAt,
           timezone: consentEvents.timezone,
+          ipAddress: consentEvents.ipAddress,
+          userAgent: consentEvents.userAgent,
           data: consentEvents.data,
         })
         .from(consentEvents)
@@ -124,6 +135,8 @@ export async function GET(request: NextRequest) {
           productId: cartEvents.productId,
           productName: cartEvents.productName,
           country: cartEvents.country,
+          ipAddress: cartEvents.ipAddress,
+          userAgent: cartEvents.userAgent,
           createdAt: cartEvents.createdAt,
         })
         .from(cartEvents)
@@ -142,6 +155,8 @@ export async function GET(request: NextRequest) {
           fullName: checkoutDrafts.fullName,
           grandTotal: checkoutDrafts.grandTotal,
           country: checkoutDrafts.country,
+          ipAddress: checkoutDrafts.ipAddress,
+          userAgent: checkoutDrafts.userAgent,
           pincode: checkoutDrafts.pincode,
           state: checkoutDrafts.state,
           cartSnapshot: checkoutDrafts.cartSnapshot,
@@ -165,6 +180,8 @@ export async function GET(request: NextRequest) {
           email: orders.email,
           grandTotal: orders.grandTotal,
           country: orders.country,
+          ipAddress: orders.ipAddress,
+          userAgent: orders.userAgent,
           pincode: orders.pincode,
           state: orders.state,
           cartSnapshot: orders.cartSnapshot,
@@ -176,13 +193,19 @@ export async function GET(request: NextRequest) {
         .limit(5000) as Promise<OrderRow[]>,
     ]);
 
+    const excludedSessionIds = collectExcludedSessionIds(timelineRows, cartRows, draftRows, orderRows);
+    const visibleTimelineRows = filterExcludedAdminRows(timelineRows, excludedSessionIds);
+    const visibleCartRows = filterExcludedAdminRows(cartRows, excludedSessionIds);
+    const visibleDraftRows = filterExcludedAdminRows(draftRows, excludedSessionIds);
+    const visibleOrderRows = filterExcludedAdminRows(orderRows, excludedSessionIds);
+
     const indiaOnly = isIndiaMarket(market);
     const scopedTimelineRows = indiaOnly
-      ? timelineRows.filter((row) => isIndiaTimezone(row.timezone) || isIndiaOperationalCountry(String(row.data?.country ?? "")))
-      : timelineRows;
-    const scopedCartRows = indiaOnly ? cartRows.filter((row) => isIndiaOperationalCountry(row.country)) : cartRows;
-    const scopedDraftRows = indiaOnly ? draftRows.filter(isIndiaCheckoutSignal) : draftRows;
-    const scopedOrderRows = indiaOnly ? orderRows.filter(isIndiaCheckoutSignal) : orderRows;
+      ? visibleTimelineRows.filter((row) => isIndiaTimezone(row.timezone) || isIndiaOperationalCountry(String(row.data?.country ?? "")))
+      : visibleTimelineRows;
+    const scopedCartRows = indiaOnly ? visibleCartRows.filter((row) => isIndiaOperationalCountry(row.country)) : visibleCartRows;
+    const scopedDraftRows = indiaOnly ? visibleDraftRows.filter(isIndiaCheckoutSignal) : visibleDraftRows;
+    const scopedOrderRows = indiaOnly ? visibleOrderRows.filter(isIndiaCheckoutSignal) : visibleOrderRows;
 
     const pageViews = scopedTimelineRows.filter((row) => row.data?.eventType === "page_view");
     const uniqueViewerSessions = new Set(pageViews.map((row) => row.sessionId));

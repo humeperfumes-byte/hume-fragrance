@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { formatINR } from "@/lib/currency";
 import { parseAdminMarket } from "@/lib/admin-market";
+import { ADMIN_TIME_WINDOW_OPTIONS } from "@/lib/admin-time-window";
 
 type DashboardAnalytics = {
   ok: boolean;
@@ -164,7 +165,7 @@ function MetricCard({
           : "border-white/5 bg-white/[0.03] text-white";
 
   return (
-    <div className={`rounded-3xl border p-6 shadow-2xl backdrop-blur-xl ${toneClass}`}>
+    <div className={`min-w-0 rounded-2xl border p-5 shadow-2xl backdrop-blur-xl sm:rounded-3xl sm:p-6 ${toneClass}`}>
       <div className="flex items-start justify-between gap-4">
         <p className="text-xs font-medium text-white/45">{label}</p>
         <Icon className="h-4 w-4 opacity-70" />
@@ -244,9 +245,9 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
+    <div className="mx-auto max-w-7xl space-y-6 sm:space-y-8">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-medium text-white/45">
             Daily Operating View
           </p>
@@ -257,20 +258,21 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2">
+        <div className="flex w-full flex-wrap items-center gap-3 md:w-auto">
+          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 sm:flex-none">
             <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">
               Window
             </span>
             <select
               value={timeWindowHours}
               onChange={(event) => setTimeWindowHours(event.target.value)}
-              className="cursor-pointer bg-transparent text-sm font-medium text-white outline-none"
+              className="min-w-0 flex-1 cursor-pointer bg-transparent text-sm font-medium text-white outline-none sm:flex-none"
             >
-              <option value="24">Last 24 Hours</option>
-              <option value="168">Last 7 Days</option>
-              <option value="360">Last 15 Days</option>
-              <option value="720">Last 30 Days</option>
+              {ADMIN_TIME_WINDOW_OPTIONS.map((option) => (
+                <option key={option.hours} value={option.hours}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
           <Button
@@ -326,9 +328,9 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-            <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-7 shadow-2xl backdrop-blur-xl">
-              <div className="mb-6 flex items-center justify-between">
-                <div>
+            <div className="min-w-0 rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-2xl backdrop-blur-xl sm:rounded-3xl sm:p-7">
+              <div className="mb-6 flex items-center justify-between gap-4">
+                <div className="min-w-0">
                   <h2 className="text-lg font-semibold text-white">Morning Run List</h2>
                   <p className="mt-1 text-sm text-white/35">The jobs that move money today.</p>
                 </div>
@@ -340,13 +342,13 @@ export default function DashboardPage() {
                   <a
                     key={item.label}
                     href={item.href}
-                    className="group flex items-center justify-between gap-4 rounded-2xl border border-white/5 bg-white/[0.03] p-4 transition-colors hover:bg-white/[0.06]"
+                    className="group flex items-center justify-between gap-3 rounded-2xl border border-white/5 bg-white/[0.03] p-4 transition-colors hover:bg-white/[0.06]"
                   >
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-medium text-white">{item.label}</p>
                       <p className="mt-1 text-xs text-white/35">{item.helper}</p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex shrink-0 items-center gap-2 sm:gap-3">
                       <span
                         className={`text-xl font-semibold ${
                           item.tone === "warning"
@@ -365,9 +367,9 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-7 shadow-2xl backdrop-blur-xl">
-              <div className="mb-6 flex items-center justify-between">
-                <div>
+            <div className="min-w-0 rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-2xl backdrop-blur-xl sm:rounded-3xl sm:p-7">
+              <div className="mb-6 flex items-center justify-between gap-4">
+                <div className="min-w-0">
                   <h2 className="text-lg font-semibold text-white">Conversion Funnel</h2>
                   <p className="mt-1 text-sm text-white/35">Where demand turns into orders.</p>
                 </div>
@@ -383,8 +385,8 @@ export default function DashboardPage() {
                   ["WhatsApp started", analytics.conversionFunnel.whatsappInitiated],
                   ["Orders", analytics.conversionFunnel.orders],
                 ].map(([label, value]) => (
-                  <div key={label} className="grid grid-cols-[130px_1fr_70px] items-center gap-4">
-                    <span className="text-xs font-medium text-white/45">{label}</span>
+                  <div key={label} className="grid grid-cols-[minmax(84px,0.85fr)_minmax(70px,1fr)_52px] items-center gap-3 sm:grid-cols-[130px_1fr_70px] sm:gap-4">
+                    <span className="min-w-0 truncate text-xs font-medium text-white/45">{label}</span>
                     <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
                       <div
                         className="h-full rounded-full bg-primary/70"
@@ -426,17 +428,17 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-            <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-7 shadow-2xl backdrop-blur-xl">
+            <div className="min-w-0 rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-2xl backdrop-blur-xl sm:rounded-3xl sm:p-7">
               <h2 className="text-lg font-semibold text-white">Source ROI Proxy</h2>
               <p className="mt-1 text-sm text-white/35">
                 Revenue and pipeline by acquisition source. Add ad spend later for true ROI.
               </p>
 
-              <div className="mt-6 overflow-x-auto">
+              <div className="-mx-5 mt-6 overflow-x-auto px-5 sm:mx-0 sm:px-0">
                 {analytics.sourceRoi.length === 0 ? (
                   <EmptyState label="No source performance recorded yet." />
                 ) : (
-                  <table className="w-full min-w-[760px] text-sm">
+                  <table className="w-full min-w-[640px] text-sm sm:min-w-[760px]">
                     <thead>
                       <tr className="border-b border-white/5 text-left text-[10px] uppercase tracking-[0.18em] text-white/30">
                         <th className="py-3 font-bold">Source</th>
@@ -467,7 +469,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-7 shadow-2xl backdrop-blur-xl">
+            <div className="min-w-0 rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-2xl backdrop-blur-xl sm:rounded-3xl sm:p-7">
               <h2 className="text-lg font-semibold text-white">Recent Orders</h2>
               <p className="mt-1 text-sm text-white/35">The latest customer commitments.</p>
 
@@ -481,14 +483,14 @@ export default function DashboardPage() {
                       href={`/admin/orders${market === "all" ? "?market=all" : "?market=india"}`}
                       className="block rounded-2xl border border-white/5 bg-white/[0.03] p-4 transition-colors hover:bg-white/[0.06]"
                     >
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
                           <p className="font-medium text-white">{order.orderNumber}</p>
                           <p className="mt-1 text-xs text-white/35">
                             {order.fullName || order.phone || "Guest"} - {formatDate(order.createdAt)}
                           </p>
                         </div>
-                        <div className="text-right">
+                        <div className="shrink-0 text-right">
                           <p className="text-sm font-semibold text-white">{formatINR(order.grandTotal)}</p>
                           <span
                             className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${statusClassName(order.status)}`}
@@ -505,9 +507,9 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-            <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-7 shadow-2xl backdrop-blur-xl">
-              <div className="mb-6 flex items-center justify-between">
-                <div>
+            <div className="min-w-0 rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-2xl backdrop-blur-xl sm:rounded-3xl sm:p-7">
+              <div className="mb-6 flex items-center justify-between gap-4">
+                <div className="min-w-0">
                   <h2 className="text-lg font-semibold text-white">Product Demand</h2>
                   <p className="mt-1 text-sm text-white/35">
                     Demand score blends ordered units, draft units, and add-to-cart activity.
@@ -522,8 +524,8 @@ export default function DashboardPage() {
                 ) : (
                   analytics.productDemand.map((product, index) => (
                     <div key={product.productId} className="rounded-2xl border border-white/5 bg-white/[0.03] p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
                           <p className="text-xs font-medium text-white/35">
                             #{index + 1} - {product.productId}
                           </p>
@@ -531,7 +533,7 @@ export default function DashboardPage() {
                         </div>
                         <p className="text-xl font-semibold text-primary">{product.demandScore}</p>
                       </div>
-                      <div className="mt-4 grid grid-cols-4 gap-2 text-center text-xs">
+                      <div className="mt-4 grid grid-cols-2 gap-2 text-center text-xs sm:grid-cols-4">
                         <div className="rounded-xl bg-white/[0.04] p-3">
                           <p className="text-white/30">Cart</p>
                           <p className="mt-1 text-base font-semibold text-white">{product.addToCart}</p>
@@ -556,9 +558,9 @@ export default function DashboardPage() {
             </div>
 
             <div className="space-y-6">
-              <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-7 shadow-2xl backdrop-blur-xl">
-                <div className="mb-6 flex items-center justify-between">
-                  <div>
+              <div className="min-w-0 rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-2xl backdrop-blur-xl sm:rounded-3xl sm:p-7">
+                <div className="mb-6 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
                     <h2 className="text-lg font-semibold text-white">Repeat Customers</h2>
                     <p className="mt-1 text-sm text-white/35">People proving retention with more than one order.</p>
                   </div>
@@ -592,7 +594,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-7 shadow-2xl backdrop-blur-xl">
+              <div className="min-w-0 rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-2xl backdrop-blur-xl sm:rounded-3xl sm:p-7">
                 <h2 className="text-lg font-semibold text-white">Top Pages</h2>
                 <p className="mt-1 text-sm text-white/35">Useful for diagnosing SEO and navigation demand.</p>
                 <div className="mt-6 space-y-3">

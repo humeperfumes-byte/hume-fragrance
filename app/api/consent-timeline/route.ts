@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { consentEvents } from "@/db/schema";
 import { isServerConsentTrackingEnabled } from "@/lib/consent-config";
+import { isInternalAdminRequest } from "@/lib/admin-data-filters";
 
 const timelineSchema = z.object({
   sessionId: z.string().min(4).max(255),
@@ -14,6 +15,10 @@ const timelineSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  if (isInternalAdminRequest(request)) {
+    return NextResponse.json({ ok: true, skipped: "admin_traffic" });
+  }
+
   if (!isServerConsentTrackingEnabled) {
     return NextResponse.json({ ok: true, skipped: true });
   }

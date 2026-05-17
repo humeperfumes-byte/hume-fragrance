@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { cartEvents } from "@/db/schema";
+import { isInternalAdminRequest } from "@/lib/admin-data-filters";
 
 const cartEventSchema = z.object({
   sessionId: z.string().min(4).max(255),
@@ -11,6 +12,7 @@ const cartEventSchema = z.object({
     "update_cart_quantity",
     "remove_from_cart",
     "coupon_auto_applied",
+    "reward_banner_click",
   ]),
   path: z.string().max(2048).optional(),
   productId: z.string().max(255).optional(),
@@ -22,6 +24,10 @@ const cartEventSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  if (isInternalAdminRequest(request)) {
+    return NextResponse.json({ ok: true, skipped: "admin_traffic" });
+  }
+
   try {
     const body = await request.json();
     const data = cartEventSchema.parse(body);

@@ -295,4 +295,25 @@
       transform: translateX(-50%);
     }
   }
+  @keyframes hume-video-progress {
+    0% {
+      transform: scaleX(0);
+    }
+    100% {
+      transform: scaleX(1);
+    }
+  }
+  @keyframes hume-reward-sweep {
+    0% {
+      opacity: 0;
+      transform: translateX(0) rotate(12deg);
+    }
+    18% {
+      opacity: 0.85;
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(720%) rotate(12deg);
+    }
+  }
 }

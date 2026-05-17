@@ -20,16 +20,26 @@ import { buildAdminEmailHref, buildAdminWhatsAppHref, type AdminLeadTemplate } f
 
 export type CartLeadRow = {
   sessionId: string;
+  sessionIds?: string[];
+  anonymousJourneyKey?: string | null;
   name: string | null;
   phone: string | null;
   normalizedPhone: string | null;
   email: string | null;
   latestActivity: string;
+  activityCount: number;
   cartOpens: number;
   addToCartCount: number;
   removeCount: number;
   quantityUpdates: number;
+  rewardBannerClicks: number;
   cartSignalValue: number;
+  originalCartSignalValue: number | null;
+  discountAmount: number | null;
+  rewardCode: string | null;
+  rewardLabel: string | null;
+  rewardPercent: number | null;
+  rewardEvidence: boolean;
   products: Array<{ name: string; quantity: number; value: number }>;
   potentialScore: number;
   hasContact: boolean;
@@ -174,15 +184,42 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
                     <p className="text-xs text-white/35">
                       Active {formatDistanceToNow(new Date(row.latestActivity), { addSuffix: true })}
                     </p>
+                    <p className="text-xs text-white/35">
+                      {row.activityCount} active signal{row.activityCount === 1 ? "" : "s"}
+                    </p>
+                    {row.sessionIds && row.sessionIds.length > 1 ? (
+                      <p className="text-xs font-medium text-emerald-200/70">
+                        Combined journey: {row.sessionIds.length} sessions
+                      </p>
+                    ) : null}
                   </div>
 
                   <div className="space-y-2">
                     <div className="flex items-start justify-between gap-3">
                       <div>
+                        {row.originalCartSignalValue && row.discountAmount ? (
+                          <p className="text-xs font-medium text-white/30 line-through">
+                            {formatINR(row.originalCartSignalValue)}
+                          </p>
+                        ) : null}
                         <p className="text-xl font-semibold text-white">{formatINR(row.cartSignalValue)}</p>
                         <p className="text-xs text-white/35">
-                          {row.addToCartCount} add-to-cart, {row.cartOpens} opens
+                          Current value • {row.addToCartCount} add-to-cart, {row.cartOpens} opens
                         </p>
+                        {row.rewardBannerClicks > 0 ? (
+                          <p className="mt-1 text-xs font-medium text-amber-200/75">
+                            Reward banner tapped {row.rewardBannerClicks}x
+                          </p>
+                        ) : null}
+                        {row.rewardPercent && row.discountAmount ? (
+                          <p className="mt-1 text-xs font-medium text-emerald-300/80">
+                            {row.rewardLabel || `${row.rewardPercent}% reward`} applied • -{formatINR(row.discountAmount)}
+                          </p>
+                        ) : row.hasCheckout && !row.rewardEvidence ? (
+                          <p className="mt-1 text-xs font-medium text-amber-200/75">
+                            No welcome-back reward captured
+                          </p>
+                        ) : null}
                       </div>
                       {row.intentScore ? (
                         <span className="inline-flex items-center gap-1 rounded-full border border-red-500/20 bg-red-500/10 px-2 py-1 text-xs font-semibold text-red-200">

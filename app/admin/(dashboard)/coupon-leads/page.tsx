@@ -1,12 +1,21 @@
 import { db } from "@/db";
 import { couponCodeEvents, checkoutDrafts, orders, sessionIntelligence } from "@/db/schema";
-import { desc, inArray } from "drizzle-orm";
+import { desc, gte, inArray } from "drizzle-orm";
 import { CouponLeadsTable } from "./CouponLeadsTable";
 import { Ticket } from "lucide-react";
+import { AdminDateWindowControl } from "@/components/admin/AdminDateWindowControl";
+import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-data-filters";
+import { parseAdminTimeWindow } from "@/lib/admin-time-window";
 
 export const dynamic = "force-dynamic";
 
-export default async function CouponLeadsPage() {
+type AdminPageProps = {
+  searchParams?: Promise<{ hours?: string }> | { hours?: string };
+};
+
+export default async function CouponLeadsPage({ searchParams }: AdminPageProps) {
+  const params = await searchParams;
+  const timeWindow = parseAdminTimeWindow(params?.hours);
   let events: (typeof couponCodeEvents.$inferSelect)[] = [];
   let dbError = false;
 
@@ -14,8 +23,10 @@ export default async function CouponLeadsPage() {
     events = await db
       .select()
       .from(couponCodeEvents)
+      .where(gte(couponCodeEvents.createdAt, timeWindow.since))
       .orderBy(desc(couponCodeEvents.createdAt))
       .limit(500);
+    events = filterExcludedAdminRows(events, collectExcludedSessionIds(events));
   } catch (error) {
     console.error("Coupon leads page DB error:", error);
     dbError = true;
@@ -50,7 +61,7 @@ export default async function CouponLeadsPage() {
 
   if (sessionIds.length > 0) {
     try {
-      const [relatedDrafts, relatedOrders, relatedIntel] = await Promise.all([
+      let [relatedDrafts, relatedOrders, relatedIntel] = await Promise.all([
         db.select({
           sessionId: checkoutDrafts.sessionId,
           status: checkoutDrafts.status,
@@ -59,12 +70,18 @@ export default async function CouponLeadsPage() {
           email: checkoutDrafts.email,
           grandTotal: checkoutDrafts.grandTotal,
           leadStatus: checkoutDrafts.leadStatus,
+          ipAddress: checkoutDrafts.ipAddress,
+          userAgent: checkoutDrafts.userAgent,
         }).from(checkoutDrafts).where(inArray(checkoutDrafts.sessionId, sessionIds)),
         db.select({
           sessionId: orders.sessionId,
           orderNumber: orders.orderNumber,
           status: orders.status,
           grandTotal: orders.grandTotal,
+          phone: orders.phone,
+          email: orders.email,
+          ipAddress: orders.ipAddress,
+          userAgent: orders.userAgent,
         }).from(orders).where(inArray(orders.sessionId, sessionIds)),
         db.select({
           sessionId: sessionIntelligence.sessionId,
@@ -74,6 +91,12 @@ export default async function CouponLeadsPage() {
           lastActiveAt: sessionIntelligence.lastActiveAt,
         }).from(sessionIntelligence).where(inArray(sessionIntelligence.sessionId, sessionIds)),
       ]);
+
+      const excludedSessionIds = collectExcludedSessionIds(relatedDrafts, relatedOrders);
+      events = filterExcludedAdminRows(events, excludedSessionIds);
+      relatedDrafts = filterExcludedAdminRows(relatedDrafts, excludedSessionIds);
+      relatedOrders = filterExcludedAdminRows(relatedOrders, excludedSessionIds);
+      relatedIntel = relatedIntel.filter((row) => !excludedSessionIds.has(row.sessionId));
 
       for (const d of relatedDrafts) {
         draftsMap.set(d.sessionId, d);
@@ -127,7 +150,8 @@ export default async function CouponLeadsPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+        <div className="flex flex-col gap-2">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-primary/10">
             <Ticket className="h-6 w-6 text-primary" />
@@ -137,7 +161,9 @@ export default async function CouponLeadsPage() {
         <p className="text-white/40 text-sm font-medium uppercase tracking-[0.2em] ml-11">
           People who claimed your coupon codes — cross-referenced with their full journey
         </p>
-        <p className="ml-11 text-xs text-white/35">Showing all coupon leads.</p>
+        <p className="ml-11 text-xs text-white/35">Showing coupon leads from {timeWindow.label.toLowerCase()}.</p>
+        </div>
+        <AdminDateWindowControl />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">

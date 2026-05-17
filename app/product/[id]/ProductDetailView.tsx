@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   Clock,
   Wind,
@@ -450,9 +451,12 @@ export default function ProductDetailView({
                 </p>
                 <h3 className="font-serif text-2xl sm:text-3xl mb-4">{relatedBlogs[0].title}</h3>
                 <p className="text-body text-muted-foreground mb-4">{relatedBlogs[0].excerpt}</p>
-                <div className="text-body text-muted-foreground whitespace-pre-line leading-relaxed">
-                  {relatedBlogs[0].content}
-                </div>
+                <Link
+                  href={`/blog/${relatedBlogs[0].slug}`}
+                  className="inline-flex text-sm font-medium uppercase tracking-[0.18em] text-foreground underline-offset-4 hover:underline"
+                >
+                  Read the guide
+                </Link>
               </article>
             </div>
           </div>

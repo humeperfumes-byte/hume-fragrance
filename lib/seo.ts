@@ -27,12 +27,13 @@ function getSeoProductUrl(
 export const getOrganizationSchema = (baseUrl = SITE_URL) => ({
   "@context": "https://schema.org",
   "@type": "Organization",
+  "@id": siteUrlForBase(baseUrl, "/#organization"),
   name: "HUME Fragrance",
   url: baseUrl,
   logo: siteUrlForBase(baseUrl, "/images/logo.png"),
   description:
     "HUME Fragrance is an Indian perfume brand from Kannauj that creates premium inspired alternatives to designer fragrances. EDP concentration with 8-12 hour longevity, designed for Indian weather. Starting ₹499.",
-  sameAs: ["https://instagram.com/humefragrance", "https://wa.me/919559024822"],
+  sameAs: ["https://www.instagram.com/hume.perfume/", "https://wa.me/919559024822"],
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "customer service",
@@ -51,6 +52,7 @@ export const getOrganizationSchema = (baseUrl = SITE_URL) => ({
 export const getWebSiteSchema = (baseUrl = SITE_URL) => ({
   "@context": "https://schema.org",
   "@type": "WebSite",
+  "@id": siteUrlForBase(baseUrl, "/#website"),
   name: "HUME Fragrance",
   url: baseUrl,
   description:
@@ -80,6 +82,19 @@ export const getProductSchema = (
       date: string;
     }[];
     category: string;
+    size?: string;
+    gender?: string;
+    notes?: {
+      top: string[];
+      heart: string[];
+      base: string[];
+    };
+    longevity?: {
+      duration: string;
+      sillage: string;
+      season: string[];
+      occasion: string[];
+    };
   },
   baseUrl = SITE_URL,
 ) => {
@@ -88,23 +103,95 @@ export const getProductSchema = (
       ? product.reviews.reduce((sum, r) => sum + r.rating, 0) /
         product.reviews.length
       : 0;
+  const productUrl = getSeoProductUrl(product, baseUrl);
+  const productImages = product.images.map((image) =>
+    image.startsWith("http") ? image : siteUrlForBase(baseUrl, image),
+  );
+  const priceValidUntil = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split("T")[0];
 
   return {
     "@context": "https://schema.org",
     "@type": "Product",
+    "@id": `${productUrl}#product`,
     name: product.name,
     description: product.description || product.seoDescription,
-    image: product.images[0],
+    image: productImages,
+    sku: `HUME-${product.id}`,
+    mpn: `HUME-${product.id}`,
     brand: { "@type": "Brand", name: "HUME Fragrance" },
     category: `Fragrances > ${product.category}`,
-    url: getSeoProductUrl(product, baseUrl),
+    url: productUrl,
+    additionalProperty: [
+      product.size
+        ? { "@type": "PropertyValue", name: "Size", value: product.size.toUpperCase() }
+        : null,
+      product.gender
+        ? { "@type": "PropertyValue", name: "Gender", value: product.gender }
+        : null,
+      product.longevity?.duration
+        ? { "@type": "PropertyValue", name: "Longevity", value: product.longevity.duration }
+        : null,
+      product.longevity?.sillage
+        ? { "@type": "PropertyValue", name: "Projection", value: product.longevity.sillage }
+        : null,
+      product.notes
+        ? {
+            "@type": "PropertyValue",
+            name: "Fragrance Notes",
+            value: [
+              ...product.notes.top,
+              ...product.notes.heart,
+              ...product.notes.base,
+            ].join(", "),
+          }
+        : null,
+    ].filter(Boolean),
     offers: {
       "@type": "Offer",
       price: product.price.toFixed(2),
       priceCurrency: "INR",
       availability: "https://schema.org/InStock",
-      url: getSeoProductUrl(product, baseUrl),
+      url: productUrl,
+      priceValidUntil,
+      itemCondition: "https://schema.org/NewCondition",
       seller: { "@type": "Organization", name: "HUME Fragrance" },
+      shippingDetails: {
+        "@type": "OfferShippingDetails",
+        shippingRate: {
+          "@type": "MonetaryAmount",
+          value: 0,
+          currency: "INR",
+        },
+        shippingDestination: {
+          "@type": "DefinedRegion",
+          addressCountry: "IN",
+        },
+        deliveryTime: {
+          "@type": "ShippingDeliveryTime",
+          handlingTime: {
+            "@type": "QuantitativeValue",
+            minValue: 0,
+            maxValue: 1,
+            unitCode: "DAY",
+          },
+          transitTime: {
+            "@type": "QuantitativeValue",
+            minValue: 2,
+            maxValue: 7,
+            unitCode: "DAY",
+          },
+        },
+      },
+      hasMerchantReturnPolicy: {
+        "@type": "MerchantReturnPolicy",
+        applicableCountry: "IN",
+        returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+        merchantReturnDays: 7,
+        returnMethod: "https://schema.org/ReturnByMail",
+        returnFees: "https://schema.org/FreeReturn",
+      },
     },
     aggregateRating:
       product.reviews.length > 0

@@ -8,6 +8,18 @@ import { isConsentTrackingEnabled } from "@/lib/consent-config";
 const CONSENT_DECISION_KEY = "hume_consent_decision";
 const CONSENT_SESSION_KEY = "hume_consent_session_id";
 const FIRST_TOUCH_SOURCE_KEY = "hume_first_touch_source";
+const INTENT_STORAGE_KEY = "hume_behavior_intent_unlocked";
+
+const INTENT_EVENT_TYPES = new Set([
+  "add_to_cart",
+  "cart_open",
+  "update_cart_quantity",
+  "remove_from_cart",
+  "coupon_auto_applied",
+  "checkout_started",
+  "coupon_requested",
+  "coupon_sent",
+]);
 
 type TrackingDetail = {
   eventType: string;
@@ -96,6 +108,7 @@ export default function ConsentTimelineTracker() {
     }
 
     if (!isConsentTrackingEnabled) return;
+    if (window.localStorage.getItem(INTENT_STORAGE_KEY) !== "true") return;
 
     void sendEvent("page_view", {
       fromPath,
@@ -119,6 +132,16 @@ export default function ConsentTimelineTracker() {
     const handler = (event: Event) => {
       const customEvent = event as CustomEvent<TrackingDetail>;
       if (!customEvent.detail?.eventType) return;
+      if (
+        customEvent.detail.eventType === "cart_open" &&
+        Number(customEvent.detail.payload?.itemCount || 0) <= 0
+      ) {
+        return;
+      }
+      if (INTENT_EVENT_TYPES.has(customEvent.detail.eventType)) {
+        window.localStorage.setItem(INTENT_STORAGE_KEY, "true");
+      }
+      if (window.localStorage.getItem(INTENT_STORAGE_KEY) !== "true") return;
       void sendEvent(customEvent.detail.eventType, customEvent.detail.payload);
     };
 

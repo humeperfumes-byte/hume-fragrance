@@ -1,9 +1,12 @@
 import { db } from "@/db";
 import { cartEvents, checkoutDrafts, couponCodeEvents, orders, sessionIntelligence } from "@/db/schema";
-import { desc } from "drizzle-orm";
+import { desc, gte } from "drizzle-orm";
 import { ShoppingCart } from "lucide-react";
 import { CartLeadsTable, type CartLeadRow } from "./CartLeadsTable";
 import { formatINR } from "@/lib/currency";
+import { AdminDateWindowControl } from "@/components/admin/AdminDateWindowControl";
+import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-data-filters";
+import { parseAdminTimeWindow } from "@/lib/admin-time-window";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +41,178 @@ function productKey(value: string | null | undefined): string {
     .trim();
 }
 
-export default async function CartLeadsPage() {
+type AdminPageProps = {
+  searchParams?: Promise<{ hours?: string }> | { hours?: string };
+};
+
+type RewardSignal = {
+  code: string | null;
+  label: string | null;
+  percent: number;
+  expiresAt: number | null;
+  createdAt: Date;
+};
+
+function readRewardSignal(payload: Record<string, unknown>, createdAt: Date): RewardSignal | null {
+  const directReward = payload.welcomeBackReward;
+  const reward =
+    directReward && typeof directReward === "object"
+      ? (directReward as Record<string, unknown>)
+      : payload;
+
+  const rawPercent = Number(reward.percent ?? reward.rewardPercent ?? reward.tier);
+  if (rawPercent !== 5 && rawPercent !== 10) return null;
+
+  const expiresAt = Number(reward.expiresAt);
+  if (Number.isFinite(expiresAt) && expiresAt < createdAt.getTime()) return null;
+
+  return {
+    code: String(reward.code ?? reward.couponCode ?? "").trim() || null,
+    label: String(reward.label ?? reward.rewardLabel ?? "").trim() || null,
+    percent: rawPercent,
+    expiresAt: Number.isFinite(expiresAt) ? expiresAt : null,
+    createdAt,
+  };
+}
+
+function getDiscountedValue(value: number, rewardPercent: number | null): number {
+  if (!rewardPercent) return value;
+  return Math.max(0, value - (value * rewardPercent) / 100);
+}
+
+function mergeProducts(
+  left: CartLeadRow["products"],
+  right: CartLeadRow["products"],
+): CartLeadRow["products"] {
+  const map = new Map<string, { name: string; quantity: number; value: number }>();
+
+  for (const product of [...left, ...right]) {
+    const key = productKey(product.name) || product.name;
+    const existing = map.get(key);
+    map.set(key, {
+      name: existing?.name || product.name,
+      quantity: Math.max(existing?.quantity || 0, product.quantity),
+      value: Math.max(existing?.value || 0, product.value),
+    });
+  }
+
+  return Array.from(map.values()).sort((a, b) => b.value - a.value);
+}
+
+function getLeadJourneyKey(row: CartLeadRow): string {
+  if (row.normalizedPhone) return `phone:${row.normalizedPhone}`;
+  if (row.email) return `email:${row.email.trim().toLowerCase()}`;
+  if (row.couponDestination) {
+    const key = contactKey(row.couponDestination);
+    if (key) return key;
+  }
+  if (row.anonymousJourneyKey) return `anonymous:${row.anonymousJourneyKey}`;
+  if (row.checkoutId) return `checkout:${row.checkoutId}`;
+  return `session:${row.sessionId}`;
+}
+
+function mergeCartLeadRows(rows: CartLeadRow[]): CartLeadRow[] {
+  const map = new Map<string, CartLeadRow>();
+
+  for (const row of rows) {
+    const key = getLeadJourneyKey(row);
+    const existing = map.get(key);
+
+    if (!existing) {
+      map.set(key, { ...row, sessionIds: [row.sessionId] });
+      continue;
+    }
+
+    const latestExisting = new Date(existing.latestActivity).getTime();
+    const latestIncoming = new Date(row.latestActivity).getTime();
+    const newest = latestIncoming > latestExisting ? row : existing;
+    const checkoutValue = Math.max(existing.checkoutValue || 0, row.checkoutValue || 0) || null;
+    const orderValue = Math.max(existing.orderValue || 0, row.orderValue || 0) || null;
+    const rewardPercent = Math.max(existing.rewardPercent || 0, row.rewardPercent || 0) || null;
+    const originalCartSignalValue = Math.max(
+      existing.originalCartSignalValue || existing.cartSignalValue,
+      row.originalCartSignalValue || row.cartSignalValue,
+    );
+    const currentCartSignalValue =
+      checkoutValue ||
+      (rewardPercent
+        ? getDiscountedValue(originalCartSignalValue, rewardPercent)
+        : Math.max(existing.cartSignalValue, row.cartSignalValue));
+    const discountAmount =
+      rewardPercent && originalCartSignalValue > currentCartSignalValue
+        ? originalCartSignalValue - currentCartSignalValue
+        : null;
+    const sessionIds = Array.from(
+      new Set([...(existing.sessionIds || [existing.sessionId]), row.sessionId]),
+    );
+
+    map.set(key, {
+      ...existing,
+      sessionId: newest.sessionId,
+      sessionIds,
+      anonymousJourneyKey:
+        newest.anonymousJourneyKey || existing.anonymousJourneyKey || row.anonymousJourneyKey,
+      name: newest.name || existing.name || row.name,
+      phone: newest.phone || existing.phone || row.phone,
+      normalizedPhone: newest.normalizedPhone || existing.normalizedPhone || row.normalizedPhone,
+      email: newest.email || existing.email || row.email,
+      latestActivity: newest.latestActivity,
+      activityCount: existing.activityCount + row.activityCount,
+      cartOpens: existing.cartOpens + row.cartOpens,
+      addToCartCount: existing.addToCartCount + row.addToCartCount,
+      removeCount: existing.removeCount + row.removeCount,
+      quantityUpdates: existing.quantityUpdates + row.quantityUpdates,
+      rewardBannerClicks: existing.rewardBannerClicks + row.rewardBannerClicks,
+      cartSignalValue: currentCartSignalValue,
+      originalCartSignalValue:
+        discountAmount || existing.originalCartSignalValue || row.originalCartSignalValue
+          ? originalCartSignalValue
+          : null,
+      discountAmount,
+      rewardCode: newest.rewardCode || existing.rewardCode || row.rewardCode,
+      rewardLabel: newest.rewardLabel || existing.rewardLabel || row.rewardLabel,
+      rewardPercent,
+      rewardEvidence: existing.rewardEvidence || row.rewardEvidence,
+      products: mergeProducts(existing.products, row.products),
+      potentialScore: Math.max(existing.potentialScore, row.potentialScore),
+      hasContact: existing.hasContact || row.hasContact,
+      hasCoupon: existing.hasCoupon || row.hasCoupon,
+      couponCode: newest.couponCode || existing.couponCode || row.couponCode,
+      couponChannel: newest.couponChannel || existing.couponChannel || row.couponChannel,
+      couponDestination:
+        newest.couponDestination || existing.couponDestination || row.couponDestination,
+      hasCheckout: existing.hasCheckout || row.hasCheckout,
+      connectionSource:
+        existing.connectionSource === "session" || row.connectionSource === "session"
+          ? "session"
+          : existing.connectionSource || row.connectionSource,
+      checkoutId: newest.checkoutId || existing.checkoutId || row.checkoutId,
+      checkoutStatus: newest.checkoutStatus || existing.checkoutStatus || row.checkoutStatus,
+      checkoutValue,
+      checkoutLeadStatus:
+        newest.checkoutLeadStatus || existing.checkoutLeadStatus || row.checkoutLeadStatus,
+      checkoutLastEditedField:
+        newest.checkoutLastEditedField ||
+        existing.checkoutLastEditedField ||
+        row.checkoutLastEditedField,
+      hasOrder: existing.hasOrder || row.hasOrder,
+      orderNumber: newest.orderNumber || existing.orderNumber || row.orderNumber,
+      orderStatus: newest.orderStatus || existing.orderStatus || row.orderStatus,
+      orderValue,
+      intentScore: Math.max(existing.intentScore || 0, row.intentScore || 0) || null,
+      abandonmentRisk:
+        Math.max(existing.abandonmentRisk || 0, row.abandonmentRisk || 0) || null,
+      predictedNextAction:
+        newest.predictedNextAction || existing.predictedNextAction || row.predictedNextAction,
+    });
+  }
+
+  return Array.from(map.values());
+}
+
+export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
+  const params = await searchParams;
+  const timeWindow = parseAdminTimeWindow(params?.hours);
   let rows: CartLeadRow[] = [];
   let dbError = false;
 
@@ -54,22 +228,29 @@ export default async function CartLeadsPage() {
         quantity: cartEvents.quantity,
         path: cartEvents.path,
         country: cartEvents.country,
+        ipAddress: cartEvents.ipAddress,
+        userAgent: cartEvents.userAgent,
+        payload: cartEvents.payload,
         createdAt: cartEvents.createdAt,
       })
       .from(cartEvents)
+      .where(gte(cartEvents.createdAt, timeWindow.since))
       .orderBy(desc(cartEvents.createdAt))
       .limit(1500);
 
-    const [couponRows, draftRows, orderRows, intelligenceRows] = await Promise.all([
+    let [couponRows, draftRows, orderRows, intelligenceRows] = await Promise.all([
       db
         .select({
           sessionId: couponCodeEvents.sessionId,
           channel: couponCodeEvents.channel,
           couponCode: couponCodeEvents.couponCode,
           destination: couponCodeEvents.destination,
+          ipAddress: couponCodeEvents.ipAddress,
+          userAgent: couponCodeEvents.userAgent,
           createdAt: couponCodeEvents.createdAt,
         })
         .from(couponCodeEvents)
+        .where(gte(couponCodeEvents.createdAt, timeWindow.since))
         .orderBy(desc(couponCodeEvents.createdAt))
         .limit(1000),
       db
@@ -84,9 +265,12 @@ export default async function CartLeadsPage() {
           leadStatus: checkoutDrafts.leadStatus,
           lastEditedField: checkoutDrafts.lastEditedField,
           cartSnapshot: checkoutDrafts.cartSnapshot,
+          ipAddress: checkoutDrafts.ipAddress,
+          userAgent: checkoutDrafts.userAgent,
           updatedAt: checkoutDrafts.updatedAt,
         })
         .from(checkoutDrafts)
+        .where(gte(checkoutDrafts.updatedAt, timeWindow.since))
         .orderBy(desc(checkoutDrafts.updatedAt))
         .limit(1000),
       db
@@ -97,9 +281,12 @@ export default async function CartLeadsPage() {
           phone: orders.phone,
           email: orders.email,
           grandTotal: orders.grandTotal,
+          ipAddress: orders.ipAddress,
+          userAgent: orders.userAgent,
           createdAt: orders.createdAt,
         })
         .from(orders)
+        .where(gte(orders.createdAt, timeWindow.since))
         .orderBy(desc(orders.createdAt))
         .limit(1000),
       db
@@ -111,9 +298,17 @@ export default async function CartLeadsPage() {
           lastActiveAt: sessionIntelligence.lastActiveAt,
         })
         .from(sessionIntelligence)
+        .where(gte(sessionIntelligence.updatedAt, timeWindow.since))
         .orderBy(desc(sessionIntelligence.updatedAt))
         .limit(1000),
     ]);
+
+    const excludedSessionIds = collectExcludedSessionIds(cartRows, couponRows, draftRows, orderRows);
+    const visibleCartRows = filterExcludedAdminRows(cartRows, excludedSessionIds);
+    couponRows = filterExcludedAdminRows(couponRows, excludedSessionIds);
+    draftRows = filterExcludedAdminRows(draftRows, excludedSessionIds);
+    orderRows = filterExcludedAdminRows(orderRows, excludedSessionIds);
+    intelligenceRows = intelligenceRows.filter((row) => !excludedSessionIds.has(row.sessionId));
 
     const couponMap = new Map<string, (typeof couponRows)[number]>();
     const couponContactMap = new Map<string, (typeof couponRows)[number]>();
@@ -146,6 +341,19 @@ export default async function CartLeadsPage() {
       intelligenceMap.set(intelligence.sessionId, intelligence);
     }
 
+    const rewardMap = new Map<string, RewardSignal>();
+    for (const event of visibleCartRows) {
+      const reward = readRewardSignal(
+        (event.payload || {}) as Record<string, unknown>,
+        event.createdAt,
+      );
+      if (!reward) continue;
+      const existing = rewardMap.get(event.sessionId);
+      if (!existing || reward.percent > existing.percent || reward.createdAt > existing.createdAt) {
+        rewardMap.set(event.sessionId, reward);
+      }
+    }
+
     const sessionMap = new Map<
       string,
       {
@@ -155,12 +363,15 @@ export default async function CartLeadsPage() {
         addToCartCount: number;
         removeCount: number;
         quantityUpdates: number;
+        rewardBannerClicks: number;
         cartSignalValue: number;
+        ipAddress: string | null;
+        userAgent: string | null;
         products: Map<string, { name: string; quantity: number; value: number }>;
       }
     >();
 
-    for (const event of cartRows) {
+    for (const event of visibleCartRows) {
       const existing = sessionMap.get(event.sessionId);
       const entry =
         existing ??
@@ -170,21 +381,27 @@ export default async function CartLeadsPage() {
           cartOpens: 0,
           addToCartCount: 0,
           removeCount: 0,
-          quantityUpdates: 0,
-          cartSignalValue: 0,
+        quantityUpdates: 0,
+        rewardBannerClicks: 0,
+        cartSignalValue: 0,
+        ipAddress: event.ipAddress,
+        userAgent: event.userAgent,
           products: new Map<string, { name: string; quantity: number; value: number }>(),
         };
 
       if (event.createdAt > entry.latestActivity) entry.latestActivity = event.createdAt;
+      if (event.ipAddress) entry.ipAddress = event.ipAddress;
+      if (event.userAgent) entry.userAgent = event.userAgent;
       if (event.eventType === "cart_open") entry.cartOpens += 1;
       if (event.eventType === "remove_from_cart") entry.removeCount += 1;
       if (event.eventType === "update_cart_quantity") entry.quantityUpdates += 1;
+      if (event.eventType === "reward_banner_click") entry.rewardBannerClicks += 1;
 
       if (event.eventType === "add_to_cart") {
         entry.addToCartCount += 1;
         const quantity = event.quantity || 1;
         const value = money(event.price) * quantity;
-        entry.cartSignalValue += value;
+        entry.cartSignalValue = Math.max(entry.cartSignalValue, value);
         const productKey = event.productId || event.productName || "unknown";
         const product = entry.products.get(productKey);
         entry.products.set(productKey, {
@@ -229,7 +446,7 @@ export default async function CartLeadsPage() {
       return bestDraft;
     };
 
-    rows = Array.from(sessionMap.values())
+    const sessionRows = Array.from(sessionMap.values())
       .filter((entry) => entry.addToCartCount > 0)
       .map((entry) => {
         const exactDraft = draftMap.get(entry.sessionId) || null;
@@ -248,10 +465,32 @@ export default async function CartLeadsPage() {
           (emailKey ? orderContactMap.get(emailKey) : null) ||
           null;
         const intelligence = intelligenceMap.get(entry.sessionId);
+        const reward = rewardMap.get(entry.sessionId) || null;
         const couponPhone = coupon?.destination && !isEmail(coupon.destination) ? coupon.destination : null;
         const couponEmail = coupon?.destination && isEmail(coupon.destination) ? coupon.destination : null;
         const phone = draft?.phone || couponPhone;
         const email = draft?.email || couponEmail;
+        const draftProducts = (draft?.cartSnapshot || [])
+          .filter((item) => !item.isGift)
+          .map((item) => ({
+            name: item.name,
+            quantity: item.quantity,
+            value: item.price * item.quantity,
+          }))
+          .sort((a, b) => b.value - a.value);
+        const checkoutValue = draft?.grandTotal ? money(draft.grandTotal) : null;
+        const estimatedDiscountedCartValue =
+          reward && entry.cartSignalValue > 0
+            ? getDiscountedValue(entry.cartSignalValue, reward.percent)
+            : null;
+        const currentCartValue =
+          checkoutValue && estimatedDiscountedCartValue
+            ? Math.min(checkoutValue, estimatedDiscountedCartValue)
+            : checkoutValue || estimatedDiscountedCartValue || entry.cartSignalValue;
+        const discountAmount =
+          reward && entry.cartSignalValue > currentCartValue
+            ? entry.cartSignalValue - currentCartValue
+            : null;
         const name = draft?.fullName || null;
         const hasContact = Boolean(phone || email);
         const hasCoupon = Boolean(coupon);
@@ -277,17 +516,51 @@ export default async function CartLeadsPage() {
 
         return {
           sessionId: entry.sessionId,
+          anonymousJourneyKey:
+            !phone && !email && entry.products.size > 0
+              ? (() => {
+                  const productKeys = Array.from(entry.products.values())
+                    .map((product) => productKey(product.name))
+                    .sort();
+                  const productSignature = productKeys.join("|");
+                  const isKitJourney = productKeys.some((key) => key.includes("custom 4 x 20ml kit"));
+                  if (hasCheckout && isKitJourney) {
+                    return `checkout-product::${productSignature}`;
+                  }
+                  if (entry.ipAddress && entry.userAgent) {
+                    return `${entry.ipAddress}::${entry.userAgent.slice(0, 120)}::${productSignature}`;
+                  }
+                  return hasCheckout ? `checkout-product::${productSignature}` : null;
+                })()
+              : null,
           name,
           phone,
           normalizedPhone: normalizePhone(phone),
           email,
           latestActivity: entry.latestActivity.toISOString(),
+          activityCount:
+            entry.addToCartCount +
+            entry.cartOpens +
+            entry.removeCount +
+            entry.quantityUpdates +
+            entry.rewardBannerClicks,
           cartOpens: entry.cartOpens,
           addToCartCount: entry.addToCartCount,
           removeCount: entry.removeCount,
           quantityUpdates: entry.quantityUpdates,
-          cartSignalValue: entry.cartSignalValue,
-          products: Array.from(entry.products.values()).sort((a, b) => b.value - a.value),
+          rewardBannerClicks: entry.rewardBannerClicks,
+          cartSignalValue: currentCartValue,
+          originalCartSignalValue: discountAmount ? entry.cartSignalValue : null,
+          discountAmount,
+          rewardCode: reward?.code || null,
+          rewardLabel:
+            reward?.label || (reward ? `Welcome Back ${reward.percent}` : null),
+          rewardPercent: reward?.percent || null,
+          rewardEvidence: Boolean(reward),
+          products:
+            draftProducts.length > 0
+              ? draftProducts
+              : Array.from(entry.products.values()).sort((a, b) => b.value - a.value),
           potentialScore,
           hasContact,
           hasCoupon,
@@ -298,7 +571,7 @@ export default async function CartLeadsPage() {
           connectionSource,
           checkoutId: draft?.id || null,
           checkoutStatus: draft?.status || null,
-          checkoutValue: draft?.grandTotal ? money(draft.grandTotal) : null,
+          checkoutValue,
           checkoutLeadStatus: draft?.leadStatus || null,
           checkoutLastEditedField: draft?.lastEditedField || null,
           hasOrder,
@@ -310,7 +583,9 @@ export default async function CartLeadsPage() {
           predictedNextAction: intelligence?.predictedNextAction || null,
         };
       })
-      .filter((row) => !row.hasOrder)
+      .filter((row) => !row.hasOrder);
+
+    rows = mergeCartLeadRows(sessionRows)
       .sort((a, b) => b.potentialScore - a.potentialScore || new Date(b.latestActivity).getTime() - new Date(a.latestActivity).getTime());
   } catch (error) {
     console.error("Cart leads page DB error:", error);
@@ -344,12 +619,10 @@ export default async function CartLeadsPage() {
         <div className="rounded-lg border border-white/10 bg-white/[0.04] p-2">
           <ShoppingCart className="h-5 w-5 text-white/65" />
         </div>
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-semibold text-white">Cart Leads</h1>
-          <p className="mt-1 text-sm text-white/45">
-            Cart activity connected with coupon claims, checkout drafts, and customer contact data.
-          </p>
         </div>
+        <AdminDateWindowControl />
       </div>
 
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">

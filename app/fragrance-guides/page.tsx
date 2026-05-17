@@ -10,6 +10,7 @@ import {
 } from "@/lib/programmatic-seo";
 import { FESTIVAL_SEO_PAGES } from "@/lib/festival-seo";
 import { getRequestSiteUrl } from "@/lib/request-site";
+import { AI_RECOMMENDATION_PAGES } from "@/lib/ai-recommendation-pages";
 
 export async function generateMetadata(): Promise<Metadata> {
   const baseUrl = await getRequestSiteUrl();
@@ -69,6 +70,10 @@ export default async function FragranceGuidesHubPage() {
       Boolean(item),
     )
     .map((item) => ({ href: `/${item.slug}`, label: item.title }));
+  const recommendationGuides = AI_RECOMMENDATION_PAGES.map((item) => ({
+    href: `/recommendations/${item.slug}`,
+    label: item.title,
+  }));
 
   const occasionGuides = FESTIVAL_SEO_PAGES.filter(
     (item) =>
@@ -124,6 +129,7 @@ export default async function FragranceGuidesHubPage() {
   }));
 
   const sections = [
+    section("AI Recommendation Pages", recommendationGuides),
     section("AI Search Guides", aiSearchGuides),
     section("Occasion Guides", occasionGuides),
     section("Budget Guides", budgetGuides),

@@ -20,7 +20,7 @@ import {
   Filter,
 } from "lucide-react";
 
-const POLL_INTERVAL = 10_000;
+const POLL_INTERVAL = 60_000;
 
 type CrossRef = {
   contactName: string | null;
@@ -98,7 +98,15 @@ function buildMailtoUrl(email: string, name: string | null): string {
   return `mailto:${email}?subject=${subject}&body=${body}`;
 }
 
-export function IntelligenceFeed({ initialSessions }: { initialSessions: EnrichedSession[] }) {
+export function IntelligenceFeed({
+  initialSessions,
+  market = "india",
+  hours = 720,
+}: {
+  initialSessions: EnrichedSession[];
+  market?: "india" | "all";
+  hours?: number;
+}) {
   const [sessions, setSessions] = useState(initialSessions);
   const [isLive, setIsLive] = useState(true);
   const [search, setSearch] = useState("");
@@ -107,14 +115,14 @@ export function IntelligenceFeed({ initialSessions }: { initialSessions: Enriche
 
   const fetchLatest = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/intelligence");
+      const res = await fetch(`/api/admin/intelligence?market=${market}&hours=${hours}`);
       if (!res.ok) return;
       const data = await res.json();
       if (data.sessions) setSessions(data.sessions);
     } catch {
       // Silently continue
     }
-  }, []);
+  }, [hours, market]);
 
   useEffect(() => {
     if (!isLive) return;

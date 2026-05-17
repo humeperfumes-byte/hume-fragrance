@@ -1,12 +1,21 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { behavioralEvents, sessionIntelligence, sectionAttribution } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
+import { isInternalAdminRequest } from "@/lib/admin-data-filters";
 
 // ── Intent Scoring Weights ──────────────────────────────────
 const INTENT_WEIGHTS: Record<string, number> = {
   page_view: 2,
+  add_to_cart: 35,
+  cart_open: 10,
+  update_cart_quantity: 8,
+  remove_from_cart: 3,
+  coupon_auto_applied: 18,
+  checkout_started: 30,
+  coupon_requested: 18,
+  coupon_sent: 18,
   scroll_10: 1,
   scroll_25: 3,
   scroll_50: 8,
@@ -41,7 +50,11 @@ const ABANDONMENT_SIGNALS: Record<string, { cause: string; weight: number }> = {
   scroll_100: { cause: "comparison_shopping", weight: 20 },
 };
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  if (isInternalAdminRequest(req)) {
+    return NextResponse.json({ ok: true, skipped: "admin_traffic" });
+  }
+
   try {
     const body = await req.json();
     const { sessionId, events } = body;
@@ -132,6 +145,8 @@ export async function POST(req: Request) {
         abandonmentCauses.set("exit_intent", (abandonmentCauses.get("exit_intent") || 0) + 40);
       } else if (eventType === "page_view") {
         totalIntentGain += INTENT_WEIGHTS["page_view"];
+      } else if (INTENT_WEIGHTS[eventType]) {
+        totalIntentGain += INTENT_WEIGHTS[eventType];
       }
     }
 

@@ -206,7 +206,7 @@ export function CouponLeadsTable({ events }: { events: EnrichedCouponEvent[] }) 
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
+        <div className="relative min-w-0 flex-1 sm:min-w-[200px] sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
           <input
             type="text"
@@ -251,7 +251,7 @@ export function CouponLeadsTable({ events }: { events: EnrichedCouponEvent[] }) 
 
       {/* Table */}
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
-        <div className="grid grid-cols-[1.2fr_0.5fr_0.5fr_0.5fr_0.4fr_auto] gap-4 border-b border-white/10 bg-white/[0.04] px-5 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-white/30">
+        <div className="hidden grid-cols-[1.2fr_0.5fr_0.5fr_0.5fr_0.4fr_auto] gap-4 border-b border-white/10 bg-white/[0.04] px-5 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-white/30 xl:grid">
           <span>Contact & Journey</span>
           <span>Coupon Code</span>
           <span>Channel</span>
@@ -279,7 +279,7 @@ export function CouponLeadsTable({ events }: { events: EnrichedCouponEvent[] }) 
               return (
                 <div
                   key={event.id}
-                  className="grid grid-cols-[1.2fr_0.5fr_0.5fr_0.5fr_0.4fr_auto] gap-4 px-5 py-4 text-sm items-start hover:bg-white/[0.02] transition-colors"
+                  className="grid gap-4 px-4 py-4 text-sm transition-colors hover:bg-white/[0.02] xl:grid-cols-[1.2fr_0.5fr_0.5fr_0.5fr_0.4fr_auto] xl:items-start xl:px-5"
                 >
                   {/* Contact & Journey */}
                   <div className="min-w-0">
@@ -295,6 +295,7 @@ export function CouponLeadsTable({ events }: { events: EnrichedCouponEvent[] }) 
 
                   {/* Coupon Code */}
                   <div>
+                    <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white/30 xl:hidden">Coupon Code</p>
                     <span className="inline-flex items-center rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary tracking-wider">
                       {code}
                     </span>
@@ -302,6 +303,7 @@ export function CouponLeadsTable({ events }: { events: EnrichedCouponEvent[] }) 
 
                   {/* Channel */}
                   <div>
+                    <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white/30 xl:hidden">Channel</p>
                     <span
                       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${
                         event.channel === "whatsapp"
@@ -322,10 +324,14 @@ export function CouponLeadsTable({ events }: { events: EnrichedCouponEvent[] }) 
                   </div>
 
                   {/* Date */}
-                  <span className="text-white/40 text-xs">{formatDate(event.createdAt)}</span>
+                  <span className="text-xs text-white/40">
+                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.16em] text-white/30 xl:hidden">Claimed At</span>
+                    {formatDate(event.createdAt)}
+                  </span>
 
                   {/* Last Online */}
                   <div>
+                    <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white/30 xl:hidden">Last Online</p>
                     {(() => {
                       const la = timeAgo(event.xref.lastActiveAt);
                       return (
@@ -346,7 +352,7 @@ export function CouponLeadsTable({ events }: { events: EnrichedCouponEvent[] }) 
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex flex-col items-end gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row xl:flex-col xl:items-end">
                     {/* WhatsApp contact */}
                     {contactPhone ? (
                       <a

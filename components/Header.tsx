@@ -116,7 +116,7 @@ const Header = () => {
                 if (typeof window !== "undefined") {
                   window.dispatchEvent(
                     new CustomEvent("hume:tracking", {
-                      detail: { eventType: "cart_open", payload: { source: "header" } },
+                      detail: { eventType: "cart_open", payload: { source: "header", itemCount: totalItems } },
                     })
                   );
                 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -91,7 +91,7 @@ export function ProductFormSheet({ open, onOpenChange, onSuccess }: ProductFormS
       toast({ title: "Product created successfully!" });
       onSuccess();
       setForm({ ...form, name: "", inspiration: "", price: "", imagesCsv: "", description: "" }); // Reset some fields
-    } catch (err) {
+    } catch {
       toast({ title: "Error creating product", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -107,9 +107,9 @@ export function ProductFormSheet({ open, onOpenChange, onSuccess }: ProductFormS
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1">
-          <div className="flex-1 p-6">
+          <div className="flex-1 p-4 sm:p-6">
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 rounded-xl h-auto p-1 bg-secondary/30 mb-6">
+              <TabsList className="grid w-full grid-cols-2 rounded-xl h-auto p-1 bg-secondary/30 mb-6 sm:grid-cols-4">
                 <TabsTrigger value="basic" className="rounded-lg text-xs">Basic</TabsTrigger>
                 <TabsTrigger value="profile" className="rounded-lg text-xs">Profile</TabsTrigger>
                 <TabsTrigger value="media" className="rounded-lg text-xs">Media</TabsTrigger>
@@ -117,7 +117,7 @@ export function ProductFormSheet({ open, onOpenChange, onSuccess }: ProductFormS
               </TabsList>
               
               <TabsContent value="basic" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="name">Product Name</Label>
                     <Input id="name" value={form.name} onChange={handleChange} className="rounded-xl" required />
@@ -127,7 +127,7 @@ export function ProductFormSheet({ open, onOpenChange, onSuccess }: ProductFormS
                     <Input id="price" type="number" value={form.price} onChange={handleChange} className="rounded-xl" required />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="inspirationBrand">Inspiration Brand</Label>
                     <Input id="inspirationBrand" value={form.inspirationBrand} onChange={handleChange} className="rounded-xl" />
@@ -137,7 +137,7 @@ export function ProductFormSheet({ open, onOpenChange, onSuccess }: ProductFormS
                     <Input id="inspiration" value={form.inspiration} onChange={handleChange} className="rounded-xl" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="category">Category</Label>
                     <Input id="category" value={form.category} onChange={handleChange} className="rounded-xl" />
@@ -169,7 +169,7 @@ export function ProductFormSheet({ open, onOpenChange, onSuccess }: ProductFormS
                   <Label htmlFor="notesBaseCsv">Base Notes (comma separated)</Label>
                   <Input id="notesBaseCsv" value={form.notesBaseCsv} onChange={handleChange} className="rounded-xl" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="duration">Longevity / Duration</Label>
                     <Input id="duration" placeholder="e.g. 8-10 Hours" value={form.duration} onChange={handleChange} className="rounded-xl" />

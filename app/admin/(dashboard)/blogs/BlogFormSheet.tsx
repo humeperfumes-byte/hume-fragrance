@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,7 +71,7 @@ export function BlogFormSheet({ open, onOpenChange, onSuccess }: BlogFormSheetPr
       onSuccess();
       // Reset main fields
       setForm({ ...form, title: "", slug: "", excerpt: "", content: "", featured: false }); 
-    } catch (err) {
+    } catch {
       toast({ title: "Error creating article", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -87,7 +87,7 @@ export function BlogFormSheet({ open, onOpenChange, onSuccess }: BlogFormSheetPr
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1">
-          <div className="flex-1 p-6">
+          <div className="flex-1 p-4 sm:p-6">
             <Tabs defaultValue="editor" className="w-full">
               <TabsList className="grid w-full grid-cols-2 rounded-xl h-auto p-1 bg-secondary/30 mb-6">
                 <TabsTrigger value="editor" className="rounded-lg text-xs">Editor</TabsTrigger>
@@ -100,7 +100,7 @@ export function BlogFormSheet({ open, onOpenChange, onSuccess }: BlogFormSheetPr
                   <Input id="title" value={form.title} onChange={handleChange} className="rounded-xl text-lg h-12" required />
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="slug">Custom URL Slug (Optional)</Label>
                     <Input id="slug" placeholder="leave-blank-to-auto-generate" value={form.slug} onChange={handleChange} className="rounded-xl text-xs" />
@@ -124,7 +124,7 @@ export function BlogFormSheet({ open, onOpenChange, onSuccess }: BlogFormSheetPr
               </TabsContent>
 
               <TabsContent value="seo" className="space-y-5">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="author">Author Name</Label>
                     <Input id="author" value={form.author} onChange={handleChange} className="rounded-xl" />
@@ -135,7 +135,7 @@ export function BlogFormSheet({ open, onOpenChange, onSuccess }: BlogFormSheetPr
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="readTime">Estimated Read Time</Label>
                     <Input id="readTime" value={form.readTime} onChange={handleChange} className="rounded-xl" />

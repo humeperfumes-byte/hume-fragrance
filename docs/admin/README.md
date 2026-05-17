@@ -94,6 +94,57 @@ Important history:
 - `SG` is treated as legacy India signal in admin market logic.
 - Phone, pincode, and state can also identify India.
 
+## Date Windows
+
+Most operating views should support the shared `hours` URL parameter so the
+same screen can be used for today's work and recent-history checks.
+
+Shared files:
+
+- Window config: `lib/admin-time-window.ts`
+- Window picker: `components/admin/AdminDateWindowControl.tsx`
+
+Current options:
+
+- Last 24 Hours
+- Last 2 Days
+- Last 3 Days
+- Last 5 Days
+- Last 7 Days
+- Last 10 Days
+- Last 15 Days
+- Last 30 Days
+- Last 90 Days
+
+The admin sidebar preserves `hours` while navigating between operating views.
+
+## Internal Traffic Filtering
+
+Owner/admin activity should not pollute customer operating views.
+
+Shared helper:
+
+- `lib/admin-data-filters.ts`
+
+Future admin activity is marked by the `hume_admin_internal=1` cookie after a
+successful admin login. Public tracking and lead-capture APIs skip events when
+that cookie is present.
+
+Historical owner activity can be excluded with comma-separated environment
+values:
+
+- `ADMIN_EXCLUDED_EMAILS`
+- `ADMIN_EXCLUDED_PHONES`
+- `ADMIN_EXCLUDED_SESSION_IDS`
+- `ADMIN_EXCLUDED_IPS`
+- `ADMIN_EXCLUDED_USER_AGENT_MATCHES`
+
+Important limitation:
+
+- Old activity can only be removed if it can be identified by session, contact,
+  IP, user agent, or another stored signal. Future logged-in admin traffic is
+  skipped automatically.
+
 ## Dashboard
 
 Purpose:
@@ -135,6 +186,10 @@ Should include:
 API:
 
 - `app/api/admin/intelligence/route.ts`
+
+India view should not go empty just because older behavioral rows lack clean
+geo data. Explicit India signals still win, but unknown-country behavioral
+sessions are allowed into the India view until collection quality improves.
 
 ## Checkouts CRM
 
@@ -192,6 +247,24 @@ Important behavior:
   activity timing.
 - This was added because real users can appear split across coupon/cart/checkout
   sessions.
+- Cart Leads should display a combined lead journey when multiple cart sessions
+  point to the same checkout draft, phone, email, or coupon contact. Do not show
+  one human as multiple separate leads just because they rebuilt a kit or
+  restarted the cart flow.
+- For anonymous kit builders, repeated checkout-started rows for `Custom 4 x
+  20ml Kit` can be merged by product-intent fallback even when IP/user-agent
+  fingerprints differ. This is useful in early traffic where kit rebuilds are
+  more likely one buyer experimenting than many unrelated buyers at once.
+- Repeated add-to-cart events inside a combined journey are intent signals, not
+  cumulative cart value. Cart Leads should show the best current basket value:
+  checkout draft grand total when available, otherwise the strongest/latest cart
+  value estimate. Do not turn three rebuild attempts for one `799` kit into
+  `2397` recoverable value.
+- Welcome-back rewards (`WELCOME-BACK-5` / `WELCOME-BACK-10`) are not normal
+  coupon leads. They are recorded through cart event payloads and checkout
+  reward-detected events. Admin Cart Leads should show original value,
+  discounted value, reward label, and discount amount when this reward evidence
+  exists.
 
 Use cases:
 

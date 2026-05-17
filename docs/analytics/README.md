@@ -46,6 +46,7 @@ Current event types include:
 - `update_cart_quantity`
 - `remove_from_cart`
 - `coupon_auto_applied`
+- `reward_banner_click`
 
 Cart events should include when possible:
 
@@ -66,6 +67,7 @@ These events power:
 - funnel analysis
 - source ROI when combined with source/session data
 - recovery automation later
+- reward-banner engagement in Cart Leads
 
 ## Behavioral Events
 
@@ -75,23 +77,41 @@ Stored in:
 - `session_intelligence`
 - `section_attribution`
 
-Tracked behaviors:
+Cost-control rule:
+
+- Normal browsing should not write heavy behavior rows.
+- Behavioral intelligence unlocks only after buying intent appears.
+- Empty cart opens do not unlock intelligence.
+
+Buying-intent unlock signals:
+
+- product added to cart
+- cart opened with items inside
+- cart quantity changed
+- coupon requested or applied
+- checkout started
+
+Tracked after unlock:
 
 - page view
-- scroll depth
-- section view
-- section dwell
+- key click
+- checkout/customer form focus
 - exit intent
-- click
-- hover dwell
-- form field focus/change where implemented
+- cart/coupon intent events
 
-Sections are marked with:
+The browser stores this unlock in:
+
+- `hume_behavior_intent_unlocked`
+
+Batching is intentionally slow enough to protect Neon cost while preserving
+sales signals.
+
+Sections can be marked with:
 
 - `data-analytics-section`
 
-Homepage sections currently use these markers so admin can understand which
-parts of the page are being seen and interacted with.
+Section markers are still useful for future richer analytics, but the current
+lean mode does not track section view/dwell during normal browsing.
 
 ## Consent Timeline
 

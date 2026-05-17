@@ -8,8 +8,9 @@ import {
   orders,
   cartEvents,
   consentEvents,
+  behavioralEvents,
 } from "@/db/schema";
-import { desc, inArray } from "drizzle-orm";
+import { desc, gte, inArray } from "drizzle-orm";
 import { requireAdminToken } from "@/lib/admin-auth";
 import {
   isIndiaCheckoutSignal,
@@ -19,6 +20,8 @@ import {
   isIndiaTimezone,
   parseAdminMarket,
 } from "@/lib/admin-market";
+import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-data-filters";
+import { parseAdminTimeWindow } from "@/lib/admin-time-window";
 
 export const dynamic = "force-dynamic";
 
@@ -34,13 +37,15 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const market = parseAdminMarket(searchParams.get("market"));
+    const timeWindow = parseAdminTimeWindow(searchParams.get("hours"));
     const indiaOnly = isIndiaMarket(market);
 
     // Core intelligence data
-    const [sessions, sections] = await Promise.all([
+    const [initialSessions, sections] = await Promise.all([
       db
         .select()
         .from(sessionIntelligence)
+        .where(gte(sessionIntelligence.updatedAt, timeWindow.since))
         .orderBy(desc(sessionIntelligence.updatedAt))
         .limit(100),
       db
@@ -49,6 +54,7 @@ export async function GET(request: NextRequest) {
         .orderBy(desc(sectionAttribution.attributionScore))
         .limit(10),
     ]);
+    let sessions = initialSessions;
 
     // Gather all session IDs for cross-referencing
     const sessionIds = sessions.map((s) => s.sessionId).filter(Boolean);
@@ -58,7 +64,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Cross-reference with coupon claims, checkouts, orders, cart events
-    const [coupons, drafts, allOrders, carts, consents] = await Promise.all([
+    let [coupons, drafts, allOrders, carts, consents, behaviorRows] = await Promise.all([
       db
         .select({
           sessionId: couponCodeEvents.sessionId,
@@ -66,6 +72,8 @@ export async function GET(request: NextRequest) {
           channel: couponCodeEvents.channel,
           destination: couponCodeEvents.destination,
           country: couponCodeEvents.country,
+          ipAddress: couponCodeEvents.ipAddress,
+          userAgent: couponCodeEvents.userAgent,
           createdAt: couponCodeEvents.createdAt,
         })
         .from(couponCodeEvents)
@@ -84,6 +92,8 @@ export async function GET(request: NextRequest) {
           country: checkoutDrafts.country,
           pincode: checkoutDrafts.pincode,
           state: checkoutDrafts.state,
+          ipAddress: checkoutDrafts.ipAddress,
+          userAgent: checkoutDrafts.userAgent,
           updatedAt: checkoutDrafts.updatedAt,
         })
         .from(checkoutDrafts)
@@ -97,6 +107,10 @@ export async function GET(request: NextRequest) {
           country: orders.country,
           pincode: orders.pincode,
           state: orders.state,
+          phone: orders.phone,
+          email: orders.email,
+          ipAddress: orders.ipAddress,
+          userAgent: orders.userAgent,
           createdAt: orders.createdAt,
         })
         .from(orders)
@@ -107,6 +121,8 @@ export async function GET(request: NextRequest) {
           eventType: cartEvents.eventType,
           productName: cartEvents.productName,
           country: cartEvents.country,
+          ipAddress: cartEvents.ipAddress,
+          userAgent: cartEvents.userAgent,
           createdAt: cartEvents.createdAt,
         })
         .from(cartEvents)
@@ -117,26 +133,65 @@ export async function GET(request: NextRequest) {
         .select({
           sessionId: consentEvents.sessionId,
           timezone: consentEvents.timezone,
+          ipAddress: consentEvents.ipAddress,
+          userAgent: consentEvents.userAgent,
           data: consentEvents.data,
         })
         .from(consentEvents)
         .where(inArray(consentEvents.sessionId, sessionIds)),
+      db
+        .select({
+          sessionId: behavioralEvents.sessionId,
+          ipAddress: behavioralEvents.ipAddress,
+          userAgent: behavioralEvents.userAgent,
+          payload: behavioralEvents.payload,
+          createdAt: behavioralEvents.createdAt,
+        })
+        .from(behavioralEvents)
+        .where(inArray(behavioralEvents.sessionId, sessionIds))
+        .orderBy(desc(behavioralEvents.createdAt))
+        .limit(1000),
     ]);
 
+    const excludedSessionIds = collectExcludedSessionIds(coupons, drafts, allOrders, carts, consents, behaviorRows);
+    sessions = sessions.filter((session) => !excludedSessionIds.has(session.sessionId));
+    coupons = filterExcludedAdminRows(coupons, excludedSessionIds);
+    drafts = filterExcludedAdminRows(drafts, excludedSessionIds);
+    allOrders = filterExcludedAdminRows(allOrders, excludedSessionIds);
+    carts = filterExcludedAdminRows(carts, excludedSessionIds);
+    consents = filterExcludedAdminRows(consents, excludedSessionIds);
+    behaviorRows = filterExcludedAdminRows(behaviorRows, excludedSessionIds);
+
     const indiaSessionIds = new Set<string>();
+    const explicitGeoSessionIds = new Set<string>();
+    const unknownBehaviorSessionIds = new Set<string>();
     if (indiaOnly) {
       for (const c of coupons) if (c.sessionId && isIndiaLeadSignal(c)) indiaSessionIds.add(c.sessionId);
       for (const d of drafts) if (isIndiaCheckoutSignal(d)) indiaSessionIds.add(d.sessionId);
       for (const o of allOrders) if (isIndiaCheckoutSignal(o)) indiaSessionIds.add(o.sessionId);
-      for (const c of carts) if (isIndiaOperationalCountry(c.country)) indiaSessionIds.add(c.sessionId);
+      for (const c of carts) {
+        if (c.country) explicitGeoSessionIds.add(c.sessionId);
+        if (isIndiaOperationalCountry(c.country)) indiaSessionIds.add(c.sessionId);
+      }
       for (const c of consents) {
+        if (c.timezone || dataCountry(c.data)) explicitGeoSessionIds.add(c.sessionId);
         if (isIndiaTimezone(c.timezone) || isIndiaOperationalCountry(dataCountry(c.data))) {
           indiaSessionIds.add(c.sessionId);
         }
       }
+      for (const row of behaviorRows) {
+        const payload = row.payload as Record<string, unknown> | null;
+        const timezone = typeof payload?.timezone === "string" ? payload.timezone : null;
+        const country = dataCountry(payload);
+        if (timezone || country) explicitGeoSessionIds.add(row.sessionId);
+        if (isIndiaTimezone(timezone) || isIndiaOperationalCountry(country)) indiaSessionIds.add(row.sessionId);
+        if (!explicitGeoSessionIds.has(row.sessionId)) unknownBehaviorSessionIds.add(row.sessionId);
+      }
     }
 
-    const visibleSessions = indiaOnly ? sessions.filter((session) => indiaSessionIds.has(session.sessionId)) : sessions;
+    const visibleSessions = indiaOnly
+      ? sessions.filter((session) => indiaSessionIds.has(session.sessionId) || unknownBehaviorSessionIds.has(session.sessionId))
+      : sessions;
 
     // Build lookup maps
     const couponMap = new Map<string, typeof coupons[0]>();

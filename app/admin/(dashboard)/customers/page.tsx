@@ -1,9 +1,12 @@
 import { db } from "@/db";
 import { orders, type Order } from "@/db/schema";
-import { desc } from "drizzle-orm";
+import { desc, gte } from "drizzle-orm";
 import { formatINR } from "@/lib/currency";
 import { ExternalLink, Mail, MessageCircle } from "lucide-react";
 import { buildAdminEmailHref, buildAdminWhatsAppHref } from "@/lib/admin-message-templates";
+import { AdminDateWindowControl } from "@/components/admin/AdminDateWindowControl";
+import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-data-filters";
+import { parseAdminTimeWindow } from "@/lib/admin-time-window";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +42,13 @@ function formatDate(value: Date): string {
   }).format(value);
 }
 
-export default async function CustomersPage() {
+type AdminPageProps = {
+  searchParams?: Promise<{ hours?: string }> | { hours?: string };
+};
+
+export default async function CustomersPage({ searchParams }: AdminPageProps) {
+  const params = await searchParams;
+  const timeWindow = parseAdminTimeWindow(params?.hours);
   let allOrders: Order[] = [];
   let dbError = false;
 
@@ -47,8 +56,10 @@ export default async function CustomersPage() {
     allOrders = await db
       .select()
       .from(orders)
+      .where(gte(orders.createdAt, timeWindow.since))
       .orderBy(desc(orders.createdAt))
       .limit(1000);
+    allOrders = filterExcludedAdminRows(allOrders, collectExcludedSessionIds(allOrders));
   } catch (error) {
     console.error("Customers page DB error:", error);
     dbError = true;
@@ -112,15 +123,18 @@ export default async function CustomersPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-white">Customer CRM</h1>
-        <p className="mt-1 text-sm text-white/45">
-          Repeat buyers, lifetime value, and customer order history.
-        </p>
-        <p className="mt-1 text-xs text-white/35">Showing all customers.</p>
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold text-white">Customer CRM</h1>
+          <p className="mt-1 text-sm text-white/45">
+            Repeat buyers, lifetime value, and customer order history.
+          </p>
+          <p className="mt-1 text-xs text-white/35">Showing customers from {timeWindow.label.toLowerCase()}.</p>
+        </div>
+        <AdminDateWindowControl />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
           <p className="text-xs font-medium text-white/45">Customers</p>
           <p className="mt-3 text-2xl font-semibold text-white">{customers.length}</p>
@@ -140,7 +154,7 @@ export default async function CustomersPage() {
       </div>
 
       <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
-        <div className="grid grid-cols-[1.1fr_0.8fr_0.55fr_0.65fr_1fr_170px] gap-4 border-b border-white/10 bg-white/[0.04] px-5 py-4 text-xs font-medium text-white/45">
+        <div className="hidden grid-cols-[1.1fr_0.8fr_0.55fr_0.65fr_1fr_170px] gap-4 border-b border-white/10 bg-white/[0.04] px-5 py-4 text-xs font-medium text-white/45 xl:grid">
           <span>Customer</span>
           <span>Contact</span>
           <span className="text-right">Orders</span>
@@ -163,21 +177,31 @@ export default async function CustomersPage() {
             return (
               <div
                 key={customer.key}
-                className="grid grid-cols-[1.1fr_0.8fr_0.55fr_0.65fr_1fr_170px] gap-4 border-b border-white/5 px-5 py-4 text-sm last:border-b-0"
+                className="grid gap-4 border-b border-white/5 px-4 py-4 text-sm last:border-b-0 xl:grid-cols-[1.1fr_0.8fr_0.55fr_0.65fr_1fr_170px] xl:px-5"
               >
-                <div>
+                <div className="min-w-0">
                   <p className="font-medium text-white">{customer.name}</p>
                   <p className="mt-1 text-xs text-white/35">
                     First order {formatDate(customer.firstOrderAt)}
                   </p>
                 </div>
                 <div className="min-w-0 text-white/55">
+                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/30 xl:hidden">Contact</p>
                   <p className="truncate">{customer.phone || "No phone"}</p>
                   <p className="truncate text-xs">{customer.email || "No email"}</p>
                 </div>
-                <p className="text-right font-semibold text-white">{customer.orders.length}</p>
-                <p className="text-right font-semibold text-white">{formatINR(customer.revenue)}</p>
+                <div className="grid grid-cols-2 gap-3 xl:contents">
+                  <p className="font-semibold text-white xl:text-right">
+                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/30 xl:hidden">Orders</span>
+                    {customer.orders.length}
+                  </p>
+                  <p className="font-semibold text-white xl:text-right">
+                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/30 xl:hidden">CLV</span>
+                    {formatINR(customer.revenue)}
+                  </p>
+                </div>
                 <div className="text-xs text-white/45">
+                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/30 xl:hidden">History</p>
                   <p>Last order {formatDate(customer.lastOrderAt)}</p>
                   <p className="mt-1">
                     {customer.orders
@@ -186,7 +210,7 @@ export default async function CustomersPage() {
                       .join(", ")}
                   </p>
                 </div>
-                <div className="grid gap-2">
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
                   <a
                     href={buildAdminWhatsAppHref(customer.phone, messageInput)}
                     target="_blank"

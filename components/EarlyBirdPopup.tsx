@@ -12,6 +12,7 @@ import {
 const STORAGE_KEY = "hume_early_bird_dismissed";
 const CHECKOUT_SESSION_KEY = "hume_checkout_session_id";
 const CART_SESSION_KEY = "hume_cart_session_id";
+const INTENT_STORAGE_KEY = "hume_behavior_intent_unlocked";
 
 function getOrCreateSessionId() {
   const existing =
@@ -73,6 +74,15 @@ const EarlyBirdPopup = () => {
     if (!normalizedEmail) return;
 
     const sessionId = getOrCreateSessionId();
+    window.localStorage.setItem(INTENT_STORAGE_KEY, "true");
+    window.dispatchEvent(
+      new CustomEvent("hume:tracking", {
+        detail: {
+          eventType: "coupon_requested",
+          payload: { source: "early_bird_popup", email: normalizedEmail },
+        },
+      })
+    );
 
     try {
       const response = await fetch("/api/coupon-code/send", {
@@ -108,6 +118,15 @@ const EarlyBirdPopup = () => {
     if (!whatsappLink) return;
 
     const sessionId = getOrCreateSessionId();
+    window.localStorage.setItem(INTENT_STORAGE_KEY, "true");
+    window.dispatchEvent(
+      new CustomEvent("hume:tracking", {
+        detail: {
+          eventType: "coupon_sent",
+          payload: { source: "early_bird_popup", channel: "whatsapp" },
+        },
+      })
+    );
     void fetch("/api/coupon-code-events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -232,7 +232,24 @@ export default function CheckoutClient() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setWelcomeBackReward(readWelcomeBackReward(window.localStorage));
+    const reward = readWelcomeBackReward(window.localStorage);
+    setWelcomeBackReward(reward);
+    if (!reward) return;
+    window.dispatchEvent(
+      new CustomEvent("hume:tracking", {
+        detail: {
+          eventType: "coupon_auto_applied",
+          payload: {
+            couponCode: reward.code,
+            rewardLabel: reward.label,
+            rewardPercent: reward.percent,
+            trigger: "checkout_reward_detected",
+            visitCount: reward.visitCount,
+            expiresAt: reward.expiresAt,
+          },
+        },
+      }),
+    );
   }, []);
 
   const buildDraftPayload = useCallback(

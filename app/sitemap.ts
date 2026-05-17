@@ -6,6 +6,7 @@ import { getProgrammaticSitemapEntries } from "@/lib/programmatic-seo";
 import { getProductPath } from "@/lib/product-route";
 import { getFestivalSeoSlugs } from "@/lib/festival-seo";
 import { getRequestSiteUrl } from "@/lib/request-site";
+import { AI_RECOMMENDATION_PAGES } from "@/lib/ai-recommendation-pages";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = await getRequestSiteUrl();
@@ -42,6 +43,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: new Date(),
     changeFrequency: "monthly" as const,
     priority: 0.7,
+  }));
+  const recommendationEntries = AI_RECOMMENDATION_PAGES.map((page) => ({
+    url: `${baseUrl}/recommendations/${page.slug}`,
+    lastModified: new Date(),
+    changeFrequency: "weekly" as const,
+    priority: 0.75,
   }));
 
   return [
@@ -122,5 +129,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...blogEntries,
     ...programmaticEntries,
     ...festivalSeoEntries,
+    ...recommendationEntries,
   ];
 }

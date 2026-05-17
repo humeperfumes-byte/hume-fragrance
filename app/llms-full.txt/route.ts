@@ -2,6 +2,7 @@ import { getAllPublicProducts } from "@/lib/db/products";
 import { homeFaqItems } from "@/lib/seo";
 import { getProductPath } from "@/lib/product-route";
 import { getRequestSiteUrl } from "@/lib/request-site";
+import { AI_RECOMMENDATION_PAGES } from "@/lib/ai-recommendation-pages";
 
 export const revalidate = 3600; // Regenerate every hour — keeps "Updated" timestamp fresh
 
@@ -184,11 +185,19 @@ export async function GET() {
   lines.push(`- Best sellers: ${baseUrl}/bestseller`);
   lines.push(`- HUME Special: ${baseUrl}/hume-special`);
   lines.push(`- Fragrance Guides Hub: ${baseUrl}/fragrance-guides`);
+  lines.push(`- AI Recommendation Pages: ${baseUrl}/recommendations/*`);
   lines.push(`- Celebrities' Favorites: ${baseUrl}/celebrities-favorites`);
   lines.push(`- Build Your Kit: ${baseUrl}/kit-pack`);
   lines.push(`- Scent Quiz: ${baseUrl}/scent-quiz`);
   lines.push(`- Refill Program: ${baseUrl}/refill-subscription`);
   lines.push(`- Blog: ${baseUrl}/blog`);
+  lines.push(``);
+
+  lines.push(`## Answer-First Recommendation Pages`);
+  AI_RECOMMENDATION_PAGES.forEach((page) => {
+    lines.push(`- ${page.title}: ${baseUrl}/recommendations/${page.slug}`);
+    lines.push(`  - Quick answer: ${page.answer}`);
+  });
   lines.push(``);
 
   lines.push(`## Citation Preference`);

@@ -6,6 +6,7 @@ import BestsellerSection from "@/components/BestsellerSection";
 import RefillProgramSection from "@/components/RefillProgramSection";
 import SeoHubTeaser from "@/components/SeoHubTeaser";
 import Collection from "@/components/Collection";
+import HomeVideoCarouselSection from "@/components/HomeVideoCarouselSection";
 import HomeFaqSection from "@/components/HomeFaqSection";
 import HomeReviewsSection from "@/components/HomeReviewsSection";
 import LatestJournal from "@/components/LatestJournal";
@@ -275,6 +276,12 @@ export default async function Home() {
       </div>
       <div data-analytics-section="collection">
         <Collection perfumes={homepagePerfumes} />
+      </div>
+      <div
+        style={{ contentVisibility: "auto", containIntrinsicSize: "760px" }}
+        data-analytics-section="home_video"
+      >
+        <HomeVideoCarouselSection />
       </div>
       <div
         style={{ contentVisibility: "auto", containIntrinsicSize: "1500px" }}

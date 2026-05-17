@@ -70,7 +70,7 @@ export default function AccessoryDetailClient({ accessory }: { accessory: Access
 
             <div className="text-center">
               <p className="text-[10px] uppercase tracking-[0.26em] text-muted-foreground mb-2">
-                HUME â€” ACCESSORY
+                HUME ACCESSORY
               </p>
               <h1 className="font-serif text-[2.5rem] md:text-5xl font-light italic tracking-tight mb-2">
                 {accessory.name}

@@ -187,7 +187,7 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
 
                 {isEditing ? (
                   <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <div className="rounded-3xl border border-primary/20 bg-primary/[0.03] p-6 space-y-5">
+                    <div className="space-y-5 rounded-2xl border border-primary/20 bg-primary/[0.03] p-4 sm:rounded-3xl sm:p-6">
                       <h4 className="font-bold text-[10px] uppercase tracking-[0.2em] text-primary/60">Modify Logistics</h4>
                       <div className="space-y-4">
                         <div className="space-y-2">
@@ -198,7 +198,7 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
                             onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-4 sm:grid-cols-2">
                           <div className="space-y-2">
                             <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">Phone</label>
                             <input 
@@ -233,7 +233,7 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
                   </div>
                 ) : (
                   <>
-                    <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-6 space-y-5">
+                    <div className="space-y-5 rounded-2xl border border-white/5 bg-white/[0.02] p-4 sm:rounded-3xl sm:p-6">
                       <h4 className="font-bold text-[10px] uppercase tracking-[0.2em] text-white/30">Customer Profile</h4>
                       <div className="text-sm space-y-3">
                         <div className="flex justify-between items-center"><span className="text-white/40">Full Name</span> <span className="font-medium text-white">{selectedOrder.fullName || "N/A"}</span></div>
@@ -242,7 +242,7 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
                       </div>
                     </div>
 
-                    <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-6 space-y-4">
+                    <div className="space-y-4 rounded-2xl border border-white/5 bg-white/[0.02] p-4 sm:rounded-3xl sm:p-6">
                       <h4 className="font-bold text-[10px] uppercase tracking-[0.2em] text-white/30">Logistics Destination</h4>
                       <div className="text-sm space-y-1 text-white/80 leading-relaxed">
                         <p className="text-white font-medium">{selectedOrder.addressLine1}</p>
@@ -285,7 +285,7 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
 
                 <div className="rounded-xl border border-border/50 bg-secondary/10 p-5 space-y-4">
                   <h4 className="font-semibold text-sm uppercase tracking-widest text-muted-foreground">Order Management</h4>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid gap-2 sm:grid-cols-2">
                     {selectedOrder.status !== "shipped" && selectedOrder.status !== "delivered" && selectedOrder.status !== "cancelled" && (
                       <Button 
                         onClick={() => handleUpdateStatus(selectedOrder.id, "shipped")} 

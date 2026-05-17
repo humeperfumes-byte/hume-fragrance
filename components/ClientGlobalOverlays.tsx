@@ -1,13 +1,13 @@
 "use client";
 
-import AIChatBot from "@/components/AIChatBot";
 import EarlyBirdPopup from "@/components/EarlyBirdPopup";
+import WelcomeBackRewardBanner from "@/components/WelcomeBackRewardBanner";
 
 export default function ClientGlobalOverlays() {
   return (
     <>
-      <AIChatBot />
       <EarlyBirdPopup />
+      <WelcomeBackRewardBanner />
     </>
   );
 }
