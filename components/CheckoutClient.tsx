@@ -460,6 +460,13 @@ async function ensureRazorpayScriptLoaded() {
   return loadRazorpayScript({ forceReload: true });
 }
 
+function waitForButtonPaint() {
+  if (typeof window === "undefined") return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => resolve());
+  });
+}
+
 export default function CheckoutClient() {
   const router = useRouter();
   const pathname = usePathname();
@@ -1178,8 +1185,19 @@ export default function CheckoutClient() {
       return;
     }
 
-    if (!validate()) return;
-    if (!(await ensureCartAvailability())) return;
+    setIsPaymentProcessing(true);
+    await waitForButtonPaint();
+
+    if (!validate()) {
+      setIsPaymentProcessing(false);
+      return;
+    }
+
+    if (!(await ensureCartAvailability())) {
+      setIsPaymentProcessing(false);
+      return;
+    }
+
     if (await holdKitLeadIfUnavailable()) return;
 
     const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
@@ -1189,10 +1207,9 @@ export default function CheckoutClient() {
         description: "Razorpay key is missing. Please try WhatsApp checkout.",
         variant: "destructive",
       });
+      setIsPaymentProcessing(false);
       return;
     }
-
-    setIsPaymentProcessing(true);
 
     try {
       const scriptLoadPromise = ensureRazorpayScriptLoaded();
