@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { couponCodeEvents } from "@/db/schema";
 import { resolveIndiaAwareCountry } from "@/lib/admin-market";
-import { isInternalAdminRequest } from "@/lib/admin-data-filters";
+import { isAdminCapturedPath, isInternalAdminRequest } from "@/lib/admin-data-filters";
 
 const payloadSchema = z.object({
   sessionId: z.string().max(255).optional(),
@@ -17,13 +17,17 @@ const payloadSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  if (isInternalAdminRequest(request)) {
-    return NextResponse.json({ ok: true, skipped: "admin_traffic" });
-  }
-
   try {
     const body = await request.json();
     const data = payloadSchema.parse(body);
+
+    if (isAdminCapturedPath(data.path)) {
+      return NextResponse.json({ ok: true, skipped: "admin_page" });
+    }
+
+    if (isInternalAdminRequest(request) && data.payload?.source === "admin") {
+      return NextResponse.json({ ok: true, skipped: "admin_traffic" });
+    }
 
     const forwardedFor = request.headers.get("x-forwarded-for");
     const realIp = request.headers.get("x-real-ip");

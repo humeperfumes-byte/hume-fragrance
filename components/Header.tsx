@@ -5,7 +5,7 @@ import ImageWithFallback from "@/components/ImageWithFallback";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Search, ExternalLink } from "lucide-react";
+import { Menu, X, Search, ExternalLink, UserRound } from "lucide-react";
 import { HiOutlineShoppingBag } from "react-icons/hi2";
 import { useCart } from "@/context/CartContext";
 import ShopMegaMenu from "./ShopMegaMenu";
@@ -13,6 +13,7 @@ import type { FilterType } from "./ShopMegaMenu";
 import SearchOverlay from "./SearchOverlay";
 import { celebrityFavorites } from "@/lib/celebrity-favorites";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
+import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -22,6 +23,11 @@ const Header = () => {
   const router = useRouter();
 
   const displayCartCount = totalItems > 99 ? "99+" : `${totalItems}`;
+
+  const navigateTo = (href: string) => {
+    showNavigationLoadingToast();
+    router.push(href);
+  };
 
   useEffect(() => {
     if (!isMenuOpen) return;
@@ -35,14 +41,14 @@ const Header = () => {
   const handleMobileFilterClick = (filterType: FilterType, value: string, href?: string) => {
     setIsMenuOpen(false);
     if (href) {
-      router.push(href);
+      navigateTo(href);
       return;
     }
     if (filterType === "celebrity") {
-      router.push(`/celebrities-favorites?celebrity=${encodeURIComponent(value)}`);
+      navigateTo(`/celebrities-favorites?celebrity=${encodeURIComponent(value)}`);
       return;
     }
-    router.push(`/shop?filter=${filterType}&value=${encodeURIComponent(value)}`);
+    navigateTo(`/shop?filter=${filterType}&value=${encodeURIComponent(value)}`);
   };
 
   return (
@@ -110,6 +116,13 @@ const Header = () => {
               aria-label="Search"
             >
               <Search size={18} />
+            </button>
+            <button
+              onClick={() => navigateTo("/account")}
+              className="hidden h-9 w-9 items-center justify-center hover:bg-muted transition-colors md:inline-flex"
+              aria-label="Open account"
+            >
+              <UserRound size={18} />
             </button>
             <button
               onClick={() => {
@@ -185,7 +198,16 @@ const Header = () => {
                   <X size={20} />
                 </button>
                 <span className="font-serif text-[1.65rem] leading-none tracking-[0.2em]">HUME</span>
-                <div className="w-8" />
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    navigateTo("/account");
+                  }}
+                  className="inline-flex h-8 w-8 items-center justify-center"
+                  aria-label="Open account"
+                >
+                  <UserRound size={19} />
+                </button>
               </div>
 
               <div className="px-6 py-5 space-y-6">
@@ -194,7 +216,7 @@ const Header = () => {
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);
-                        router.push("/shop");
+                        navigateTo("/shop");
                       }}
                       className="w-full border-b border-border pb-2 text-left"
                     >
@@ -205,7 +227,7 @@ const Header = () => {
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);
-                        router.push("/hume-special");
+                        navigateTo("/hume-special");
                       }}
                       className="w-full border-b border-border pb-2 text-left"
                     >
@@ -216,7 +238,7 @@ const Header = () => {
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);
-                        router.push("/bestseller");
+                        navigateTo("/bestseller");
                       }}
                       className="w-full border-b border-border pb-2 text-left"
                     >
@@ -227,7 +249,7 @@ const Header = () => {
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);
-                        router.push("/refill-subscription");
+                        navigateTo("/refill-subscription");
                       }}
                       className="w-full border-b border-border pb-2 text-left"
                     >
@@ -243,7 +265,7 @@ const Header = () => {
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);
-                        router.push("/scent-quiz");
+                        navigateTo("/scent-quiz");
                       }}
                       className="w-full border border-foreground bg-foreground px-3 py-2 text-left text-background"
                     >
@@ -257,7 +279,7 @@ const Header = () => {
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);
-                        router.push("/kit-pack");
+                        navigateTo("/kit-pack");
                       }}
                       className="w-full border border-foreground/45 px-3 py-2 text-left"
                     >
@@ -292,7 +314,7 @@ const Header = () => {
                   <button
                     onClick={() => {
                       setIsMenuOpen(false);
-                      router.push("/celebrities-favorites");
+                      navigateTo("/celebrities-favorites");
                     }}
                     className="mb-5 flex w-full  items-center justify-between text-left"
                     aria-label="Open celebrities favorite"
@@ -310,7 +332,7 @@ const Header = () => {
                         key={celeb.label}
                         onClick={() => {
                           setIsMenuOpen(false);
-                          router.push(`/celebrities-favorites?celebrity=${encodeURIComponent(celeb.label)}`);
+                          navigateTo(`/celebrities-favorites?celebrity=${encodeURIComponent(celeb.label)}`);
                         }}
                         className="text-left"
                       >

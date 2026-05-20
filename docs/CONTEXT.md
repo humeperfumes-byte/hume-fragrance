@@ -113,6 +113,15 @@ Checkout should:
 - preserve UTM/source fields
 - convert checkout drafts into orders
 - keep WhatsApp as an important fallback/sales channel
+- support Razorpay Standard Checkout with backend order creation, signature
+  verification, and webhooks for reliable payment confirmation
+
+Current Razorpay handoff:
+
+- see `docs/checkout/RAZORPAY_HANDOFF_2026-05-18.md`
+- local env is live-mode, but production also needs matching Vercel env vars
+- webhook setup should use `/api/razorpay/webhook` with only payment/order
+  events needed for the checkout flow
 
 Avoid large redesigns unless requested.
 

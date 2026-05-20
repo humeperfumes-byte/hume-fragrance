@@ -143,7 +143,19 @@ export function buildAdminWhatsAppHref(phone: string | null | undefined, input: 
   return normalizedPhone ? `https://wa.me/${normalizedPhone}?text=${message}` : `https://wa.me/?text=${message}`;
 }
 
+export function buildGmailComposeHref(email: string, subject: string, body: string): string {
+  const params = new URLSearchParams({
+    view: "cm",
+    fs: "1",
+    to: email,
+    su: subject,
+    body,
+  });
+
+  return `https://mail.google.com/mail/?${params.toString()}`;
+}
+
 export function buildAdminEmailHref(email: string, input: AdminLeadMessageInput): string {
   const message = buildAdminLeadMessage(input);
-  return `mailto:${email}?subject=${encodeURIComponent(message.subject)}&body=${encodeURIComponent(message.body)}`;
+  return buildGmailComposeHref(email, message.subject, message.body);
 }

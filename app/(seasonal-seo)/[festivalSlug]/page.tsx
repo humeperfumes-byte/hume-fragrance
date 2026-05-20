@@ -771,6 +771,7 @@ export default async function FestivalSeoPage({ params }: Props) {
                       bestSeller={product.badges?.bestSeller}
                       humeSpecial={product.badges?.humeSpecial}
                       limitedStock={product.badges?.limitedStock}
+                      soldOut={product.badges?.soldOut}
                     />
                   ))}
                 </div>
@@ -793,6 +794,7 @@ export default async function FestivalSeoPage({ params }: Props) {
                     bestSeller={product.badges?.bestSeller}
                     humeSpecial={product.badges?.humeSpecial}
                     limitedStock={product.badges?.limitedStock}
+                    soldOut={product.badges?.soldOut}
                   />
                 ))}
               </div>
@@ -853,6 +855,7 @@ export default async function FestivalSeoPage({ params }: Props) {
                   bestSeller={product.badges?.bestSeller}
                   humeSpecial={product.badges?.humeSpecial}
                   limitedStock={product.badges?.limitedStock}
+                  soldOut={product.badges?.soldOut}
                 />
               ))}
             </div>

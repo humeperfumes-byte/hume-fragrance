@@ -326,7 +326,18 @@ export async function GET(request: NextRequest) {
     const completedOrders = scopedOrderRows.filter((row) => row.status !== "cancelled");
     const deliveredOrders = scopedOrderRows.filter((row) => row.status === "delivered");
     const openOrders = scopedOrderRows.filter((row) =>
-      ["whatsapp_initiated", "processing", "shipped"].includes(row.status),
+      [
+        "whatsapp_initiated",
+        "payment_pending",
+        "payment_authorized",
+        "refund_initiated",
+        "refund_failed",
+        "payment_disputed",
+        "dispute_action_required",
+        "dispute_under_review",
+        "processing",
+        "shipped",
+      ].includes(row.status),
     );
     const cancelledOrders = scopedOrderRows.filter((row) => row.status === "cancelled");
     const revenue = completedOrders.reduce((sum, row) => sum + money(row.grandTotal), 0);

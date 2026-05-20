@@ -7,6 +7,7 @@ import { formatINR } from "@/lib/currency";
 import { AdminDateWindowControl } from "@/components/admin/AdminDateWindowControl";
 import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-data-filters";
 import { parseAdminTimeWindow } from "@/lib/admin-time-window";
+import { getCapturedDomainInfo } from "@/lib/captured-domain";
 
 export const dynamic = "force-dynamic";
 
@@ -156,6 +157,20 @@ function mergeCartLeadRows(rows: CartLeadRow[]): CartLeadRow[] {
       phone: newest.phone || existing.phone || row.phone,
       normalizedPhone: newest.normalizedPhone || existing.normalizedPhone || row.normalizedPhone,
       email: newest.email || existing.email || row.email,
+      domainLabel:
+        newest.domainKind !== "unknown"
+          ? newest.domainLabel
+          : existing.domainKind !== "unknown"
+            ? existing.domainLabel
+            : row.domainLabel,
+      domainHost:
+        newest.domainHost || existing.domainHost || row.domainHost,
+      domainKind:
+        newest.domainKind !== "unknown"
+          ? newest.domainKind
+          : existing.domainKind !== "unknown"
+            ? existing.domainKind
+            : row.domainKind,
       latestActivity: newest.latestActivity,
       activityCount: existing.activityCount + row.activityCount,
       cartOpens: existing.cartOpens + row.cartOpens,
@@ -258,6 +273,7 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
           id: checkoutDrafts.id,
           sessionId: checkoutDrafts.sessionId,
           status: checkoutDrafts.status,
+          path: checkoutDrafts.path,
           fullName: checkoutDrafts.fullName,
           phone: checkoutDrafts.phone,
           email: checkoutDrafts.email,
@@ -278,6 +294,7 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
           sessionId: orders.sessionId,
           orderNumber: orders.orderNumber,
           status: orders.status,
+          path: orders.path,
           phone: orders.phone,
           email: orders.email,
           grandTotal: orders.grandTotal,
@@ -367,6 +384,7 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
         cartSignalValue: number;
         ipAddress: string | null;
         userAgent: string | null;
+        path: string | null;
         products: Map<string, { name: string; quantity: number; value: number }>;
       }
     >();
@@ -381,17 +399,22 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
           cartOpens: 0,
           addToCartCount: 0,
           removeCount: 0,
-        quantityUpdates: 0,
-        rewardBannerClicks: 0,
-        cartSignalValue: 0,
-        ipAddress: event.ipAddress,
-        userAgent: event.userAgent,
+          quantityUpdates: 0,
+          rewardBannerClicks: 0,
+          cartSignalValue: 0,
+          ipAddress: event.ipAddress,
+          userAgent: event.userAgent,
+          path: event.path,
           products: new Map<string, { name: string; quantity: number; value: number }>(),
         };
 
-      if (event.createdAt > entry.latestActivity) entry.latestActivity = event.createdAt;
+      if (event.createdAt > entry.latestActivity) {
+        entry.latestActivity = event.createdAt;
+        entry.path = event.path;
+      }
       if (event.ipAddress) entry.ipAddress = event.ipAddress;
       if (event.userAgent) entry.userAgent = event.userAgent;
+      if (event.path) entry.path = event.path;
       if (event.eventType === "cart_open") entry.cartOpens += 1;
       if (event.eventType === "remove_from_cart") entry.removeCount += 1;
       if (event.eventType === "update_cart_quantity") entry.quantityUpdates += 1;
@@ -503,6 +526,7 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
             : coupon
               ? "contact"
               : null;
+        const domain = getCapturedDomainInfo(draft?.path || entry.path || order?.path || null);
         const potentialScore = Math.min(
           100,
           Math.round(
@@ -537,6 +561,9 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
           phone,
           normalizedPhone: normalizePhone(phone),
           email,
+          domainLabel: domain.label,
+          domainHost: domain.host,
+          domainKind: domain.kind,
           latestActivity: entry.latestActivity.toISOString(),
           activityCount:
             entry.addToCartCount +

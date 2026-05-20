@@ -67,6 +67,12 @@ function isCartEvent(eventType: string) {
   ].includes(eventType);
 }
 
+function getCurrentCaptureUrl(pathname: string, searchParams: ReturnType<typeof useSearchParams>) {
+  const pathWithQuery = `${pathname}${searchParams?.toString() ? `?${searchParams.toString()}` : ""}`;
+  if (typeof window === "undefined") return pathWithQuery;
+  return `${window.location.origin}${pathWithQuery}`;
+}
+
 export default function CartAnalyticsTracker() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -78,7 +84,7 @@ export default function CartAnalyticsTracker() {
       if (!eventType || !isCartEvent(eventType)) return;
 
       const sessionId = getSessionId();
-      const path = `${pathname}${searchParams?.toString() ? `?${searchParams.toString()}` : ""}`;
+      const path = getCurrentCaptureUrl(pathname, searchParams);
       const payload = customEvent.detail?.payload ?? {};
       if (eventType === "cart_open" && Number(payload.itemCount || 0) <= 0) return;
       const welcomeBackReward = getActiveWelcomeBackReward();

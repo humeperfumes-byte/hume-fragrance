@@ -106,6 +106,7 @@ export default function WelcomeBackRewardBanner() {
     const interval = window.setInterval(syncReward, 10000);
     window.addEventListener("storage", syncReward);
     window.addEventListener("focus", syncReward);
+    window.addEventListener("hume:welcome-back-reward-sync", syncReward);
 
     return () => {
       if (revealTimeoutRef.current) {
@@ -114,6 +115,7 @@ export default function WelcomeBackRewardBanner() {
       window.clearInterval(interval);
       window.removeEventListener("storage", syncReward);
       window.removeEventListener("focus", syncReward);
+      window.removeEventListener("hume:welcome-back-reward-sync", syncReward);
     };
   }, [isCartOpen, pathname]);
 

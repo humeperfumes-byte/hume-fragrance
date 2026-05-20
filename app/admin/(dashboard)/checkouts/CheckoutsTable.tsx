@@ -21,9 +21,36 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { formatINR } from "@/lib/currency";
 import { buildAdminEmailHref, buildAdminLeadMessage, buildAdminWhatsAppHref } from "@/lib/admin-message-templates";
+import { getCapturedDomainInfo, type CapturedDomainKind } from "@/lib/captured-domain";
 
 function getDraftValue(draft: CheckoutDraft): number {
   return Number.parseFloat(String(draft.grandTotal ?? "0") || "0");
+}
+
+function getDraftHost(draft: CheckoutDraft) {
+  if (!draft.path) return "Unknown";
+  try {
+    return new URL(draft.path).hostname.replace(/^www\./, "");
+  } catch {
+    return draft.path.startsWith("/") ? "Legacy / unknown" : draft.path;
+  }
+}
+
+function getDomainClassName(kind: CapturedDomainKind) {
+  switch (kind) {
+    case "india":
+      return "border-emerald-500/20 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/10";
+    case "global":
+      return "border-sky-500/20 bg-sky-500/10 text-sky-200 hover:bg-sky-500/10";
+    case "preview":
+      return "border-purple-500/20 bg-purple-500/10 text-purple-200 hover:bg-purple-500/10";
+    case "local":
+      return "border-white/10 bg-white/[0.05] text-white/55 hover:bg-white/[0.05]";
+    case "unknown":
+      return "border-amber-500/20 bg-amber-500/10 text-amber-200 hover:bg-amber-500/10";
+    default:
+      return "border-white/10 bg-white/[0.04] text-white/45 hover:bg-white/[0.04]";
+  }
 }
 
 function scoreCheckoutDraft(draft: CheckoutDraft): number {
@@ -250,6 +277,7 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
           const value = getDraftValue(draft);
           const items = draft.cartSnapshot || [];
           const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+          const domain = getCapturedDomainInfo(draft.path);
 
           return (
             <div
@@ -307,6 +335,14 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
                   <span>{formatDistanceToNow(new Date(draft.updatedAt), { addSuffix: true })}</span>
                   <span className="text-white/15">/</span>
                   <span>{format(new Date(draft.updatedAt), "MMM d, h:mm a")}</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className={`${getDomainClassName(domain.kind)} shadow-none`} title={domain.host ?? getDraftHost(draft)}>
+                    {domain.label}
+                  </Badge>
+                  <span className="max-w-full truncate text-xs text-white/30">
+                    {domain.host ?? getDraftHost(draft)}
+                  </span>
                 </div>
               </div>
 
@@ -406,6 +442,8 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
                         value: getDraftValue(draft),
                         checkoutField: draft.lastEditedField,
                       })}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/10 px-3 text-xs font-semibold text-blue-300 transition-all hover:bg-blue-500/20 active:scale-[0.98]"
                     >
                       <Mail className="h-4 w-4" />

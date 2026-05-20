@@ -4,7 +4,8 @@ import CheckoutClient from "@/components/CheckoutClient";
 
 export const metadata = {
   title: "Checkout",
-  description: "Enter your delivery details and complete your HUME order via WhatsApp.",
+  description:
+    "Enter your delivery details and complete your HUME order with guided checkout and WhatsApp support.",
 };
 
 export default function CheckoutPage() {

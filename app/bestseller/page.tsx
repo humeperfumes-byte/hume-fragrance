@@ -69,6 +69,7 @@ export default async function BestsellerPage() {
                   bestSeller={perfume.badges?.bestSeller}
                   humeSpecial={perfume.badges?.humeSpecial}
                   limitedStock={perfume.badges?.limitedStock}
+                  soldOut={perfume.badges?.soldOut}
                 />
               ))}
             </div>

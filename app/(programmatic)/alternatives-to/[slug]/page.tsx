@@ -158,6 +158,7 @@ export default async function AlternativesToPage({
                 bestSeller={primary.badges?.bestSeller}
                 humeSpecial={primary.badges?.humeSpecial}
                 limitedStock={primary.badges?.limitedStock}
+                soldOut={primary.badges?.soldOut}
               />
             </div>
             <div className="border border-border p-6 max-w-md">
@@ -229,6 +230,7 @@ export default async function AlternativesToPage({
                     index={idx}
                     bestSeller={itemProduct.badges?.bestSeller}
                     limitedStock={itemProduct.badges?.limitedStock}
+                    soldOut={itemProduct.badges?.soldOut}
                   />
                 ))}
               </div>

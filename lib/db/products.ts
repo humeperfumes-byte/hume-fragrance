@@ -14,6 +14,7 @@ type ProductBadges = Partial<{
   bestSeller: boolean;
   humeSpecial: boolean;
   limitedStock: boolean;
+  soldOut: boolean;
 }>;
 type ProductVisibility = "public" | "seo_only";
 let hasLoggedLegacyReviewsFallback = false;
@@ -123,6 +124,7 @@ function transformProduct(
       bestSeller: Boolean(badges.bestSeller),
       humeSpecial: Boolean(badges.humeSpecial),
       limitedStock: Boolean(badges.limitedStock),
+      soldOut: Boolean(badges.soldOut),
     },
     notes: product.notes as PerfumeData["notes"],
     longevity: product.longevity as PerfumeData["longevity"],

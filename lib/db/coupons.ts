@@ -15,6 +15,7 @@ const SPECIAL5_COUPON: CouponData = {
   minSubtotal: 0,
   active: true,
   displayInCart: false,
+  welcomeBackMode: "cap_5",
 };
 
 function withHiddenSpecialCoupon(rows: CouponData[], cartOnly: boolean) {
@@ -34,6 +35,10 @@ function transformCoupon(row: CouponRow): CouponData {
     minSubtotal: parseFloat(row.minSubtotal),
     active: Boolean(row.active),
     displayInCart: Boolean(row.displayInCart),
+    welcomeBackMode:
+      row.welcomeBackMode === "allow" || row.welcomeBackMode === "disable"
+        ? row.welcomeBackMode
+        : "cap_5",
   };
 }
 

@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { celebrityFavorites } from "@/lib/celebrity-favorites";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getClientCachedProducts } from "@/lib/client-products-cache";
+import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 
 type FilterType = "nature" | "gender" | "occasion" | "celebrity";
 
@@ -175,13 +176,16 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
   const handleItemClick = (item: ShopItem) => {
     onClose();
     if (item.href) {
+      showNavigationLoadingToast();
       router.push(item.href);
       return;
     }
     if (item.filterType === "celebrity") {
+      showNavigationLoadingToast();
       router.push(`/celebrities-favorites?celebrity=${encodeURIComponent(item.label)}`);
       return;
     }
+    showNavigationLoadingToast();
     router.push(`/shop?filter=${item.filterType}&value=${encodeURIComponent(item.label)}`);
   };
 
@@ -219,6 +223,7 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
                         <button
                           onClick={() => {
                             onClose();
+                            showNavigationLoadingToast();
                             router.push("/celebrities-favorites");
                           }}
                           className="text-caption text-foreground hover:text-muted-foreground transition-luxury flex items-center gap-1.5 cursor-pointer group"
@@ -355,6 +360,7 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
                             <button
                               onClick={() => {
                                 onClose();
+                                showNavigationLoadingToast();
                                 router.push("/bestseller");
                               }}
                               className="block w-full border-b border-border py-3 text-left font-serif text-[1.5rem] leading-none text-foreground hover:text-muted-foreground transition-luxury"
@@ -364,6 +370,7 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
                             <button
                               onClick={() => {
                                 onClose();
+                                showNavigationLoadingToast();
                                 router.push("/hume-special");
                               }}
                               className="block w-full border-b border-border py-3 text-left font-serif text-[1.5rem] leading-none text-foreground hover:text-muted-foreground transition-luxury"
@@ -373,6 +380,7 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
                             <button
                               onClick={() => {
                                 onClose();
+                                showNavigationLoadingToast();
                                 router.push("/shop");
                               }}
                               className="block w-full py-3 text-left font-serif text-[1.5rem] leading-none text-foreground hover:text-muted-foreground transition-luxury"

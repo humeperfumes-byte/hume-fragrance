@@ -28,6 +28,7 @@ export const products = pgTable("products", {
       bestSeller?: boolean;
       humeSpecial?: boolean;
       limitedStock?: boolean;
+      soldOut?: boolean;
     }>()
     .notNull()
     .default({}),
@@ -126,6 +127,7 @@ export const coupons = pgTable("coupons", {
   minSubtotal: decimal("min_subtotal", { precision: 10, scale: 2 }).notNull().default("0"),
   active: boolean("active").notNull().default(true),
   displayInCart: boolean("display_in_cart").notNull().default(true),
+  welcomeBackMode: varchar("welcome_back_mode", { length: 30 }).notNull().default("cap_5"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -212,11 +214,16 @@ export const checkoutDrafts = pgTable("checkout_drafts", {
         name: string;
         inspiration?: string;
         size?: string;
-        quantity: number;
-        price: number;
-        isGift?: boolean;
-      }>
-    >()
+          quantity: number;
+          price: number;
+          isGift?: boolean;
+          kitSelections?: Array<{
+            id: string;
+            name: string;
+            inspiration?: string;
+          }>;
+        }>
+      >()
     .notNull()
     .default([]),
   country: varchar("country", { length: 8 }),
@@ -240,6 +247,11 @@ export const orders = pgTable("orders", {
   checkoutChannel: varchar("checkout_channel", { length: 50 }).notNull().default("whatsapp"),
   paymentMethod: varchar("payment_method", { length: 100 }),
   shippingMethod: varchar("shipping_method", { length: 100 }),
+  fulfillmentCarrier: varchar("fulfillment_carrier", { length: 100 }),
+  trackingNumber: varchar("tracking_number", { length: 120 }),
+  trackingUrl: varchar("tracking_url", { length: 2048 }),
+  trackingStatus: varchar("tracking_status", { length: 80 }),
+  trackingLastCheckedAt: timestamp("tracking_last_checked_at"),
   path: varchar("path", { length: 2048 }),
   acquisitionSource: varchar("acquisition_source", { length: 100 }),
   acquisitionCategory: varchar("acquisition_category", { length: 50 }),
@@ -270,11 +282,16 @@ export const orders = pgTable("orders", {
         name: string;
         inspiration?: string;
         size?: string;
-        quantity: number;
-        price: number;
-        isGift?: boolean;
-      }>
-    >()
+          quantity: number;
+          price: number;
+          isGift?: boolean;
+          kitSelections?: Array<{
+            id: string;
+            name: string;
+            inspiration?: string;
+          }>;
+        }>
+      >()
     .notNull()
     .default([]),
   giftItems: jsonb("gift_items").$type<string[]>().notNull().default([]),
@@ -284,6 +301,33 @@ export const orders = pgTable("orders", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   whatsappInitiatedAt: timestamp("whatsapp_initiated_at").defaultNow().notNull(),
+  shippedAt: timestamp("shipped_at"),
+  deliveredAt: timestamp("delivered_at"),
+});
+
+// Raw Razorpay webhook ledger for payment, refund, dispute, settlement and downtime reconciliation.
+export const razorpayWebhookEvents = pgTable("razorpay_webhook_events", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  event: varchar("event", { length: 120 }).notNull(),
+  accountId: varchar("account_id", { length: 255 }),
+  localOrderId: varchar("local_order_id", { length: 255 }),
+  orderNumber: varchar("order_number", { length: 50 }),
+  razorpayOrderId: varchar("razorpay_order_id", { length: 255 }),
+  razorpayPaymentId: varchar("razorpay_payment_id", { length: 255 }),
+  razorpayRefundId: varchar("razorpay_refund_id", { length: 255 }),
+  razorpayDisputeId: varchar("razorpay_dispute_id", { length: 255 }),
+  razorpaySettlementId: varchar("razorpay_settlement_id", { length: 255 }),
+  razorpayDowntimeId: varchar("razorpay_downtime_id", { length: 255 }),
+  entityType: varchar("entity_type", { length: 80 }),
+  entityId: varchar("entity_id", { length: 255 }),
+  status: varchar("status", { length: 80 }),
+  amount: decimal("amount", { precision: 14, scale: 0 }),
+  currency: varchar("currency", { length: 8 }),
+  matched: boolean("matched").notNull().default(false),
+  payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+  eventCreatedAt: timestamp("event_created_at"),
+  receivedAt: timestamp("received_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // Coupon code send / share events (email + whatsapp)
@@ -301,6 +345,29 @@ export const couponCodeEvents = pgTable("coupon_code_events", {
   userAgent: text("user_agent"),
   payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const siteSettings = pgTable("site_settings", {
+  key: varchar("key", { length: 120 }).primaryKey(),
+  value: jsonb("value").$type<Record<string, unknown>>().notNull().default({}),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const emailEvents = pgTable("email_events", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  messageType: varchar("message_type", { length: 80 }).notNull(),
+  provider: varchar("provider", { length: 50 }).notNull().default("resend"),
+  toEmail: varchar("to_email", { length: 255 }).notNull(),
+  fromEmail: varchar("from_email", { length: 255 }).notNull(),
+  subject: text("subject").notNull(),
+  status: varchar("status", { length: 40 }).notNull().default("pending"),
+  providerMessageId: varchar("provider_message_id", { length: 255 }),
+  relatedType: varchar("related_type", { length: 80 }),
+  relatedId: varchar("related_id", { length: 255 }),
+  error: text("error"),
+  payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // Behavioral Analytics & Behavioral Events
@@ -370,8 +437,14 @@ export type CheckoutDraft = typeof checkoutDrafts.$inferSelect;
 export type NewCheckoutDraft = typeof checkoutDrafts.$inferInsert;
 export type Order = typeof orders.$inferSelect;
 export type NewOrder = typeof orders.$inferInsert;
+export type RazorpayWebhookEvent = typeof razorpayWebhookEvents.$inferSelect;
+export type NewRazorpayWebhookEvent = typeof razorpayWebhookEvents.$inferInsert;
 export type CouponCodeEvent = typeof couponCodeEvents.$inferSelect;
 export type NewCouponCodeEvent = typeof couponCodeEvents.$inferInsert;
+export type SiteSetting = typeof siteSettings.$inferSelect;
+export type NewSiteSetting = typeof siteSettings.$inferInsert;
+export type EmailEvent = typeof emailEvents.$inferSelect;
+export type NewEmailEvent = typeof emailEvents.$inferInsert;
 export type BehavioralEvent = typeof behavioralEvents.$inferSelect;
 export type NewBehavioralEvent = typeof behavioralEvents.$inferInsert;
 export type SessionIntelligence = typeof sessionIntelligence.$inferSelect;

@@ -249,6 +249,7 @@ export default async function InspiredByPage({
                     index={idx}
                     bestSeller={related.badges?.bestSeller}
                     limitedStock={related.badges?.limitedStock}
+                    soldOut={related.badges?.soldOut}
                   />
                 ))}
               </div>

@@ -122,7 +122,8 @@ const Collection = ({ perfumes }: { perfumes: HomepagePerfumeCardData[] }) => {
                 bestSeller={perfume.badges?.bestSeller}
                 humeSpecial={perfume.badges?.humeSpecial}
                 limitedStock={perfume.badges?.limitedStock}
-                prioritizeImage={index === 0}
+                soldOut={perfume.badges?.soldOut}
+                prioritizeImage={false}
               />
             </div>
           ))}

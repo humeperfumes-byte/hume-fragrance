@@ -4,6 +4,7 @@ export type CouponLike = {
   type: string;
   value: number;
   minSubtotal: number;
+  welcomeBackMode?: string | null;
 };
 
 export type CartDiscountItem = {
@@ -27,6 +28,8 @@ export type WelcomeBackReward = {
   unlockedAt: number;
   expiresAt: number;
 };
+
+export type CouponWelcomeBackMode = "allow" | "cap_5" | "disable";
 
 export const WELCOME_BACK_VISIT_COUNT_KEY = "hume_welcome_back_visit_count_v1";
 export const WELCOME_BACK_LAST_VISIT_AT_KEY =
@@ -248,14 +251,47 @@ export function getWelcomeBackRewardId(reward: WelcomeBackReward) {
   return `${reward.code}:${reward.unlockedAt}`;
 }
 
+export function getCouponWelcomeBackMode(
+  coupon: Pick<CouponLike, "welcomeBackMode"> | null | undefined,
+): CouponWelcomeBackMode {
+  const mode = String(coupon?.welcomeBackMode ?? "cap_5").trim().toLowerCase();
+  if (mode === "allow" || mode === "disable") return mode;
+  return "cap_5";
+}
+
+export function getEffectiveWelcomeBackPercent(
+  reward: WelcomeBackReward | null,
+  coupon: Pick<CouponLike, "welcomeBackMode"> | null | undefined,
+) {
+  if (!reward) return 0;
+  if (!coupon) return reward.percent;
+
+  const mode = getCouponWelcomeBackMode(coupon);
+  if (mode === "disable") return 0;
+  if (mode === "allow") return reward.percent;
+  return Math.min(reward.percent, 5);
+}
+
+export function getEffectiveWelcomeBackLabel(
+  reward: WelcomeBackReward | null,
+  coupon: Pick<CouponLike, "welcomeBackMode"> | null | undefined,
+) {
+  const percent = getEffectiveWelcomeBackPercent(reward, coupon);
+  if (percent <= 0) return null;
+  return percent === 10 ? "Welcome Back 10" : "Welcome Back 5";
+}
+
 export function calculateWelcomeBackDiscount(
   reward: WelcomeBackReward | null,
   subtotal: number,
   alreadyDiscountedAmount: number,
+  coupon?: Pick<CouponLike, "welcomeBackMode"> | null,
 ) {
   if (!reward) return 0;
+  const effectivePercent = getEffectiveWelcomeBackPercent(reward, coupon ?? null);
+  if (effectivePercent <= 0) return 0;
   const remainingSubtotal = Math.max(0, subtotal - alreadyDiscountedAmount);
-  return Math.min(remainingSubtotal, (subtotal * reward.percent) / 100);
+  return Math.min(remainingSubtotal, (subtotal * effectivePercent) / 100);
 }
 
 export function formatRewardTimeRemaining(ms: number) {

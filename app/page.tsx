@@ -21,25 +21,17 @@ import {
 import { getAllPublicProducts } from "@/lib/db/products";
 import { getImagesByUsage } from "@/lib/db/images";
 import type { HomepagePerfumeCardData } from "@/types/homepage";
-import { db } from "@/db";
-import {
-  behavioralEvents,
-  cartEvents,
-  consentEvents,
-  orders,
-} from "@/db/schema";
-import { and, desc, gte, sql } from "drizzle-orm";
-import { getProductPath } from "@/lib/product-route";
-import { getRequestSiteUrl } from "@/lib/request-site";
+import { SITE_URL } from "@/lib/site";
 
 export const revalidate = 120;
 
-export async function generateMetadata(): Promise<Metadata> {
-  const baseUrl = await getRequestSiteUrl();
-
+export function generateMetadata(): Metadata {
   return {
+    title: "HUME Fragrance | Premium Inspired Perfumes in India",
+    description:
+      "Shop HUME Fragrance for premium inspired EDP perfumes in India. Long-lasting scents, designer-style profiles, free delivery over INR 500, and WhatsApp support.",
     alternates: {
-      canonical: baseUrl,
+      canonical: SITE_URL,
     },
   };
 }
@@ -57,175 +49,23 @@ const KitPackShowcase = nextDynamic(
   },
 );
 
-type ProductSignal = {
-  views: number;
-  clicks: number;
-  addToCart: number;
-  orderedUnits: number;
-  orderRevenue: number;
-};
-
-function createProductSignal(): ProductSignal {
-  return {
-    views: 0,
-    clicks: 0,
-    addToCart: 0,
-    orderedUnits: 0,
-    orderRevenue: 0,
-  };
-}
-
-function normalizeCartProductId(id: string | null | undefined) {
-  return String(id ?? "")
-    .split("::")[0]
-    .replace(/^gift-/, "")
-    .trim();
-}
-
-function addSignal(
-  map: Map<string, ProductSignal>,
-  productId: string,
-  apply: (signal: ProductSignal) => void,
-) {
-  if (!productId) return;
-  const existing = map.get(productId) ?? createProductSignal();
-  apply(existing);
-  map.set(productId, existing);
-}
-
 export default async function Home() {
-  const baseUrl = await getRequestSiteUrl();
-  const signalWindow = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  const baseUrl = SITE_URL;
 
-  const [
-    perfumes,
-    heroSlides,
-    productViewStats,
-    productClickRows,
-    cartRows,
-    orderRows,
-  ] = await Promise.all([
+  const [perfumes, heroSlides] = await Promise.all([
     getAllPublicProducts(),
     getImagesByUsage("hero"),
-    db
-      .select({
-        path: behavioralEvents.path,
-        views: sql<number>`count(*)`.as("views"),
-      })
-      .from(behavioralEvents)
-      .where(
-        and(
-          gte(behavioralEvents.createdAt, signalWindow),
-          sql`${behavioralEvents.path} LIKE '/product/%'`,
-        ),
-      )
-      .groupBy(behavioralEvents.path)
-      .orderBy(desc(sql`views`))
-      .catch(() => []),
-    db
-      .select({
-        data: consentEvents.data,
-        createdAt: consentEvents.createdAt,
-      })
-      .from(consentEvents)
-      .where(gte(consentEvents.createdAt, signalWindow))
-      .orderBy(desc(consentEvents.createdAt))
-      .limit(10000)
-      .catch(() => []),
-    db
-      .select({
-        eventType: cartEvents.eventType,
-        productId: cartEvents.productId,
-      })
-      .from(cartEvents)
-      .where(gte(cartEvents.createdAt, signalWindow))
-      .orderBy(desc(cartEvents.createdAt))
-      .limit(10000)
-      .catch(() => []),
-    db
-      .select({
-        status: orders.status,
-        cartSnapshot: orders.cartSnapshot,
-      })
-      .from(orders)
-      .where(gte(orders.createdAt, signalWindow))
-      .orderBy(desc(orders.createdAt))
-      .limit(5000)
-      .catch(() => []),
   ]);
-
-  const productSignals = new Map<string, ProductSignal>();
-  const productPathToId = new Map<string, string>();
-
-  perfumes.forEach((product) => {
-    const path = getProductPath({
-      id: product.id,
-      name: product.name,
-      inspiration: product.inspiration,
-      inspirationBrand: product.inspirationBrand,
-    });
-    productPathToId.set(path, product.id);
-  });
-
-  productViewStats.forEach((stat) => {
-    const path = String(stat.path ?? "").split("?")[0];
-    const productId = productPathToId.get(path);
-    if (productId) {
-      addSignal(productSignals, productId, (signal) => {
-        signal.views += Number(stat.views) || 0;
-      });
-    }
-  });
-
-  productClickRows.forEach((row) => {
-    if (row.data?.eventType !== "product_click") return;
-    const productId = normalizeCartProductId(String(row.data?.productId ?? ""));
-    addSignal(productSignals, productId, (signal) => {
-      signal.clicks += 1;
-    });
-  });
-
-  cartRows
-    .filter((row) => row.eventType === "add_to_cart")
-    .forEach((row) => {
-      const productId = normalizeCartProductId(row.productId);
-      addSignal(productSignals, productId, (signal) => {
-        signal.addToCart += 1;
-      });
-    });
-
-  orderRows
-    .filter((row) => row.status !== "cancelled")
-    .forEach((order) => {
-      order.cartSnapshot?.forEach((item) => {
-        if (item.isGift) return;
-        const productId = normalizeCartProductId(item.id);
-        addSignal(productSignals, productId, (signal) => {
-          signal.orderedUnits += item.quantity;
-          signal.orderRevenue += item.price * item.quantity;
-        });
-      });
-    });
 
   function getProductScore(product: {
     id: string;
     badges?: { bestSeller?: boolean; humeSpecial?: boolean };
   }) {
-    const signal = productSignals.get(product.id) ?? createProductSignal();
-    const badgeBoost = product.badges?.bestSeller
+    return product.badges?.bestSeller
       ? 35
       : product.badges?.humeSpecial
         ? 18
         : 0;
-
-    return (
-      signal.orderedUnits * 120 +
-      signal.orderRevenue / 20 +
-      signal.addToCart * 35 +
-      signal.clicks * 14 +
-      signal.views * 3 +
-      badgeBoost
-    );
   }
 
   const homepagePerfumes: HomepagePerfumeCardData[] = perfumes

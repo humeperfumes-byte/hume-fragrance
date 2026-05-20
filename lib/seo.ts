@@ -30,9 +30,9 @@ export const getOrganizationSchema = (baseUrl = SITE_URL) => ({
   "@id": siteUrlForBase(baseUrl, "/#organization"),
   name: "HUME Fragrance",
   url: baseUrl,
-  logo: siteUrlForBase(baseUrl, "/images/logo.png"),
+  logo: siteUrlForBase(baseUrl, "/icon.png"),
   description:
-    "HUME Fragrance is an Indian perfume brand from Kannauj that creates premium inspired alternatives to designer fragrances. EDP concentration with 8-12 hour longevity, designed for Indian weather. Starting ₹499.",
+    "HUME Fragrance is an Indian perfume brand from Kannauj that creates premium inspired alternatives to designer fragrances. EDP concentration with 8-12 hour longevity, designed for Indian weather. Starting INR 499.",
   sameAs: ["https://www.instagram.com/hume.perfume/", "https://wa.me/919559024822"],
   contactPoint: {
     "@type": "ContactPoint",
@@ -56,7 +56,7 @@ export const getWebSiteSchema = (baseUrl = SITE_URL) => ({
   name: "HUME Fragrance",
   url: baseUrl,
   description:
-    "Premium inspired perfumes for Indian weather with 8-12 hour longevity. Starting ₹499.",
+    "Premium inspired perfumes for Indian weather with 8-12 hour longevity. Starting INR 499.",
   dateModified: new Date().toISOString(),
   potentialAction: {
     "@type": "SearchAction",
@@ -82,6 +82,10 @@ export const getProductSchema = (
       date: string;
     }[];
     category: string;
+    badges?: {
+      limitedStock?: boolean;
+      soldOut?: boolean;
+    };
     size?: string;
     gender?: string;
     notes?: {
@@ -110,6 +114,12 @@ export const getProductSchema = (
   const priceValidUntil = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)
     .toISOString()
     .split("T")[0];
+
+  const availability = product.badges?.soldOut
+    ? "https://schema.org/OutOfStock"
+    : product.badges?.limitedStock
+    ? "https://schema.org/LimitedAvailability"
+    : "https://schema.org/InStock";
 
   return {
     "@context": "https://schema.org",
@@ -152,7 +162,7 @@ export const getProductSchema = (
       "@type": "Offer",
       price: product.price.toFixed(2),
       priceCurrency: "INR",
-      availability: "https://schema.org/InStock",
+      availability,
       url: productUrl,
       priceValidUntil,
       itemCondition: "https://schema.org/NewCondition",

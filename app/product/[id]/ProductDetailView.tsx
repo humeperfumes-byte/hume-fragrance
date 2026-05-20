@@ -175,6 +175,11 @@ export default function ProductDetailView({
                     Limited Stock
                   </span>
                 )}
+                {perfume.badges?.soldOut && (
+                  <span className="inline-flex items-center border border-red-500/50 bg-red-50 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-red-700">
+                    Sold Out
+                  </span>
+                )}
               </div>
 
               <div className="text-center">

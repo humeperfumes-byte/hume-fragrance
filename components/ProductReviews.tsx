@@ -95,9 +95,15 @@ const ProductReviews = ({ reviews, productName, inspiration }: ProductReviewsPro
 
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <StarRating rating={review.rating} />
-                  <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-700">
-                    Verified
-                  </span>
+                  {review.verified ? (
+                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-700">
+                      Verified Buyer
+                    </span>
+                  ) : (
+                    <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+                      Review
+                    </span>
+                  )}
                 </div>
 
                 <p className="text-body text-muted-foreground mb-5 leading-relaxed" itemProp="reviewBody">
@@ -155,4 +161,3 @@ const ProductReviews = ({ reviews, productName, inspiration }: ProductReviewsPro
 };
 
 export default ProductReviews;
-

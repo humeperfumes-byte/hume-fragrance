@@ -4,6 +4,75 @@ import { orders } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAdminToken } from "@/lib/admin-auth";
 
+type OrderPatch = Partial<typeof orders.$inferInsert>;
+
+const textFields = [
+  "status",
+  "checkoutChannel",
+  "paymentMethod",
+  "shippingMethod",
+  "fulfillmentCarrier",
+  "trackingNumber",
+  "trackingUrl",
+  "trackingStatus",
+  "fullName",
+  "phone",
+  "email",
+  "addressLine1",
+  "addressLine2",
+  "city",
+  "state",
+  "pincode",
+  "notes",
+  "appliedCouponCode",
+  "whatsappMessage",
+] as const;
+
+const moneyFields = ["subtotal", "shippingFee", "grandTotal"] as const;
+const dateFields = ["trackingLastCheckedAt", "shippedAt", "deliveredAt"] as const;
+
+function cleanText(value: unknown) {
+  if (value === null || value === undefined) return undefined;
+  const text = String(value).trim();
+  return text.length > 0 ? text : undefined;
+}
+
+function cleanMoney(value: unknown) {
+  if (value === null || value === undefined || value === "") return undefined;
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue.toFixed(2) : undefined;
+}
+
+function cleanDate(value: unknown) {
+  if (!value) return undefined;
+  const date = value instanceof Date ? value : new Date(String(value));
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+function buildOrderPatch(data: Record<string, unknown>): OrderPatch {
+  const patch: OrderPatch = { updatedAt: new Date() };
+
+  textFields.forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(data, field)) {
+      patch[field] = cleanText(data[field]);
+    }
+  });
+
+  moneyFields.forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(data, field)) {
+      patch[field] = cleanMoney(data[field]);
+    }
+  });
+
+  dateFields.forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(data, field)) {
+      patch[field] = cleanDate(data[field]);
+    }
+  });
+
+  return patch;
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -19,11 +88,10 @@ export async function PATCH(
       return NextResponse.json({ error: "Order ID is required" }, { status: 400 });
     }
 
-    // Filter out restricted fields if any, but for admin we allow most
-    const { id: _id, orderNumber: _orderNumber, createdAt: _createdAt, ...updateData } = data;
+    const updateData = buildOrderPatch(data);
 
     await db.update(orders)
-      .set({ ...updateData, updatedAt: new Date() })
+      .set(updateData)
       .where(eq(orders.id, orderId));
 
     return NextResponse.json({ ok: true });

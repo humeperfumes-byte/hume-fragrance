@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Mail, MessageCircle, Search, Filter, ExternalLink, ShoppingCart, Package, Zap, AlertTriangle } from "lucide-react";
-import { buildAdminEmailHref, buildAdminWhatsAppHref } from "@/lib/admin-message-templates";
+import { buildAdminEmailHref, buildAdminWhatsAppHref, buildGmailComposeHref } from "@/lib/admin-message-templates";
 
 type CrossRef = {
   hasCheckout: boolean;
@@ -100,8 +100,8 @@ export function buildWhatsAppUrlFromEmail(email: string, couponCode: string): st
 }
 
 export function buildMailtoUrl(email: string, couponCode: string): string {
-  const subject = encodeURIComponent(`Your HUME Fragrance Coupon Code: ${couponCode}`);
-  const body = encodeURIComponent(
+  const subject = `Your HUME Fragrance Coupon Code: ${couponCode}`;
+  const body =
     `Hi there!\n\n` +
     `Thank you for claiming your HUME Fragrance coupon code!\n\n` +
     `Your exclusive code: ${couponCode}\n\n` +
@@ -109,10 +109,9 @@ export function buildMailtoUrl(email: string, couponCode: string): string {
     `Would you like help choosing the perfect scent? Simply reply to this email and we'll guide you based on your preferences.\n\n` +
     `Shop now: https://humefragrance.com\n\n` +
     `Warm regards,\n` +
-    `Team HUME Fragrance`
-  );
+    `Team HUME Fragrance`;
 
-  return `mailto:${email}?subject=${subject}&body=${body}`;
+  return buildGmailComposeHref(email, subject, body);
 }
 
 function JourneyBadges({ xref }: { xref: CrossRef }) {

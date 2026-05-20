@@ -235,6 +235,7 @@ export default function ScentQuiz({ perfumes }: { perfumes: PerfumeData[] }) {
                   index={index}
                   bestSeller={perfume.badges?.bestSeller}
                   limitedStock={perfume.badges?.limitedStock}
+                  soldOut={perfume.badges?.soldOut}
                   hidePrice
                 />
               ))}

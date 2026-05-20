@@ -1,5 +1,6 @@
 import { config } from "dotenv";
 config({ path: ".env.local" });
+config({ path: ".env", override: false });
 
 import { sendOrderConfirmationEmail, OrderEmailData } from "../lib/email/send-order-confirmation";
 

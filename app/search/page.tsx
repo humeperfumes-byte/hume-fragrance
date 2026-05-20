@@ -18,7 +18,7 @@ export async function generateMetadata({ searchParams }: SearchPageProps): Promi
   return {
     title: query ? `Search results for ${query} | HUME Fragrance` : "Search HUME Fragrance",
     description:
-      "Search HUME Fragrance perfumes by name, notes, inspiration, occasion, category, and scent family.",
+      "Search HUME Fragrance perfumes by name, inspiration, category, and gender.",
     alternates: {
       canonical: query ? `${baseUrl}/search?q=${encodeURIComponent(query)}` : `${baseUrl}/search`,
     },
@@ -47,14 +47,6 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             product.inspirationBrand,
             product.category,
             product.gender,
-            product.description,
-            product.seoDescription,
-            product.seoKeywords.join(" "),
-            product.notes.top.join(" "),
-            product.notes.heart.join(" "),
-            product.notes.base.join(" "),
-            product.longevity.season.join(" "),
-            product.longevity.occasion.join(" "),
           ].join(" "),
         );
         return query
@@ -76,12 +68,12 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             {query ? `Search results for "${params?.q}"` : "Search Perfumes"}
           </h1>
           <p className="max-w-3xl text-body text-muted-foreground">
-            Find HUME perfumes by notes, scent family, occasion, inspiration,
-            performance, or product name.
+            Find HUME perfumes by product name, inspiration, category, or
+            gender.
           </p>
           {!query ? (
             <div className="mt-6 flex flex-wrap gap-3">
-              {["fresh", "office", "date night", "sauvage", "vanilla", "long lasting"].map((term) => (
+              {["sauvage", "imagine", "ombre", "ultra male", "unisex", "hume special"].map((term) => (
                 <Link
                   key={term}
                   href={`/search?q=${encodeURIComponent(term)}`}
@@ -132,6 +124,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   bestSeller={product.badges?.bestSeller}
                   humeSpecial={product.badges?.humeSpecial}
                   limitedStock={product.badges?.limitedStock}
+                  soldOut={product.badges?.soldOut}
                   disableEntranceAnimation
                 />
               ))}
@@ -139,8 +132,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           ) : (
             <div className="border border-border p-8">
               <p className="text-muted-foreground">
-                No exact match found. Try a note, occasion, or inspiration such
-                as fresh, office, date night, vanilla, oud, or Sauvage.
+                No exact match found. Try a product name, inspiration, category,
+                or gender such as Sauvage, Imagine, Ombre, or Unisex.
               </p>
             </div>
           )}

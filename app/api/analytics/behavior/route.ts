@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { behavioralEvents, sessionIntelligence, sectionAttribution } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
-import { isInternalAdminRequest } from "@/lib/admin-data-filters";
+import { isAdminCapturedPath, isInternalAdminRequest } from "@/lib/admin-data-filters";
 
 // ── Intent Scoring Weights ──────────────────────────────────
 const INTENT_WEIGHTS: Record<string, number> = {
@@ -51,10 +51,6 @@ const ABANDONMENT_SIGNALS: Record<string, { cause: string; weight: number }> = {
 };
 
 export async function POST(req: NextRequest) {
-  if (isInternalAdminRequest(req)) {
-    return NextResponse.json({ ok: true, skipped: "admin_traffic" });
-  }
-
   try {
     const body = await req.json();
     const { sessionId, events } = body;
@@ -62,7 +58,7 @@ export async function POST(req: NextRequest) {
     if (!sessionId) return NextResponse.json({ error: "No session" }, { status: 400 });
 
     // Support both batched events and legacy single events
-    const eventList: Array<{
+    const rawEventList: Array<{
       eventType: string;
       path?: string;
       scrollDepth?: number;
@@ -73,7 +69,20 @@ export async function POST(req: NextRequest) {
       payload?: Record<string, unknown>;
     }> = Array.isArray(events) ? events : body.eventType ? [body] : [];
 
-    if (eventList.length === 0) return NextResponse.json({ error: "No events" }, { status: 400 });
+    const eventList = rawEventList.filter((event) => !isAdminCapturedPath(event.path));
+
+    if (rawEventList.length === 0) return NextResponse.json({ error: "No events" }, { status: 400 });
+
+    if (eventList.length === 0) {
+      return NextResponse.json({ ok: true, skipped: "admin_page" });
+    }
+
+    if (
+      isInternalAdminRequest(req) &&
+      eventList.every((event) => event.payload?.source === "admin")
+    ) {
+      return NextResponse.json({ ok: true, skipped: "admin_traffic" });
+    }
 
     const ipAddress = req.headers.get("x-forwarded-for") || "0.0.0.0";
     const userAgent = req.headers.get("user-agent") || "unknown";

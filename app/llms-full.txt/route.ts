@@ -10,11 +10,6 @@ function formatDate(date: Date): string {
   return date.toISOString().split("T")[0]; // YYYY-MM-DD
 }
 
-function daysAgo(n: number): string {
-  const d = new Date(Date.now() - n * 24 * 60 * 60 * 1000);
-  return formatDate(d);
-}
-
 export async function GET() {
   const baseUrl = await getRequestSiteUrl();
   const products = await getAllPublicProducts();

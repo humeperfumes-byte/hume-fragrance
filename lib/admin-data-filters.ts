@@ -54,6 +54,20 @@ export function isInternalAdminRequest(request: NextRequest): boolean {
   return request.cookies.get("admin_token")?.value === expectedToken;
 }
 
+export function getCapturedPathname(path: string | null | undefined): string {
+  if (!path) return "";
+
+  try {
+    return new URL(path).pathname;
+  } catch {
+    return path.split("?")[0] || "";
+  }
+}
+
+export function isAdminCapturedPath(path: string | null | undefined): boolean {
+  return getCapturedPathname(path).startsWith("/admin");
+}
+
 export function isExcludedAdminDataRow(row: AdminDataRow): boolean {
   const config = exclusionConfig();
 

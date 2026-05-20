@@ -28,5 +28,6 @@ export type HomepagePerfumeCardData = {
     bestSeller?: boolean;
     humeSpecial?: boolean;
     limitedStock?: boolean;
+    soldOut?: boolean;
   };
 };

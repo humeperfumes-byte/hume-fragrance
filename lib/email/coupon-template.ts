@@ -1,14 +1,18 @@
-import { SITE_URL } from "@/lib/site";
+import { SITE_URL } from "../site";
+
+export function buildCouponEmailSubject(couponCode: string) {
+  return `Your HUME early bird code: ${couponCode}`;
+}
 
 export function buildCouponEmailText(couponCode: string) {
   return [
     "HUME FRAGRANCE",
     "",
-    "Your starting code is ready.",
+    "Your early bird code is ready.",
     "",
     `Coupon Code: ${couponCode}`,
     "",
-    "Use this code at checkout on humefragrance.com.",
+    "Use this code at checkout to unlock 10% off your order.",
     "",
     "Need help choosing a scent?",
     "WhatsApp: +91 95590 24822",
@@ -50,7 +54,7 @@ export function buildCouponEmailHtml(couponCode: string, recipientEmail: string)
                   <tr>
                     <td style="padding:12px 16px 18px;background:#141414;">
                       <p style="margin:0 0 10px;font-size:11px;letter-spacing:0.22em;text-transform:uppercase;opacity:0.85;">Hume Fragrance</p>
-                      <img src="${heroImageUrl}" alt="HUME B3G1 Offer" width="680" style="display:block;width:100%;max-width:680px;height:auto;border:0;outline:none;text-decoration:none;border-radius:12px;" />
+                      <img src="${heroImageUrl}" alt="HUME early bird offer" width="680" style="display:block;width:100%;max-width:680px;height:auto;border:0;outline:none;text-decoration:none;border-radius:12px;" />
                     </td>
                   </tr>
                 </table>
@@ -59,7 +63,7 @@ export function buildCouponEmailHtml(couponCode: string, recipientEmail: string)
             <tr>
               <td style="padding:18px 16px 10px;background:#141414;">
                 <p style="margin:0 0 12px;font-size:30px;line-height:1.15;font-weight:300;color:#ffffff;">Hi ${greetingName},</p>
-                <p style="margin:0 0 16px;font-size:18px;line-height:1.6;color:#d6d2cb;">Use this code during checkout to activate your first-order offer.</p>
+                <p style="margin:0 0 16px;font-size:18px;line-height:1.6;color:#d6d2cb;">Use this code during checkout to activate your early bird 10% offer.</p>
                 <div style="margin:0 0 18px;padding:18px 16px;border:1px dashed rgba(255,255,255,0.3);border-radius:14px;background:rgba(255,255,255,0.04);text-align:center;">
                   <p style="margin:0 0 8px;font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:#d8d1c3;">Coupon Code</p>
                   <p style="margin:0;font-size:34px;letter-spacing:0.2em;font-weight:700;color:#ffffff;">${couponCode}</p>

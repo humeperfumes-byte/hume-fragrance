@@ -120,6 +120,7 @@ export default async function AlternativeIntentPage({
                   index={idx}
                   bestSeller={perfume.badges?.bestSeller}
                   limitedStock={perfume.badges?.limitedStock}
+                  soldOut={perfume.badges?.soldOut}
                 />
               ))}
             </div>

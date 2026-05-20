@@ -154,6 +154,7 @@ export default async function BestProgrammaticPage({
                     index={index}
                     bestSeller={product.badges?.bestSeller}
                     limitedStock={product.badges?.limitedStock}
+                    soldOut={product.badges?.soldOut}
                   />
                 ))}
               </div>

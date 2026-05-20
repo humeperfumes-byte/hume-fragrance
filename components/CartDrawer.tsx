@@ -20,10 +20,13 @@ import ImageWithFallback from "@/components/ImageWithFallback";
 import { formatINR } from "@/lib/currency";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { stripRegionPrefix } from "@/lib/region-routing";
+import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 import {
   calculateCouponDiscount,
   calculateWelcomeBackDiscount,
   formatRewardTimeRemaining,
+  getEffectiveWelcomeBackLabel,
+  getEffectiveWelcomeBackPercent,
   isCouponEligible as isCartCouponEligible,
   parseBuyGetConfig,
   trackWelcomeBackVisit,
@@ -40,6 +43,7 @@ interface Coupon {
   minSubtotal: number;
   active: boolean;
   displayInCart?: boolean;
+  welcomeBackMode?: string;
 }
 
 const APPLIED_COUPON_STORAGE_KEY = "hume_applied_coupon_code";
@@ -93,8 +97,8 @@ const CartDrawer = () => {
 
   const freeDeliveryThreshold = 500;
   const deliveryChargeBelowThreshold = 100;
-  const firstGiftThreshold = 1299;
-  const secondGiftThreshold = 1899;
+  const firstGiftThreshold = 1499;
+  const secondGiftThreshold = 2099;
 
   const [visibleCoupons, setVisibleCoupons] = useState<Coupon[]>([]);
   const [allCoupons, setAllCoupons] = useState<Coupon[]>([]);
@@ -146,8 +150,18 @@ const CartDrawer = () => {
     welcomeBackReward,
     subtotal,
     normalizedCouponDiscount,
+    appliedCoupon,
   );
-  const shippingFee = welcomeBackReward ? 0 : regularShippingFee;
+  const effectiveWelcomeBackPercent = getEffectiveWelcomeBackPercent(
+    welcomeBackReward,
+    appliedCoupon,
+  );
+  const welcomeBackLabel = getEffectiveWelcomeBackLabel(
+    welcomeBackReward,
+    appliedCoupon,
+  );
+  const hasWelcomeBackBenefit = effectiveWelcomeBackPercent > 0;
+  const shippingFee = hasWelcomeBackBenefit ? 0 : regularShippingFee;
   const shippingSavings = Math.max(0, regularShippingFee - shippingFee);
   const grandTotal =
     Math.max(0, subtotal - normalizedCouponDiscount - welcomeBackDiscount) +
@@ -161,15 +175,15 @@ const CartDrawer = () => {
       ? Math.max(0, appliedCoupon.value)
       : 0;
   const stackedPercentOff =
-    appliedPercentOff + (welcomeBackReward?.percent ?? 0);
-  const rewardTimeRemaining = welcomeBackReward
+    appliedPercentOff + effectiveWelcomeBackPercent;
+  const rewardTimeRemaining = welcomeBackReward && hasWelcomeBackBenefit
     ? Math.max(0, welcomeBackReward.expiresAt - rewardNow)
     : 0;
   const rewardTease =
     welcomeBackReward?.tier === 10
       ? "Still deciding? Bigger secret unlocked ;)"
       : "2nd visit? Secret reward unlocked ;)";
-  const isUrgentReward = welcomeBackReward?.tier === 10;
+  const isUrgentReward = effectiveWelcomeBackPercent === 10;
 
   const unlockedGiftCount =
     subtotal >= secondGiftThreshold
@@ -213,6 +227,9 @@ const CartDrawer = () => {
     if (typeof window === "undefined") return;
     const result = trackWelcomeBackVisit(window.localStorage);
     setWelcomeBackReward(result.reward);
+    if (result.reward) {
+      window.dispatchEvent(new CustomEvent("hume:welcome-back-reward-sync"));
+    }
 
     if (result.justUnlocked && result.reward) {
       window.dispatchEvent(
@@ -394,7 +411,6 @@ const CartDrawer = () => {
       setAppliedCouponCode(null);
       toast({
         title: "Coupon removed",
-        description: `${coupon.code} has been removed.`,
       });
       return;
     }
@@ -417,7 +433,6 @@ const CartDrawer = () => {
     setAppliedCouponCode(coupon.code);
     toast({
       title: "Coupon applied",
-      description: `${coupon.code} has been applied.`,
     });
   };
 
@@ -461,18 +476,14 @@ const CartDrawer = () => {
     setCouponInput("");
     toast({
       title: "Coupon applied",
-      description: `${coupon.code} has been applied.`,
     });
   };
 
   const handleContinueCheckout = () => {
     setIsCartOpen(false);
     router.prefetch("/checkout");
+    showNavigationLoadingToast("Opening checkout");
     router.push("/checkout");
-    toast({
-      title: "Continue to checkout",
-      description: "Add your delivery details to place the order.",
-    });
   };
 
   const renderSidebarCartLayout = () => (
@@ -518,6 +529,7 @@ const CartDrawer = () => {
               type="button"
               onClick={() => {
                 setIsCartOpen(false);
+                showNavigationLoadingToast();
                 router.push("/shop");
               }}
               className="mt-6 h-11 bg-black px-6 text-sm font-semibold text-white transition hover:bg-black/85"
@@ -527,7 +539,7 @@ const CartDrawer = () => {
           </div>
         ) : (
           <>
-            {welcomeBackReward && rewardTimeRemaining > 0 ? (
+            {welcomeBackReward && welcomeBackLabel && rewardTimeRemaining > 0 ? (
               <section
                 className={`mb-4 overflow-hidden border text-white shadow-[0_14px_34px_rgba(21,17,12,0.16)] ${
                   isUrgentReward
@@ -538,7 +550,7 @@ const CartDrawer = () => {
                 <div className="flex items-start justify-between gap-4 px-4 py-3">
                   <div>
                     <p className="text-sm font-semibold text-white">
-                      Extra {welcomeBackReward.percent}% off + free delivery
+                      Extra {effectiveWelcomeBackPercent}% off + free delivery
                     </p>
                     <p className="mt-1.5 w-full text-xs leading-snug text-white/65">
                       <span className="mr-1.5 text-[13px] text-white opacity-100">
@@ -638,16 +650,7 @@ const CartDrawer = () => {
                       exit={{ opacity: 0, y: -12 }}
                       className="grid grid-cols-[82px_minmax(0,1fr)_auto] gap-3 py-4"
                     >
-                      <div
-                        className="relative h-20 w-20 overflow-hidden bg-[#eee9e3]"
-                        onClick={() => {
-                          if (!item.isGift) return;
-                          setIsCartOpen(false);
-                          router.push(
-                            `/accessory/${item.id.replace(/^gift-/, "")}`,
-                          );
-                        }}
-                      >
+                      <div className="relative h-20 w-20 overflow-hidden bg-[#eee9e3]">
                         <ImageWithFallback
                           src={withCloudinaryTransforms(
                             item.image || "/images/logo.png",
@@ -666,7 +669,9 @@ const CartDrawer = () => {
                         <p className="truncate text-sm font-semibold leading-tight">
                           {item.name}
                         </p>
-                        <p className="mt-1 line-clamp-2 text-xs leading-snug text-black/50">
+                        <p
+                          className={`${item.isGift ? "hidden " : ""}mt-1 line-clamp-2 text-xs leading-snug text-black/50`}
+                        >
                           {item.inspiration} {item.size ? `• ${item.size}` : ""}
                         </p>
 
@@ -997,6 +1002,7 @@ const CartDrawer = () => {
                   type="button"
                   onClick={() => {
                     setIsCartOpen(false);
+                    showNavigationLoadingToast();
                     router.push("/kit-pack");
                   }}
                   className="flex h-9 w-9 items-center justify-center rounded-full border border-black/20 transition hover:bg-black hover:text-white"
@@ -1048,10 +1054,10 @@ const CartDrawer = () => {
                     </span>
                   </div>
                 ) : null}
-                {welcomeBackReward && welcomeBackDiscount > 0 ? (
+                {welcomeBackReward && welcomeBackLabel && welcomeBackDiscount > 0 ? (
                   <div className="flex justify-between">
                     <span className="text-black/55">
-                      {welcomeBackReward.label}
+                      {welcomeBackLabel}
                     </span>
                     <span className="font-semibold text-[#0f6b46]">
                       -{formatINR(welcomeBackDiscount)}
@@ -1169,7 +1175,7 @@ const CartDrawer = () => {
                   isUrgentReward ? "text-red-200" : "text-emerald-200"
                 }`}
               >
-                {welcomeBackReward.label} Unlocked
+                {welcomeBackLabel ?? welcomeBackReward.label} Unlocked
               </motion.p>
 
               <motion.div
@@ -1184,7 +1190,7 @@ const CartDrawer = () => {
               >
                 <div className="flex items-end justify-center gap-1 text-white">
                   <span className="font-sans text-[6.8rem] font-semibold leading-[0.8]">
-                    {welcomeBackReward.percent}
+                    {effectiveWelcomeBackPercent || welcomeBackReward.percent}
                   </span>
                   <div className="pb-2 text-left">
                     <span className="block font-sans text-4xl font-semibold leading-none">

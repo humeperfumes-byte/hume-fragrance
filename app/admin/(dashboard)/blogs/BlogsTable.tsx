@@ -26,7 +26,7 @@ export function BlogsTable({ initialPosts }: { initialPosts: BlogPost[] }) {
       setPosts(posts.filter(p => p.slug !== slug));
       toast({ title: "Blog post deleted" });
       router.refresh();
-    } catch (err) {
+    } catch {
       toast({ title: "Error deleting post", variant: "destructive" });
     }
   };

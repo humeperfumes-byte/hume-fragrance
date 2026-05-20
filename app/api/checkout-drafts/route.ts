@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { checkoutDrafts } from "@/db/schema";
 import { resolveIndiaAwareCountry } from "@/lib/admin-market";
-import { isInternalAdminRequest } from "@/lib/admin-data-filters";
+import { isAdminCapturedPath, isInternalAdminRequest } from "@/lib/admin-data-filters";
 
 const cartItemSchema = z.object({
   id: z.string().min(1).max(255),
@@ -13,6 +13,15 @@ const cartItemSchema = z.object({
   quantity: z.number().int().nonnegative(),
   price: z.number().nonnegative(),
   isGift: z.boolean().optional(),
+  kitSelections: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(255),
+        name: z.string().min(1).max(255),
+        inspiration: z.string().max(255).optional(),
+      }),
+    )
+    .optional(),
 });
 
 const checkoutDraftSchema = z.object({
@@ -47,14 +56,37 @@ const checkoutDraftSchema = z.object({
     .default({}),
 });
 
-export async function POST(request: NextRequest) {
-  if (isInternalAdminRequest(request)) {
-    return NextResponse.json({ ok: true, skipped: "admin_traffic" });
-  }
+function getRequestOrigin(request: NextRequest) {
+  const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const host = request.headers.get("host");
+  const requestUrl = new URL(request.url);
+  return `${forwardedProto}://${forwardedHost || host || requestUrl.host}`;
+}
 
+function getCapturedPath(request: NextRequest, path?: string) {
+  if (path?.startsWith("http://") || path?.startsWith("https://")) {
+    return path;
+  }
+  if (path?.startsWith("/")) {
+    return `${getRequestOrigin(request)}${path}`;
+  }
+  return path || request.url;
+}
+
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const data = checkoutDraftSchema.parse(body);
+
+    const capturedPath = getCapturedPath(request, data.path);
+    if (isAdminCapturedPath(data.path) || isAdminCapturedPath(capturedPath)) {
+      return NextResponse.json({ ok: true, skipped: "admin_page" });
+    }
+
+    if (isInternalAdminRequest(request) && data.acquisitionSource === "admin") {
+      return NextResponse.json({ ok: true, skipped: "admin_traffic" });
+    }
 
     const forwardedFor = request.headers.get("x-forwarded-for");
     const realIp = request.headers.get("x-real-ip");
@@ -77,7 +109,7 @@ export async function POST(request: NextRequest) {
         id: crypto.randomUUID(),
         sessionId: data.sessionId,
         status: data.status,
-        path: data.path ?? null,
+        path: capturedPath,
         acquisitionSource: data.acquisitionSource ?? null,
         acquisitionCategory: data.acquisitionCategory ?? null,
         acquisitionReferrerHost: data.acquisitionReferrerHost ?? null,
@@ -110,7 +142,7 @@ export async function POST(request: NextRequest) {
         target: checkoutDrafts.sessionId,
         set: {
           status: data.status,
-          path: data.path ?? null,
+          path: capturedPath,
           acquisitionSource: data.acquisitionSource ?? null,
           acquisitionCategory: data.acquisitionCategory ?? null,
           acquisitionReferrerHost: data.acquisitionReferrerHost ?? null,

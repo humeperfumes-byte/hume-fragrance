@@ -23,8 +23,7 @@ export default function AccessoryDetailClient({ accessory }: { accessory: Access
       size: "Accessory",
     });
     toast({
-      title: "Added to bag",
-      description: `${accessory.name} has been added to your bag.`,
+      title: "Product added to cart",
     });
   };
 

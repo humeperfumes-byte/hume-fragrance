@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { formatINR } from "@/lib/currency";
 import { buildAdminEmailHref, buildAdminWhatsAppHref, type AdminLeadTemplate } from "@/lib/admin-message-templates";
+import type { CapturedDomainKind } from "@/lib/captured-domain";
 
 export type CartLeadRow = {
   sessionId: string;
@@ -26,6 +27,9 @@ export type CartLeadRow = {
   phone: string | null;
   normalizedPhone: string | null;
   email: string | null;
+  domainLabel: string;
+  domainHost: string | null;
+  domainKind: CapturedDomainKind;
   latestActivity: string;
   activityCount: number;
   cartOpens: number;
@@ -84,6 +88,23 @@ function scoreClassName(score: number): string {
   return "text-white";
 }
 
+function domainClassName(kind: CapturedDomainKind): string {
+  switch (kind) {
+    case "india":
+      return "border-emerald-500/20 bg-emerald-500/10 text-emerald-200";
+    case "global":
+      return "border-sky-500/20 bg-sky-500/10 text-sky-200";
+    case "preview":
+      return "border-purple-500/20 bg-purple-500/10 text-purple-200";
+    case "local":
+      return "border-white/10 bg-white/[0.05] text-white/55";
+    case "unknown":
+      return "border-amber-500/20 bg-amber-500/10 text-amber-200";
+    default:
+      return "border-white/10 bg-white/[0.04] text-white/45";
+  }
+}
+
 export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("connected");
@@ -103,6 +124,8 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
         row.name?.toLowerCase().includes(q) ||
         row.phone?.toLowerCase().includes(q) ||
         row.email?.toLowerCase().includes(q) ||
+        row.domainLabel.toLowerCase().includes(q) ||
+        row.domainHost?.toLowerCase().includes(q) ||
         row.couponCode?.toLowerCase().includes(q) ||
         row.products.some((product) => product.name.toLowerCase().includes(q))
       );
@@ -187,6 +210,17 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
                     <p className="text-xs text-white/35">
                       {row.activityCount} active signal{row.activityCount === 1 ? "" : "s"}
                     </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`inline-flex rounded-full border px-2 py-1 text-xs font-semibold ${domainClassName(row.domainKind)}`}
+                        title={row.domainHost ?? undefined}
+                      >
+                        {row.domainLabel}
+                      </span>
+                      {row.domainHost ? (
+                        <span className="max-w-full truncate text-xs text-white/30">{row.domainHost}</span>
+                      ) : null}
+                    </div>
                     {row.sessionIds && row.sessionIds.length > 1 ? (
                       <p className="text-xs font-medium text-emerald-200/70">
                         Combined journey: {row.sessionIds.length} sessions
@@ -317,6 +351,8 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
                           value: row.checkoutValue || row.cartSignalValue,
                           checkoutField: row.checkoutLastEditedField,
                         })}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/10 px-3 text-xs font-semibold text-blue-300 transition-all hover:bg-blue-500/20 active:scale-[0.98]"
                       >
                         <Mail className="h-4 w-4" />

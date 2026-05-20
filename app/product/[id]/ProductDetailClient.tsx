@@ -9,11 +9,17 @@ import { formatINR } from "@/lib/currency";
 
 export default function ProductDetailClient({ perfume }: { perfume: PerfumeData }) {
   const { addItem } = useCart();
+  const isSoldOut = Boolean(perfume.badges?.soldOut);
   const whatsappMessage = encodeURIComponent(
     `Hello HUME Fragrance, I am interested in ${perfume.name} (${perfume.size}) inspired by ${perfume.inspirationBrand} ${perfume.inspiration}. Please help me order it.`,
   );
 
   const handleAddToCart = () => {
+    if (isSoldOut) {
+      toast({ title: "Currently sold out" });
+      return;
+    }
+
     addItem({
       id: perfume.id,
       name: perfume.name,
@@ -24,8 +30,7 @@ export default function ProductDetailClient({ perfume }: { perfume: PerfumeData 
       size: perfume.size || "50ml",
     });
     toast({
-      title: "Added to bag",
-      description: `${perfume.name} has been added to your bag.`,
+      title: "Product added to cart",
     });
   };
 
@@ -35,9 +40,13 @@ export default function ProductDetailClient({ perfume }: { perfume: PerfumeData 
         onClick={handleAddToCart}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        className="w-full py-4 bg-foreground text-background text-[11px] uppercase tracking-[0.28em] hover:opacity-90 transition-opacity"
+        className={`w-full py-4 text-[11px] uppercase tracking-[0.28em] transition-opacity ${
+          isSoldOut
+            ? "cursor-not-allowed bg-muted text-muted-foreground"
+            : "bg-foreground text-background hover:opacity-90"
+        }`}
       >
-        Add to Bag
+        {isSoldOut ? "Sold Out" : "Add to Bag"}
       </motion.button>
 
       <a
@@ -79,9 +88,13 @@ export default function ProductDetailClient({ perfume }: { perfume: PerfumeData 
           </div>
           <button
             onClick={handleAddToCart}
-            className="inline-flex min-w-[9rem] items-center justify-center bg-foreground px-6 py-3 text-[10px] uppercase tracking-[0.28em] text-background"
+            className={`inline-flex min-w-[9rem] items-center justify-center px-6 py-3 text-[10px] uppercase tracking-[0.28em] ${
+              isSoldOut
+                ? "cursor-not-allowed bg-muted text-muted-foreground"
+                : "bg-foreground text-background"
+            }`}
           >
-            Add to Bag
+            {isSoldOut ? "Sold Out" : "Add to Bag"}
           </button>
         </div>
       </div>

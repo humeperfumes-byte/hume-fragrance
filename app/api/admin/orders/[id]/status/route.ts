@@ -19,13 +19,40 @@ export async function PATCH(
       return NextResponse.json({ error: "Order ID and status are required" }, { status: 400 });
     }
 
-    const validStatuses = ["whatsapp_initiated", "processing", "shipped", "delivered", "cancelled"];
+    const validStatuses = [
+      "whatsapp_initiated",
+      "payment_pending",
+      "payment_authorized",
+      "payment_failed",
+      "refund_initiated",
+      "partially_refunded",
+      "refunded",
+      "refund_failed",
+      "payment_disputed",
+      "dispute_action_required",
+      "dispute_under_review",
+      "dispute_won",
+      "dispute_lost",
+      "dispute_closed",
+      "processing",
+      "shipped",
+      "delivered",
+      "cancelled",
+    ];
     if (!validStatuses.includes(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
+    const now = new Date();
+    const statusTimestamps =
+      status === "delivered"
+        ? { shippedAt: now, deliveredAt: now }
+        : status === "shipped"
+          ? { shippedAt: now }
+          : {};
+
     await db.update(orders)
-      .set({ status, updatedAt: new Date() })
+      .set({ status, ...statusTimestamps, updatedAt: now })
       .where(eq(orders.id, orderId));
 
     return NextResponse.json({ ok: true });

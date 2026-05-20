@@ -283,6 +283,124 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+  .hume-order-button {
+    --order-green-dark: #063d21;
+    --order-green-mid: #079447;
+    --order-green-pop: #17e66f;
+    --order-lime: #bcff4f;
+    isolation: isolate;
+    position: relative;
+    height: 3.15rem;
+    width: 100%;
+    overflow: visible;
+    border-radius: 9999px !important;
+    border: 1px solid rgba(207, 255, 223, 0.42);
+    background:
+      radial-gradient(circle at 28% 0%, rgba(188, 255, 79, 0.46), transparent 32%),
+      linear-gradient(135deg, var(--order-green-dark) 0%, var(--order-green-mid) 42%, var(--order-green-pop) 72%, #0bb85c 100%);
+    background-size: 180% 180%;
+    color: white;
+    font-weight: 550;
+    letter-spacing: 0.08em;
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.38),
+      inset 0 10px 22px rgba(255, 255, 255, 0.08),
+      inset 0 -14px 24px rgba(0, 48, 24, 0.32),
+      0 0 0 1px rgba(190, 255, 213, 0.50),
+      0 15px 34px rgba(5, 150, 75, 0.38),
+      0 0 38px rgba(23, 230, 111, 0.36);
+    transform: translateZ(0);
+    transition:
+      transform 240ms ease,
+      box-shadow 240ms ease,
+      border-color 240ms ease,
+      filter 240ms ease;
+    animation: hume-order-gradient 5.8s ease-in-out infinite;
+  }
+  .hume-order-button::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: -6px;
+    z-index: -1;
+    border-radius: inherit;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(13, 148, 75, 0.22)),
+      radial-gradient(circle at 50% 20%, rgba(188, 255, 79, 0.32), transparent 58%);
+    filter: blur(0.2px);
+    box-shadow:
+      0 1px 1px rgba(255, 255, 255, 0.50),
+      0 -12px 18px -12px rgba(0, 54, 28, 0.55) inset,
+      0 0 26px rgba(34, 197, 94, 0.26);
+  }
+  .hume-order-button::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 1px;
+    border-radius: inherit;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.34), transparent 43%),
+      linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, 0.44) 18%, transparent 36%);
+    background-size: 100% 100%, 240% 100%;
+    background-position: 0 0, -130% 0;
+    mix-blend-mode: screen;
+    opacity: 0.7;
+    animation: hume-order-sheen 3.2s ease-in-out infinite;
+  }
+  .hume-order-button:hover {
+    border-color: rgba(220, 255, 230, 0.72);
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.42),
+      inset 0 10px 22px rgba(255, 255, 255, 0.10),
+      inset 0 -14px 24px rgba(0, 48, 24, 0.26),
+      0 0 0 2px rgba(190, 255, 213, 0.58),
+      0 18px 42px rgba(5, 150, 75, 0.48),
+      0 0 48px rgba(23, 230, 111, 0.48);
+    filter: saturate(1.08) brightness(1.04);
+    transform: translateY(-1px);
+  }
+  .hume-order-button:active {
+    transform: translateY(0) scale(0.99);
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.30),
+      inset 0 -10px 18px rgba(0, 48, 24, 0.34),
+      0 0 0 1px rgba(190, 255, 213, 0.48),
+      0 10px 24px rgba(5, 150, 75, 0.34);
+  }
+  .hume-order-button:disabled {
+    cursor: wait;
+    filter: saturate(0.82);
+  }
+  .hume-order-icon,
+  .hume-order-text {
+    position: relative;
+    z-index: 1;
+  }
+  .hume-order-icon {
+    width: 1.05rem;
+    height: 1.05rem;
+    fill: rgba(255, 255, 255, 0.92);
+    filter:
+      drop-shadow(0 0 5px rgba(188, 255, 79, 0.65))
+      drop-shadow(0 1px 3px rgba(0, 52, 24, 0.45));
+    animation: hume-order-icon-flicker 2.3s ease-in-out infinite;
+  }
+  .hume-order-icon-right {
+    animation-delay: 0.65s;
+    transform: scaleX(-1);
+  }
+  .hume-order-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.04em;
+    font-weight: 500;
+    text-shadow: 0 1px 6px rgba(0, 58, 28, 0.45);
+  }
+  .hume-order-letter {
+    display: inline-block;
+    animation: hume-order-letter 2.4s ease-in-out infinite;
+  }
   .badge-marquee-track {
     animation: badge-marquee 12s linear infinite;
     will-change: transform;
@@ -314,6 +432,52 @@
     100% {
       opacity: 0;
       transform: translateX(720%) rotate(12deg);
+    }
+  }
+  @keyframes hume-order-sheen {
+    0% {
+      background-position: 0 0, -130% 0;
+      opacity: 0.42;
+    }
+    45% {
+      opacity: 0.72;
+    }
+    100% {
+      background-position: 0 0, 180% 0;
+      opacity: 0.42;
+    }
+  }
+  @keyframes hume-order-gradient {
+    0%,
+    100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+  @keyframes hume-order-icon-flicker {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.62;
+      transform: scale(0.94);
+    }
+  }
+  @keyframes hume-order-letter {
+    0%,
+    100% {
+      color: rgba(255, 255, 255, 0.72);
+      text-shadow: 0 1px 5px rgba(0, 58, 28, 0.32);
+    }
+    50% {
+      color: #fff;
+      text-shadow:
+        0 0 4px rgba(255, 255, 255, 0.72),
+        0 0 10px rgba(188, 255, 79, 0.55);
     }
   }
 }

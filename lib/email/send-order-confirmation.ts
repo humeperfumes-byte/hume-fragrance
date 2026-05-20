@@ -1,7 +1,5 @@
-import { Resend } from "resend";
 import { buildOrderConfirmationPreviewHtml } from "./order-confirmation-template";
-
-const FROM_EMAIL = "HUME Fragrance <support@humefragrance.com>";
+import { sendHumeEmail } from "./hume-mail-service";
 
 export interface OrderEmailData {
   orderNumber: string;
@@ -38,13 +36,6 @@ export async function sendOrderConfirmationEmail(order: OrderEmailData) {
   }
 
   try {
-    const resendApiKey = process.env.RESEND_API_KEY;
-    if (!resendApiKey) {
-      console.error("Missing RESEND_API_KEY environment variable.");
-      return false;
-    }
-    const resend = new Resend(resendApiKey);
-
     const addressParts = [
       order.details.addressLine1,
       order.details.addressLine2,
@@ -86,19 +77,38 @@ export async function sendOrderConfirmationEmail(order: OrderEmailData) {
       items,
     });
 
-    const sendResult = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: [order.details.email],
-      subject: `Order Confirmed: ${order.orderNumber}`,
+    const subject = `Order Confirmed: ${order.orderNumber}`;
+    const text = [
+      `Hi ${order.details.fullName || "there"},`,
+      "",
+      `Your HUME order ${order.orderNumber} is confirmed.`,
+      `Total: Rs. ${Number(order.grandTotal || 0).toFixed(2)}`,
+      `Shipping address: ${shippingAddress}`,
+      "",
+      "Need help? WhatsApp us at +91 95590 24822.",
+    ].join("\n");
+
+    const sendResult = await sendHumeEmail({
+      to: order.details.email,
+      subject,
+      text,
       html: html,
+      messageType: "order_confirmation",
+      relatedType: "order",
+      relatedId: order.orderNumber,
+      payload: {
+        paymentMethod: order.paymentMethod ?? null,
+        shippingMethod: order.shippingMethod ?? null,
+        itemCount: order.cartSnapshot.length,
+      },
     });
 
-    if (sendResult?.error) {
-      console.error("Resend API error:", sendResult.error);
+    if (!sendResult.sent) {
+      console.error("Order confirmation email failed:", sendResult.error);
       return false;
     }
 
-    return Boolean(sendResult?.data?.id);
+    return true;
   } catch (error) {
     console.error("Failed to send order confirmation email:", error);
     return false;

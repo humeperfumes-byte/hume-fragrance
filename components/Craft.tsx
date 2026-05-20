@@ -38,7 +38,7 @@ const Craft = () => {
               alt="HUME perfume collection"
               width={800}
               height={600}
-              loading="eager"
+              loading="lazy"
               className="w-full h-auto"
             />
           </motion.div>

@@ -1,4 +1,5 @@
 export type CouponType = string;
+export type CouponWelcomeBackMode = "allow" | "cap_5" | "disable";
 
 export interface CouponData {
   id: string;
@@ -10,6 +11,7 @@ export interface CouponData {
   minSubtotal: number;
   active: boolean;
   displayInCart: boolean;
+  welcomeBackMode: CouponWelcomeBackMode;
 }
 
 export const coupons: CouponData[] = [
@@ -23,6 +25,7 @@ export const coupons: CouponData[] = [
     minSubtotal: 499,
     active: true,
     displayInCart: true,
+    welcomeBackMode: "cap_5",
   },
   {
     id: "hume100",
@@ -34,5 +37,6 @@ export const coupons: CouponData[] = [
     minSubtotal: 999,
     active: true,
     displayInCart: true,
+    welcomeBackMode: "cap_5",
   },
 ];

@@ -19,6 +19,7 @@ import {
   Search,
   Filter,
 } from "lucide-react";
+import { buildGmailComposeHref } from "@/lib/admin-message-templates";
 
 const POLL_INTERVAL = 60_000;
 
@@ -91,11 +92,10 @@ function buildWhatsAppUrl(phone: string, name: string | null): string {
 }
 
 function buildMailtoUrl(email: string, name: string | null): string {
-  const subject = encodeURIComponent("Your HUME Fragrance Experience Awaits");
-  const body = encodeURIComponent(
-    `Hi${name ? ` ${name}` : ""},\n\nThank you for exploring HUME Fragrance. We noticed you've been browsing our collection and wanted to reach out personally.\n\nWould you like help choosing the perfect scent? We can recommend based on your preferences.\n\nAs a welcome gift, we include complimentary fragrance samples with every first order.\n\nShop now: https://humefragrance.com\n\nWarm regards,\nTeam HUME Fragrance`
-  );
-  return `mailto:${email}?subject=${subject}&body=${body}`;
+  const subject = "Your HUME Fragrance Experience Awaits";
+  const body =
+    `Hi${name ? ` ${name}` : ""},\n\nThank you for exploring HUME Fragrance. We noticed you've been browsing our collection and wanted to reach out personally.\n\nWould you like help choosing the perfect scent? We can recommend based on your preferences.\n\nAs a welcome gift, we include complimentary fragrance samples with every first order.\n\nShop now: https://humefragrance.com\n\nWarm regards,\nTeam HUME Fragrance`;
+  return buildGmailComposeHref(email, subject, body);
 }
 
 export function IntelligenceFeed({
@@ -108,7 +108,7 @@ export function IntelligenceFeed({
   hours?: number;
 }) {
   const [sessions, setSessions] = useState(initialSessions);
-  const [isLive, setIsLive] = useState(true);
+  const [isLive] = useState(true);
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState<string>("all");
   const [expandedId, setExpandedId] = useState<number | null>(null);

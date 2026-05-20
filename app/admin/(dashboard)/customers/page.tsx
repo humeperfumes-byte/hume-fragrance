@@ -224,6 +224,8 @@ export default async function CustomersPage({ searchParams }: AdminPageProps) {
                   {customer.email ? (
                     <a
                       href={buildAdminEmailHref(customer.email, messageInput)}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/10 px-3 text-xs font-semibold text-blue-300 hover:bg-blue-500/20"
                     >
                       <Mail className="h-3.5 w-3.5" />

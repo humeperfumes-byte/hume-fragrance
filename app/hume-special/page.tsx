@@ -71,6 +71,7 @@ export default async function HumeSpecialPage() {
                   bestSeller={perfume.badges?.bestSeller}
                   humeSpecial={perfume.badges?.humeSpecial}
                   limitedStock={perfume.badges?.limitedStock}
+                  soldOut={perfume.badges?.soldOut}
                 />
               ))}
             </div>

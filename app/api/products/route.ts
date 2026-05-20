@@ -4,6 +4,7 @@ import { products, productCategories } from "@/db/schema";
 import { z } from "zod";
 import { requireAdminToken } from "@/lib/admin-auth";
 import { getAllProducts, getAllPublicProducts } from "@/lib/db/products";
+import { revalidateTag } from "next/cache";
 
 const imageUrlSchema = z
   .array(z.string().trim().url())
@@ -66,6 +67,15 @@ export async function POST(request: NextRequest) {
       description: z.string(),
       seoDescription: z.string(),
       seoKeywords: z.array(z.string()),
+      badges: z
+        .object({
+          bestSeller: z.boolean().optional(),
+          humeSpecial: z.boolean().optional(),
+          limitedStock: z.boolean().optional(),
+          soldOut: z.boolean().optional(),
+        })
+        .optional()
+        .default({}),
       notes: z.object({
         top: z.array(z.string()),
         heart: z.array(z.string()),
@@ -108,6 +118,8 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error("Failed to save product_categories rows:", error);
     }
+
+    revalidateTag("products", "max");
 
     return NextResponse.json(
       {

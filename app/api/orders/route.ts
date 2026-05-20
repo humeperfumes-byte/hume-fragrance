@@ -4,7 +4,8 @@ import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { sendOrderConfirmationEmail } from "@/lib/email/send-order-confirmation";
 import { resolveIndiaAwareCountry } from "@/lib/admin-market";
-import { isInternalAdminRequest } from "@/lib/admin-data-filters";
+import { isAdminCapturedPath, isInternalAdminRequest } from "@/lib/admin-data-filters";
+import { eq } from "drizzle-orm";
 
 const cartItemSchema = z.object({
   id: z.string().min(1).max(255),
@@ -14,6 +15,15 @@ const cartItemSchema = z.object({
   quantity: z.number().int().nonnegative(),
   price: z.number().nonnegative(),
   isGift: z.boolean().optional(),
+  kitSelections: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(255),
+        name: z.string().min(1).max(255),
+        inspiration: z.string().max(255).optional(),
+      }),
+    )
+    .optional(),
 });
 
 const orderSchema = z.object({
@@ -55,15 +65,52 @@ const orderSchema = z.object({
     .default({}),
 });
 
-export async function POST(request: NextRequest) {
-  if (isInternalAdminRequest(request)) {
-    return NextResponse.json({ ok: true, skipped: "admin_traffic" });
+function getRequestOrigin(request: NextRequest) {
+  const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const host = request.headers.get("host");
+  const requestUrl = new URL(request.url);
+  return `${forwardedProto}://${forwardedHost || host || requestUrl.host}`;
+}
+
+function getCapturedPath(request: NextRequest, path?: string) {
+  if (path?.startsWith("http://") || path?.startsWith("https://")) {
+    return path;
+  }
+  if (path?.startsWith("/")) {
+    return `${getRequestOrigin(request)}${path}`;
+  }
+  return path || request.url;
+}
+
+function shouldSendOrderConfirmation(status: string, previousStatus?: string) {
+  if (["payment_pending", "payment_authorized", "payment_failed"].includes(status)) {
+    return false;
   }
 
+  return previousStatus !== status;
+}
+
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const data = orderSchema.parse(body);
 
+    if (isAdminCapturedPath(data.path)) {
+      return NextResponse.json({ ok: true, skipped: "admin_page" });
+    }
+
+    if (isInternalAdminRequest(request) && data.acquisitionSource === "admin") {
+      return NextResponse.json({ ok: true, skipped: "admin_traffic" });
+    }
+
+    const [existingOrder] = await db
+      .select({ status: orders.status })
+      .from(orders)
+      .where(eq(orders.id, data.id))
+      .limit(1);
+
+    const capturedPath = getCapturedPath(request, data.path);
     const forwardedFor = request.headers.get("x-forwarded-for");
     const realIp = request.headers.get("x-real-ip");
     const ipAddress = forwardedFor?.split(",")[0]?.trim() || realIp || null;
@@ -89,7 +136,7 @@ export async function POST(request: NextRequest) {
         checkoutChannel: data.checkoutChannel,
         paymentMethod: data.paymentMethod ?? null,
         shippingMethod: data.shippingMethod ?? null,
-        path: data.path ?? null,
+        path: capturedPath,
         acquisitionSource: data.acquisitionSource ?? null,
         acquisitionCategory: data.acquisitionCategory ?? null,
         acquisitionReferrerHost: data.acquisitionReferrerHost ?? null,
@@ -129,7 +176,7 @@ export async function POST(request: NextRequest) {
           checkoutChannel: data.checkoutChannel,
           paymentMethod: data.paymentMethod ?? null,
           shippingMethod: data.shippingMethod ?? null,
-          path: data.path ?? null,
+          path: capturedPath,
           acquisitionSource: data.acquisitionSource ?? null,
           acquisitionCategory: data.acquisitionCategory ?? null,
           acquisitionReferrerHost: data.acquisitionReferrerHost ?? null,
@@ -162,8 +209,12 @@ export async function POST(request: NextRequest) {
         },
       });
 
-    // Send order confirmation email asynchronously
-    if (data.details.email) {
+    // Send order confirmation email asynchronously, but only after the order
+    // leaves transient payment states.
+    if (
+      data.details.email &&
+      shouldSendOrderConfirmation(data.status, existingOrder?.status)
+    ) {
       sendOrderConfirmationEmail(data).catch((err) => {
         console.error("Async email send failed:", err);
       });

@@ -7,6 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import { formatINR } from "@/lib/currency";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getProductPath } from "@/lib/product-route";
+import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 
 interface CelebrityFavoriteCardProps {
   id: string;
@@ -90,8 +91,7 @@ export default function CelebrityFavoriteCard({
   const handleAddToCart = () => {
     addItem({ id, name, inspiration, category, image, price, size: "50ml" });
     toast({
-      title: "Added to bag",
-      description: `${name} has been added to your bag.`,
+      title: "Product added to cart",
     });
   };
 
@@ -100,10 +100,14 @@ export default function CelebrityFavoriteCard({
       className="w-full max-w-[360px] mx-auto cursor-pointer"
       role="link"
       tabIndex={0}
-      onClick={() => router.push(productPath)}
+      onClick={() => {
+        showNavigationLoadingToast();
+        router.push(productPath);
+      }}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
+          showNavigationLoadingToast();
           router.push(productPath);
         }
       }}

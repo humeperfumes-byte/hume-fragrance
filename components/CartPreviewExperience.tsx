@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/currency";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { formatRewardTimeRemaining } from "@/lib/cart-discounts";
+import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 
 type PreviewItem = {
   id: string;
@@ -31,8 +32,8 @@ type RewardPreview = {
 
 const FREE_DELIVERY_THRESHOLD = 500;
 const DELIVERY_FEE_BELOW_THRESHOLD = 100;
-const FIRST_GIFT_THRESHOLD = 1299;
-const SECOND_GIFT_THRESHOLD = 1899;
+const FIRST_GIFT_THRESHOLD = 1499;
+const SECOND_GIFT_THRESHOLD = 2099;
 const APPLIED_COUPON_CODE = "HUME100";
 const APPLIED_COUPON_DISCOUNT = 100;
 
@@ -56,12 +57,12 @@ const sampleItems: PreviewItem[] = [
     quantity: 1,
   },
   {
-    id: "gift-travel-atomizer-preview",
-    name: "Travel Atomizer",
-    inspiration: "Black pocket spray",
+    id: "gift-tier-1-preview",
+    name: "Gift 1",
+    inspiration: "Free gift",
     image: "/images/logo.png",
     price: 0,
-    size: "10ml",
+    size: "Gift",
     quantity: 1,
     isGift: true,
   },
@@ -132,7 +133,10 @@ function RewardPreviewDrawer({ reward }: { reward: RewardPreview }) {
           </div>
           <button
             type="button"
-            onClick={() => router.push("/shop")}
+            onClick={() => {
+              showNavigationLoadingToast();
+              router.push("/shop");
+            }}
             className="flex h-9 w-9 items-center justify-center text-black/45 transition hover:text-black"
             aria-label="Close cart preview"
           >
@@ -232,9 +236,11 @@ function RewardPreviewDrawer({ reward }: { reward: RewardPreview }) {
                   <p className="truncate text-sm font-semibold leading-tight">
                     {item.name}
                   </p>
-                  <p className="mt-1 line-clamp-2 text-xs leading-snug text-black/50">
-                    {item.inspiration} {item.size ? `- ${item.size}` : ""}
-                  </p>
+                  {!item.isGift ? (
+                    <p className="mt-1 line-clamp-2 text-xs leading-snug text-black/50">
+                      {item.inspiration} {item.size ? `- ${item.size}` : ""}
+                    </p>
+                  ) : null}
 
                   {item.isGift ? (
                     <div className="mt-3 flex items-center gap-2">
@@ -411,7 +417,10 @@ function RewardPreviewDrawer({ reward }: { reward: RewardPreview }) {
         </p>
 
         <Button
-          onClick={() => router.push("/checkout")}
+          onClick={() => {
+            showNavigationLoadingToast("Opening checkout");
+            router.push("/checkout");
+          }}
           className="mt-4 h-12 w-full rounded-none bg-black text-sm font-semibold text-white hover:bg-black/85"
         >
           Checkout

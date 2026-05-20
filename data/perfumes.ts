@@ -47,6 +47,7 @@ export interface PerfumeData {
     bestSeller?: boolean;
     humeSpecial?: boolean;
     limitedStock?: boolean;
+    soldOut?: boolean;
   };
   notes: {
     top: string[];

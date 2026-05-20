@@ -168,6 +168,7 @@ export default async function AiRecommendationPage({ params }: PageProps) {
                 bestSeller={product.badges?.bestSeller}
                 humeSpecial={product.badges?.humeSpecial}
                 limitedStock={product.badges?.limitedStock}
+                soldOut={product.badges?.soldOut}
                 disableEntranceAnimation
               />
             ))}

@@ -27,6 +27,10 @@ export function ProductFormSheet({ open, onOpenChange, onSuccess }: ProductFormS
     gender: "Unisex",
     imagesCsv: "",
     price: "",
+    bestSeller: false,
+    humeSpecial: false,
+    limitedStock: false,
+    soldOut: false,
     description: "",
     seoDescription: "",
     seoKeywordsCsv: "",
@@ -40,6 +44,10 @@ export function ProductFormSheet({ open, onOpenChange, onSuccess }: ProductFormS
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.id]: e.target.value });
+  };
+
+  const handleCheckedChange = (id: "bestSeller" | "humeSpecial" | "limitedStock" | "soldOut", checked: boolean) => {
+    setForm({ ...form, [id]: checked });
   };
 
   const slugify = (str: string) => str.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
@@ -63,6 +71,12 @@ export function ProductFormSheet({ open, onOpenChange, onSuccess }: ProductFormS
       images: form.imagesCsv.split(",").map(s => s.trim()).filter(Boolean),
       price: Number(form.price),
       priceCurrency: "INR",
+      badges: {
+        bestSeller: form.bestSeller,
+        humeSpecial: form.humeSpecial,
+        limitedStock: form.limitedStock,
+        soldOut: form.soldOut,
+      },
       description: form.description,
       seoDescription: form.seoDescription,
       seoKeywords: form.seoKeywordsCsv.split(",").map(s => s.trim()).filter(Boolean),
@@ -153,6 +167,32 @@ export function ProductFormSheet({ open, onOpenChange, onSuccess }: ProductFormS
                 <div className="space-y-2">
                   <Label htmlFor="description">Full Description</Label>
                   <Textarea id="description" value={form.description} onChange={handleChange} className="rounded-xl min-h-[120px]" />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-4">
+                  {[
+                    ["bestSeller", "Best Seller"],
+                    ["humeSpecial", "HUME Special"],
+                    ["limitedStock", "Limited Stock"],
+                    ["soldOut", "Sold Out"],
+                  ].map(([id, label]) => (
+                    <label
+                      key={id}
+                      className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-background px-3 py-3 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={Boolean(form[id as "bestSeller" | "humeSpecial" | "limitedStock" | "soldOut"])}
+                        onChange={(event) =>
+                          handleCheckedChange(
+                            id as "bestSeller" | "humeSpecial" | "limitedStock" | "soldOut",
+                            event.target.checked,
+                          )
+                        }
+                        className="h-4 w-4 accent-black"
+                      />
+                      <span>{label}</span>
+                    </label>
+                  ))}
                 </div>
               </TabsContent>
 

@@ -4,6 +4,7 @@ import { products, reviews, productCategories } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { requireAdminToken } from "@/lib/admin-auth";
+import { revalidateTag } from "next/cache";
 
 const imageUrlSchema = z
   .array(z.string().trim().url())
@@ -25,6 +26,14 @@ const productSchema = z.object({
   description: z.string().optional(),
   seoDescription: z.string().optional(),
   seoKeywords: z.array(z.string()).optional(),
+  badges: z
+    .object({
+      bestSeller: z.boolean().optional(),
+      humeSpecial: z.boolean().optional(),
+      limitedStock: z.boolean().optional(),
+      soldOut: z.boolean().optional(),
+    })
+    .optional(),
   notes: z
     .object({
       top: z.array(z.string()),
@@ -181,6 +190,8 @@ export async function PUT(
       console.error("Failed to sync product_categories:", error);
     }
 
+    revalidateTag("products", "max");
+
     let mappedCategoryIds: string[] = [updatedProduct.categoryId];
     try {
       const rows = await db
@@ -238,6 +249,8 @@ export async function DELETE(
         { status: 404 }
       );
     }
+
+    revalidateTag("products", "max");
 
     return NextResponse.json({ message: "Product deleted successfully" });
   } catch (error) {

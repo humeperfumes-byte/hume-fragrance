@@ -28,13 +28,31 @@ const videos = [
 export default function HomeVideoCarouselSection() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [isInView, setIsInView] = useState(false);
+  const sectionRef = useRef<HTMLElement | null>(null);
   const videoRefs = useRef<Array<HTMLVideoElement | null>>([]);
   const swipeStartXRef = useRef<number | null>(null);
 
   useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsInView(entry.isIntersecting);
+      },
+      { rootMargin: "240px 0px" },
+    );
+
+    observer.observe(section);
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     videoRefs.current.forEach((video, index) => {
       if (!video) return;
-      if (index === activeIndex) {
+      if (index === activeIndex && isInView) {
         video.currentTime = 0;
         setProgress(0);
         void video.play().catch(() => undefined);
@@ -43,7 +61,7 @@ export default function HomeVideoCarouselSection() {
         video.currentTime = 0;
       }
     });
-  }, [activeIndex]);
+  }, [activeIndex, isInView]);
 
   const goTo = (index: number) => {
     const nextIndex = (index + videos.length) % videos.length;
@@ -79,7 +97,7 @@ export default function HomeVideoCarouselSection() {
   };
 
   const handleTimeUpdate = (index: number) => {
-    if (index !== activeIndex) return;
+    if (index !== activeIndex || !isInView) return;
 
     const video = videoRefs.current[index];
     if (!video || !Number.isFinite(video.duration) || video.duration <= 0) return;
@@ -88,7 +106,10 @@ export default function HomeVideoCarouselSection() {
   };
 
   return (
-    <section className="overflow-hidden bg-[#080709] py-12 text-white md:py-16">
+    <section
+      ref={sectionRef}
+      className="overflow-hidden bg-[#080709] py-12 text-white md:py-16"
+    >
       <div className="container-luxury">
         <div className="mx-auto mb-8 max-w-3xl text-center md:mb-10">
           <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-white/45">
@@ -163,15 +184,15 @@ export default function HomeVideoCarouselSection() {
                   }}
                   className="h-full w-full object-cover"
                   src={video.src}
-                  poster={video.poster}
+                  poster={isInView ? video.poster : undefined}
                   muted
                   playsInline
-                  autoPlay={isActive}
-                  preload={isActive ? "auto" : "none"}
+                  autoPlay={isActive && isInView}
+                  preload={isActive && isInView ? "metadata" : "none"}
                   onLoadedMetadata={() => handleTimeUpdate(index)}
                   onTimeUpdate={() => handleTimeUpdate(index)}
                   onEnded={() => {
-                    if (index === activeIndex) {
+                    if (index === activeIndex && isInView) {
                       goTo(activeIndex + 1);
                     }
                   }}

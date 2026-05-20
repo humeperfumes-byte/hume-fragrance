@@ -13,6 +13,7 @@ const STORAGE_KEY = "hume_early_bird_dismissed";
 const CHECKOUT_SESSION_KEY = "hume_checkout_session_id";
 const CART_SESSION_KEY = "hume_cart_session_id";
 const INTENT_STORAGE_KEY = "hume_behavior_intent_unlocked";
+const EARLY_BIRD_COUPON_CODE = "HUME_EARLY_BIRD";
 
 function getOrCreateSessionId() {
   const existing =
@@ -45,7 +46,7 @@ const EarlyBirdPopup = () => {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [startingCode, setStartingCode] = useState<string>("CASH5");
+  const [startingCode, setStartingCode] = useState<string>(EARLY_BIRD_COUPON_CODE);
   const [emailSent, setEmailSent] = useState(false);
   const [whatsappLink, setWhatsappLink] = useState("");
 
@@ -99,7 +100,7 @@ const EarlyBirdPopup = () => {
 
       if (response.ok) {
         const data = (await response.json()) as CouponSendResponse;
-        setStartingCode(data.couponCode || "CASH5");
+        setStartingCode(data.couponCode || EARLY_BIRD_COUPON_CODE);
         setEmailSent(Boolean(data.emailSent));
         setWhatsappLink(data.whatsappLink || "");
       }

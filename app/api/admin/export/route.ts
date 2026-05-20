@@ -10,6 +10,8 @@ import {
   behavioralEvents,
   sessionIntelligence,
   sectionAttribution,
+  razorpayWebhookEvents,
+  emailEvents,
   products,
   reviews,
 } from "@/db/schema";
@@ -49,6 +51,20 @@ function flatten(obj: Record<string, unknown>, prefix = ""): Record<string, unkn
   return result;
 }
 
+async function getRazorpayWebhookEvents(since: Date) {
+  try {
+    return await db
+      .select()
+      .from(razorpayWebhookEvents)
+      .where(gte(razorpayWebhookEvents.receivedAt, since))
+      .orderBy(desc(razorpayWebhookEvents.receivedAt))
+      .limit(10000);
+  } catch (error) {
+    console.warn("Razorpay webhook event export skipped. Sync the database schema.", error);
+    return [];
+  }
+}
+
 export async function GET(request: NextRequest) {
   const unauthorized = requireAdminToken(request);
   if (unauthorized) return unauthorized;
@@ -70,6 +86,8 @@ export async function GET(request: NextRequest) {
       behaviors,
       intelligence,
       sections,
+      razorpayEvents,
+      emails,
       allProducts,
       allReviews,
     ] = await Promise.all([
@@ -81,6 +99,8 @@ export async function GET(request: NextRequest) {
       db.select().from(behavioralEvents).where(gte(behavioralEvents.createdAt, since)).orderBy(desc(behavioralEvents.createdAt)).limit(10000),
       db.select().from(sessionIntelligence).orderBy(desc(sessionIntelligence.updatedAt)).limit(10000),
       db.select().from(sectionAttribution).orderBy(desc(sectionAttribution.attributionScore)).limit(1000),
+      getRazorpayWebhookEvents(since),
+      db.select().from(emailEvents).where(gte(emailEvents.createdAt, since)).orderBy(desc(emailEvents.createdAt)).limit(10000),
       db.select().from(products).orderBy(desc(products.createdAt)),
       db.select().from(reviews).orderBy(desc(reviews.createdAt)).limit(5000),
     ]);
@@ -283,6 +303,8 @@ export async function GET(request: NextRequest) {
       behavioral_events: behaviors.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
       session_intelligence: intelligence.map((r) => ({ ...r, lastActiveAt: r.lastActiveAt.toISOString(), createdAt: r.createdAt.toISOString(), updatedAt: r.updatedAt.toISOString() })),
       section_attribution: sections.map((r) => ({ ...r, updatedAt: r.updatedAt.toISOString() })),
+      razorpay_webhook_events: razorpayEvents.map((r) => ({ ...r, eventCreatedAt: r.eventCreatedAt?.toISOString() || null, receivedAt: r.receivedAt.toISOString(), updatedAt: r.updatedAt.toISOString() })),
+      email_events: emails.map((r) => ({ ...r, createdAt: r.createdAt.toISOString(), updatedAt: r.updatedAt.toISOString() })),
       products: allProducts.map((r) => ({ ...r, createdAt: r.createdAt.toISOString(), updatedAt: r.updatedAt.toISOString() })),
       reviews: allReviews.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
     };

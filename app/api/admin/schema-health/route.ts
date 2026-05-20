@@ -31,6 +31,39 @@ const requiredColumns: Record<string, string[]> = {
     "acquisition_category",
     "acquisition_referrer_host",
   ],
+  razorpay_webhook_events: [
+    "event",
+    "local_order_id",
+    "order_number",
+    "razorpay_order_id",
+    "razorpay_payment_id",
+    "razorpay_refund_id",
+    "razorpay_dispute_id",
+    "razorpay_settlement_id",
+    "razorpay_downtime_id",
+    "payload",
+    "received_at",
+  ],
+  coupons: [
+    "welcome_back_mode",
+  ],
+  email_events: [
+    "message_type",
+    "provider",
+    "to_email",
+    "from_email",
+    "subject",
+    "status",
+    "provider_message_id",
+    "related_type",
+    "related_id",
+    "payload",
+  ],
+  site_settings: [
+    "key",
+    "value",
+    "updated_at",
+  ],
 };
 
 export async function GET(request: NextRequest) {

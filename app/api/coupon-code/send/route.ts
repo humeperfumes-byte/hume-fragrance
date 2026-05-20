@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { Resend } from "resend";
 import { db } from "@/db";
 import { couponCodeEvents } from "@/db/schema";
-import { getActiveCoupons } from "@/lib/db/coupons";
-import { buildCouponEmailHtml, buildCouponEmailText } from "@/lib/email/coupon-template";
-import { isInternalAdminRequest } from "@/lib/admin-data-filters";
+import { getCouponByCode } from "@/lib/db/coupons";
+import {
+  buildCouponEmailHtml,
+  buildCouponEmailSubject,
+  buildCouponEmailText,
+} from "@/lib/email/coupon-template";
+import { isHumeMailConfigured, sendHumeEmail } from "@/lib/email/hume-mail-service";
+import { isAdminCapturedPath, isInternalAdminRequest } from "@/lib/admin-data-filters";
+
+const EARLY_BIRD_COUPON_CODE = "HUME_EARLY_BIRD";
 
 const payloadSchema = z.object({
   email: z.string().email().max(255),
@@ -28,12 +34,11 @@ function getRequestMeta(request: NextRequest) {
   return { ipAddress, userAgent, country };
 }
 
-function getCouponCode(codeList: Array<{ code: string; minSubtotal: number }>) {
-  return (
-    codeList
-      .sort((a, b) => Number(a.minSubtotal ?? 0) - Number(b.minSubtotal ?? 0))[0]
-      ?.code?.toUpperCase() ?? "CASH5"
-  );
+async function getEarlyBirdCouponCode() {
+  const configuredCode =
+    process.env.EARLY_BIRD_COUPON_CODE?.trim().toUpperCase() || EARLY_BIRD_COUPON_CODE;
+  const coupon = await getCouponByCode(configuredCode);
+  return coupon?.code?.toUpperCase() || configuredCode;
 }
 
 async function captureCouponEvent(
@@ -67,22 +72,19 @@ async function captureCouponEvent(
 }
 
 export async function POST(request: NextRequest) {
-  if (isInternalAdminRequest(request)) {
-    return NextResponse.json({ ok: true, skipped: "admin_traffic" });
-  }
-
   try {
     const body = await request.json();
     const data = payloadSchema.parse(body);
-    const activeCoupons = await getActiveCoupons({ cartOnly: true });
-    const couponCode = getCouponCode(
-      activeCoupons
-        .filter((coupon) => Boolean(coupon.code))
-        .map((coupon) => ({
-          code: coupon.code,
-          minSubtotal: Number(coupon.minSubtotal ?? 0),
-        })),
-    );
+
+    if (isAdminCapturedPath(data.path)) {
+      return NextResponse.json({ ok: true, skipped: "admin_page" });
+    }
+
+    if (isInternalAdminRequest(request) && data.source === "admin") {
+      return NextResponse.json({ ok: true, skipped: "admin_traffic" });
+    }
+
+    const couponCode = await getEarlyBirdCouponCode();
 
     await captureCouponEvent(
       {
@@ -98,20 +100,23 @@ export async function POST(request: NextRequest) {
       request,
     );
 
-    const resendApiKey = process.env.RESEND_API_KEY;
-    const fromEmail = process.env.COUPON_EMAIL_FROM;
     let emailSent = false;
 
-    if (resendApiKey && fromEmail) {
-      const resend = new Resend(resendApiKey);
-      const sendResult = await resend.emails.send({
-        from: fromEmail,
-        to: [data.email],
-        subject: `Your HUME starting code: ${couponCode}`,
+    if (isHumeMailConfigured()) {
+      const emailResult = await sendHumeEmail({
+        to: data.email,
+        subject: buildCouponEmailSubject(couponCode),
         text: buildCouponEmailText(couponCode),
         html: buildCouponEmailHtml(couponCode, data.email),
+        messageType: "coupon_code",
+        relatedType: "coupon",
+        relatedId: couponCode,
+        payload: {
+          source: data.source ?? "early_bird_popup",
+          sessionId: data.sessionId ?? null,
+        },
       });
-      emailSent = Boolean(sendResult?.data?.id);
+      emailSent = emailResult.sent;
     }
 
     if (emailSent) {
@@ -138,7 +143,7 @@ export async function POST(request: NextRequest) {
       couponCode,
       emailSent,
       whatsappLink,
-      providerConfigured: Boolean(resendApiKey && fromEmail),
+      providerConfigured: isHumeMailConfigured(),
     });
   } catch (error) {
     console.error("coupon-code send error:", error);

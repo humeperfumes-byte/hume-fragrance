@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { cartEvents } from "@/db/schema";
-import { isInternalAdminRequest } from "@/lib/admin-data-filters";
+import { isAdminCapturedPath, isInternalAdminRequest } from "@/lib/admin-data-filters";
 
 const cartEventSchema = z.object({
   sessionId: z.string().min(4).max(255),
@@ -23,14 +23,37 @@ const cartEventSchema = z.object({
   payload: z.record(z.string(), z.unknown()).optional(),
 });
 
-export async function POST(request: NextRequest) {
-  if (isInternalAdminRequest(request)) {
-    return NextResponse.json({ ok: true, skipped: "admin_traffic" });
-  }
+function getRequestOrigin(request: NextRequest) {
+  const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const host = request.headers.get("host");
+  const requestUrl = new URL(request.url);
+  return `${forwardedProto}://${forwardedHost || host || requestUrl.host}`;
+}
 
+function getCapturedPath(request: NextRequest, path?: string) {
+  if (path?.startsWith("http://") || path?.startsWith("https://")) {
+    return path;
+  }
+  if (path?.startsWith("/")) {
+    return `${getRequestOrigin(request)}${path}`;
+  }
+  return path || request.url;
+}
+
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const data = cartEventSchema.parse(body);
+    const capturedPath = getCapturedPath(request, data.path);
+
+    if (isAdminCapturedPath(data.path) || isAdminCapturedPath(capturedPath)) {
+      return NextResponse.json({ ok: true, skipped: "admin_page" });
+    }
+
+    if (isInternalAdminRequest(request) && data.payload?.source === "admin") {
+      return NextResponse.json({ ok: true, skipped: "admin_traffic" });
+    }
 
     const forwardedFor = request.headers.get("x-forwarded-for");
     const realIp = request.headers.get("x-real-ip");
@@ -45,7 +68,7 @@ export async function POST(request: NextRequest) {
       id: crypto.randomUUID(),
       sessionId: data.sessionId,
       eventType: data.eventType,
-      path: data.path ?? null,
+      path: capturedPath,
       productId: data.productId ?? null,
       productName: data.productName ?? null,
       price: typeof data.price === "number" ? data.price.toFixed(2) : null,

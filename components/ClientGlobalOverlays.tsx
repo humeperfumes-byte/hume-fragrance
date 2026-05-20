@@ -1,7 +1,14 @@
 "use client";
 
-import EarlyBirdPopup from "@/components/EarlyBirdPopup";
-import WelcomeBackRewardBanner from "@/components/WelcomeBackRewardBanner";
+import dynamic from "next/dynamic";
+
+const EarlyBirdPopup = dynamic(() => import("@/components/EarlyBirdPopup"), {
+  ssr: false,
+});
+const WelcomeBackRewardBanner = dynamic(
+  () => import("@/components/WelcomeBackRewardBanner"),
+  { ssr: false },
+);
 
 export default function ClientGlobalOverlays() {
   return (

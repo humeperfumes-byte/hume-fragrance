@@ -2,15 +2,20 @@ import { db } from "@/db";
 import { products } from "@/db/schema";
 import { desc } from "drizzle-orm";
 import { ProductsTable } from "./ProductsTable";
+import { getKitAvailability } from "@/lib/kit-availability";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProductsPage() {
   let allProducts: (typeof products.$inferSelect)[] = [];
+  let kitAvailability = { outOfStock: false };
   let dbError = false;
 
   try {
-    allProducts = await db.select().from(products).orderBy(desc(products.createdAt));
+    [allProducts, kitAvailability] = await Promise.all([
+      db.select().from(products).orderBy(desc(products.createdAt)),
+      getKitAvailability(),
+    ]);
   } catch (error) {
     console.error("Products page DB error:", error);
     dbError = true;
@@ -43,7 +48,7 @@ export default async function ProductsPage() {
         </p>
       </div>
 
-      <ProductsTable initialProducts={allProducts} />
+      <ProductsTable initialProducts={allProducts} initialKitOutOfStock={kitAvailability.outOfStock} />
     </div>
   );
 }

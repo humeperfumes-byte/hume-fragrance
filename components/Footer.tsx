@@ -52,6 +52,13 @@ export default async function Footer() {
     { href: "/#about", label: "About HUME" },
     { href: "/#craft", label: "Our Craft" },
     { href: "/#collection", label: "Best Sellers" },
+    { href: "/account", label: "My Account" },
+    { href: "/track-order", label: "Track Order" },
+    { href: "/shipping-policy", label: "Shipping Policy" },
+    { href: "/return-refund-policy", label: "Returns & Refunds" },
+    { href: "/privacy-policy", label: "Privacy Policy" },
+    { href: "/terms", label: "Terms" },
+    { href: "/contact", label: "Contact" },
     { href: "/sitemap.xml", label: "Sitemap" },
   ];
 
@@ -145,6 +152,18 @@ export default async function Footer() {
             </Link>
             <Link href="/blog" className="text-caption opacity-50 hover:opacity-100 transition-opacity">
               Blog
+            </Link>
+            <Link href="/track-order" className="text-caption opacity-50 hover:opacity-100 transition-opacity">
+              Track Order
+            </Link>
+            <Link href="/account" className="text-caption opacity-50 hover:opacity-100 transition-opacity">
+              Account
+            </Link>
+            <Link href="/shipping-policy" className="text-caption opacity-50 hover:opacity-100 transition-opacity">
+              Shipping
+            </Link>
+            <Link href="/return-refund-policy" className="text-caption opacity-50 hover:opacity-100 transition-opacity">
+              Returns
             </Link>
           </div>
         </div>

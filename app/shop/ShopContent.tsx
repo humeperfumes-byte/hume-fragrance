@@ -386,6 +386,7 @@ export default function ShopContent({ perfumes }: { perfumes: PerfumeData[] }) {
                       bestSeller={perfume.badges?.bestSeller}
                       humeSpecial={perfume.badges?.humeSpecial}
                       limitedStock={perfume.badges?.limitedStock}
+                      soldOut={perfume.badges?.soldOut}
                     />
                   </div>
                 ))}

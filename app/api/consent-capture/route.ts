@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { consentEvents } from "@/db/schema";
 import { z } from "zod";
 import { isServerConsentTrackingEnabled } from "@/lib/consent-config";
+import { isAdminCapturedPath } from "@/lib/admin-data-filters";
 
 const payloadSchema = z.object({
   decision: z.enum(["allow", "deny"]),
@@ -26,6 +27,11 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const payload = payloadSchema.parse(body);
+
+    if (isAdminCapturedPath(payload.path)) {
+      return NextResponse.json({ ok: true, skipped: "admin_page" });
+    }
+
     const forwardedFor = request.headers.get("x-forwarded-for");
     const realIp = request.headers.get("x-real-ip");
     const ipAddress = forwardedFor?.split(",")[0]?.trim() || realIp || null;

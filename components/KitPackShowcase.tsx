@@ -16,7 +16,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { PerfumeData } from "@/data/perfumes";
-import { getClientCachedProducts } from "@/lib/client-products-cache";
 
 export default function KitPackShowcase() {
   const { addItem } = useCart();
@@ -32,7 +31,9 @@ export default function KitPackShowcase() {
     let active = true;
     const loadPerfumes = async () => {
       try {
-        const data = await getClientCachedProducts();
+        const response = await fetch("/api/products?purpose=kit", { cache: "no-store" });
+        if (!response.ok) throw new Error(`Failed to fetch kit products: ${response.status}`);
+        const data = (await response.json()) as PerfumeData[];
         if (active) setAllPerfumes(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error("Failed to load perfumes:", error);
@@ -46,7 +47,10 @@ export default function KitPackShowcase() {
     };
   }, []);
 
-  const kitPerfumes = useMemo(() => allPerfumes, [allPerfumes]);
+  const kitPerfumes = useMemo(
+    () => allPerfumes.filter((perfume) => !perfume.badges?.soldOut),
+    [allPerfumes],
+  );
   const kitTotal = 799;
   const isComplete = slots.every(Boolean);
 
@@ -57,6 +61,10 @@ export default function KitPackShowcase() {
 
   const handleSelectPerfume = (perfume: PerfumeData) => {
     if (activeSlotIndex === null) return;
+    if (perfume.badges?.soldOut) {
+      toast({ title: "This perfume is currently sold out" });
+      return;
+    }
     setSlots((prev) => {
       const updated = [...prev];
       updated[activeSlotIndex] = perfume;
@@ -76,6 +84,11 @@ export default function KitPackShowcase() {
   const handleAddKitToCart = () => {
     if (!isComplete) return;
     const selected = slots.filter(Boolean) as PerfumeData[];
+    const unavailable = selected.find((perfume) => perfume.badges?.soldOut);
+    if (unavailable) {
+      toast({ title: `${unavailable.name} is currently sold out` });
+      return;
+    }
     const kitId = `kit-4pack-${selected.map((p) => p.id).join("-")}`;
     addItem({
       id: kitId,
@@ -85,10 +98,14 @@ export default function KitPackShowcase() {
       image: "/images/kit.png",
       price: kitTotal,
       size: "20ml",
+      kitSelections: selected.map((perfume) => ({
+        id: perfume.id,
+        name: perfume.name,
+        inspiration: perfume.inspiration,
+      })),
     });
     toast({
-      title: "Kit added to bag",
-      description: "Your 4 x 20ml kit has been added to your bag.",
+      title: "Kit added to cart",
     });
   };
 

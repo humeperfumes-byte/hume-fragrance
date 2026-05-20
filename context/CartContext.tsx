@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { tierGiftAccessories } from "@/data/accessories";
 
 export interface CartItem {
   id: string;
@@ -12,6 +11,11 @@ export interface CartItem {
   price: number;
   size?: string;
   isGift?: boolean;
+  kitSelections?: Array<{
+    id: string;
+    name: string;
+    inspiration?: string;
+  }>;
   quantity: number;
 }
 
@@ -29,6 +33,7 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 const CART_STORAGE_KEY = "hume_cart_v2";
+const GENERIC_GIFT_IMAGE = "/images/logo.png";
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -109,7 +114,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const clearCart = () => setItems([]);
 
   // Keep gift eligibility consistent with spend tiers:
-  // 1 gift above 1299, 2 gifts above 1899.
+  // 1 gift above 1499, 2 gifts above 2099.
   useEffect(() => {
     if (!hydrated) return;
     setItems((prev) => {
@@ -117,14 +122,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         (sum, item) => sum + (!item.isGift ? item.price * item.quantity : 0),
         0
       );
-      const allowedGiftCount = paidSubtotal >= 1899 ? 2 : paidSubtotal >= 1299 ? 1 : 0;
+      const allowedGiftCount = paidSubtotal >= 2099 ? 2 : paidSubtotal >= 1499 ? 1 : 0;
       const paidItems = prev.filter((item) => !item.isGift);
-      const nextGiftItems = tierGiftAccessories.slice(0, allowedGiftCount).map((gift) => ({
-        id: `gift-${gift.id}`,
-        name: gift.name,
-        inspiration: gift.shortDescription,
+      const nextGiftItems = Array.from({ length: allowedGiftCount }, (_, index) => ({
+        id: `gift-tier-${index + 1}`,
+        name: `Gift ${index + 1}`,
+        inspiration: "Free gift",
         category: "Gift",
-        image: gift.images[0],
+        image: GENERIC_GIFT_IMAGE,
         price: 0,
         size: "Gift",
         isGift: true,
