@@ -43,6 +43,10 @@ const LAST_ORDER_ID_KEY = "hume_last_order_id_v1";
 const LAST_ORDER_NUMBER_KEY = "hume_last_order_number_v1";
 const FREE_DELIVERY_THRESHOLD = 500;
 const DELIVERY_FEE_BELOW_THRESHOLD = 100;
+const RAZORPAY_CHECKOUT_SCRIPT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
+const RAZORPAY_SCRIPT_TIMEOUT_MS = 15000;
+
+let razorpayScriptPromise: Promise<boolean> | null = null;
 
 type CheckoutDetails = {
   fullName: string;
@@ -367,39 +371,93 @@ function isRazorpayAvailableForCurrentHost() {
   );
 }
 
-function loadRazorpayScript() {
-  return new Promise<boolean>((resolve) => {
-    if (typeof window === "undefined") {
+function getRazorpayScriptElement() {
+  if (typeof document === "undefined") return null;
+  return document.querySelector<HTMLScriptElement>(
+    `script[src="${RAZORPAY_CHECKOUT_SCRIPT_SRC}"]`,
+  );
+}
+
+function loadRazorpayScript({ forceReload = false } = {}) {
+  if (typeof window === "undefined") {
+    return Promise.resolve(false);
+  }
+
+  if (window.Razorpay) {
+    return Promise.resolve(true);
+  }
+
+  if (forceReload) {
+    razorpayScriptPromise = null;
+    getRazorpayScriptElement()?.remove();
+  }
+
+  if (razorpayScriptPromise) {
+    return razorpayScriptPromise;
+  }
+
+  razorpayScriptPromise = new Promise<boolean>((resolve) => {
+    let settled = false;
+    let timeoutId: number | null = null;
+    let script = getRazorpayScriptElement();
+
+    if (script?.dataset.humeRazorpayStatus === "failed") {
+      script.remove();
+      script = null;
+    }
+
+    const finish = (loaded: boolean) => {
+      if (settled) return;
+      settled = true;
+
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+
+      if (loaded && window.Razorpay) {
+        if (script) script.dataset.humeRazorpayStatus = "loaded";
+        resolve(true);
+        return;
+      }
+
+      if (script) {
+        script.dataset.humeRazorpayStatus = "failed";
+        if (script.dataset.humeRazorpayOwner === "checkout-loader") {
+          script.remove();
+        }
+      }
+      razorpayScriptPromise = null;
       resolve(false);
-      return;
+    };
+
+    if (!script) {
+      script = document.createElement("script");
+      script.src = RAZORPAY_CHECKOUT_SCRIPT_SRC;
+      script.async = true;
+      script.defer = true;
+      script.dataset.humeRazorpayOwner = "checkout-loader";
+      script.dataset.humeRazorpayStatus = "loading";
     }
 
-    if (window.Razorpay) {
-      resolve(true);
-      return;
+    script.addEventListener("load", () => finish(Boolean(window.Razorpay)), {
+      once: true,
+    });
+    script.addEventListener("error", () => finish(false), { once: true });
+
+    timeoutId = window.setTimeout(() => finish(false), RAZORPAY_SCRIPT_TIMEOUT_MS);
+
+    if (!script.parentElement) {
+      document.body.appendChild(script);
     }
-
-    const existingScript = document.querySelector<HTMLScriptElement>(
-      'script[src="https://checkout.razorpay.com/v1/checkout.js"]',
-    );
-
-    if (existingScript) {
-      existingScript.addEventListener("load", () => resolve(true), {
-        once: true,
-      });
-      existingScript.addEventListener("error", () => resolve(false), {
-        once: true,
-      });
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.async = true;
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
   });
+
+  return razorpayScriptPromise;
+}
+
+async function ensureRazorpayScriptLoaded() {
+  const loaded = await loadRazorpayScript();
+  if (loaded) return true;
+  return loadRazorpayScript({ forceReload: true });
 }
 
 export default function CheckoutClient() {
@@ -438,7 +496,11 @@ export default function CheckoutClient() {
   });
 
   useEffect(() => {
-    setIsRazorpayAvailable(isRazorpayAvailableForCurrentHost());
+    const available = isRazorpayAvailableForCurrentHost();
+    setIsRazorpayAvailable(available);
+    if (available) {
+      void loadRazorpayScript();
+    }
   }, []);
 
   useEffect(() => {
@@ -1116,11 +1178,11 @@ export default function CheckoutClient() {
       return;
     }
 
-      if (!validate()) return;
-      if (!(await ensureCartAvailability())) return;
-      if (await holdKitLeadIfUnavailable()) return;
+    if (!validate()) return;
+    if (!(await ensureCartAvailability())) return;
+    if (await holdKitLeadIfUnavailable()) return;
 
-      const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
     if (!keyId) {
       toast({
         title: "Payment is not configured",
@@ -1133,11 +1195,14 @@ export default function CheckoutClient() {
     setIsPaymentProcessing(true);
 
     try {
+      const scriptLoadPromise = ensureRazorpayScriptLoaded();
       await persistDraft(undefined, "complete", true);
 
-      const scriptLoaded = await loadRazorpayScript();
+      const scriptLoaded = await scriptLoadPromise;
       if (!scriptLoaded || !window.Razorpay) {
-        throw new Error("Razorpay checkout could not be loaded.");
+        throw new Error(
+          "Razorpay checkout could not be loaded. Please retry or use WhatsApp checkout.",
+        );
       }
 
       const identity = getOrderIdentity();

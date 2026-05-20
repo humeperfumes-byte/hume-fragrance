@@ -166,6 +166,20 @@ function toResult(
   const destination = [booking?.destination_office_name, booking?.destination_pincode]
     .filter(Boolean)
     .join(" - ");
+  const carrierDestination =
+    booking?.destination_office_name ||
+    booking?.destination_city ||
+    booking?.destination_pincode ||
+    booking?.destination_country
+      ? {
+          source: "carrier" as const,
+          label: "India Post destination",
+          addressLine1: booking?.destination_office_name ?? null,
+          city: booking?.destination_city ?? null,
+          pincode: booking?.destination_pincode ?? null,
+          country: booking?.destination_country ?? null,
+        }
+      : null;
 
   return {
     carrier: "speed_post",
@@ -177,6 +191,7 @@ function toResult(
     checkedAt,
     lastScan: latestEvent ? getEventTime(latestEvent) : booking?.booking_date ?? null,
     location: latestEvent?.office?.trim() || booking?.booking_office_name || null,
+    destination: carrierDestination,
     expectedDelivery: booking?.delivery_confirmed_on ?? null,
     timeline: toTimeline(events),
     message: latestEvent

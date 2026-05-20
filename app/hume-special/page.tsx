@@ -20,6 +20,8 @@ export default async function HumeSpecialPage() {
   const baseUrl = await getRequestSiteUrl();
   const products = await getAllPublicProducts();
   const specialProducts = products.filter((p) => p.badges?.humeSpecial);
+  const specialProductIds = new Set(specialProducts.map((product) => product.id));
+  const remainingProducts = products.filter((product) => !specialProductIds.has(product.id));
   const jsonLd = [
     getItemListSchema(
       "HUME Special Fragrances",
@@ -82,6 +84,43 @@ export default async function HumeSpecialPage() {
           )}
         </div>
       </section>
+
+      {remainingProducts.length > 0 ? (
+        <section className="pb-20 md:pb-24">
+          <div className="container-luxury">
+            <div className="mb-10 md:mb-12">
+              <p className="text-caption text-muted-foreground mb-3">
+                Continue Exploring
+              </p>
+              <h2 className="font-serif text-3xl font-light md:text-4xl">
+                All Fragrances
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8 items-start">
+              {remainingProducts.map((perfume, index) => (
+                <PerfumeCard
+                  key={perfume.id}
+                  id={perfume.id}
+                  name={perfume.name}
+                  inspiration={perfume.inspiration}
+                  inspirationBrand={perfume.inspirationBrand}
+                  category={perfume.category}
+                  categoryTags={perfume.categoryTags}
+                  categoryIds={perfume.categoryIds}
+                  image={perfume.images[0]}
+                  price={perfume.price}
+                  index={specialProducts.length + index}
+                  bestSeller={perfume.badges?.bestSeller}
+                  humeSpecial={perfume.badges?.humeSpecial}
+                  limitedStock={perfume.badges?.limitedStock}
+                  soldOut={perfume.badges?.soldOut}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <SeoHubTeaser />
       <Footer />

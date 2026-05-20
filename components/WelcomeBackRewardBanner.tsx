@@ -14,6 +14,14 @@ import {
 const REWARD_BANNER_DELAY_MS = 5000;
 const REWARD_BANNER_VISIBLE_MS = 10000;
 
+function shouldHideRewardBanner(pathname: string | null) {
+  return (
+    pathname?.startsWith("/admin") ||
+    pathname?.startsWith("/checkout") ||
+    pathname?.startsWith("/order-success")
+  );
+}
+
 export function WelcomeBackRewardBannerCard({
   percent,
   onViewCart,
@@ -76,6 +84,7 @@ export function WelcomeBackRewardBannerCard({
 
 export default function WelcomeBackRewardBanner() {
   const pathname = usePathname();
+  const hideBanner = shouldHideRewardBanner(pathname);
   const { isCartOpen, setIsCartOpen, totalItems } = useCart();
   const [reward, setReward] = useState<WelcomeBackReward | null>(null);
   const [visible, setVisible] = useState(false);
@@ -86,9 +95,19 @@ export default function WelcomeBackRewardBanner() {
     if (typeof window === "undefined") return;
 
     const syncReward = () => {
+      if (hideBanner) {
+        setVisible(false);
+        setReward(null);
+        if (revealTimeoutRef.current) {
+          window.clearTimeout(revealTimeoutRef.current);
+          revealTimeoutRef.current = null;
+        }
+        return;
+      }
+
       const activeReward = readWelcomeBackReward(window.localStorage);
       setReward(activeReward);
-      if (!activeReward || isCartOpen || pathname?.startsWith("/admin")) return;
+      if (!activeReward || isCartOpen) return;
 
       const rewardId = getWelcomeBackRewardId(activeReward);
       if (displayedRewardIdRef.current === rewardId) return;
@@ -117,15 +136,15 @@ export default function WelcomeBackRewardBanner() {
       window.removeEventListener("focus", syncReward);
       window.removeEventListener("hume:welcome-back-reward-sync", syncReward);
     };
-  }, [isCartOpen, pathname]);
+  }, [hideBanner, isCartOpen]);
 
   useEffect(() => {
-    if (!reward || isCartOpen || pathname?.startsWith("/admin")) return;
+    if (!reward || isCartOpen || hideBanner) return;
     const timeout = window.setTimeout(() => setVisible(false), REWARD_BANNER_VISIBLE_MS);
     return () => window.clearTimeout(timeout);
-  }, [isCartOpen, pathname, reward]);
+  }, [hideBanner, isCartOpen, reward]);
 
-  if (!reward || isCartOpen || pathname?.startsWith("/admin")) return null;
+  if (!reward || isCartOpen || hideBanner) return null;
 
   const handleViewCart = () => {
     if (typeof window !== "undefined") {

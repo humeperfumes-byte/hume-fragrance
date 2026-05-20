@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Track Your HUME Order",
-  description: "Track HUME orders shipped with India Post Speed Post.",
+  description: "Track HUME orders shipped with our delivery partners.",
 };
 
 type TrackOrderPageProps = {

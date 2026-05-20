@@ -4,19 +4,22 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   CheckCircle2,
-  Clock3,
   Loader2,
   MapPin,
-  PackageCheck,
   PackageSearch,
+  Phone,
   Route,
   Search,
-  ShieldCheck,
   Truck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { TRACKING_STATUS_META, TrackingResult } from "@/lib/tracking/carriers";
+import {
+  TRACKING_CARRIERS,
+  TRACKING_STATUS_META,
+  type TrackingDestination,
+  type TrackingResult,
+} from "@/lib/tracking/carriers";
 import { cn } from "@/lib/utils";
 
 type TrackingResponse = {
@@ -45,6 +48,18 @@ function getProgress(status?: TrackingResult["status"]) {
   return 0;
 }
 
+function getDestinationAddressLines(destination?: TrackingDestination | null) {
+  if (!destination) return [];
+  return [
+    destination.addressLine1,
+    destination.addressLine2,
+    [destination.city, destination.state, destination.pincode]
+      .filter(Boolean)
+      .join(", "),
+    destination.country,
+  ].filter((line): line is string => Boolean(line));
+}
+
 function StatusIcon({ status }: { status?: TrackingResult["status"] }) {
   if (status === "delivered") return <CheckCircle2 className="h-5 w-5 text-emerald-600" />;
   if (status === "exception" || status === "returned") return <AlertCircle className="h-5 w-5 text-rose-600" />;
@@ -64,6 +79,10 @@ export default function TrackOrderClient({ initialTrackingNumber = "" }: TrackOr
   const [isLoading, setIsLoading] = useState(false);
   const [hasAutoTracked, setHasAutoTracked] = useState(false);
   const progress = useMemo(() => getProgress(result?.status), [result]);
+  const destinationAddressLines = useMemo(
+    () => getDestinationAddressLines(result?.destination),
+    [result?.destination],
+  );
 
   const lookupTracking = useCallback(async (value: string) => {
     setError(null);
@@ -71,14 +90,14 @@ export default function TrackOrderClient({ initialTrackingNumber = "" }: TrackOr
 
     const nextTrackingNumber = value.trim().toUpperCase();
     if (!nextTrackingNumber) {
-      setError("Enter your Speed Post tracking ID.");
+      setError("Enter your tracking ID.");
       return;
     }
 
     setTrackingNumber(nextTrackingNumber);
     setIsLoading(true);
     try {
-      const response = await fetch("/api/tracking/speed-post", {
+      const response = await fetch("/api/tracking", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ trackingNumber: nextTrackingNumber }),
@@ -113,33 +132,45 @@ export default function TrackOrderClient({ initialTrackingNumber = "" }: TrackOr
       <div className="mx-auto max-w-5xl">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(360px,1fr)] lg:items-start">
           <div className="pt-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">Speed Post Tracking</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">Order Tracking</p>
             <h1 className="mt-4 font-serif text-4xl font-light leading-none tracking-wide text-zinc-950 sm:text-5xl">
               Track your order
             </h1>
             <p className="mt-5 max-w-md text-sm leading-6 text-zinc-600">
-              Enter the India Post Speed Post tracking ID shared by HUME to see the latest shipment status.
+              Enter the tracking ID shared by HUME to see the latest shipment status across our delivery partners.
             </p>
-            {normalizedInitialTrackingNumber ? (
-              <p className="mt-3 max-w-md text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">
-                Tracking {normalizedInitialTrackingNumber}
-              </p>
+            {result?.destination ? (
+              <div className="mt-8 max-w-md border border-emerald-100 bg-emerald-50/70 p-4 shadow-[0_18px_55px_rgba(16,185,129,0.08)]">
+                <div className="mb-3 flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-emerald-700" />
+                  <h2 className="text-sm font-semibold text-zinc-950">
+                    Destination address
+                  </h2>
+                </div>
+                {result.destination.fullName ? (
+                  <p className="text-sm font-semibold text-zinc-950">
+                    {result.destination.fullName}
+                  </p>
+                ) : null}
+                {result.destination.phone ? (
+                  <p className="mt-1 flex items-center gap-2 text-sm text-zinc-700">
+                    <Phone className="h-3.5 w-3.5 text-emerald-700" />
+                    {result.destination.phone}
+                  </p>
+                ) : null}
+                {destinationAddressLines.length ? (
+                  <div className="mt-3 space-y-1 text-sm leading-6 text-zinc-700">
+                    {destinationAddressLines.map((line) => (
+                      <p key={line}>{line}</p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm text-zinc-500">
+                    Address is not available for this tracking ID yet.
+                  </p>
+                )}
+              </div>
             ) : null}
-
-            <div className="mt-8 grid max-w-md grid-cols-3 gap-2 text-xs text-zinc-500">
-              <div className="border border-zinc-200 bg-white/70 p-3">
-                <PackageCheck className="mb-2 h-4 w-4 text-zinc-700" />
-                Speed Post
-              </div>
-              <div className="border border-zinc-200 bg-white/70 p-3">
-                <ShieldCheck className="mb-2 h-4 w-4 text-zinc-700" />
-                Official source
-              </div>
-              <div className="border border-zinc-200 bg-white/70 p-3">
-                <Clock3 className="mb-2 h-4 w-4 text-zinc-700" />
-                Live lookup
-              </div>
-            </div>
           </div>
 
           <div className="border border-zinc-200 bg-white p-4 shadow-[0_24px_80px_rgba(15,15,15,0.08)] sm:p-6">
@@ -152,7 +183,7 @@ export default function TrackOrderClient({ initialTrackingNumber = "" }: TrackOr
                   <Input
                     value={trackingNumber}
                     onChange={(event) => setTrackingNumber(event.target.value.toUpperCase())}
-                    placeholder="EA123456789IN"
+                    placeholder="Tracking ID / AWB"
                     autoComplete="off"
                     className="h-12 flex-1 rounded-none border-zinc-300 bg-zinc-50 text-base uppercase text-zinc-950 placeholder:text-zinc-400 focus-visible:ring-zinc-950/20"
                   />
@@ -184,6 +215,9 @@ export default function TrackOrderClient({ initialTrackingNumber = "" }: TrackOr
                       </div>
                       <div>
                         <p className="text-lg font-semibold text-zinc-950">{result.trackingNumber}</p>
+                        <p className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-zinc-400">
+                          {TRACKING_CARRIERS[result.carrier].label}
+                        </p>
                         <p className="mt-1 text-sm text-zinc-500">{result.message}</p>
                       </div>
                     </div>

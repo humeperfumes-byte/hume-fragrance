@@ -89,6 +89,19 @@ export type TrackingTimelineItem = {
   description?: string | null;
 };
 
+export type TrackingDestination = {
+  source: "hume_order" | "carrier";
+  label?: string | null;
+  fullName?: string | null;
+  phone?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pincode?: string | null;
+  country?: string | null;
+};
+
 export type TrackingResult = {
   carrier: TrackingCarrier;
   trackingNumber: string;
@@ -99,6 +112,7 @@ export type TrackingResult = {
   checkedAt: string;
   lastScan?: string | null;
   location?: string | null;
+  destination?: TrackingDestination | null;
   expectedDelivery?: string | null;
   timeline: TrackingTimelineItem[];
   message: string;

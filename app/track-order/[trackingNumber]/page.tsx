@@ -21,7 +21,7 @@ export async function generateMetadata({
 
   return {
     title: cleanNumber ? `Track Order ${cleanNumber}` : "Track Your HUME Order",
-    description: "Track your HUME order shipped with India Post Speed Post.",
+    description: "Track your HUME order shipped with our delivery partners.",
     robots: {
       index: false,
       follow: false,
