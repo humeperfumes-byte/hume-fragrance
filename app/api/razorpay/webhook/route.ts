@@ -10,6 +10,10 @@ import {
   type Order,
 } from "@/db/schema";
 import { sendOrderConfirmationEmail } from "@/lib/email/send-order-confirmation";
+import {
+  sendAdminOrderAlert,
+  shouldSendAdminOrderAlert,
+} from "@/lib/notifications/admin-order-alert";
 
 export const runtime = "nodejs";
 
@@ -432,6 +436,34 @@ function sendRecoveryEmailIfNeeded(order: Order, nextStatus: string) {
   });
 }
 
+function sendAdminAlertIfNeeded(order: Order, nextStatus: string, paymentMethod?: string | null) {
+  if (!shouldSendAdminOrderAlert(nextStatus, order.status)) return;
+
+  sendAdminOrderAlert({
+    orderNumber: order.orderNumber,
+    status: nextStatus,
+    checkoutChannel: order.checkoutChannel,
+    paymentMethod: paymentMethod ?? order.paymentMethod ?? "Razorpay Online Payment",
+    shippingMethod: order.shippingMethod,
+    subtotal: order.subtotal,
+    shippingFee: order.shippingFee,
+    grandTotal: order.grandTotal,
+    details: {
+      fullName: order.fullName,
+      email: order.email,
+      phone: order.phone,
+      addressLine1: order.addressLine1,
+      addressLine2: order.addressLine2,
+      city: order.city,
+      state: order.state,
+      pincode: order.pincode,
+    },
+    cartSnapshot: order.cartSnapshot,
+  }).catch((error) => {
+    console.error("Razorpay webhook admin alert failed:", error);
+  });
+}
+
 export async function POST(request: NextRequest) {
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
   const signature = request.headers.get("x-razorpay-signature");
@@ -636,6 +668,7 @@ export async function POST(request: NextRequest) {
       { ...existingOrder, paymentMethod: nextPaymentMethod, whatsappMessage: nextMessage },
       nextStatus,
     );
+    sendAdminAlertIfNeeded(existingOrder, nextStatus, nextPaymentMethod);
 
     return NextResponse.json({
       ok: true,

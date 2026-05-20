@@ -3,6 +3,10 @@ import { z } from "zod";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { sendOrderConfirmationEmail } from "@/lib/email/send-order-confirmation";
+import {
+  sendAdminOrderAlert,
+  shouldSendAdminOrderAlert,
+} from "@/lib/notifications/admin-order-alert";
 import { resolveIndiaAwareCountry } from "@/lib/admin-market";
 import { isAdminCapturedPath, isInternalAdminRequest } from "@/lib/admin-data-filters";
 import { eq } from "drizzle-orm";
@@ -217,6 +221,23 @@ export async function POST(request: NextRequest) {
     ) {
       sendOrderConfirmationEmail(data).catch((err) => {
         console.error("Async email send failed:", err);
+      });
+    }
+
+    if (shouldSendAdminOrderAlert(data.status, existingOrder?.status)) {
+      sendAdminOrderAlert({
+        orderNumber: data.orderNumber,
+        status: data.status,
+        checkoutChannel: data.checkoutChannel,
+        paymentMethod: data.paymentMethod,
+        shippingMethod: data.shippingMethod,
+        subtotal: data.subtotal,
+        shippingFee: data.shippingFee,
+        grandTotal: data.grandTotal,
+        details: data.details,
+        cartSnapshot: data.cartSnapshot,
+      }).catch((err) => {
+        console.error("Async admin order alert failed:", err);
       });
     }
 
