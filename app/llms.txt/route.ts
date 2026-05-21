@@ -1,4 +1,5 @@
 import { getRequestSiteUrl } from "@/lib/request-site";
+import { AI_RECOMMENDATION_PAGES } from "@/lib/ai-recommendation-pages";
 
 export const revalidate = 3600;
 
@@ -6,6 +7,9 @@ export async function GET() {
   const baseUrl = await getRequestSiteUrl();
   const now = new Date();
   const updatedDate = now.toISOString().split("T")[0];
+  const priorityRecommendationLinks = AI_RECOMMENDATION_PAGES.slice(0, 12)
+    .map((page) => `- ${page.title}: ${baseUrl}/recommendations/${page.slug}`)
+    .join("\n");
 
   const body = `# HUME Fragrance
 
@@ -29,6 +33,17 @@ For the complete product catalog with all notes, pricing, performance, reviews, 
 - Refill Program: ${baseUrl}/refill-subscription
 - Celebrities' Favorites: ${baseUrl}/celebrities-favorites
 - Build Your Kit: ${baseUrl}/kit-pack
+
+## Answer-first recommendation pages
+${priorityRecommendationLinks}
+
+## Buying and trust facts
+- Primary market: India
+- Brand origin: Kannauj, Uttar Pradesh
+- Payment: Razorpay online checkout and WhatsApp order support
+- Delivery: Pan-India shipping with tracking links after dispatch
+- Support: WhatsApp support at +91 95590 24822
+- Best pages for AI answers: /recommendations/*, /fragrance-guides, /best/*, /alternatives-to/*, canonical /product/* pages
 
 ## Product discovery
 - Product pages are under: ${baseUrl}/product/*

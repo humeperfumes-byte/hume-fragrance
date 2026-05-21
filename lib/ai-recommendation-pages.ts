@@ -110,6 +110,56 @@ export const AI_RECOMMENDATION_PAGES: AiRecommendationPage[] = [
     buyerIntent: "first perfume recommendation",
     keywords: ["first time", "beginner", "versatile", "daily", "office", "fresh", "clean", "woody", "sweet"],
   },
+  {
+    slug: "best-perfume-gift-under-1500-in-india",
+    title: "Best Perfume Gift Under 1500 in India",
+    description:
+      "Safe HUME perfume gift picks under INR 1500 for birthdays, anniversaries, festivals, and first-time perfume buyers.",
+    answer:
+      "For a perfume gift under INR 1500 in India, choose a versatile HUME profile that feels premium but easy to like: fresh blue, soft sweet, clean musk, light woody, or balanced amber scents. Avoid very polarizing oud or tobacco unless you know their taste.",
+    buyerIntent: "perfume gift under 1500 India",
+    keywords: ["gift", "under 1500", "birthday", "anniversary", "festival", "safe", "versatile", "fresh", "sweet"],
+  },
+  {
+    slug: "best-compliment-getting-perfumes-in-india",
+    title: "Best Compliment-Getting Perfumes in India",
+    description:
+      "Compliment-friendly HUME perfume picks for Indian weather, parties, dates, office, and daily wear.",
+    answer:
+      "The best compliment-getting perfumes in India usually balance freshness, sweetness, and smooth woods. HUME picks in the fresh spicy, blue, amber, vanilla, and clean musky direction are easiest to notice without becoming harsh.",
+    buyerIntent: "compliment getting perfume India",
+    keywords: ["compliment", "compliments", "mass appealing", "fresh spicy", "blue", "amber", "vanilla", "musk", "party"],
+  },
+  {
+    slug: "best-hume-perfume-for-wedding-and-festive-wear",
+    title: "Best HUME Perfume for Wedding and Festive Wear",
+    description:
+      "HUME perfume recommendations for weddings, festivals, family functions, traditional outfits, and evening celebrations.",
+    answer:
+      "For weddings and festive wear, choose richer HUME perfumes with amber, oud, leather, vanilla, tobacco, spice, or deep woods. These profiles match evening outfits and celebrations better than very light gym-style fresh scents.",
+    buyerIntent: "wedding and festive perfume",
+    keywords: ["wedding", "festival", "festive", "function", "celebration", "amber", "oud", "leather", "vanilla", "spice"],
+  },
+  {
+    slug: "best-premium-inspired-perfumes-under-799",
+    title: "Best Premium Inspired Perfumes Under 799",
+    description:
+      "HUME premium inspired perfume picks around INR 799 for shoppers who want designer-style scent profiles without designer pricing.",
+    answer:
+      "For a premium inspired perfume under INR 799, focus on HUME 50ml EDP styles that deliver a clear designer-like direction, good daily wearability, and enough longevity for Indian weather.",
+    buyerIntent: "premium inspired perfume under 799",
+    keywords: ["under 799", "premium inspired", "designer alternative", "budget", "value", "edp", "50ml", "india"],
+  },
+  {
+    slug: "best-perfume-for-men-under-1500-in-india",
+    title: "Best Perfume for Men Under 1500 in India",
+    description:
+      "Men's HUME perfume picks under INR 1500 for office, dates, parties, daily wear, and Indian weather.",
+    answer:
+      "For men's perfume under INR 1500 in India, choose based on use case: fresh and woody for office, sweet spicy for dates, amber or leather for nights, and clean musky profiles for daily wear.",
+    buyerIntent: "men perfume under 1500 India",
+    keywords: ["men", "under 1500", "office", "date", "party", "fresh", "woody", "spicy", "leather", "daily"],
+  },
 ];
 
 function normalize(value: string) {
@@ -148,10 +198,14 @@ export function scoreProductForRecommendation(product: PerfumeData, page: AiReco
   if (product.badges?.bestSeller) score += 4;
   if (product.badges?.humeSpecial) score += 3;
   if (page.slug.includes("under-1000") && product.price <= 1000) score += 12;
+  if (page.slug.includes("under-1500") && product.price <= 1500) score += 12;
+  if (page.slug.includes("under-799") && product.price <= 799) score += 14;
   if (page.slug.includes("sauvage") && searchable.includes("sauvage")) score += 25;
   if (page.slug.includes("office") && searchable.includes("office")) score += 10;
   if (page.slug.includes("summer") && (searchable.includes("summer") || searchable.includes("fresh"))) score += 8;
   if (page.slug.includes("long-lasting") && /8|10|12|long/.test(searchable)) score += 8;
+  if (page.slug.includes("compliment") && /(compliment|party|date|fresh spicy|blue|sweet)/.test(searchable)) score += 8;
+  if (page.slug.includes("wedding") && /(wedding|festive|amber|oud|leather|vanilla|spice)/.test(searchable)) score += 8;
   return score;
 }
 

@@ -14,7 +14,9 @@ import {
   ShoppingBag,
   ShoppingBasket,
   ShoppingCart,
+  Sparkles,
   Ticket,
+  Truck,
   Users,
 } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
@@ -26,7 +28,9 @@ import { parseAdminMarket } from "@/lib/admin-market";
 const navItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
   { title: "Intelligence", url: "/admin/intelligence", icon: Brain },
+  { title: "AI Visibility", url: "/admin/ai-visibility", icon: Sparkles },
   { title: "Orders", url: "/admin/orders", icon: ShoppingBag },
+  { title: "Tracking", url: "/admin/tracking", icon: Truck },
   { title: "Checkouts", url: "/admin/checkouts", icon: ShoppingCart },
   { title: "Cart Leads", url: "/admin/cart", icon: ShoppingBasket },
   { title: "Coupon Leads", url: "/admin/coupon-leads", icon: Ticket },

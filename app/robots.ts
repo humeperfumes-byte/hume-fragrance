@@ -24,6 +24,11 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         disallow: disallowRules,
       },
       {
+        userAgent: "ChatGPT-User",
+        allow: allowRules,
+        disallow: disallowRules,
+      },
+      {
         userAgent: "PerplexityBot",
         allow: allowRules,
         disallow: disallowRules,
@@ -34,7 +39,27 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         disallow: disallowRules,
       },
       {
+        userAgent: "Bingbot",
+        allow: allowRules,
+        disallow: disallowRules,
+      },
+      {
         userAgent: "Googlebot",
+        allow: allowRules,
+        disallow: disallowRules,
+      },
+      {
+        userAgent: "Google-Extended",
+        allow: allowRules,
+        disallow: disallowRules,
+      },
+      {
+        userAgent: "Applebot",
+        allow: allowRules,
+        disallow: disallowRules,
+      },
+      {
+        userAgent: "Applebot-Extended",
         allow: allowRules,
         disallow: disallowRules,
       },

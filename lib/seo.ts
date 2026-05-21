@@ -34,6 +34,18 @@ export const getOrganizationSchema = (baseUrl = SITE_URL) => ({
   description:
     "HUME Fragrance is an Indian perfume brand from Kannauj that creates premium inspired alternatives to designer fragrances. EDP concentration with 8-12 hour longevity, designed for Indian weather. Starting INR 499.",
   sameAs: ["https://www.instagram.com/hume.perfume/", "https://wa.me/919559024822"],
+  areaServed: {
+    "@type": "Country",
+    name: "India",
+  },
+  knowsAbout: [
+    "inspired perfumes",
+    "EDP perfumes",
+    "long lasting perfumes for Indian weather",
+    "designer fragrance alternatives",
+    "Kannauj perfumery",
+    "perfume gifting",
+  ],
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "customer service",
@@ -46,6 +58,15 @@ export const getOrganizationSchema = (baseUrl = SITE_URL) => ({
     addressLocality: "Kannauj",
     addressRegion: "Uttar Pradesh",
     addressCountry: "IN",
+  },
+  hasMerchantReturnPolicy: {
+    "@type": "MerchantReturnPolicy",
+    applicableCountry: "IN",
+    returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+    merchantReturnDays: 7,
+    returnMethod: "https://schema.org/ReturnByMail",
+    returnFees: "https://schema.org/FreeReturn",
+    merchantReturnLink: siteUrlForBase(baseUrl, "/return-refund-policy"),
   },
 });
 
@@ -99,6 +120,7 @@ export const getProductSchema = (
       season: string[];
       occasion: string[];
     };
+    seoKeywords?: string[];
   },
   baseUrl = SITE_URL,
 ) => {
@@ -133,7 +155,37 @@ export const getProductSchema = (
     brand: { "@type": "Brand", name: "HUME Fragrance" },
     category: `Fragrances > ${product.category}`,
     url: productUrl,
+    keywords: [
+      product.name,
+      `${product.inspirationBrand} ${product.inspiration} inspired perfume`,
+      product.category,
+      product.gender,
+      ...(product.seoKeywords ?? []),
+      ...(product.longevity?.occasion ?? []),
+      ...(product.longevity?.season ?? []),
+    ]
+      .filter(Boolean)
+      .join(", "),
+    audience: {
+      "@type": "PeopleAudience",
+      suggestedGender: product.gender || "Unisex",
+      geographicArea: {
+        "@type": "Country",
+        name: "India",
+      },
+    },
+    isRelatedTo: {
+      "@type": "Product",
+      name: `${product.inspirationBrand} ${product.inspiration}`,
+      brand: { "@type": "Brand", name: product.inspirationBrand },
+    },
     additionalProperty: [
+      { "@type": "PropertyValue", name: "Concentration", value: "EDP" },
+      {
+        "@type": "PropertyValue",
+        name: "Inspired Profile",
+        value: `${product.inspirationBrand} ${product.inspiration}`,
+      },
       product.size
         ? { "@type": "PropertyValue", name: "Size", value: product.size.toUpperCase() }
         : null,
@@ -155,6 +207,20 @@ export const getProductSchema = (
               ...product.notes.heart,
               ...product.notes.base,
             ].join(", "),
+          }
+        : null,
+      product.longevity?.season?.length
+        ? {
+            "@type": "PropertyValue",
+            name: "Best Seasons",
+            value: product.longevity.season.join(", "),
+          }
+        : null,
+      product.longevity?.occasion?.length
+        ? {
+            "@type": "PropertyValue",
+            name: "Best Occasions",
+            value: product.longevity.occasion.join(", "),
           }
         : null,
     ].filter(Boolean),

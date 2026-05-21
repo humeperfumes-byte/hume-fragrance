@@ -33,6 +33,7 @@ import {
   TRACKING_STATUS_META,
   TrackingCarrier,
   TrackingResult,
+  isTrackingCarrier,
 } from "@/lib/tracking/carriers";
 
 type LookupResponse = {
@@ -46,6 +47,30 @@ type RecentLookup = {
   trackingNumber: string;
   statusLabel: string;
   checkedAt: string;
+};
+
+type TrackedOrder = {
+  id: string;
+  orderNumber: string;
+  status: string;
+  checkoutChannel: string;
+  fullName: string | null;
+  phone: string | null;
+  city: string | null;
+  state: string | null;
+  fulfillmentCarrier: string | null;
+  trackingNumber: string | null;
+  trackingUrl: string | null;
+  trackingStatus: string | null;
+  trackingLastCheckedAt: string | null;
+  shippedAt: string | null;
+  deliveredAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TrackingSystemClientProps = {
+  initialTrackedOrders?: TrackedOrder[];
 };
 
 const carrierEntries = Object.entries(TRACKING_CARRIERS) as Array<
@@ -75,6 +100,22 @@ function buildTrackingUrl(result: TrackingResult) {
   return `${origin}/track-order/${encodeURIComponent(result.trackingNumber)}`;
 }
 
+function buildOrderTrackingUrl(order: TrackedOrder) {
+  if (order.trackingUrl) return order.trackingUrl;
+  const origin = typeof window === "undefined" ? "" : window.location.origin;
+  return `${origin}/track-order/${encodeURIComponent(order.trackingNumber || "")}`;
+}
+
+function normalizeOrderCarrier(value: string | null | undefined): TrackingCarrier {
+  return isTrackingCarrier(value) ? value : "speed_post";
+}
+
+function titleStatus(value: string | null | undefined) {
+  return String(value || "pending")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 function buildCustomerUpdate(result: TrackingResult) {
   const carrier = TRACKING_CARRIERS[result.carrier].shortLabel;
   const location = result.location ? ` Current location: ${result.location}.` : "";
@@ -99,7 +140,7 @@ function CarrierMark({ carrier }: { carrier: TrackingCarrier }) {
   );
 }
 
-export default function TrackingSystemClient() {
+export default function TrackingSystemClient({ initialTrackedOrders = [] }: TrackingSystemClientProps) {
   const [carrier, setCarrier] = useState<TrackingCarrier>("delhivery");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [bulkText, setBulkText] = useState("");
@@ -114,6 +155,13 @@ export default function TrackingSystemClient() {
     const bulkCount = splitTrackingNumbers(bulkText).length;
     return bulkCount || (trackingNumber.trim() ? 1 : 0);
   }, [bulkText, trackingNumber]);
+  const deliveryStats = useMemo(() => {
+    const active = initialTrackedOrders.filter((order) => !order.deliveredAt && order.status !== "delivered").length;
+    const delivered = initialTrackedOrders.filter((order) => order.deliveredAt || order.status === "delivered").length;
+    const needsCheck = initialTrackedOrders.filter((order) => !order.trackingLastCheckedAt).length;
+
+    return { active, delivered, needsCheck };
+  }, [initialTrackedOrders]);
 
   useEffect(() => {
     try {
@@ -148,11 +196,9 @@ export default function TrackingSystemClient() {
     window.localStorage.setItem("hume_tracking_recent", JSON.stringify(nextRecent));
   }
 
-  async function handleLookup(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function lookupShipments(nextCarrier: TrackingCarrier, trackingNumbers: string[]) {
     setError(null);
 
-    const trackingNumbers = splitTrackingNumbers(bulkText || trackingNumber);
     if (!trackingNumbers.length) {
       setError("Add at least one tracking number.");
       return;
@@ -163,7 +209,7 @@ export default function TrackingSystemClient() {
       const response = await fetch("/api/admin/tracking", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ carrier, trackingNumbers }),
+        body: JSON.stringify({ carrier: nextCarrier, trackingNumbers }),
       });
       const data = (await response.json()) as LookupResponse;
 
@@ -181,6 +227,21 @@ export default function TrackingSystemClient() {
     }
   }
 
+  async function handleLookup(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await lookupShipments(carrier, splitTrackingNumbers(bulkText || trackingNumber));
+  }
+
+  async function checkTrackedOrder(order: TrackedOrder) {
+    if (!order.trackingNumber) return;
+
+    const nextCarrier = normalizeOrderCarrier(order.fulfillmentCarrier);
+    setCarrier(nextCarrier);
+    setTrackingNumber(order.trackingNumber);
+    setBulkText("");
+    await lookupShipments(nextCarrier, [order.trackingNumber]);
+  }
+
   async function copyCustomerUpdate(result: TrackingResult) {
     await navigator.clipboard.writeText(buildCustomerUpdate(result));
   }
@@ -189,16 +250,20 @@ export default function TrackingSystemClient() {
     await navigator.clipboard.writeText(buildTrackingUrl(result));
   }
 
+  async function copyOrderTrackingLink(order: TrackedOrder) {
+    await navigator.clipboard.writeText(buildOrderTrackingUrl(order));
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div className="max-w-2xl">
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <Badge className="border-emerald-400/20 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/10">
-              Draft page
+              Admin tracking desk
             </Badge>
             <Badge className="border-white/10 bg-white/[0.04] text-white/50 hover:bg-white/[0.04]">
-              Not linked in admin nav
+              Orders + carrier lookup
             </Badge>
           </div>
           <h1 className="text-2xl">Shipment Tracking System</h1>
@@ -222,6 +287,108 @@ export default function TrackingSystemClient() {
           ))}
         </div>
       </div>
+
+      <section className="rounded-3xl border border-white/10 bg-white/[0.03]">
+        <div className="flex flex-col justify-between gap-4 border-b border-white/10 p-4 sm:flex-row sm:items-end sm:p-5">
+          <div>
+            <h2 className="text-lg font-semibold text-white">Active Delivery Tracking</h2>
+            <p className="mt-1 text-sm text-white/40">
+              Orders where a tracking ID has been saved from the order panel.
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-2xl border border-white/10 bg-black/15 px-3 py-2">
+              <p className="text-lg font-semibold text-white">{initialTrackedOrders.length}</p>
+              <p className="text-[10px] uppercase tracking-[0.14em] text-white/35">Tracked</p>
+            </div>
+            <div className="rounded-2xl border border-sky-400/15 bg-sky-400/10 px-3 py-2">
+              <p className="text-lg font-semibold text-sky-100">{deliveryStats.active}</p>
+              <p className="text-[10px] uppercase tracking-[0.14em] text-sky-100/45">Active</p>
+            </div>
+            <div className="rounded-2xl border border-emerald-400/15 bg-emerald-400/10 px-3 py-2">
+              <p className="text-lg font-semibold text-emerald-100">{deliveryStats.delivered}</p>
+              <p className="text-[10px] uppercase tracking-[0.14em] text-emerald-100/45">Delivered</p>
+            </div>
+          </div>
+        </div>
+
+        {initialTrackedOrders.length ? (
+          <div className="divide-y divide-white/8">
+            {initialTrackedOrders.map((order) => {
+              const orderCarrier = normalizeOrderCarrier(order.fulfillmentCarrier);
+              const carrierConfig = TRACKING_CARRIERS[orderCarrier];
+
+              return (
+                <div key={order.id} className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[1.1fr_0.9fr_1fr_auto] lg:items-center">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold text-white">{order.orderNumber}</p>
+                      <Badge className="border-white/10 bg-black/20 text-[10px] text-white/55 hover:bg-black/20">
+                        {titleStatus(order.status)}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 truncate text-sm text-white/45">
+                      {order.fullName || "No customer name"}{order.phone ? ` / ${order.phone}` : ""}
+                    </p>
+                    <p className="mt-1 truncate text-xs text-white/30">
+                      {[order.city, order.state].filter(Boolean).join(", ") || "No location added"}
+                    </p>
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/30">Carrier</p>
+                    <p className="mt-1 text-sm font-medium text-white">{carrierConfig.shortLabel}</p>
+                    <p className="mt-1 truncate text-xs text-white/35">{order.checkoutChannel}</p>
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/30">Tracking ID</p>
+                    <p className="mt-1 truncate text-sm font-semibold text-white">{order.trackingNumber}</p>
+                    <p className="mt-1 text-xs text-white/35">
+                      Last checked: {formatDateTime(order.trackingLastCheckedAt)}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 lg:justify-end">
+                    <Button
+                      type="button"
+                      onClick={() => checkTrackedOrder(order)}
+                      className="h-9 rounded-xl bg-white text-black hover:bg-white/90"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      Check
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => copyOrderTrackingLink(order)}
+                      className="h-9 rounded-xl border border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.1]"
+                    >
+                      <ClipboardCopy className="h-4 w-4" />
+                      Copy
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => window.open(buildOrderTrackingUrl(order), "_blank", "noopener,noreferrer")}
+                      className="h-9 rounded-xl border border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.1]"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Open
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="px-6 py-12 text-center">
+            <Truck className="mx-auto h-8 w-8 text-white/25" />
+            <h3 className="mt-4 text-lg font-semibold text-white">No tracked deliveries yet</h3>
+            <p className="mx-auto mt-2 max-w-md text-sm text-white/40">
+              Add a tracking ID inside an order first. It will then appear here automatically.
+            </p>
+          </div>
+        )}
+      </section>
 
       <div className="grid gap-5 xl:grid-cols-[420px_minmax(0,1fr)]">
         <section className="space-y-5">
