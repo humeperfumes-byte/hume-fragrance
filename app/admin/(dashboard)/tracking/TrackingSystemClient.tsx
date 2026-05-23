@@ -35,6 +35,7 @@ import {
   TrackingResult,
   isTrackingCarrier,
 } from "@/lib/tracking/carriers";
+import { buildPublicTrackingUrl } from "@/lib/tracking-url";
 
 type LookupResponse = {
   ok: boolean;
@@ -97,13 +98,12 @@ function splitTrackingNumbers(value: string) {
 
 function buildTrackingUrl(result: TrackingResult) {
   const origin = typeof window === "undefined" ? "" : window.location.origin;
-  return `${origin}/track-order/${encodeURIComponent(result.trackingNumber)}`;
+  return buildPublicTrackingUrl(result.trackingNumber, origin);
 }
 
 function buildOrderTrackingUrl(order: TrackedOrder) {
-  if (order.trackingUrl) return order.trackingUrl;
   const origin = typeof window === "undefined" ? "" : window.location.origin;
-  return `${origin}/track-order/${encodeURIComponent(order.trackingNumber || "")}`;
+  return buildPublicTrackingUrl(order.trackingNumber, origin) || order.trackingUrl || "";
 }
 
 function normalizeOrderCarrier(value: string | null | undefined): TrackingCarrier {

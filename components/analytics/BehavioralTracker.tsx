@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 const BATCH_FLUSH_INTERVAL = 30000;
 const ANALYTICS_SESSION_KEY = "hume_analytics_sid";
@@ -32,6 +32,7 @@ type AnalyticsEvent = {
 
 export function BehavioralTracker() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const sessionIdRef = useRef<string | null>(null);
   const intentUnlockedRef = useRef(false);
   const trackedFormFields = useRef<Set<string>>(new Set());
@@ -53,8 +54,25 @@ export function BehavioralTracker() {
     return sid;
   }, []);
 
-  const queueEvent = useCallback((event: AnalyticsEvent) => {
-    if (!intentUnlockedRef.current) return;
+  const getCaptureUrl = useCallback(() => {
+    const pathWithQuery = `${pathname}${searchParams?.toString() ? `?${searchParams.toString()}` : ""}`;
+    if (typeof window === "undefined") return pathWithQuery;
+    return `${window.location.origin}${pathWithQuery}`;
+  }, [pathname, searchParams]);
+
+  const withSitePayload = useCallback((payload?: Record<string, unknown>) => {
+    if (typeof window === "undefined") return payload || {};
+    return {
+      ...(payload || {}),
+      siteHost: window.location.hostname,
+      siteOrigin: window.location.origin,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || undefined,
+      language: navigator.language || undefined,
+    };
+  }, []);
+
+  const queueEvent = useCallback((event: AnalyticsEvent, force = false) => {
+    if (!force && !intentUnlockedRef.current) return;
     eventQueue.current.push(event);
   }, []);
 
@@ -84,17 +102,15 @@ export function BehavioralTracker() {
       intentUnlockedRef.current = true;
       eventQueue.current.push({
         eventType,
-        path: pathname,
-        payload: {
-          ...(payload || {}),
+        path: getCaptureUrl(),
+        payload: withSitePayload({
+          ...payload,
           intentUnlockedBy: eventType,
           intentMode: "cart_intent",
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || undefined,
-          language: navigator.language || undefined,
-        },
+        }),
       });
     },
-    [getSharedSessionId, pathname]
+    [getCaptureUrl, getSharedSessionId, withSitePayload]
   );
 
   useEffect(() => {
@@ -104,18 +120,14 @@ export function BehavioralTracker() {
     const storedIntent = localStorage.getItem(INTENT_STORAGE_KEY) === "true";
     intentUnlockedRef.current = storedIntent;
 
-    if (storedIntent) {
-      eventQueue.current.push({
-        eventType: "page_view",
-        path: pathname,
-        payload: {
-          intentMode: "cart_intent",
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || undefined,
-          language: navigator.language || undefined,
-        },
-      });
-    }
-  }, [getSharedSessionId, pathname]);
+    eventQueue.current.push({
+      eventType: "page_view",
+      path: getCaptureUrl(),
+      payload: withSitePayload({
+        intentMode: storedIntent ? "cart_intent" : "site_visit",
+      }),
+    });
+  }, [getCaptureUrl, getSharedSessionId, pathname, withSitePayload]);
 
   useEffect(() => {
     const handleTrackingEvent = (event: Event) => {
@@ -138,7 +150,11 @@ export function BehavioralTracker() {
 
     const handleMouseLeave = (e: MouseEvent) => {
       if (e.clientY <= 0) {
-        queueEvent({ eventType: "exit_intent", path: pathname, payload: { cause: "mouse_leave_top" } });
+        queueEvent({
+          eventType: "exit_intent",
+          path: getCaptureUrl(),
+          payload: withSitePayload({ cause: "mouse_leave_top" }),
+        });
         void flushEvents();
       }
     };
@@ -148,10 +164,11 @@ export function BehavioralTracker() {
       const batch = [...eventQueue.current];
       if (batch.length === 0) return;
       eventQueue.current = [];
-      navigator.sendBeacon(
-        "/api/analytics/behavior",
-        JSON.stringify({ sessionId: sessionIdRef.current, events: batch })
+      const blob = new Blob(
+        [JSON.stringify({ sessionId: sessionIdRef.current, events: batch })],
+        { type: "application/json" },
       );
+      navigator.sendBeacon("/api/analytics/behavior", blob);
     };
 
     document.addEventListener("mouseleave", handleMouseLeave);
@@ -163,7 +180,7 @@ export function BehavioralTracker() {
       if (flushTimerRef.current) clearInterval(flushTimerRef.current);
       void flushEvents();
     };
-  }, [flushEvents, pathname, queueEvent]);
+  }, [flushEvents, getCaptureUrl, queueEvent, withSitePayload]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -173,17 +190,18 @@ export function BehavioralTracker() {
 
       queueEvent({
         eventType: "click",
-        path: pathname,
+        path: getCaptureUrl(),
         elementId: clickable.id || undefined,
         elementText: clickable.textContent?.substring(0, 50) || undefined,
         sectionName:
           clickable.closest("[data-analytics-section]")?.getAttribute("data-analytics-section") || undefined,
-      });
+        payload: withSitePayload(),
+      }, true);
     };
 
     document.addEventListener("click", handleClick);
     return () => document.removeEventListener("click", handleClick);
-  }, [pathname, queueEvent]);
+  }, [getCaptureUrl, queueEvent, withSitePayload]);
 
   useEffect(() => {
     const handleFocusIn = (e: FocusEvent) => {
@@ -196,7 +214,7 @@ export function BehavioralTracker() {
 
       queueEvent({
         eventType: "form_focus",
-        path: pathname,
+        path: getCaptureUrl(),
         elementId: fieldId,
         sectionName:
           target.closest("[data-analytics-section]")?.getAttribute("data-analytics-section") || undefined,
@@ -205,7 +223,7 @@ export function BehavioralTracker() {
 
     document.addEventListener("focusin", handleFocusIn);
     return () => document.removeEventListener("focusin", handleFocusIn);
-  }, [pathname, queueEvent]);
+  }, [getCaptureUrl, queueEvent]);
 
   return null;
 }

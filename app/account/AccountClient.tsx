@@ -23,6 +23,7 @@ import {
   type StoredCustomerAccount,
 } from "@/lib/customer-account";
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
+import { buildPublicTrackingPath } from "@/lib/tracking-url";
 import { cn } from "@/lib/utils";
 
 type AccountOrderItem = {
@@ -388,7 +389,10 @@ export default function AccountClient() {
                             </div>
                           </div>
                           <Button asChild className="h-10 rounded-full bg-zinc-950 text-white hover:bg-zinc-800">
-                            <Link href={order.trackingUrl || "/track-order"} onClick={() => showNavigationLoadingToast()}>
+                            <Link
+                              href={buildPublicTrackingPath(order.trackingNumber) || order.trackingUrl || "/track-order"}
+                              onClick={() => showNavigationLoadingToast()}
+                            >
                               <PackageSearch className="h-4 w-4" />
                               Track
                             </Link>

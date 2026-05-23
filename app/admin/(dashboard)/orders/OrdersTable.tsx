@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { CheckCircle2, Copy, ExternalLink, MessageCircle, Package, Truck } from "lucide-react";
+import { buildPublicTrackingUrl } from "@/lib/tracking-url";
 
 export function formatINR(amount: number | string): string {
   return new Intl.NumberFormat("en-IN", {
@@ -38,9 +39,8 @@ function getPaymentTrail(message: string | null) {
 }
 
 function getTrackingUrl(order: Pick<Order, "trackingNumber" | "trackingUrl">) {
-  if (order.trackingUrl) return order.trackingUrl;
-  if (typeof window === "undefined" || !order.trackingNumber) return "";
-  return `${window.location.origin}/track-order/${encodeURIComponent(order.trackingNumber)}`;
+  const origin = typeof window === "undefined" ? "" : window.location.origin;
+  return buildPublicTrackingUrl(order.trackingNumber, origin) || order.trackingUrl || "";
 }
 
 function getCarrierLabel(carrier?: string | null) {
@@ -204,9 +204,7 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
     if (!selectedOrder) return;
     const trackingNumber = String(editForm.trackingNumber || "").trim().toUpperCase();
     const fulfillmentCarrier = String(editForm.fulfillmentCarrier || "speed_post").trim();
-    const trackingUrl = trackingNumber
-      ? `${window.location.origin}/track-order/${encodeURIComponent(trackingNumber)}`
-      : "";
+    const trackingUrl = buildPublicTrackingUrl(trackingNumber, window.location.origin);
 
     setIsUpdating(true);
     try {
@@ -479,7 +477,14 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
                           type="button"
                           variant="outline"
                           disabled={!editForm.trackingNumber}
-                          onClick={() => copyText(`${window.location.origin}/track-order/${encodeURIComponent(String(editForm.trackingNumber || "").trim().toUpperCase())}`)}
+                          onClick={() =>
+                            copyText(
+                              buildPublicTrackingUrl(
+                                String(editForm.trackingNumber || "").trim().toUpperCase(),
+                                window.location.origin,
+                              ),
+                            )
+                          }
                           className="rounded-xl border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.07]"
                         >
                           <Copy className="mr-2 h-4 w-4" /> Copy Link

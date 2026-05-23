@@ -73,6 +73,26 @@ function getCurrentCaptureUrl(pathname: string, searchParams: ReturnType<typeof 
   return `${window.location.origin}${pathWithQuery}`;
 }
 
+function sendCartEvent(body: Record<string, unknown>) {
+  const text = JSON.stringify(body);
+  const sendBeaconFallback = () => {
+    if (typeof navigator === "undefined" || !navigator.sendBeacon) return;
+    const blob = new Blob([text], { type: "application/json" });
+    navigator.sendBeacon("/api/cart-events", blob);
+  };
+
+  void fetch("/api/cart-events", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    keepalive: true,
+    body: text,
+  })
+    .then((response) => {
+      if (!response.ok) sendBeaconFallback();
+    })
+    .catch(sendBeaconFallback);
+}
+
 export default function CartAnalyticsTracker() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -89,24 +109,21 @@ export default function CartAnalyticsTracker() {
       if (eventType === "cart_open" && Number(payload.itemCount || 0) <= 0) return;
       const welcomeBackReward = getActiveWelcomeBackReward();
 
-      void fetch("/api/cart-events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        keepalive: true,
-        body: JSON.stringify({
-          sessionId,
-          eventType,
-          path,
-          productId: payload.productId,
-          productName: payload.productName,
-          price: payload.price,
-          quantity: payload.quantity,
-          isGift: payload.isGift,
-          payload: {
-            ...payload,
-            welcomeBackReward,
-          },
-        }),
+      sendCartEvent({
+        sessionId,
+        eventType,
+        path,
+        productId: payload.productId,
+        productName: payload.productName,
+        price: payload.price,
+        quantity: payload.quantity,
+        isGift: payload.isGift,
+        payload: {
+          ...payload,
+          siteHost: window.location.hostname,
+          siteOrigin: window.location.origin,
+          welcomeBackReward,
+        },
       });
     };
 

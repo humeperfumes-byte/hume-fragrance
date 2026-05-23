@@ -8,6 +8,8 @@ export interface ProgrammaticInspiration {
     slug: string;
     note: string;
   };
+  availability?: "available" | "demand_validation";
+  demand_note?: string;
   scent_profile: {
     family: string;
     top_notes: string[];
@@ -47,10 +49,46 @@ type ProgrammaticSeoData = {
 
 const data = programmaticSeoData as ProgrammaticSeoData;
 
+export const HIGH_INTENT_INSPIRED_BY_SLUGS = [
+  "mancera-red-tobacco",
+  "amouage-interlude-man",
+  "tom-ford-ombre-leather",
+  "acqua-di-gio-profondo",
+  "initio-oud-for-greatness",
+  "tom-ford-tobacco-vanille",
+  "xerjoff-naxos",
+  "parfums-de-marly-layton",
+  "nishane-hacivat",
+  "bvlgari-tygar",
+  "louis-vuitton-ombre-nomade",
+  "louis-vuitton-imagination",
+  "amouage-outlands",
+  "afnan-supremacy-collectors-edition-pour-homme",
+  "kilian-angels-share-paradis",
+  "armani-stronger-with-you-absolutely",
+  "terre-dhermes-intense",
+  "ex-nihilo-blue-talisman-extrait-de-parfum",
+  "jean-paul-gaultier-le-male-elixir-absolu",
+  "byredo-bal-dafrique-absolu",
+  "viktor-rolf-spicebomb-metallic-musk",
+  "french-avenue-liquid-brun",
+  "creed-absolu-aventus",
+  "hugo-boss-bottled-absolu",
+  "dior-fahrenheit",
+  "parfums-de-marly-althair",
+] as const;
+
 export const getAllProgrammaticInspirations = () => data.inspirations;
 
 export const getProgrammaticInspirationBySlug = (slug: string) =>
   data.inspirations.find((item) => item.slug === slug);
+
+export const getHighIntentProgrammaticInspirations = () => {
+  const bySlug = new Map(data.inspirations.map((item) => [item.slug, item]));
+  return HIGH_INTENT_INSPIRED_BY_SLUGS.map((slug) => bySlug.get(slug)).filter(
+    (item): item is ProgrammaticInspiration => Boolean(item),
+  );
+};
 
 export const getAllProgrammaticAlternatives = () => data.alternatives;
 
@@ -61,6 +99,8 @@ export const getAlternativeToBySlug = (slug: string) =>
   data.inspirations.find((item) => item.slug === slug);
 
 export function buildInspiredFaq(item: ProgrammaticInspiration) {
+  const isDemandValidation = item.availability === "demand_validation";
+
   return [
     {
       question: `How long does this ${item.originalName} inspired perfume last?`,
@@ -68,16 +108,21 @@ export function buildInspiredFaq(item: ProgrammaticInspiration) {
     },
     {
       question: `Is this similar to ${item.originalBrand} ${item.originalName}?`,
-      answer:
-        "It follows the same scent family and note direction while being priced for daily use in India.",
+      answer: isDemandValidation
+        ? "This is a demand-watch page for the scent direction. HUME shows the closest current style while deciding whether to create a dedicated version."
+        : "It follows the same scent family and note direction while being priced for daily use in India.",
     },
     {
       question: "Is this suitable for Indian weather?",
       answer: item.formulated_for_india,
     },
     {
-      question: "Where can I buy the full product?",
-      answer: "You can order it directly from the linked product section on this page.",
+      question: isDemandValidation
+        ? "Is this exact HUME perfume available now?"
+        : "Where can I buy the full product?",
+      answer: isDemandValidation
+        ? "Not yet. This page tracks interest for a possible future HUME release, and the closest current HUME style is linked on the page."
+        : "You can order it directly from the linked product section on this page.",
     },
   ];
 }
@@ -103,18 +148,19 @@ export function buildBestPageFaq(item: ProgrammaticAlternative) {
 }
 
 export function getProgrammaticSitemapEntries(baseUrl: string) {
+  const highIntentSlugs = new Set<string>(HIGH_INTENT_INSPIRED_BY_SLUGS);
   const inspired = data.inspirations.map((item) => ({
     url: `${baseUrl}/inspired-by/${item.slug}`,
     lastModified: new Date(),
-    changeFrequency: "monthly" as const,
-    priority: 0.7,
+    changeFrequency: highIntentSlugs.has(item.slug) ? ("weekly" as const) : ("monthly" as const),
+    priority: highIntentSlugs.has(item.slug) ? 0.85 : 0.7,
   }));
 
   const alternativesTo = data.inspirations.map((item) => ({
     url: `${baseUrl}/alternatives-to/${item.slug}`,
     lastModified: new Date(),
-    changeFrequency: "monthly" as const,
-    priority: 0.7,
+    changeFrequency: highIntentSlugs.has(item.slug) ? ("weekly" as const) : ("monthly" as const),
+    priority: highIntentSlugs.has(item.slug) ? 0.8 : 0.7,
   }));
 
   const best = data.alternatives.map((item) => ({

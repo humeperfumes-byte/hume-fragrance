@@ -32,7 +32,7 @@ export default function ConsentCaptureBanner() {
           body: JSON.stringify({
             decision: "allow",
             sessionId,
-            path: window.location.pathname,
+            path: window.location.href,
             referrer: document.referrer || undefined,
             language: navigator.language || undefined,
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || undefined,
@@ -45,6 +45,8 @@ export default function ConsentCaptureBanner() {
             screenHeight: window.screen?.height || undefined,
             cookieEnabled: navigator.cookieEnabled,
             data: {
+              siteHost: window.location.hostname,
+              siteOrigin: window.location.origin,
               pathWithQuery: window.location.pathname + window.location.search,
             },
           }),

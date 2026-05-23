@@ -95,7 +95,7 @@
     },
     {
       "slug": "acqua-di-gio-profondo",
-      "originalName": "Acqua di Gio Profondo",
+      "originalName": "Acqua di Gio Profondo Eau de Parfum",
       "originalBrand": "Giorgio Armani",
       "humeProduct": {
         "slug": "acqua-di-gio-profondo",
@@ -133,7 +133,7 @@
           "Evening"
         ]
       },
-      "why_inspired": "Acqua di Gio Profondo remains a benchmark in the aquatic aromatic style, so demand for this profile stays consistently high in India.",
+      "why_inspired": "Acqua di Gio Profondo Eau de Parfum remains a benchmark in the aquatic aromatic style, so demand for this profile stays consistently high in India.",
       "what_makes_original_iconic": "Acqua di Gio Profondo by Giorgio Armani became iconic because it balanced recognisable character with wide versatility across settings.",
       "how_hume_captures_essence": "HUME keeps the same scent direction with a matching note pyramid and a practical EDP build for daily wear.",
       "formulated_for_india": "The blend is tuned for Indian heat and humidity with stronger base support so the dry down lasts longer on skin.",
@@ -1645,6 +1645,692 @@
       "formulated_for_india": "The blend is tuned for Indian heat and humidity with stronger base support so the dry down lasts longer on skin.",
       "original_price": 2500,
       "savings": 2001
+    },
+    {
+      "slug": "amouage-outlands",
+      "originalName": "Outlands",
+      "originalBrand": "Amouage",
+      "humeProduct": {
+        "slug": "ombre-nomade",
+        "note": "Demand validation page for future HUME product planning; closest current product is shown until this profile is produced."
+      },
+      "availability": "demand_validation",
+      "demand_note": "Track demand for a high-luxury spicy resinous Amouage-style profile.",
+      "scent_profile": {
+        "family": "Spicy Resinous Amber",
+        "top_notes": [
+          "Lemon",
+          "Citrus",
+          "Pepper"
+        ],
+        "heart_notes": [
+          "Saffron",
+          "Patchouli",
+          "Anise"
+        ],
+        "base_notes": [
+          "Vanilla",
+          "Resins",
+          "Woods"
+        ]
+      },
+      "characteristics": {
+        "longevity": "10-12 hours",
+        "projection": "Strong",
+        "seasons": [
+          "Fall",
+          "Winter",
+          "Monsoon"
+        ],
+        "occasions": [
+          "Date Night",
+          "Events",
+          "Evening"
+        ]
+      },
+      "why_inspired": "Amouage Outlands is a high-ticket niche release with strong interest from fragrance-aware buyers who search for bold amber, spice, resin, and vanilla profiles.",
+      "what_makes_original_iconic": "Outlands stands out because it contrasts bright citrus with saffron, resinous depth, patchouli, spice, and a rich modern niche dry down.",
+      "how_hume_captures_essence": "This page tracks demand for an Outlands-inspired direction. The closest current HUME style is Nomade Noir for shoppers who want dark woods, oud depth, and event-ready richness.",
+      "formulated_for_india": "If developed, this profile should be tuned for evening wear in Indian weather with controlled sweetness, strong resin support, and a long-lasting amber-woody base.",
+      "original_price": 43000,
+      "savings": 42201
+    },
+    {
+      "slug": "afnan-supremacy-collectors-edition-pour-homme",
+      "originalName": "Supremacy Collector's Edition Pour Homme",
+      "originalBrand": "Afnan",
+      "humeProduct": {
+        "slug": "creed-aventus",
+        "note": "Demand validation page for future HUME product planning; closest current product is shown until this profile is produced."
+      },
+      "availability": "demand_validation",
+      "demand_note": "Track demand for fruity chypre Aventus-style searches from Middle Eastern clone interest.",
+      "scent_profile": {
+        "family": "Fruity Chypre",
+        "top_notes": [
+          "Pineapple",
+          "Bergamot",
+          "Apple"
+        ],
+        "heart_notes": [
+          "Orange Blossom",
+          "Birch",
+          "Amber"
+        ],
+        "base_notes": [
+          "Oakmoss",
+          "Musk",
+          "Ambergris"
+        ]
+      },
+      "characteristics": {
+        "longevity": "8-10 hours",
+        "projection": "Moderate to Strong",
+        "seasons": [
+          "Spring",
+          "Summer",
+          "Monsoon"
+        ],
+        "occasions": [
+          "Office",
+          "Daily Wear",
+          "Evening"
+        ]
+      },
+      "why_inspired": "Afnan Supremacy Collector's Edition Pour Homme is searched by buyers comparing fruity Aventus-style DNA with stronger value and modern performance.",
+      "what_makes_original_iconic": "It became interesting because it combines pineapple-citrus freshness with birch, oakmoss, musk, and ambergris-style depth in a highly wearable masculine profile.",
+      "how_hume_captures_essence": "This page tracks demand for this exact Afnan direction. The closest current HUME style is Aventus for shoppers wanting pineapple, woods, musk, and a polished fresh-fruity signature.",
+      "formulated_for_india": "If developed, the profile should emphasize fresh opening clarity, dry woody-musky support, and enough projection for Indian daytime use without becoming heavy.",
+      "original_price": 6500,
+      "savings": 5701
+    },
+    {
+      "slug": "kilian-angels-share-paradis",
+      "originalName": "Angels' Share Paradis",
+      "originalBrand": "By Kilian",
+      "humeProduct": {
+        "slug": "stronger-with-you-intensely",
+        "note": "Demand validation page for future HUME product planning; closest current product is shown until this profile is produced."
+      },
+      "availability": "demand_validation",
+      "demand_note": "Track demand for ultra-premium boozy gourmand unisex scent direction.",
+      "scent_profile": {
+        "family": "Boozy Gourmand Amber",
+        "top_notes": [
+          "Cognac",
+          "Cinnamon",
+          "Spices"
+        ],
+        "heart_notes": [
+          "Praline",
+          "Tonka Bean",
+          "Oak"
+        ],
+        "base_notes": [
+          "Vanilla",
+          "Amber",
+          "Woods"
+        ]
+      },
+      "characteristics": {
+        "longevity": "10-12 hours",
+        "projection": "Strong",
+        "seasons": [
+          "Fall",
+          "Winter",
+          "Monsoon"
+        ],
+        "occasions": [
+          "Date Night",
+          "Events",
+          "Evening"
+        ]
+      },
+      "why_inspired": "Angels' Share Paradis has strong luxury-gourmand demand because shoppers search for warm, boozy, sweet, expensive-smelling scents with high evening impact.",
+      "what_makes_original_iconic": "The appeal is its rich cognac-style warmth, spiced sweetness, gourmand heart, and polished amber-woody depth.",
+      "how_hume_captures_essence": "This page tracks demand for a Kilian-style boozy gourmand. The closest current HUME style is Intense You for shoppers who want warm vanilla, amber, spice, and date-night sweetness.",
+      "formulated_for_india": "If developed, this should be tuned as a night and winter scent with sweetness controlled by woods and amber so it does not become sticky in Indian conditions.",
+      "original_price": 42000,
+      "savings": 41201
+    },
+    {
+      "slug": "armani-stronger-with-you-absolutely",
+      "originalName": "Stronger With You Absolutely",
+      "originalBrand": "Emporio Armani",
+      "humeProduct": {
+        "slug": "stronger-with-you-intensely",
+        "note": "Demand validation page for future HUME product planning; closest current product is shown until this profile is produced."
+      },
+      "availability": "demand_validation",
+      "demand_note": "Track demand for darker rum-vanilla Stronger With You flanker searches.",
+      "scent_profile": {
+        "family": "Warm Rum Vanilla",
+        "top_notes": [
+          "Rum",
+          "Bergamot",
+          "Elemi"
+        ],
+        "heart_notes": [
+          "Lavender",
+          "Davana",
+          "Chestnut"
+        ],
+        "base_notes": [
+          "Vanilla",
+          "Cedar",
+          "Patchouli"
+        ]
+      },
+      "characteristics": {
+        "longevity": "8-10 hours",
+        "projection": "Strong",
+        "seasons": [
+          "Fall",
+          "Winter",
+          "Monsoon"
+        ],
+        "occasions": [
+          "Date Night",
+          "Events",
+          "Evening"
+        ]
+      },
+      "why_inspired": "Stronger With You Absolutely gets searched by buyers who want a darker, boozier take on the Stronger With You sweet amber DNA.",
+      "what_makes_original_iconic": "Its hook is the mix of rum warmth, chestnut sweetness, vanilla, lavender, and woods in a masculine gourmand profile.",
+      "how_hume_captures_essence": "This page tracks demand for the Absolutely direction. The closest current HUME style is Intense You, which already covers the warm amber-vanilla Stronger With You family.",
+      "formulated_for_india": "If developed, this should emphasize the boozy amber dry down and keep projection polished for evening wear in Indian weather.",
+      "original_price": 9800,
+      "savings": 9001
+    },
+    {
+      "slug": "terre-dhermes-intense",
+      "originalName": "Terre d'Hermes Eau de Parfum Intense",
+      "originalBrand": "Hermes",
+      "humeProduct": {
+        "slug": "creed-viking",
+        "note": "Demand validation page for future HUME product planning; closest current product is shown until this profile is produced."
+      },
+      "availability": "demand_validation",
+      "demand_note": "Track demand for mineral woody citrus masculine searches.",
+      "scent_profile": {
+        "family": "Mineral Woody Citrus",
+        "top_notes": [
+          "Bergamot",
+          "Citrus",
+          "Pepper"
+        ],
+        "heart_notes": [
+          "Mineral Notes",
+          "Lava Stone",
+          "Warm Woods"
+        ],
+        "base_notes": [
+          "Vetiver",
+          "Cedar",
+          "Earthy Woods"
+        ]
+      },
+      "characteristics": {
+        "longevity": "8-10 hours",
+        "projection": "Moderate to Strong",
+        "seasons": [
+          "Spring",
+          "Summer",
+          "Monsoon"
+        ],
+        "occasions": [
+          "Office",
+          "Daily Wear",
+          "Evening"
+        ]
+      },
+      "why_inspired": "Terre d'Hermes Intense is a strong search target because Indian buyers often look for mature citrus-woody perfumes that feel premium, masculine, and office-safe.",
+      "what_makes_original_iconic": "The profile is known for its contrast between bright bergamot, mineral depth, and dry masculine woods.",
+      "how_hume_captures_essence": "This page tracks demand for the Terre dHermes Intense direction. The closest current HUME style is Viking Spirit for shoppers who want a refined spicy-woody masculine profile.",
+      "formulated_for_india": "If developed, it should be bright enough for warm weather but anchored by dry woods and vetiver so the scent feels mature and long-lasting.",
+      "original_price": 11500,
+      "savings": 10701
+    },
+    {
+      "slug": "ex-nihilo-blue-talisman-extrait-de-parfum",
+      "originalName": "Blue Talisman Extrait de Parfum",
+      "originalBrand": "Ex Nihilo",
+      "humeProduct": {
+        "slug": "lv-imagination",
+        "note": "Demand validation page for future HUME product planning; closest current product is shown until this profile is produced."
+      },
+      "availability": "demand_validation",
+      "demand_note": "Track demand for pear-musky luxury fresh niche searches.",
+      "scent_profile": {
+        "family": "Pear Musky Fresh",
+        "top_notes": [
+          "Pear",
+          "Bergamot",
+          "Ginger"
+        ],
+        "heart_notes": [
+          "Orange Blossom",
+          "Ambrofix",
+          "Fresh Woods"
+        ],
+        "base_notes": [
+          "Musk",
+          "Amber",
+          "Soft Woods"
+        ]
+      },
+      "characteristics": {
+        "longevity": "8-10 hours",
+        "projection": "Moderate to Strong",
+        "seasons": [
+          "Spring",
+          "Summer",
+          "Monsoon"
+        ],
+        "occasions": [
+          "Office",
+          "Daily Wear",
+          "Evening"
+        ]
+      },
+      "why_inspired": "Blue Talisman Extrait de Parfum is gaining high-intent search demand from shoppers looking for a fresh niche signature with pear, musk, and modern luxury polish.",
+      "what_makes_original_iconic": "Its appeal comes from a juicy pear freshness blended with airy musks, polished amber, and smooth woods.",
+      "how_hume_captures_essence": "This page tracks demand for a Blue Talisman Extrait direction. The closest current HUME style is Infinite Vision for shoppers who want a luxury fresh amber profile.",
+      "formulated_for_india": "If developed, this should prioritize freshness, airy musks, and clean projection for Indian daytime wear and humid conditions.",
+      "original_price": 42000,
+      "savings": 41201
+    },
+    {
+      "slug": "jean-paul-gaultier-le-male-elixir-absolu",
+      "originalName": "Le Male Elixir Absolu",
+      "originalBrand": "Jean Paul Gaultier",
+      "humeProduct": {
+        "slug": "stronger-with-you-intensely",
+        "note": "Demand validation page for future HUME product planning; closest current product is shown until this profile is produced."
+      },
+      "availability": "demand_validation",
+      "demand_note": "Track demand for new sweet amber Le Male flanker searches.",
+      "scent_profile": {
+        "family": "Sweet Amber Aromatic",
+        "top_notes": [
+          "Lavender",
+          "Plum",
+          "Mint"
+        ],
+        "heart_notes": [
+          "Cinnamon",
+          "Honey",
+          "Benzoin"
+        ],
+        "base_notes": [
+          "Vanilla",
+          "Tonka Bean",
+          "Amber"
+        ]
+      },
+      "characteristics": {
+        "longevity": "10-12 hours",
+        "projection": "Strong",
+        "seasons": [
+          "Fall",
+          "Winter",
+          "Monsoon"
+        ],
+        "occasions": [
+          "Date Night",
+          "Events",
+          "Evening"
+        ]
+      },
+      "why_inspired": "Le Male Elixir Absolu is a fresh demand opportunity because shoppers search new JPG flankers quickly when the sweet amber DNA starts trending.",
+      "what_makes_original_iconic": "The attraction is a richer sweet aromatic profile built around lavender, warm spice, honeyed sweetness, vanilla, tonka, and amber.",
+      "how_hume_captures_essence": "This page tracks demand for the Le Male Elixir Absolu direction. The closest current HUME style is Intense You for shoppers wanting sweet amber warmth and strong night performance.",
+      "formulated_for_india": "If developed, this profile should be powerful but smooth, with sweetness controlled for Indian evenings and colder weather.",
+      "original_price": 12500,
+      "savings": 11701
+    },
+    {
+      "slug": "byredo-bal-dafrique-absolu",
+      "originalName": "Bal d'Afrique Absolu",
+      "originalBrand": "Byredo",
+      "humeProduct": {
+        "slug": "gypsy-water",
+        "note": "Demand validation page for future HUME product planning; closest current product is shown until this profile is produced."
+      },
+      "availability": "demand_validation",
+      "demand_note": "Track demand for unisex luxury citrus-gourmand Byredo searches.",
+      "scent_profile": {
+        "family": "Citrus Gourmand Woods",
+        "top_notes": [
+          "Bergamot",
+          "Lemon",
+          "Blackcurrant"
+        ],
+        "heart_notes": [
+          "Praline",
+          "Violet",
+          "Soft Musk"
+        ],
+        "base_notes": [
+          "Amber",
+          "Cedar",
+          "Vetiver"
+        ]
+      },
+      "characteristics": {
+        "longevity": "8-10 hours",
+        "projection": "Moderate to Strong",
+        "seasons": [
+          "Spring",
+          "Summer",
+          "Monsoon"
+        ],
+        "occasions": [
+          "Office",
+          "Daily Wear",
+          "Evening"
+        ]
+      },
+      "why_inspired": "Bal d'Afrique Absolu has strong unisex search potential because it connects Byredo's cult fresh-woody identity with a deeper gourmand Absolu format.",
+      "what_makes_original_iconic": "The profile balances bright citrus and blackcurrant with praline, violet, musks, amber, cedar, and vetiver.",
+      "how_hume_captures_essence": "This page tracks demand for Bal dAfrique Absolu. The closest current HUME style is Gypsy Water Bloom for shoppers who want a refined Byredo-style woody aromatic direction.",
+      "formulated_for_india": "If developed, this should feel fresh enough for daytime but deeper than the original style, with soft musk and woods for all-day Indian wear.",
+      "original_price": 29000,
+      "savings": 28201
+    },
+    {
+      "slug": "viktor-rolf-spicebomb-metallic-musk",
+      "originalName": "Spicebomb Metallic Musk",
+      "originalBrand": "Viktor & Rolf",
+      "humeProduct": {
+        "slug": "spicebomb",
+        "note": "Demand validation page for future HUME product planning; closest current product is shown until this profile is produced."
+      },
+      "availability": "demand_validation",
+      "demand_note": "Track demand for new Spicebomb flanker and musky spicy masculine searches.",
+      "scent_profile": {
+        "family": "Spicy Musk Suede",
+        "top_notes": [
+          "Black Pepper",
+          "Bergamot",
+          "Spices"
+        ],
+        "heart_notes": [
+          "White Musk",
+          "Metallic Accord",
+          "Sage"
+        ],
+        "base_notes": [
+          "Suede",
+          "Woods",
+          "Amber"
+        ]
+      },
+      "characteristics": {
+        "longevity": "8-10 hours",
+        "projection": "Strong",
+        "seasons": [
+          "Fall",
+          "Winter",
+          "Monsoon"
+        ],
+        "occasions": [
+          "Date Night",
+          "Events",
+          "Evening"
+        ]
+      },
+      "why_inspired": "Spicebomb Metallic Musk is a useful demand-test page because new Spicebomb flankers often create fast search spikes among male fragrance buyers.",
+      "what_makes_original_iconic": "It takes the Spicebomb idea toward black pepper, clean musk, suede, woods, and a polished modern masculine finish.",
+      "how_hume_captures_essence": "This page tracks demand for the Metallic Musk direction. The closest current HUME style is Spice Inferno for shoppers who want the spicy Viktor & Rolf family.",
+      "formulated_for_india": "If developed, the profile should keep the musky-suede finish wearable while preserving the spicy punch people expect from the Spicebomb line.",
+      "original_price": 10500,
+      "savings": 9701
+    },
+    {
+      "slug": "french-avenue-liquid-brun",
+      "originalName": "Liquid Brun",
+      "originalBrand": "French Avenue",
+      "humeProduct": {
+        "slug": "stronger-with-you-intensely",
+        "note": "Demand validation page for future HUME product planning; closest current product is shown until this profile is produced."
+      },
+      "availability": "demand_validation",
+      "demand_note": "Track demand from Althair-style clone searches and Indian fragrance community interest.",
+      "scent_profile": {
+        "family": "Vanilla Praline Spice",
+        "top_notes": [
+          "Cinnamon",
+          "Orange Blossom",
+          "Cardamom"
+        ],
+        "heart_notes": [
+          "Bourbon Vanilla",
+          "Elemi",
+          "Bergamot"
+        ],
+        "base_notes": [
+          "Praline",
+          "Ambroxan",
+          "Guaiac Wood"
+        ]
+      },
+      "characteristics": {
+        "longevity": "8-10 hours",
+        "projection": "Strong",
+        "seasons": [
+          "Fall",
+          "Winter",
+          "Monsoon"
+        ],
+        "occasions": [
+          "Date Night",
+          "Events",
+          "Evening"
+        ]
+      },
+      "why_inspired": "French Avenue Liquid Brun is heavily discussed by clone buyers because it offers a sweet vanilla-praline direction associated with Althair-style demand.",
+      "what_makes_original_iconic": "The fragrance is known for cinnamon, cardamom, orange blossom, bourbon vanilla, praline, ambroxan, and warm woods.",
+      "how_hume_captures_essence": "This page tracks demand for Liquid Brun. The closest current HUME style is Intense You for shoppers who want sweet vanilla, amber, and warm date-night performance.",
+      "formulated_for_india": "If developed, the profile should keep vanilla and praline smooth, avoiding excessive sweetness while maintaining evening projection.",
+      "original_price": 4000,
+      "savings": 3201
+    },
+    {
+      "slug": "creed-absolu-aventus",
+      "originalName": "Absolu Aventus",
+      "originalBrand": "Creed",
+      "humeProduct": {
+        "slug": "creed-aventus",
+        "note": "Demand validation page for future HUME product planning; closest current product is shown until this profile is produced."
+      },
+      "availability": "demand_validation",
+      "demand_note": "Track demand for richer Creed Aventus flanker searches.",
+      "scent_profile": {
+        "family": "Dark Fruity Woods",
+        "top_notes": [
+          "Grapefruit",
+          "Bergamot",
+          "Blackcurrant"
+        ],
+        "heart_notes": [
+          "Ginger",
+          "Cinnamon",
+          "Citron"
+        ],
+        "base_notes": [
+          "Patchouli",
+          "Pink Pepper",
+          "Vetiver"
+        ]
+      },
+      "characteristics": {
+        "longevity": "10-12 hours",
+        "projection": "Strong",
+        "seasons": [
+          "Fall",
+          "Winter",
+          "Monsoon"
+        ],
+        "occasions": [
+          "Date Night",
+          "Events",
+          "Evening"
+        ]
+      },
+      "why_inspired": "Absolu Aventus attracts buyers who already know Creed Aventus but want a darker, richer, more intense version of the DNA.",
+      "what_makes_original_iconic": "The profile keeps the Aventus prestige while shifting toward darker citrus, spice, patchouli, pepper, and dense woods.",
+      "how_hume_captures_essence": "This page tracks demand for Absolu Aventus. The closest current HUME style is Aventus for shoppers who want fresh fruity Creed-style character now.",
+      "formulated_for_india": "If developed, the profile should be richer than the classic Aventus direction but still wearable in Indian evenings and monsoon weather.",
+      "original_price": 39000,
+      "savings": 38201
+    },
+    {
+      "slug": "hugo-boss-bottled-absolu",
+      "originalName": "Bottled Absolu",
+      "originalBrand": "Hugo Boss",
+      "humeProduct": {
+        "slug": "ombre-leather",
+        "note": "Demand validation page for future HUME product planning; closest current product is shown until this profile is produced."
+      },
+      "availability": "demand_validation",
+      "demand_note": "Track demand for dark woody-leather Boss Bottled flanker searches.",
+      "scent_profile": {
+        "family": "Woody Leather Incense",
+        "top_notes": [
+          "Bergamot",
+          "Blood Orange",
+          "Incense"
+        ],
+        "heart_notes": [
+          "Leather",
+          "Myrrh",
+          "Patchouli"
+        ],
+        "base_notes": [
+          "Cedarwood",
+          "Vetiver",
+          "Warm Woods"
+        ]
+      },
+      "characteristics": {
+        "longevity": "8-10 hours",
+        "projection": "Moderate to Strong",
+        "seasons": [
+          "Fall",
+          "Winter",
+          "Monsoon"
+        ],
+        "occasions": [
+          "Date Night",
+          "Events",
+          "Evening"
+        ]
+      },
+      "why_inspired": "BOSS Bottled Absolu is a strong demand-test target because buyers search for darker, more mature designer flankers with leather, incense, and woods.",
+      "what_makes_original_iconic": "It adds richer leather and incense depth to the familiar Boss Bottled masculine universe.",
+      "how_hume_captures_essence": "This page tracks demand for Bottled Absolu. The closest current HUME style is Leather Eclipse for shoppers who want a polished leather-woody profile.",
+      "formulated_for_india": "If developed, it should balance citrus freshness with leather, incense, and woods so it feels masculine without becoming too dense.",
+      "original_price": 11000,
+      "savings": 10201
+    },
+    {
+      "slug": "dior-fahrenheit",
+      "originalName": "Fahrenheit",
+      "originalBrand": "Dior",
+      "humeProduct": {
+        "slug": "ombre-leather",
+        "note": "Demand validation page for future HUME product planning; closest current product is shown until this profile is produced."
+      },
+      "availability": "demand_validation",
+      "demand_note": "Track demand for classic violet-leather masculine searches.",
+      "scent_profile": {
+        "family": "Violet Leather Woods",
+        "top_notes": [
+          "Sicilian Mandarin",
+          "Bergamot",
+          "Citrus"
+        ],
+        "heart_notes": [
+          "Violet",
+          "Nutmeg",
+          "Spices"
+        ],
+        "base_notes": [
+          "Leather",
+          "Woods",
+          "Vetiver"
+        ]
+      },
+      "characteristics": {
+        "longevity": "8-10 hours",
+        "projection": "Moderate to Strong",
+        "seasons": [
+          "Fall",
+          "Winter",
+          "Monsoon"
+        ],
+        "occasions": [
+          "Office",
+          "Evening",
+          "Events"
+        ]
+      },
+      "why_inspired": "Dior Fahrenheit has evergreen search demand because it is one of the most recognizable masculine leather-violet fragrances.",
+      "what_makes_original_iconic": "Fahrenheit became iconic for its fresh mandarin opening, violet accord, masculine woods, and leather signature.",
+      "how_hume_captures_essence": "This page tracks demand for a Fahrenheit direction. The closest current HUME style is Leather Eclipse for shoppers who want leather depth and a masculine dry down.",
+      "formulated_for_india": "If developed, this should preserve the violet-leather identity while smoothing the dry down for modern Indian daily and evening use.",
+      "original_price": 9800,
+      "savings": 9001
+    },
+    {
+      "slug": "parfums-de-marly-althair",
+      "originalName": "Althair",
+      "originalBrand": "Parfums de Marly",
+      "humeProduct": {
+        "slug": "stronger-with-you-intensely",
+        "note": "Demand validation page for future HUME product planning; closest current product is shown until this profile is produced."
+      },
+      "availability": "demand_validation",
+      "demand_note": "Track demand for premium vanilla-praline niche searches.",
+      "scent_profile": {
+        "family": "Vanilla Praline Amber",
+        "top_notes": [
+          "Orange Blossom",
+          "Bergamot",
+          "Cinnamon"
+        ],
+        "heart_notes": [
+          "Bourbon Vanilla",
+          "Elemi",
+          "Praline"
+        ],
+        "base_notes": [
+          "Ambroxan",
+          "Guaiac Wood",
+          "Musk"
+        ]
+      },
+      "characteristics": {
+        "longevity": "8-10 hours",
+        "projection": "Moderate to Strong",
+        "seasons": [
+          "Fall",
+          "Winter",
+          "Monsoon"
+        ],
+        "occasions": [
+          "Date Night",
+          "Events",
+          "Evening"
+        ]
+      },
+      "why_inspired": "Parfums de Marly Althair is an important demand page because vanilla, praline, amber, and luxury niche sweetness are highly searched by buyers wanting expensive-smelling night scents.",
+      "what_makes_original_iconic": "Althair is known for its magnetic vanilla, praline sweetness, orange blossom brightness, warm spices, creamy woods, and amber depth.",
+      "how_hume_captures_essence": "This page tracks demand for Althair. The closest current HUME style is Intense You for shoppers who want sweet amber-vanilla warmth and strong evening wearability.",
+      "formulated_for_india": "If developed, it should be rich and gourmand but balanced with woods and musk so it performs in Indian weather without becoming overly sugary.",
+      "original_price": 23000,
+      "savings": 22201
     }
   ],
   "alternatives": [

@@ -1,5 +1,6 @@
 import { getRequestSiteUrl } from "@/lib/request-site";
 import { AI_RECOMMENDATION_PAGES } from "@/lib/ai-recommendation-pages";
+import { getHighIntentProgrammaticInspirations } from "@/lib/programmatic-seo";
 
 export const revalidate = 3600;
 
@@ -9,6 +10,12 @@ export async function GET() {
   const updatedDate = now.toISOString().split("T")[0];
   const priorityRecommendationLinks = AI_RECOMMENDATION_PAGES.slice(0, 12)
     .map((page) => `- ${page.title}: ${baseUrl}/recommendations/${page.slug}`)
+    .join("\n");
+  const highIntentInspiredLinks = getHighIntentProgrammaticInspirations()
+    .map(
+      (item) =>
+        `- ${item.originalBrand} ${item.originalName} alternative: ${baseUrl}/inspired-by/${item.slug}`,
+    )
     .join("\n");
 
   const body = `# HUME Fragrance
@@ -36,6 +43,9 @@ For the complete product catalog with all notes, pricing, performance, reviews, 
 
 ## Answer-first recommendation pages
 ${priorityRecommendationLinks}
+
+## High-intent inspired alternatives
+${highIntentInspiredLinks}
 
 ## Buying and trust facts
 - Primary market: India
@@ -72,6 +82,7 @@ The site includes Organization, WebSite, Product, FAQPage, CollectionPage, ItemL
 - Best perfumes for Indian weather
 - Best HUME perfume for office, date night, gifting, daily use, Indian summer, and first-time buyers
 - Inspired alternatives to designer and niche fragrances
+- High-intent inspired pages include Mancera Red Tobacco, Amouage Interlude Man, Tom Ford Tobacco Vanille, Initio Oud for Greatness, Xerjoff Naxos, Parfums de Marly Layton, Nishane Hacivat, Bvlgari Tygar, Louis Vuitton Ombre Nomade, and Louis Vuitton Imagination
 - Occasion-based recommendations like office, date night, wedding, festival and travel
 - Budget fragrance guides by price band
 - Brand comparisons and clone-vs-original education

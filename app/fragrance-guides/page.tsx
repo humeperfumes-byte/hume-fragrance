@@ -7,6 +7,7 @@ import { getBreadcrumbSchema } from "@/lib/seo";
 import {
   getAllProgrammaticAlternatives,
   getAllProgrammaticInspirations,
+  getHighIntentProgrammaticInspirations,
 } from "@/lib/programmatic-seo";
 import { FESTIVAL_SEO_PAGES } from "@/lib/festival-seo";
 import { getRequestSiteUrl } from "@/lib/request-site";
@@ -74,6 +75,12 @@ export default async function FragranceGuidesHubPage() {
     href: `/recommendations/${item.slug}`,
     label: item.title,
   }));
+  const highIntentInspiredGuides = getHighIntentProgrammaticInspirations().map(
+    (item) => ({
+      href: `/inspired-by/${item.slug}`,
+      label: `${item.originalBrand} ${item.originalName} alternative`,
+    }),
+  );
 
   const occasionGuides = FESTIVAL_SEO_PAGES.filter(
     (item) =>
@@ -130,6 +137,7 @@ export default async function FragranceGuidesHubPage() {
 
   const sections = [
     section("AI Recommendation Pages", recommendationGuides),
+    section("High-Intent Inspired Alternatives", highIntentInspiredGuides),
     section("AI Search Guides", aiSearchGuides),
     section("Occasion Guides", occasionGuides),
     section("Budget Guides", budgetGuides),
@@ -245,6 +253,27 @@ export default async function FragranceGuidesHubPage() {
                 </Link>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="pb-14">
+        <div className="container-luxury">
+          <div className="rounded-[30px] border border-border/60 bg-gradient-to-br from-white via-secondary/10 to-secondary/25 p-6 md:p-8 shadow-[0_18px_45px_rgba(15,15,20,0.05)]">
+            <div className="max-w-3xl">
+              <p className="text-caption text-muted-foreground">
+                High-Intent Inspired Searches
+              </p>
+              <h2 className="mt-3 font-serif text-3xl md:text-4xl">
+                Niche & Designer Alternatives People Search For
+              </h2>
+              <p className="mt-3 text-body text-muted-foreground">
+                These guides focus on expensive, high-demand fragrances with
+                strong search intent around alternatives, inspired perfumes,
+                performance, and Indian-weather value.
+              </p>
+            </div>
+            <div className="mt-6">{renderLinks(highIntentInspiredGuides)}</div>
           </div>
         </div>
       </section>

@@ -5,6 +5,7 @@ import { Cormorant_Garamond, Montserrat } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import ClientGlobalOverlays from "@/components/ClientGlobalOverlays";
+import BrowserRecoveryGuard from "@/components/BrowserRecoveryGuard";
 import ConsentCaptureBanner from "@/components/ConsentCaptureBanner";
 import ConsentTimelineTracker from "@/components/ConsentTimelineTracker";
 import CartAnalyticsTracker from "@/components/CartAnalyticsTracker";
@@ -100,6 +101,7 @@ export default async function RootLayout({
         className={`${montserrat.variable} ${cormorant.variable} antialiased`}
       >
         <Providers>
+          <BrowserRecoveryGuard />
           {children}
           <ClientGlobalOverlays />
           <ConsentCaptureBanner />

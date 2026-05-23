@@ -46,6 +46,11 @@ function getSessionId() {
   return next;
 }
 
+function getCurrentCaptureUrl(pathWithQuery: string) {
+  if (typeof window === "undefined") return pathWithQuery;
+  return `${window.location.origin}${pathWithQuery}`;
+}
+
 export default function ConsentTimelineTracker() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -64,11 +69,15 @@ export default function ConsentTimelineTracker() {
         keepalive: true,
         body: JSON.stringify({
           sessionId,
-          path: pathWithQuery,
+          path: getCurrentCaptureUrl(pathWithQuery),
           eventType,
           language: navigator.language || undefined,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || undefined,
-          payload,
+          payload: {
+            ...(payload || {}),
+            siteHost: window.location.hostname,
+            siteOrigin: window.location.origin,
+          },
         }),
       });
     } catch (error) {
@@ -115,6 +124,8 @@ export default function ConsentTimelineTracker() {
       toPath,
       source: acquisition.source,
       sourceCategory: acquisition.category,
+      siteHost: window.location.hostname,
+      siteOrigin: window.location.origin,
       referrer,
       referrerHost: acquisition.referrerHost,
       utmSource: utmSource || undefined,

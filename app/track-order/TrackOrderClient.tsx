@@ -314,7 +314,7 @@ export default function TrackOrderClient({ initialTrackingNumber = "" }: TrackOr
                   <PackageSearch className="h-9 w-9 text-zinc-300" />
                   <p className="mt-4 text-sm font-medium text-zinc-900">Your tracking result will appear here</p>
                   <p className="mt-2 max-w-xs text-xs leading-5 text-zinc-500">
-                    Use the tracking ID sent after dispatch. Speed Post updates can take a little time after booking.
+                    Use the tracking ID sent after dispatch. Carrier updates can take a little time after booking.
                   </p>
                 </div>
               )}

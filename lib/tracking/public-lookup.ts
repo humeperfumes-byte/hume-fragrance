@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
+import { isLikelyDelhiveryAwb, trackDelhiveryWaybill } from "@/lib/tracking/delhivery";
 import { trackSpeedPostConsignment } from "@/lib/tracking/india-post";
 import {
   TRACKING_CARRIERS,
@@ -51,6 +52,7 @@ function normalizeCarrier(value: string | null | undefined, trackingNumber: stri
   if (/delhivery/.test(normalized)) return "delhivery";
   if (/speed|india_?post|indian_?post/.test(normalized)) return "speed_post";
   if (/^[A-Z]{2}\d{9}IN$/.test(cleanTrackingNumber(trackingNumber))) return "speed_post";
+  if (isLikelyDelhiveryAwb(trackingNumber)) return "delhivery";
   return "speed_post";
 }
 
@@ -311,6 +313,10 @@ async function trackCarrierConsignment(
 ): Promise<TrackingResult> {
   if (carrier === "speed_post") {
     return trackSpeedPostConsignment(trackingNumber);
+  }
+
+  if (carrier === "delhivery") {
+    return trackDelhiveryWaybill(trackingNumber);
   }
 
   const endpointTemplate = getProviderEndpoint(carrier);

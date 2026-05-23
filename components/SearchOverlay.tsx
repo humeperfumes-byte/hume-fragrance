@@ -27,6 +27,7 @@ import {
   readStoredCustomerAccount,
 } from "@/lib/customer-account";
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
+import { buildPublicTrackingPath } from "@/lib/tracking-url";
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -542,7 +543,7 @@ function OrderResult({
   onClose: () => void;
 }) {
   const href = order.trackingNumber
-    ? order.trackingUrl || `/track-order/${encodeURIComponent(order.trackingNumber)}`
+    ? buildPublicTrackingPath(order.trackingNumber) || order.trackingUrl || "/track-order"
     : "/account";
   const firstItem = order.cartSnapshot[0];
 

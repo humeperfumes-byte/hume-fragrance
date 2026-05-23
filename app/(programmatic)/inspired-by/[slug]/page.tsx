@@ -39,16 +39,25 @@ export async function generateMetadata({
   if (!product) return { title: "Not Found" };
 
   const baseUrl = await getRequestSiteUrl();
+  const isDemandValidation = item.availability === "demand_validation";
 
   return {
-    title: `${product.name}: Inspired by ${item.originalBrand} ${item.originalName} | HUME`,
-    description: `Experience ${item.scent_profile.family} style inspired by ${item.originalName}. ${item.characteristics.longevity} longevity and premium EDP quality at ${formatPrice(product.price)}.`,
+    title: isDemandValidation
+      ? `${item.originalBrand} ${item.originalName} Inspired Perfume Interest | HUME`
+      : `${product.name}: Inspired by ${item.originalBrand} ${item.originalName} | HUME`,
+    description: isDemandValidation
+      ? `Explore demand for a ${item.scent_profile.family} style inspired by ${item.originalName}, with the closest current HUME fragrance direction linked for shoppers.`
+      : `Experience ${item.scent_profile.family} style inspired by ${item.originalName}. ${item.characteristics.longevity} longevity and premium EDP quality at ${formatPrice(product.price)}.`,
     alternates: {
       canonical: `${baseUrl}/inspired-by/${item.slug}`,
     },
     openGraph: {
-      title: `HUME ${product.name} - Inspired by ${item.originalName}`,
-      description: `Save ${formatPrice(item.savings)} on ${item.originalName} style fragrance.`,
+      title: isDemandValidation
+        ? `${item.originalBrand} ${item.originalName} Inspired Perfume Interest`
+        : `HUME ${product.name} - Inspired by ${item.originalName}`,
+      description: isDemandValidation
+        ? `Demand watch page for a ${item.scent_profile.family} style inspired by ${item.originalName}.`
+        : `Save ${formatPrice(item.savings)} on ${item.originalName} style fragrance.`,
       url: `${baseUrl}/inspired-by/${item.slug}`,
       images: product.images?.[0] ? [product.images[0]] : [],
     },
@@ -70,6 +79,7 @@ export default async function InspiredByPage({
     getAllProducts(),
   ]);
   if (!product) notFound();
+  const isDemandValidation = item.availability === "demand_validation";
 
   const relatedProducts = allProducts
     .filter((p) => p.id !== product.id)
@@ -109,15 +119,17 @@ export default async function InspiredByPage({
         <div className="container-luxury space-y-12">
           <div className="max-w-3xl">
             <p className="text-caption text-muted-foreground mb-3">
-              Inspired Collection
+              {isDemandValidation ? "Inspired Demand Watch" : "Inspired Collection"}
             </p>
             <h1 className="font-serif text-4xl md:text-5xl font-light mb-4">
-              {product.name}: Inspired by {item.originalName}
+              {isDemandValidation
+                ? `${item.originalBrand} ${item.originalName} Inspired Perfume`
+                : `${product.name}: Inspired by ${item.originalName}`}
             </h1>
             <p className="text-body text-muted-foreground">
-              Experience {item.scent_profile.family} luxury at{" "}
-              {formatPrice(product.price)} instead of{" "}
-              {formatPrice(item.original_price)}.
+              {isDemandValidation
+                ? `Explore the ${item.scent_profile.family.toLowerCase()} profile and the closest current HUME style while we track demand for this scent direction.`
+                : `Experience ${item.scent_profile.family} luxury at ${formatPrice(product.price)} instead of ${formatPrice(item.original_price)}.`}
             </p>
           </div>
 
@@ -126,14 +138,32 @@ export default async function InspiredByPage({
               Quick Answer
             </p>
             <p className="text-sm text-muted-foreground">
-              The closest daily-wear option here is{" "}
-              <span className="font-medium text-foreground">
-                {product.name}
-              </span>
-              , inspired by {item.originalBrand} {item.originalName}, with{" "}
-              {item.characteristics.longevity.toLowerCase()} and a{" "}
-              {item.scent_profile.family.toLowerCase()} profile at{" "}
-              {formatPrice(product.price)}.
+              {isDemandValidation ? (
+                <>
+                  HUME is tracking demand for{" "}
+                  <span className="font-medium text-foreground">
+                    {item.originalBrand} {item.originalName}
+                  </span>
+                  . The closest current HUME style is{" "}
+                  <span className="font-medium text-foreground">
+                    {product.name}
+                  </span>
+                  , selected for a nearby{" "}
+                  {item.scent_profile.family.toLowerCase()} direction with{" "}
+                  {item.characteristics.longevity.toLowerCase()} expected wear.
+                </>
+              ) : (
+                <>
+                  The closest daily-wear option here is{" "}
+                  <span className="font-medium text-foreground">
+                    {product.name}
+                  </span>
+                  , inspired by {item.originalBrand} {item.originalName}, with{" "}
+                  {item.characteristics.longevity.toLowerCase()} and a{" "}
+                  {item.scent_profile.family.toLowerCase()} profile at{" "}
+                  {formatPrice(product.price)}.
+                </>
+              )}
             </p>
           </div>
 
@@ -154,18 +184,20 @@ export default async function InspiredByPage({
             </div>
             <div className="border border-border p-6 bg-secondary/10">
               <p className="text-caption text-muted-foreground mb-2">
-                HUME Alternative
+                {isDemandValidation ? "Closest HUME Style" : "HUME Alternative"}
               </p>
               <h2 className="font-serif text-2xl mb-2">{product.name}</h2>
               <p className="text-2xl font-semibold mb-2">
                 {formatPrice(product.price)}
               </p>
               <p className="text-sm text-muted-foreground mb-4">
-                Save {formatPrice(item.savings)} with the same scent direction.
+                {isDemandValidation
+                  ? "This exact inspired profile is being evaluated. Start with the closest available HUME direction."
+                  : `Save ${formatPrice(item.savings)} with the same scent direction.`}
               </p>
               <Button asChild>
                 <Link href={getProductPath(product)}>
-                  View Full Product Details
+                  {isDemandValidation ? "Explore Closest HUME Style" : "View Full Product Details"}
                 </Link>
               </Button>
             </div>
@@ -200,7 +232,9 @@ export default async function InspiredByPage({
               </p>
             </div>
             <div className="border border-border p-6">
-              <h3 className="font-serif text-2xl mb-3">How HUME Captures It</h3>
+              <h3 className="font-serif text-2xl mb-3">
+                {isDemandValidation ? "Demand Signal & Closest Match" : "How HUME Captures It"}
+              </h3>
               <p className="text-sm text-muted-foreground">
                 {item.how_hume_captures_essence}
               </p>

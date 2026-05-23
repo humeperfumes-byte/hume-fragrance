@@ -3,6 +3,7 @@ import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { checkoutDrafts, orders } from "@/db/schema";
+import { buildPublicTrackingPath } from "@/lib/tracking-url";
 
 const accountRequestSchema = z.object({
   sessionId: z.string().min(8).max(255),
@@ -18,8 +19,7 @@ function getTrackingHref(order: {
   trackingNumber: string | null;
   trackingUrl: string | null;
 }) {
-  if (!order.trackingNumber) return null;
-  return order.trackingUrl || `/track-order/${encodeURIComponent(order.trackingNumber)}`;
+  return buildPublicTrackingPath(order.trackingNumber) || order.trackingUrl || null;
 }
 
 export async function POST(request: NextRequest) {

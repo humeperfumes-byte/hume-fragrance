@@ -16,7 +16,7 @@ export const TRACKING_CARRIERS = {
     officialUrl: "https://www.delhivery.com/tracking",
     accent: "from-sky-400 to-cyan-500",
     tone: "text-sky-200",
-    envKeys: ["DELHIVERY_TRACKING_ENDPOINT", "DELHIVERY_API_TOKEN"],
+    envKeys: ["DELHIVERY_API_TOKEN", "DELHIVERY_TRACKING_ENDPOINT optional"],
     hint: "Usually a 12-14 digit AWB number.",
   },
   bluedart: {

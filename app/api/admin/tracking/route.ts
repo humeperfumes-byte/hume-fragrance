@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminToken } from "@/lib/admin-auth";
+import { trackDelhiveryWaybill } from "@/lib/tracking/delhivery";
 import { trackSpeedPostConsignment } from "@/lib/tracking/india-post";
 import {
   TRACKING_CARRIERS,
@@ -30,7 +31,7 @@ function getProviderEndpoint(carrier: TrackingCarrier): string | undefined {
     case "speed_post":
       return process.env.SPEED_POST_TRACKING_ENDPOINT;
     case "delhivery":
-      return process.env.DELHIVERY_TRACKING_ENDPOINT;
+      return process.env.DELHIVERY_TRACKING_ENDPOINT ?? "https://track.delhivery.com/api/v1/packages/json/";
     case "bluedart":
       return process.env.BLUEDART_TRACKING_ENDPOINT;
     default:
@@ -275,6 +276,10 @@ async function trackWithConfiguredEndpoint(
     }
   }
 
+  if (carrier === "delhivery") {
+    return trackDelhiveryWaybill(trackingNumber);
+  }
+
   const endpointTemplate = getProviderEndpoint(carrier);
 
   if (!endpointTemplate) {
@@ -358,7 +363,14 @@ export async function POST(request: NextRequest) {
       providerSetup: Object.fromEntries(
         Object.keys(TRACKING_CARRIERS).map((carrierKey) => {
           const carrier = carrierKey as TrackingCarrier;
-          return [carrier, carrier === "speed_post" ? true : Boolean(getProviderEndpoint(carrier))];
+          return [
+            carrier,
+            carrier === "speed_post"
+              ? true
+              : carrier === "delhivery"
+                ? Boolean(process.env.DELHIVERY_API_TOKEN)
+                : Boolean(getProviderEndpoint(carrier)),
+          ];
         }),
       ),
     });
