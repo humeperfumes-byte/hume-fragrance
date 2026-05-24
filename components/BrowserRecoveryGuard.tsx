@@ -2,20 +2,68 @@
 
 import { useEffect } from "react";
 
-const RECOVERY_VERSION = "2026-05-24-domain-cache-recovery-1";
+const RECOVERY_VERSION = "2026-05-24-com-hard-browser-recovery-2";
 const RECOVERY_KEY = "hume:browser-recovery-version";
 const RECOVERY_PARAM = "hume_recovery";
-const SESSION_CACHE_KEYS = ["hume:products:public:v1"];
+
+function shouldRunRecoveryOnThisHost() {
+  const hostname = window.location.hostname.replace(/^www\./, "");
+  return hostname === "humefragrance.com";
+}
+
+function getCookieDeleteDomains() {
+  const hostname = window.location.hostname;
+  const baseDomain = hostname.replace(/^www\./, "");
+
+  return Array.from(
+    new Set([
+      "",
+      hostname,
+      `.${hostname}`,
+      baseDomain,
+      `.${baseDomain}`,
+    ]),
+  );
+}
+
+function expireAccessibleCookies() {
+  const cookieNames = document.cookie
+    .split(";")
+    .map((cookie) => cookie.split("=")[0]?.trim())
+    .filter(Boolean);
+
+  const paths = ["/", window.location.pathname || "/"];
+  const domains = getCookieDeleteDomains();
+
+  for (const name of cookieNames) {
+    for (const path of paths) {
+      for (const domain of domains) {
+        const domainPart = domain ? `; domain=${domain}` : "";
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; max-age=0; path=${path}${domainPart}; SameSite=Lax`;
+      }
+    }
+  }
+}
+
+function clearWebStorage() {
+  window.sessionStorage.clear();
+  window.localStorage.clear();
+  window.localStorage.setItem(RECOVERY_KEY, RECOVERY_VERSION);
+}
 
 async function clearOriginRuntimeCaches() {
   const tasks: Array<Promise<unknown>> = [];
 
   try {
-    for (const key of SESSION_CACHE_KEYS) {
-      window.sessionStorage.removeItem(key);
-    }
+    clearWebStorage();
   } catch {
     // Storage can be blocked in some browsers.
+  }
+
+  try {
+    expireAccessibleCookies();
+  } catch {
+    // HttpOnly cookies cannot be removed from client code.
   }
 
   try {
@@ -45,6 +93,8 @@ async function clearOriginRuntimeCaches() {
 
 export default function BrowserRecoveryGuard() {
   useEffect(() => {
+    if (!shouldRunRecoveryOnThisHost()) return;
+
     const currentUrl = new URL(window.location.href);
 
     if (currentUrl.searchParams.get(RECOVERY_PARAM) === RECOVERY_VERSION) {
@@ -55,7 +105,6 @@ export default function BrowserRecoveryGuard() {
 
     try {
       if (window.localStorage.getItem(RECOVERY_KEY) === RECOVERY_VERSION) return;
-      window.localStorage.setItem(RECOVERY_KEY, RECOVERY_VERSION);
     } catch {
       return;
     }
