@@ -7,6 +7,7 @@ import {
   ClipboardCopy,
   ExternalLink,
   Loader2,
+  MessageCircle,
   PackageCheck,
   PackageSearch,
   RadioTower,
@@ -104,6 +105,20 @@ function buildTrackingUrl(result: TrackingResult) {
 function buildOrderTrackingUrl(order: TrackedOrder) {
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   return buildPublicTrackingUrl(order.trackingNumber, origin) || order.trackingUrl || "";
+}
+
+function buildOrderCustomerUpdate(order: TrackedOrder) {
+  const carrier = TRACKING_CARRIERS[normalizeOrderCarrier(order.fulfillmentCarrier)].shortLabel;
+  const name = order.fullName?.split(" ")[0] || "there";
+  const trackingLink = buildOrderTrackingUrl(order);
+  return `Hi ${name}, your HUME order ${order.orderNumber} has been shipped via ${carrier}. Tracking ID: ${order.trackingNumber}. Track here: ${trackingLink}`;
+}
+
+function buildOrderWhatsAppUrl(order: TrackedOrder) {
+  const digits = order.phone?.replace(/\D/g, "") || "";
+  const normalized = digits.length === 10 ? `91${digits}` : digits;
+  if (normalized.length < 10) return null;
+  return `https://wa.me/${normalized}?text=${encodeURIComponent(buildOrderCustomerUpdate(order))}`;
 }
 
 function normalizeOrderCarrier(value: string | null | undefined): TrackingCarrier {
@@ -254,6 +269,10 @@ export default function TrackingSystemClient({ initialTrackedOrders = [] }: Trac
     await navigator.clipboard.writeText(buildOrderTrackingUrl(order));
   }
 
+  async function copyOrderCustomerUpdate(order: TrackedOrder) {
+    await navigator.clipboard.writeText(buildOrderCustomerUpdate(order));
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
@@ -366,6 +385,24 @@ export default function TrackingSystemClient({ initialTrackedOrders = [] }: Trac
                       <ClipboardCopy className="h-4 w-4" />
                       Copy
                     </Button>
+                    <Button
+                      type="button"
+                      onClick={() => copyOrderCustomerUpdate(order)}
+                      className="h-9 rounded-xl border border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.1]"
+                    >
+                      <ClipboardCopy className="h-4 w-4" />
+                      Update
+                    </Button>
+                    {buildOrderWhatsAppUrl(order) ? (
+                      <Button
+                        type="button"
+                        onClick={() => window.open(buildOrderWhatsAppUrl(order) || "", "_blank", "noopener,noreferrer")}
+                        className="h-9 rounded-xl border border-emerald-400/20 bg-emerald-400/10 text-emerald-100 hover:bg-emerald-400/15"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        WhatsApp
+                      </Button>
+                    ) : null}
                     <Button
                       type="button"
                       onClick={() => window.open(buildOrderTrackingUrl(order), "_blank", "noopener,noreferrer")}

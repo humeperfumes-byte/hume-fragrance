@@ -199,6 +199,28 @@
   }
 }
 
+@keyframes hume-otp-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  22% {
+    transform: translateX(-7px);
+  }
+  44% {
+    transform: translateX(6px);
+  }
+  66% {
+    transform: translateX(-4px);
+  }
+  82% {
+    transform: translateX(3px);
+  }
+}
+
+.hume-otp-shake {
+  animation: hume-otp-shake 0.34s ease-in-out;
+}
+
 @layer components {
   .admin-shell {
     font-family: var(--font-sans);

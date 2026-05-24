@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { checkoutDrafts, orders } from "@/db/schema";
+import {
+  accountDraftWhere,
+  accountOrderWhere,
+  findAccountSession,
+  identityFromSession,
+} from "@/lib/account-login";
 import { buildPublicTrackingPath } from "@/lib/tracking-url";
 
 const accountRequestSchema = z.object({
-  sessionId: z.string().min(8).max(255),
+  sessionId: z.string().min(4).max(255).optional(),
+  accountToken: z.string().min(16).max(512).optional(),
 });
 
 function toNumber(value: unknown) {
@@ -25,18 +32,40 @@ function getTrackingHref(order: {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { sessionId } = accountRequestSchema.parse(body);
+    const { sessionId, accountToken } = accountRequestSchema.parse(body);
+    const accountSession = accountToken ? await findAccountSession(accountToken) : null;
+    const identity = accountSession ? identityFromSession(accountSession) : null;
+
+    if (!sessionId && !identity) {
+      return NextResponse.json(
+        { ok: false, error: "Account session not found" },
+        { status: 401 },
+      );
+    }
+
+    const draftWhere = identity && sessionId
+      ? or(eq(checkoutDrafts.sessionId, sessionId), accountDraftWhere(identity))
+      : identity
+        ? accountDraftWhere(identity)
+        : eq(checkoutDrafts.sessionId, sessionId as string);
+
+    const orderWhere = identity && sessionId
+      ? or(eq(orders.sessionId, sessionId), accountOrderWhere(identity))
+      : identity
+        ? accountOrderWhere(identity)
+        : eq(orders.sessionId, sessionId as string);
 
     const [latestDraft, accountOrders] = await Promise.all([
       db
         .select()
         .from(checkoutDrafts)
-        .where(eq(checkoutDrafts.sessionId, sessionId))
+        .where(draftWhere)
+        .orderBy(desc(checkoutDrafts.updatedAt))
         .limit(1),
       db
         .select()
         .from(orders)
-        .where(eq(orders.sessionId, sessionId))
+        .where(orderWhere)
         .orderBy(desc(orders.createdAt))
         .limit(50),
     ]);
@@ -48,6 +77,7 @@ export async function POST(request: NextRequest) {
       ok: true,
       profile: profileSource
         ? {
+            sessionId: profileSource.sessionId,
             fullName: profileSource.fullName,
             phone: profileSource.phone,
             email: profileSource.email,

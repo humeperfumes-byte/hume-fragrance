@@ -2,6 +2,7 @@ export const CUSTOMER_ACCOUNT_STORAGE_KEY = "hume_customer_account_v1";
 export const CHECKOUT_DETAILS_STORAGE_KEY = "hume_checkout_details_v1";
 export const CHECKOUT_SESSION_STORAGE_KEY = "hume_checkout_session_id";
 export const CART_SESSION_STORAGE_KEY = "hume_cart_session_id";
+export const ACCOUNT_LOGIN_TOKEN_STORAGE_KEY = "hume_account_login_token_v1";
 
 export type CustomerAccountDetails = {
   fullName?: string;
@@ -18,6 +19,7 @@ export type CustomerAccountDetails = {
 
 export type StoredCustomerAccount = {
   sessionId: string;
+  accountLoginToken?: string;
   fullName: string;
   phone: string;
   alternatePhone?: string;
@@ -49,6 +51,10 @@ export function getStoredCheckoutSessionId(storage: Storage) {
     storage.getItem(CART_SESSION_STORAGE_KEY) ||
     ""
   );
+}
+
+export function getStoredAccountLoginToken(storage: Storage) {
+  return storage.getItem(ACCOUNT_LOGIN_TOKEN_STORAGE_KEY) || "";
 }
 
 export function readStoredCustomerAccount(storage: Storage) {
@@ -99,11 +105,69 @@ export function persistCustomerAccountFromCheckout(
   };
 
   storage.setItem(CUSTOMER_ACCOUNT_STORAGE_KEY, JSON.stringify(account));
+  storage.setItem(CHECKOUT_DETAILS_STORAGE_KEY, JSON.stringify({
+    fullName: account.fullName,
+    phone: account.phone,
+    alternatePhone: account.alternatePhone,
+    email: account.email,
+    addressLine1: account.addressLine1,
+    addressLine2: account.addressLine2,
+    city: account.city,
+    state: account.state,
+    pincode: account.pincode,
+    notes: account.notes,
+  }));
   storage.setItem(CHECKOUT_SESSION_STORAGE_KEY, sessionId);
   storage.setItem(CART_SESSION_STORAGE_KEY, sessionId);
   return account;
 }
 
+export function persistCustomerAccountFromOtp(
+  storage: Storage,
+  accountLoginToken: string,
+  details: CustomerAccountDetails & { sessionId: string },
+) {
+  if (!accountLoginToken || !details.sessionId || !hasLoginIdentity(details)) return null;
+
+  const existing = readStoredCustomerAccount(storage);
+  const now = new Date().toISOString();
+  const account: StoredCustomerAccount = {
+    sessionId: details.sessionId,
+    accountLoginToken,
+    fullName: cleaned(details.fullName),
+    phone: cleaned(details.phone),
+    alternatePhone: cleaned(details.alternatePhone) || existing?.alternatePhone || undefined,
+    email: cleaned(details.email) || undefined,
+    addressLine1: cleaned(details.addressLine1) || undefined,
+    addressLine2: cleaned(details.addressLine2) || undefined,
+    city: cleaned(details.city) || undefined,
+    state: cleaned(details.state) || undefined,
+    pincode: cleaned(details.pincode) || undefined,
+    notes: cleaned(details.notes) || undefined,
+    loggedInAt: now,
+    updatedAt: now,
+  };
+
+  storage.setItem(CUSTOMER_ACCOUNT_STORAGE_KEY, JSON.stringify(account));
+  storage.setItem(CHECKOUT_DETAILS_STORAGE_KEY, JSON.stringify({
+    fullName: account.fullName,
+    phone: account.phone,
+    alternatePhone: account.alternatePhone,
+    email: account.email,
+    addressLine1: account.addressLine1,
+    addressLine2: account.addressLine2,
+    city: account.city,
+    state: account.state,
+    pincode: account.pincode,
+    notes: account.notes,
+  }));
+  storage.setItem(ACCOUNT_LOGIN_TOKEN_STORAGE_KEY, accountLoginToken);
+  storage.setItem(CHECKOUT_SESSION_STORAGE_KEY, details.sessionId);
+  storage.setItem(CART_SESSION_STORAGE_KEY, details.sessionId);
+  return account;
+}
+
 export function clearStoredCustomerAccount(storage: Storage) {
   storage.removeItem(CUSTOMER_ACCOUNT_STORAGE_KEY);
+  storage.removeItem(ACCOUNT_LOGIN_TOKEN_STORAGE_KEY);
 }

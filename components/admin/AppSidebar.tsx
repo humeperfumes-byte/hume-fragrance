@@ -14,7 +14,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, ShoppingBag, ShoppingCart, Package, FileText, LogOut, Brain, Truck, Sparkles } from "lucide-react";
+import { Bell, LayoutDashboard, ShoppingBag, ShoppingCart, Package, FileText, LogOut, Brain, Truck, Sparkles } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
@@ -25,6 +25,7 @@ const navItems = [
   { title: "AI Visibility", url: "/admin/ai-visibility", icon: Sparkles },
   { title: "Orders", url: "/admin/orders", icon: ShoppingBag },
   { title: "Tracking", url: "/admin/tracking", icon: Truck },
+  { title: "Stock Requests", url: "/admin/stock-notify", icon: Bell },
   { title: "Checkouts", url: "/admin/checkouts", icon: ShoppingCart },
   { title: "Catalog", url: "/admin/products", icon: Package },
   { title: "Content", url: "/admin/blogs", icon: FileText },

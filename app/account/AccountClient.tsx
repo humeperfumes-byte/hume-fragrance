@@ -1,23 +1,42 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
+  KeyRound,
   LogOut,
+  Mail,
   MapPin,
+  MessageCircle,
   PackageSearch,
+  ReceiptText,
   RefreshCw,
   ShieldCheck,
   ShoppingBag,
   Truck,
   UserRound,
+  WalletCards,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { formatINR } from "@/lib/currency";
 import {
   clearStoredCustomerAccount,
+  getStoredAccountLoginToken,
   getStoredCheckoutSessionId,
   persistCustomerAccountFromCheckout,
+  persistCustomerAccountFromOtp,
   readStoredCheckoutDetails,
   readStoredCustomerAccount,
   type StoredCustomerAccount,
@@ -67,6 +86,28 @@ type AccountResponse = {
   error?: string;
 };
 
+type OtpRequestResponse = {
+  ok?: boolean;
+  requestId?: string;
+  expiresInMinutes?: number;
+  deliveryHint?: string;
+  dryRun?: boolean;
+  error?: string;
+};
+
+type OtpVerifyResponse = {
+  ok?: boolean;
+  accountToken?: string;
+  profile?: Partial<StoredCustomerAccount> & {
+    sessionId: string;
+    fullName: string;
+    phone: string;
+  };
+  error?: string;
+};
+
+const OTP_RESEND_SECONDS = 30;
+
 function formatDate(value?: string | null) {
   if (!value) return "Not available";
   const date = new Date(value);
@@ -107,10 +148,20 @@ export default function AccountClient() {
   const [orders, setOrders] = useState<AccountOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loginIdentifier, setLoginIdentifier] = useState("");
+  const [otpRequest, setOtpRequest] = useState<OtpRequestResponse | null>(null);
+  const [otpCode, setOtpCode] = useState("");
+  const [loginStatus, setLoginStatus] = useState<string | null>(null);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [isRequestingOtp, setIsRequestingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [resendSeconds, setResendSeconds] = useState(0);
+  const [otpShakeKey, setOtpShakeKey] = useState(0);
+  const [selectedOrder, setSelectedOrder] = useState<AccountOrder | null>(null);
 
   const profileAddress = useMemo(() => compactAddress(account), [account]);
 
-  const loadAccount = async () => {
+  const loadAccount = useCallback(async () => {
     if (typeof window === "undefined") return;
     setError(null);
     setIsLoading(true);
@@ -118,6 +169,8 @@ export default function AccountClient() {
     const storage = window.localStorage;
     const savedAccount = readStoredCustomerAccount(storage);
     const checkoutDetails = readStoredCheckoutDetails(storage);
+    const accountToken =
+      savedAccount?.accountLoginToken || getStoredAccountLoginToken(storage);
     const sessionId =
       savedAccount?.sessionId || getStoredCheckoutSessionId(storage);
     const hydratedAccount =
@@ -128,7 +181,7 @@ export default function AccountClient() {
 
     setAccount(hydratedAccount);
 
-    if (!sessionId) {
+    if (!sessionId && !accountToken) {
       setOrders([]);
       setIsLoading(false);
       return;
@@ -138,7 +191,10 @@ export default function AccountClient() {
       const response = await fetch("/api/account", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId }),
+        body: JSON.stringify({
+          sessionId: sessionId || undefined,
+          accountToken: accountToken || undefined,
+        }),
       });
       const data = (await response.json()) as AccountResponse;
       if (!response.ok || !data.ok) {
@@ -149,6 +205,8 @@ export default function AccountClient() {
       if (hydratedAccount && serverProfile) {
         const mergedAccount: StoredCustomerAccount = {
           ...hydratedAccount,
+          sessionId: serverProfile.sessionId || hydratedAccount.sessionId,
+          accountLoginToken: accountToken || hydratedAccount.accountLoginToken,
           fullName: serverProfile.fullName || hydratedAccount.fullName,
           phone: serverProfile.phone || hydratedAccount.phone,
           email: serverProfile.email || hydratedAccount.email,
@@ -160,6 +218,30 @@ export default function AccountClient() {
           notes: serverProfile.notes || hydratedAccount.notes,
         };
         setAccount(mergedAccount);
+      } else if (
+        !hydratedAccount &&
+        accountToken &&
+        serverProfile?.sessionId &&
+        serverProfile.fullName &&
+        serverProfile.phone
+      ) {
+        const restoredAccount = persistCustomerAccountFromOtp(
+          storage,
+          accountToken,
+          {
+            sessionId: serverProfile.sessionId,
+            fullName: serverProfile.fullName,
+            phone: serverProfile.phone,
+            email: serverProfile.email,
+            addressLine1: serverProfile.addressLine1,
+            addressLine2: serverProfile.addressLine2,
+            city: serverProfile.city,
+            state: serverProfile.state,
+            pincode: serverProfile.pincode,
+            notes: serverProfile.notes,
+          },
+        );
+        setAccount(restoredAccount);
       }
       setOrders(data.orders ?? []);
     } catch (loadError) {
@@ -167,11 +249,21 @@ export default function AccountClient() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadAccount();
-  }, []);
+  }, [loadAccount]);
+
+  useEffect(() => {
+    if (resendSeconds <= 0) return;
+
+    const timer = window.setInterval(() => {
+      setResendSeconds((seconds) => Math.max(0, seconds - 1));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [resendSeconds]);
 
   const handleSignOut = () => {
     if (typeof window !== "undefined") {
@@ -179,6 +271,90 @@ export default function AccountClient() {
     }
     setAccount(null);
     setOrders([]);
+  };
+
+  const handleRequestOtp = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setLoginError(null);
+    setLoginStatus(null);
+    setIsRequestingOtp(true);
+
+    try {
+      const response = await fetch("/api/account/otp/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier: loginIdentifier }),
+      });
+      const data = (await response.json()) as OtpRequestResponse;
+
+      if (!response.ok || !data.ok || !data.requestId) {
+        throw new Error(data.error || "Unable to send login code.");
+      }
+
+      setOtpRequest(data);
+      setOtpCode("");
+      setResendSeconds(OTP_RESEND_SECONDS);
+      setLoginStatus(`Code sent to ${data.deliveryHint || "your saved email"}.`);
+    } catch (requestError) {
+      setLoginError(requestError instanceof Error ? requestError.message : "Unable to send login code.");
+    } finally {
+      setIsRequestingOtp(false);
+    }
+  };
+
+  const verifyOtp = useCallback(async (code: string) => {
+    if (!otpRequest?.requestId || isVerifyingOtp) return;
+
+    setLoginError(null);
+    setIsVerifyingOtp(true);
+
+    try {
+      const response = await fetch("/api/account/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requestId: otpRequest.requestId,
+          code,
+        }),
+      });
+      const data = (await response.json()) as OtpVerifyResponse;
+
+      if (!response.ok || !data.ok || !data.accountToken || !data.profile) {
+        throw new Error(data.error || "Unable to verify login code.");
+      }
+
+      const nextAccount = persistCustomerAccountFromOtp(
+        window.localStorage,
+        data.accountToken,
+        data.profile,
+      );
+      setAccount(nextAccount);
+      setLoginStatus("Account opened.");
+      setOtpRequest(null);
+      setOtpCode("");
+      await loadAccount();
+    } catch (verifyError) {
+      setLoginError(verifyError instanceof Error ? verifyError.message : "Unable to verify login code.");
+      setOtpCode("");
+      setOtpShakeKey((key) => key + 1);
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  }, [isVerifyingOtp, loadAccount, otpRequest?.requestId]);
+
+  useEffect(() => {
+    if (!otpRequest?.requestId || otpCode.length !== 4 || isVerifyingOtp) return;
+
+    const timer = window.setTimeout(() => {
+      void verifyOtp(otpCode);
+    }, 220);
+
+    return () => window.clearTimeout(timer);
+  }, [isVerifyingOtp, otpCode, otpRequest?.requestId, verifyOtp]);
+
+  const handleVerifyOtp = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await verifyOtp(otpCode);
   };
 
   if (!account && !isLoading) {
@@ -197,6 +373,84 @@ export default function AccountClient() {
           <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-zinc-600">
             Add your name and mobile number at checkout and this device will stay logged in for faster checkout, order history, and tracking updates.
           </p>
+
+          <div className="mx-auto mt-7 max-w-xl rounded-[1.5rem] border border-zinc-200 bg-zinc-50/80 p-4 text-left">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-zinc-950 shadow-sm">
+                <KeyRound className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-zinc-950">Already checked out?</p>
+                <p className="mt-1 text-xs leading-5 text-zinc-500">
+                  Enter the email or mobile number used at checkout. We will send a 4 digit code to the saved email.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleRequestOtp} className="mt-4 flex flex-col gap-3 sm:flex-row">
+              <input
+                value={loginIdentifier}
+                onChange={(event) => setLoginIdentifier(event.target.value)}
+                placeholder="Email or mobile number"
+                inputMode="email"
+                autoComplete="email tel"
+                className="min-h-12 flex-1 rounded-full border border-zinc-200 bg-white px-4 text-sm outline-none transition focus:border-zinc-950"
+              />
+              <Button
+                type="submit"
+                disabled={isRequestingOtp || resendSeconds > 0 || !loginIdentifier.trim()}
+                className="h-12 rounded-full bg-zinc-950 px-6 text-white hover:bg-zinc-800"
+              >
+                <Mail className="h-4 w-4" />
+                {isRequestingOtp
+                  ? "Sending..."
+                  : resendSeconds > 0
+                    ? `Resend in ${resendSeconds}s`
+                    : otpRequest?.requestId
+                      ? "Resend code"
+                      : "Send code"}
+              </Button>
+            </form>
+
+            {otpRequest?.requestId ? (
+              <form onSubmit={handleVerifyOtp} className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <InputOTP
+                  maxLength={4}
+                  value={otpCode}
+                  onChange={(value) => setOtpCode(value.replace(/\D/g, "").slice(0, 4))}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  containerClassName="flex-1 justify-center gap-3 sm:justify-start"
+                  className="w-full"
+                >
+                  <InputOTPGroup key={otpShakeKey} className={cn("gap-3", loginError ? "hume-otp-shake" : "")}>
+                    {[0, 1, 2, 3].map((index) => (
+                      <InputOTPSlot
+                        key={index}
+                        index={index}
+                        className="h-14 w-14 rounded-xl border border-zinc-200 bg-white text-2xl font-medium text-zinc-950 shadow-[0_8px_24px_rgba(15,23,42,0.08)] ring-0 ring-offset-0 first:rounded-xl first:border last:rounded-xl data-[active=true]:border-zinc-950 data-[active=true]:ring-0"
+                      />
+                    ))}
+                  </InputOTPGroup>
+                </InputOTP>
+                <Button
+                  type="submit"
+                  disabled={isVerifyingOtp || otpCode.length !== 4}
+                  className="h-12 rounded-full bg-emerald-600 px-6 text-white hover:bg-emerald-700"
+                >
+                  {isVerifyingOtp ? "Opening..." : "Open account"}
+                </Button>
+              </form>
+            ) : null}
+
+            {loginStatus ? (
+              <p className="mt-3 text-xs font-medium text-emerald-700">{loginStatus}</p>
+            ) : null}
+            {loginError ? (
+              <p className="mt-3 text-xs font-medium text-rose-600">{loginError}</p>
+            ) : null}
+          </div>
+
           <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Button asChild className="h-12 rounded-full bg-zinc-950 px-6 text-white hover:bg-zinc-800">
               <Link href="/shop" onClick={() => showNavigationLoadingToast()}>
@@ -352,6 +606,15 @@ export default function AccountClient() {
                         <span className="text-lg font-semibold">
                           {order.grandTotal !== null ? formatINR(order.grandTotal) : "Saved"}
                         </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setSelectedOrder(order)}
+                          className="h-9 rounded-full bg-white px-4 text-xs"
+                        >
+                          <ReceiptText className="h-3.5 w-3.5" />
+                          Details
+                        </Button>
                       </div>
                     </div>
 
@@ -416,6 +679,124 @@ export default function AccountClient() {
             )}
           </div>
         </div>
+
+        <Sheet
+          open={Boolean(selectedOrder)}
+          onOpenChange={(open) => {
+            if (!open) setSelectedOrder(null);
+          }}
+        >
+          <SheetContent className="w-full overflow-y-auto border-zinc-200 bg-white p-0 sm:max-w-2xl">
+            {selectedOrder ? (
+              <div className="space-y-5 p-5 sm:p-7">
+                <SheetHeader className="text-left">
+                  <SheetTitle className="font-serif text-3xl font-light">
+                    {selectedOrder.orderNumber}
+                  </SheetTitle>
+                  <SheetDescription>
+                    Placed {formatDate(selectedOrder.createdAt)} / {titleStatus(selectedOrder.status)}
+                  </SheetDescription>
+                </SheetHeader>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+                    <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                      <WalletCards className="h-3.5 w-3.5" />
+                      Payment
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-zinc-950">
+                      {selectedOrder.paymentMethod || (selectedOrder.checkoutChannel === "razorpay" ? "Razorpay" : "WhatsApp")}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                      Total
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-zinc-950">
+                      {selectedOrder.grandTotal !== null ? formatINR(selectedOrder.grandTotal) : "Saved"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                      Coupon
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-zinc-950">
+                      {selectedOrder.appliedCouponCode || "None"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-zinc-200 bg-white p-4">
+                  <h3 className="text-sm font-semibold text-zinc-950">Items</h3>
+                  <div className="mt-4 divide-y divide-zinc-100">
+                    {selectedOrder.cartSnapshot.map((item) => (
+                      <div key={`${selectedOrder.id}-${item.id}`} className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                        <div className="min-w-0">
+                          <p className="font-medium text-zinc-950">{item.name}</p>
+                          <p className="mt-1 text-xs text-zinc-500">
+                            Qty {item.quantity}
+                            {!item.isGift && item.size ? ` / ${item.size}` : ""}
+                            {item.inspiration ? ` / Inspired by ${item.inspiration}` : ""}
+                          </p>
+                        </div>
+                        <p className={cn("shrink-0 text-sm font-semibold", item.isGift ? "text-emerald-600" : "text-zinc-950")}>
+                          {item.isGift ? "FREE" : formatINR(item.price * item.quantity)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
+                  <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700/70">
+                    <MapPin className="h-4 w-4" />
+                    Delivery details
+                  </p>
+                  <p className="mt-3 font-semibold">{account?.fullName || "Customer"}</p>
+                  <p className="mt-1 text-sm">{account?.phone || "Phone not available"}</p>
+                  {account?.email ? <p className="mt-1 text-sm">{account.email}</p> : null}
+                  <p className="mt-3 text-sm leading-6">{profileAddress}</p>
+                </div>
+
+                <div className="rounded-3xl border border-zinc-200 bg-white p-4">
+                  <h3 className="text-sm font-semibold text-zinc-950">Shipment</h3>
+                  {selectedOrder.trackingNumber ? (
+                    <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="font-semibold">{selectedOrder.fulfillmentCarrier || "Shipment"}</p>
+                        <p className="mt-1 text-sm text-zinc-500">{selectedOrder.trackingNumber}</p>
+                        <p className="mt-1 text-xs text-zinc-400">
+                          {selectedOrder.trackingLastCheckedAt
+                            ? `Last checked ${formatDate(selectedOrder.trackingLastCheckedAt)}`
+                            : "Tracking is ready"}
+                        </p>
+                      </div>
+                      <Button asChild className="rounded-full bg-zinc-950 text-white hover:bg-zinc-800">
+                        <Link href={buildPublicTrackingPath(selectedOrder.trackingNumber) || selectedOrder.trackingUrl || "/track-order"}>
+                          <PackageSearch className="h-4 w-4" />
+                          Track order
+                        </Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-sm leading-6 text-zinc-500">
+                      Tracking will appear here after dispatch.
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button asChild className="h-11 flex-1 rounded-full bg-[#25D366] text-white hover:bg-[#20bd5a]">
+                    <a href="https://wa.me/919559024822" target="_blank" rel="noreferrer">
+                      <MessageCircle className="h-4 w-4" />
+                      Ask HUME support
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </SheetContent>
+        </Sheet>
       </div>
     </section>
   );

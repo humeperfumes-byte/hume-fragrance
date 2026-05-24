@@ -80,6 +80,22 @@ function buildAdminOrderUrl() {
   return process.env.ADMIN_ORDER_ALERT_URL || siteUrlForBase(SITE_URL, "/admin/orders");
 }
 
+function buildAdminTrackingUrl() {
+  const adminUrl = buildAdminOrderUrl();
+  try {
+    return new URL("/admin/tracking", adminUrl).toString();
+  } catch {
+    return siteUrlForBase(SITE_URL, "/admin/tracking");
+  }
+}
+
+function buildCustomerWhatsAppUrl(phone: string | null) {
+  const digits = phone?.replace(/\D/g, "") || "";
+  const normalized = digits.length === 10 ? `91${digits}` : digits;
+  if (normalized.length < 10) return null;
+  return `https://wa.me/${normalized}`;
+}
+
 export function shouldSendAdminOrderAlert(status: string, previousStatus?: string | null) {
   return ADMIN_ALERT_STATUSES.has(status) && previousStatus !== status;
 }
@@ -106,6 +122,16 @@ export async function sendAdminOrderAlert(order: AdminOrderAlertData) {
   const address = buildAddress(order);
   const items = buildItems(order);
   const adminUrl = buildAdminOrderUrl();
+  const trackingUrl = buildAdminTrackingUrl();
+  const whatsappUrl = buildCustomerWhatsAppUrl(phone);
+  const keyboard = [
+    [{ text: "Open order panel", url: adminUrl }],
+    [
+      ...(whatsappUrl ? [{ text: "WhatsApp customer", url: whatsappUrl }] : []),
+      { text: "Add tracking", url: trackingUrl },
+    ],
+    [{ text: "Mark packed", url: adminUrl }],
+  ].filter((row) => row.length > 0);
 
   const message = [
     `<b>${escapeHtml(getAlertTitle(order))}</b>`,
@@ -132,7 +158,7 @@ export async function sendAdminOrderAlert(order: AdminOrderAlertData) {
         parse_mode: "HTML",
         disable_web_page_preview: true,
         reply_markup: {
-          inline_keyboard: [[{ text: "Open admin orders", url: adminUrl }]],
+          inline_keyboard: keyboard,
         },
       }),
     });

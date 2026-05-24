@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Brain,
+  Bell,
   Download,
   FileText,
   LayoutDashboard,
@@ -31,6 +32,7 @@ const navItems = [
   { title: "AI Visibility", url: "/admin/ai-visibility", icon: Sparkles },
   { title: "Orders", url: "/admin/orders", icon: ShoppingBag },
   { title: "Tracking", url: "/admin/tracking", icon: Truck },
+  { title: "Stock Requests", url: "/admin/stock-notify", icon: Bell },
   { title: "Checkouts", url: "/admin/checkouts", icon: ShoppingCart },
   { title: "Cart Leads", url: "/admin/cart", icon: ShoppingBasket },
   { title: "Coupon Leads", url: "/admin/coupon-leads", icon: Ticket },

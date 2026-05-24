@@ -1,7 +1,7 @@
 import { desc, gte } from "drizzle-orm";
 import { Bot, ExternalLink, Globe2, Sparkles, TrendingUp } from "lucide-react";
 import { db } from "@/db";
-import { checkoutDrafts, orders } from "@/db/schema";
+import { behavioralEvents, cartEvents, checkoutDrafts, orders } from "@/db/schema";
 import { AdminDateWindowControl } from "@/components/admin/AdminDateWindowControl";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -32,9 +32,12 @@ type SourceStats = {
   group: AdminSourceGroup;
   sessions: Set<string>;
   draftCount: number;
+  pageViews: number;
+  addToCartCount: number;
   orderCount: number;
   revenue: number;
   domains: Map<string, number>;
+  pages: Map<string, number>;
   products: Map<string, number>;
   lastSeen: Date | null;
 };
@@ -70,9 +73,12 @@ function getStatsBucket(stats: Map<AdminSourceKey, SourceStats>, group: AdminSou
     group,
     sessions: new Set(),
     draftCount: 0,
+    pageViews: 0,
+    addToCartCount: 0,
     orderCount: 0,
     revenue: 0,
     domains: new Map(),
+    pages: new Map(),
     products: new Map(),
     lastSeen: null,
   };
@@ -101,11 +107,21 @@ function sortedEntries(map: Map<string, number>, limit = 4) {
     .slice(0, limit);
 }
 
+function pageLabel(path?: string | null) {
+  if (!path) return "unknown page";
+  try {
+    const url = new URL(path);
+    return url.pathname || "/";
+  } catch {
+    return path.split("?")[0] || "unknown page";
+  }
+}
+
 export default async function AiVisibilityPage({ searchParams }: AdminPageProps) {
   const params = await searchParams;
   const timeWindow = parseAdminTimeWindow(params?.hours);
 
-  const [draftRows, orderRows] = await Promise.all([
+  const [draftRows, orderRows, cartRows, behaviorRows] = await Promise.all([
     db
       .select({
         sessionId: checkoutDrafts.sessionId,
@@ -155,19 +171,48 @@ export default async function AiVisibilityPage({ searchParams }: AdminPageProps)
       .where(gte(orders.createdAt, timeWindow.since))
       .orderBy(desc(orders.createdAt))
       .limit(3000),
+    db
+      .select({
+        sessionId: cartEvents.sessionId,
+        eventType: cartEvents.eventType,
+        path: cartEvents.path,
+        productName: cartEvents.productName,
+        quantity: cartEvents.quantity,
+        userAgent: cartEvents.userAgent,
+        createdAt: cartEvents.createdAt,
+      })
+      .from(cartEvents)
+      .where(gte(cartEvents.createdAt, timeWindow.since))
+      .orderBy(desc(cartEvents.createdAt))
+      .limit(3000),
+    db
+      .select({
+        sessionId: behavioralEvents.sessionId,
+        eventType: behavioralEvents.eventType,
+        path: behavioralEvents.path,
+        userAgent: behavioralEvents.userAgent,
+        createdAt: behavioralEvents.createdAt,
+      })
+      .from(behavioralEvents)
+      .where(gte(behavioralEvents.createdAt, timeWindow.since))
+      .orderBy(desc(behavioralEvents.createdAt))
+      .limit(3000),
   ]);
 
   const excludedSessionIds = collectExcludedSessionIds(draftRows, orderRows);
   const drafts = filterExcludedAdminRows(draftRows, excludedSessionIds);
   const orderSignals = filterExcludedAdminRows(orderRows, excludedSessionIds);
   const stats = new Map<AdminSourceKey, SourceStats>();
+  const sessionGroups = new Map<string, AdminSourceGroup>();
 
   for (const draft of drafts) {
     const group = classifyAdminSource(draft);
     const bucket = getStatsBucket(stats, group);
+    sessionGroups.set(draft.sessionId, group);
     bucket.sessions.add(draft.sessionId);
     bucket.draftCount += 1;
     incrementMap(bucket.domains, getAttributionDomain(draft));
+    incrementMap(bucket.pages, pageLabel(draft.path));
     addProducts(bucket, draft.cartSnapshot as CartItem[]);
     touch(bucket, draft.updatedAt);
   }
@@ -175,12 +220,35 @@ export default async function AiVisibilityPage({ searchParams }: AdminPageProps)
   for (const order of orderSignals) {
     const group = classifyAdminSource(order);
     const bucket = getStatsBucket(stats, group);
+    sessionGroups.set(order.sessionId, group);
     bucket.sessions.add(order.sessionId);
     bucket.orderCount += 1;
     bucket.revenue += money(order.grandTotal);
     incrementMap(bucket.domains, getAttributionDomain(order));
+    incrementMap(bucket.pages, pageLabel(order.path));
     addProducts(bucket, order.cartSnapshot as CartItem[]);
     touch(bucket, order.createdAt);
+  }
+
+  for (const row of filterExcludedAdminRows(cartRows, excludedSessionIds)) {
+    const group = sessionGroups.get(row.sessionId) ?? classifyAdminSource(row);
+    const bucket = getStatsBucket(stats, group);
+    bucket.sessions.add(row.sessionId);
+    if (row.eventType === "add_to_cart") {
+      bucket.addToCartCount += 1;
+      if (row.productName) incrementMap(bucket.products, row.productName, row.quantity || 1);
+    }
+    incrementMap(bucket.pages, pageLabel(row.path));
+    touch(bucket, row.createdAt);
+  }
+
+  for (const row of filterExcludedAdminRows(behaviorRows, excludedSessionIds)) {
+    const group = sessionGroups.get(row.sessionId) ?? classifyAdminSource(row);
+    const bucket = getStatsBucket(stats, group);
+    bucket.sessions.add(row.sessionId);
+    if (row.eventType === "page_view") bucket.pageViews += 1;
+    incrementMap(bucket.pages, pageLabel(row.path));
+    touch(bucket, row.createdAt);
   }
 
   const sourceRows = Array.from(stats.values()).sort((a, b) => {
@@ -193,6 +261,8 @@ export default async function AiVisibilityPage({ searchParams }: AdminPageProps)
   const aiRows = sourceRows.filter((row) => row.group.isAi);
   const aiOrders = aiRows.reduce((sum, row) => sum + row.orderCount, 0);
   const aiDrafts = aiRows.reduce((sum, row) => sum + row.draftCount, 0);
+  const aiPageViews = aiRows.reduce((sum, row) => sum + row.pageViews, 0);
+  const aiAddToCart = aiRows.reduce((sum, row) => sum + row.addToCartCount, 0);
   const aiRevenue = aiRows.reduce((sum, row) => sum + row.revenue, 0);
   const totalRevenue = sourceRows.reduce((sum, row) => sum + row.revenue, 0);
   const totalOrders = sourceRows.reduce((sum, row) => sum + row.orderCount, 0);
@@ -202,6 +272,8 @@ export default async function AiVisibilityPage({ searchParams }: AdminPageProps)
   sourceRows.forEach((row) => row.domains.forEach((count, domain) => incrementMap(domainStats, domain, count)));
   const topAiProducts = new Map<string, number>();
   aiRows.forEach((row) => row.products.forEach((count, product) => incrementMap(topAiProducts, product, count)));
+  const topAiPages = new Map<string, number>();
+  aiRows.forEach((row) => row.pages.forEach((count, page) => incrementMap(topAiPages, page, count)));
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -224,7 +296,7 @@ export default async function AiVisibilityPage({ searchParams }: AdminPageProps)
         <AdminDateWindowControl />
       </div>
 
-      <div className="grid gap-3 md:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-5">
         <div className="rounded-3xl border border-emerald-400/15 bg-emerald-400/10 p-5">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-100/45">AI Orders</p>
           <p className="mt-3 text-3xl font-semibold text-emerald-100">{aiOrders}</p>
@@ -245,6 +317,11 @@ export default async function AiVisibilityPage({ searchParams }: AdminPageProps)
           <p className="mt-3 text-3xl font-semibold text-white">{totalDrafts}</p>
           <p className="mt-2 text-xs text-white/40">{aiDrafts} from AI sources</p>
         </div>
+        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">AI Add To Cart</p>
+          <p className="mt-3 text-3xl font-semibold text-white">{aiAddToCart}</p>
+          <p className="mt-2 text-xs text-white/40">{aiPageViews} AI page views</p>
+        </div>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -256,7 +333,7 @@ export default async function AiVisibilityPage({ searchParams }: AdminPageProps)
           {sourceRows.length ? (
             <div className="divide-y divide-white/8">
               {sourceRows.map((row) => (
-                <div key={row.group.key} className="grid gap-4 p-5 lg:grid-cols-[1fr_120px_120px_120px_130px] lg:items-center">
+                <div key={row.group.key} className="grid gap-4 p-5 lg:grid-cols-[1fr_100px_110px_110px_100px_130px] lg:items-center">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge className={cn("border hover:bg-transparent", row.group.tone)}>
@@ -273,8 +350,16 @@ export default async function AiVisibilityPage({ searchParams }: AdminPageProps)
                     <p className="mt-1 text-lg font-semibold text-white">{row.sessions.size}</p>
                   </div>
                   <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/30">Views</p>
+                    <p className="mt-1 text-lg font-semibold text-white">{row.pageViews}</p>
+                  </div>
+                  <div>
                     <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/30">Checkouts</p>
                     <p className="mt-1 text-lg font-semibold text-white">{row.draftCount}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/30">Cart</p>
+                    <p className="mt-1 text-lg font-semibold text-white">{row.addToCartCount}</p>
                   </div>
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/30">Orders</p>
@@ -326,6 +411,22 @@ export default async function AiVisibilityPage({ searchParams }: AdminPageProps)
                 </div>
               ))}
               {topAiProducts.size === 0 ? <p className="text-sm text-white/35">No AI product signals yet.</p> : null}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
+              <Bot className="h-4 w-4 text-white/35" />
+              AI Landing Pages
+            </h2>
+            <div className="mt-4 space-y-3">
+              {sortedEntries(topAiPages, 6).map(([page, count]) => (
+                <div key={page} className="rounded-2xl border border-white/8 bg-black/15 px-3 py-3">
+                  <p className="truncate text-sm font-medium text-white">{page}</p>
+                  <p className="mt-1 text-xs text-white/35">{count} AI-attributed signals</p>
+                </div>
+              ))}
+              {topAiPages.size === 0 ? <p className="text-sm text-white/35">No AI page signals yet.</p> : null}
             </div>
           </div>
 

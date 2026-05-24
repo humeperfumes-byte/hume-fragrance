@@ -29,7 +29,10 @@ import {
   readWelcomeBackReward,
   type WelcomeBackReward,
 } from "@/lib/cart-discounts";
-import { persistCustomerAccountFromCheckout } from "@/lib/customer-account";
+import {
+  persistCustomerAccountFromCheckout,
+  readStoredCustomerAccount,
+} from "@/lib/customer-account";
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 import { isRazorpayAllowedHost } from "@/lib/razorpay-domain";
 
@@ -493,9 +496,9 @@ export default function CheckoutClient() {
     if (typeof window === "undefined") return defaultDetails;
     try {
       const raw = window.localStorage.getItem(CHECKOUT_STORAGE_KEY);
-      if (!raw) return defaultDetails;
-      const parsed = JSON.parse(raw) as Partial<CheckoutDetails>;
-      return { ...defaultDetails, ...parsed };
+      const savedAccount = readStoredCustomerAccount(window.localStorage);
+      const parsed = raw ? (JSON.parse(raw) as Partial<CheckoutDetails>) : {};
+      return { ...defaultDetails, ...(savedAccount ?? {}), ...parsed };
     } catch (error) {
       console.error("Failed to hydrate checkout details:", error);
       return defaultDetails;

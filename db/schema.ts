@@ -370,6 +370,48 @@ export const emailEvents = pgTable("email_events", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const accountLoginOtps = pgTable("account_login_otps", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  identityType: varchar("identity_type", { length: 20 }).notNull(), // email | phone
+  identifier: varchar("identifier", { length: 255 }).notNull(),
+  destinationEmail: varchar("destination_email", { length: 255 }).notNull(),
+  otpHash: varchar("otp_hash", { length: 255 }).notNull(),
+  attempts: integer("attempts").notNull().default(0),
+  expiresAt: timestamp("expires_at").notNull(),
+  consumedAt: timestamp("consumed_at"),
+  ipAddress: varchar("ip_address", { length: 255 }),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const customerAccountSessions = pgTable("customer_account_sessions", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  tokenHash: varchar("token_hash", { length: 255 }).notNull().unique(),
+  identityType: varchar("identity_type", { length: 20 }).notNull(), // email | phone
+  identifier: varchar("identifier", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }),
+  phone: varchar("phone", { length: 50 }),
+  expiresAt: timestamp("expires_at").notNull(),
+  lastUsedAt: timestamp("last_used_at").defaultNow().notNull(),
+  ipAddress: varchar("ip_address", { length: 255 }),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const stockNotifyRequests = pgTable("stock_notify_requests", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  productId: varchar("product_id", { length: 255 }).notNull(),
+  productName: varchar("product_name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }),
+  phone: varchar("phone", { length: 50 }),
+  sourcePath: varchar("source_path", { length: 2048 }),
+  status: varchar("status", { length: 40 }).notNull().default("new"),
+  ipAddress: varchar("ip_address", { length: 255 }),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Behavioral Analytics & Behavioral Events
 export const behavioralEvents = pgTable("behavioral_events", {
   id: varchar("id", { length: 255 }).primaryKey(),
@@ -445,6 +487,12 @@ export type SiteSetting = typeof siteSettings.$inferSelect;
 export type NewSiteSetting = typeof siteSettings.$inferInsert;
 export type EmailEvent = typeof emailEvents.$inferSelect;
 export type NewEmailEvent = typeof emailEvents.$inferInsert;
+export type AccountLoginOtp = typeof accountLoginOtps.$inferSelect;
+export type NewAccountLoginOtp = typeof accountLoginOtps.$inferInsert;
+export type CustomerAccountSession = typeof customerAccountSessions.$inferSelect;
+export type NewCustomerAccountSession = typeof customerAccountSessions.$inferInsert;
+export type StockNotifyRequest = typeof stockNotifyRequests.$inferSelect;
+export type NewStockNotifyRequest = typeof stockNotifyRequests.$inferInsert;
 export type BehavioralEvent = typeof behavioralEvents.$inferSelect;
 export type NewBehavioralEvent = typeof behavioralEvents.$inferInsert;
 export type SessionIntelligence = typeof sessionIntelligence.$inferSelect;
