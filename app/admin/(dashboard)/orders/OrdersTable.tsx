@@ -27,6 +27,53 @@ function getOrderHost(order: Order) {
   }
 }
 
+type OrderCartItem = Order["cartSnapshot"][number];
+
+function toOrderMoney(value: unknown): number {
+  const parsed = Number.parseFloat(String(value ?? "0"));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getOrderItemQuantity(item: OrderCartItem): number {
+  const quantity = Number(item.quantity ?? 0);
+  return Number.isFinite(quantity) ? quantity : 0;
+}
+
+function getOrderItemLineTotal(item: OrderCartItem): number {
+  return toOrderMoney(item.price) * getOrderItemQuantity(item);
+}
+
+function getOrderPriceBreakdown(order: Order) {
+  const items = order.cartSnapshot || [];
+  const paidItems = items.filter((item) => !item.isGift);
+  const itemTotal = paidItems.reduce((sum, item) => sum + getOrderItemLineTotal(item), 0);
+  const storedSubtotal = toOrderMoney(order.subtotal);
+  const subtotal = storedSubtotal > 0 ? storedSubtotal : itemTotal;
+  const shippingFee = toOrderMoney(order.shippingFee);
+  const grandTotal = toOrderMoney(order.grandTotal);
+  const discount = Math.max(0, subtotal + shippingFee - grandTotal);
+
+  return {
+    items,
+    itemTotal,
+    subtotal,
+    shippingFee,
+    grandTotal,
+    discount,
+  };
+}
+
+function getSavedCheckoutPricingLines(message: string | null) {
+  if (!message) return [];
+
+  return message
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) =>
+      /^(Subtotal|Coupon Discount|Welcome Back|Delivery|Grand Total|Offer Codes):/i.test(line),
+    );
+}
+
 function getPaymentTrail(message: string | null) {
   if (!message) return null;
   const marker = "Razorpay webhook:";
@@ -47,6 +94,7 @@ function getCarrierLabel(carrier?: string | null) {
   if (!carrier) return "Speed Post";
   if (carrier === "speed_post") return "Speed Post";
   if (carrier === "delhivery") return "Delhivery";
+  if (carrier === "shiprocket") return "Shiprocket";
   if (carrier === "bluedart") return "Blue Dart";
   return carrier;
 }
@@ -88,6 +136,40 @@ function buildDeliveredMessage(order: Order) {
     "",
     "Team HUME Fragrance",
   ].join("\n");
+}
+
+function getOrderSuccessImageUrl() {
+  const origin =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : "https://www.humefragrance.com";
+  return `${origin}/images/email/order%20confirmation%20email%20hero%20image.png`;
+}
+
+function buildOrderSuccessMessage(order: Order) {
+  const itemLines = (order.cartSnapshot || [])
+    .filter((item) => !item.isGift)
+    .slice(0, 4)
+    .map((item) => `- ${item.name}${item.size ? ` (${item.size})` : ""} x${item.quantity}`);
+
+  return [
+    `Hi ${order.fullName || "there"},`,
+    "",
+    "Order Success",
+    "",
+    `Your HUME order #${order.orderNumber} has been placed successfully.`,
+    order.grandTotal ? `Order total: ${formatINR(Number(order.grandTotal))}` : null,
+    itemLines.length ? "Items:" : null,
+    ...itemLines,
+    "",
+    `Order success image: ${getOrderSuccessImageUrl()}`,
+    "",
+    "We will start preparing your order and share the tracking details once it is dispatched.",
+    "",
+    "Team HUME Fragrance",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
@@ -163,7 +245,7 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
     if (!order.phone) return;
     const phone = order.phone.replace(/\D/g, "");
     const waPhone = phone.length === 10 ? `91${phone}` : phone;
-    const message = encodeURIComponent(`Hi ${order.fullName}, we received your order #${order.orderNumber} for ${formatINR(Number(order.grandTotal))}. Let us know if you need any help!`);
+    const message = encodeURIComponent(buildOrderSuccessMessage(order));
     window.open(`https://wa.me/${waPhone}?text=${message}`, "_blank");
   };
 
@@ -445,6 +527,7 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
                             className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none focus:border-emerald-300/50"
                           >
                             <option className="bg-[#111]" value="speed_post">Speed Post</option>
+                            <option className="bg-[#111]" value="shiprocket">Shiprocket</option>
                             <option className="bg-[#111]" value="delhivery">Delhivery</option>
                             <option className="bg-[#111]" value="bluedart">Blue Dart</option>
                           </select>
@@ -524,34 +607,115 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
                   </>
                 )}
 
-                <div className="rounded-xl border border-border/50 bg-secondary/10 p-5 space-y-4">
-                  <h4 className="font-semibold text-sm uppercase tracking-widest text-muted-foreground">Order Items</h4>
-                  <div className="space-y-4">
-                    {selectedOrder.cartSnapshot?.map((item: { name: string; quantity: number; price: number; size?: string }, i: number) => (
-                      <div key={i} className="flex justify-between text-sm items-start">
+                {(() => {
+                  const priceBreakdown = getOrderPriceBreakdown(selectedOrder);
+                  const savedPricingLines = getSavedCheckoutPricingLines(selectedOrder.whatsappMessage);
+                  const discountLabel = selectedOrder.appliedCouponCode
+                    ? `Discount / offer (${selectedOrder.appliedCouponCode})`
+                    : "Discount / offer adjustment";
+
+                  return (
+                    <div className="rounded-xl border border-border/50 bg-secondary/10 p-5 space-y-4">
+                      <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="font-medium">{item.name} <span className="text-muted-foreground text-xs ml-1">x{item.quantity}</span></p>
-                          {item.size && <p className="text-xs text-muted-foreground mt-0.5">{item.size}</p>}
+                          <h4 className="font-semibold text-sm uppercase tracking-widest text-muted-foreground">Order Items</h4>
+                          <p className="mt-1 text-xs text-muted-foreground/80">Full saved price calculation for this order.</p>
                         </div>
-                        <p className="font-medium">{formatINR(item.price * item.quantity)}</p>
+                        {selectedOrder.appliedCouponCode ? (
+                          <span className="rounded-md border border-emerald-400/20 bg-emerald-400/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-200">
+                            {selectedOrder.appliedCouponCode}
+                          </span>
+                        ) : null}
                       </div>
-                    ))}
-                  </div>
-                  <div className="pt-4 border-t border-border/50 space-y-2">
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>Subtotal</span>
-                      <span>{formatINR(Number(selectedOrder.subtotal))}</span>
+
+                      <div className="space-y-4">
+                        {priceBreakdown.items.length > 0 ? (
+                          priceBreakdown.items.map((item, i) => (
+                            <div key={`${item.id}-${i}`} className="flex justify-between text-sm items-start gap-4">
+                              <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="font-medium text-white">{item.isGift ? `Gift ${i + 1}` : item.name}</p>
+                                  {item.isGift ? (
+                                    <span className="rounded bg-emerald-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-emerald-200">
+                                      Free
+                                    </span>
+                                  ) : null}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  Qty {getOrderItemQuantity(item)}
+                                  {item.size ? ` · ${item.size}` : ""}
+                                  {!item.isGift ? ` · ${formatINR(toOrderMoney(item.price))} each` : ""}
+                                </p>
+                              </div>
+                              <p className={item.isGift ? "font-medium text-emerald-300" : "font-medium text-white"}>
+                                {item.isGift ? "Free" : formatINR(getOrderItemLineTotal(item))}
+                              </p>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-muted-foreground">No cart snapshot saved.</p>
+                        )}
+                      </div>
+
+                      <div className="pt-4 border-t border-border/50 space-y-2">
+                        {priceBreakdown.itemTotal > 0 && priceBreakdown.itemTotal !== priceBreakdown.subtotal ? (
+                          <div className="flex justify-between text-sm text-muted-foreground">
+                            <span>Item line total</span>
+                            <span>{formatINR(priceBreakdown.itemTotal)}</span>
+                          </div>
+                        ) : null}
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                          <span>Subtotal</span>
+                          <span>{formatINR(priceBreakdown.subtotal)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                          <span>Shipping Fee</span>
+                          <span>{priceBreakdown.shippingFee === 0 ? "Free" : formatINR(priceBreakdown.shippingFee)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">{discountLabel}</span>
+                          <span className={priceBreakdown.discount > 0 ? "font-medium text-emerald-300" : "text-muted-foreground"}>
+                            {priceBreakdown.discount > 0 ? `-${formatINR(priceBreakdown.discount)}` : formatINR(0)}
+                          </span>
+                        </div>
+                        {priceBreakdown.discount > 0 ? (
+                          <div className="rounded-lg border border-amber-400/15 bg-amber-400/[0.04] px-3 py-2 text-[11px] leading-relaxed text-amber-100/60">
+                            This discount is calculated from saved order totals: subtotal + shipping - grand total.
+                          </div>
+                        ) : null}
+                        {savedPricingLines.length > 0 ? (
+                          <div className="rounded-lg border border-white/10 bg-black/25 p-3">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/30">
+                              Exact checkout message pricing
+                            </p>
+                            <div className="mt-2 space-y-1.5">
+                              {savedPricingLines.map((line) => {
+                                const [label, ...rest] = line.split(":");
+                                const value = rest.join(":").trim();
+                                const isDiscount = /^Coupon Discount|^Welcome Back/i.test(label);
+                                const isTotal = /^Grand Total/i.test(label);
+
+                                return (
+                                  <div
+                                    key={line}
+                                    className={`flex justify-between gap-4 text-xs ${isTotal ? "font-semibold text-white" : "text-muted-foreground"}`}
+                                  >
+                                    <span>{label}</span>
+                                    <span className={isDiscount ? "text-emerald-300" : "text-right"}>{value}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ) : null}
+                        <div className="flex justify-between font-semibold pt-3 text-base border-t border-border/50">
+                          <span>Grand Total</span>
+                          <span>{formatINR(priceBreakdown.grandTotal)}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>Shipping Fee</span>
-                      <span>{Number(selectedOrder.shippingFee) === 0 ? "Free" : formatINR(Number(selectedOrder.shippingFee))}</span>
-                    </div>
-                    <div className="flex justify-between font-semibold pt-2 text-base">
-                      <span>Grand Total</span>
-                      <span>{formatINR(Number(selectedOrder.grandTotal))}</span>
-                    </div>
-                  </div>
-                </div>
+                  );
+                })()}
 
                 <div className="rounded-xl border border-border/50 bg-secondary/10 p-5 space-y-4">
                   <h4 className="font-semibold text-sm uppercase tracking-widest text-muted-foreground">Order Management</h4>
@@ -589,7 +753,15 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
 
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5 space-y-4">
                   <h4 className="text-sm font-semibold uppercase tracking-widest text-white/45">Customer Updates</h4>
-                  <div className="grid gap-2 sm:grid-cols-3">
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => copyText(buildOrderSuccessMessage(selectedOrder))}
+                      className="rounded-xl border-emerald-400/20 bg-emerald-400/[0.06] text-emerald-100 hover:bg-emerald-400/[0.1]"
+                    >
+                      <Copy className="mr-2 h-4 w-4" /> Order Success
+                    </Button>
                     <Button
                       type="button"
                       variant="outline"

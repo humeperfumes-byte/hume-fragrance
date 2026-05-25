@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { isLikelyDelhiveryAwb, trackDelhiveryWaybill } from "@/lib/tracking/delhivery";
 import { trackSpeedPostConsignment } from "@/lib/tracking/india-post";
+import { trackShiprocketAwb } from "@/lib/tracking/shiprocket";
 import {
   TRACKING_CARRIERS,
   TRACKING_STATUS_META,
@@ -48,10 +49,14 @@ function normalizeCarrier(value: string | null | undefined, trackingNumber: stri
     .replace(/[\s-]+/g, "_");
 
   if (isTrackingCarrier(normalized)) return normalized;
+  if (/shiprocket|ship_?rocket/.test(normalized)) return "shiprocket";
   if (/blue_?dart|bluedart/.test(normalized)) return "bluedart";
   if (/delhivery/.test(normalized)) return "delhivery";
   if (/speed|india_?post|indian_?post/.test(normalized)) return "speed_post";
   if (/^[A-Z]{2}\d{9}IN$/.test(cleanTrackingNumber(trackingNumber))) return "speed_post";
+  if (process.env.SHIPROCKET_API_EMAIL && (process.env.SHIPROCKET_API_KEY || process.env.SHIPROCKET_API_PASSWORD)) {
+    return "shiprocket";
+  }
   if (isLikelyDelhiveryAwb(trackingNumber)) return "delhivery";
   return "speed_post";
 }
@@ -100,6 +105,8 @@ function getProviderEndpoint(carrier: TrackingCarrier): string | undefined {
       return process.env.SPEED_POST_TRACKING_ENDPOINT;
     case "delhivery":
       return process.env.DELHIVERY_TRACKING_ENDPOINT;
+    case "shiprocket":
+      return undefined;
     case "bluedart":
       return process.env.BLUEDART_TRACKING_ENDPOINT;
     default:
@@ -317,6 +324,10 @@ async function trackCarrierConsignment(
 
   if (carrier === "delhivery") {
     return trackDelhiveryWaybill(trackingNumber);
+  }
+
+  if (carrier === "shiprocket") {
+    return trackShiprocketAwb(trackingNumber);
   }
 
   const endpointTemplate = getProviderEndpoint(carrier);

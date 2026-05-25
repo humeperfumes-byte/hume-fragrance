@@ -122,7 +122,15 @@ function buildOrderWhatsAppUrl(order: TrackedOrder) {
 }
 
 function normalizeOrderCarrier(value: string | null | undefined): TrackingCarrier {
-  return isTrackingCarrier(value) ? value : "speed_post";
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+  if (isTrackingCarrier(normalized)) return normalized;
+  if (/shiprocket|ship_?rocket/.test(normalized)) return "shiprocket";
+  if (/delhivery/.test(normalized)) return "delhivery";
+  if (/blue_?dart|bluedart/.test(normalized)) return "bluedart";
+  return "speed_post";
 }
 
 function titleStatus(value: string | null | undefined) {

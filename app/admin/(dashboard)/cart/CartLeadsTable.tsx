@@ -6,18 +6,23 @@ import { formatDistanceToNow } from "date-fns";
 import {
   AlertTriangle,
   ExternalLink,
+  Globe2,
   Mail,
   MessageCircle,
   Package,
+  ReceiptText,
   Search,
   ShoppingCart,
+  Tag,
   Ticket,
   User,
   Zap,
 } from "lucide-react";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { formatINR } from "@/lib/currency";
 import { buildAdminEmailHref, buildAdminWhatsAppHref, type AdminLeadTemplate } from "@/lib/admin-message-templates";
 import type { CapturedDomainKind } from "@/lib/captured-domain";
+import type { SavedPricingBreakdown } from "@/lib/saved-pricing-breakdown";
 
 export type CartLeadRow = {
   sessionId: string;
@@ -65,6 +70,7 @@ export type CartLeadRow = {
   intentScore: number | null;
   abandonmentRisk: number | null;
   predictedNextAction: string | null;
+  pricingBreakdown: SavedPricingBreakdown | null;
 };
 
 type Filter = "all" | "connected" | "coupon" | "checkout" | "contactable" | "hot";
@@ -105,9 +111,233 @@ function domainClassName(kind: CapturedDomainKind): string {
   }
 }
 
+function CartLeadDetailSheet({
+  row,
+  onOpenChange,
+}: {
+  row: CartLeadRow | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  if (!row) return null;
+
+  const exact = row.pricingBreakdown;
+  const fallbackDiscount = Math.max(
+    0,
+    (row.originalCartSignalValue || row.cartSignalValue) - row.cartSignalValue,
+  );
+  const hasAnyOffer =
+    Boolean(row.couponCode) ||
+    Boolean(row.rewardLabel) ||
+    Boolean(row.discountAmount) ||
+    Boolean(exact?.couponDiscount) ||
+    Boolean(exact?.welcomeBackDiscount) ||
+    Boolean(exact?.shippingSavings);
+
+  return (
+    <Sheet open={Boolean(row)} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full overflow-y-auto border-white/10 bg-[#0f0f0f] p-0 text-white sm:max-w-2xl">
+        <div className="space-y-5 p-5 sm:p-6">
+          <SheetHeader className="space-y-2 text-left">
+            <div className="flex items-start justify-between gap-4 pr-8">
+              <div>
+                <SheetTitle className="text-2xl font-semibold text-white">Cart lead details</SheetTitle>
+                <SheetDescription className="mt-1 text-white/45">
+                  Cart activity, offer evidence, checkout links, and saved price calculation.
+                </SheetDescription>
+              </div>
+              <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${stageLabel(row).className}`}>
+                {stageLabel(row).label}
+              </span>
+            </div>
+          </SheetHeader>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-4">
+              <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-200/60">
+                <ReceiptText className="h-3.5 w-3.5" />
+                Cart value
+              </div>
+              <p className="mt-2 text-2xl font-semibold text-white">
+                {formatINR(exact?.grandTotal ?? row.checkoutValue ?? row.cartSignalValue)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">
+                <Zap className="h-3.5 w-3.5" />
+                Potential
+              </div>
+              <p className={`mt-2 text-2xl font-semibold ${scoreClassName(row.potentialScore)}`}>{row.potentialScore}</p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">
+                <Globe2 className="h-3.5 w-3.5" />
+                Site
+              </div>
+              <span className={`mt-2 inline-flex rounded-full border px-2 py-1 text-xs font-semibold ${domainClassName(row.domainKind)}`}>
+                {row.domainLabel}
+              </span>
+            </div>
+          </div>
+
+          <section className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-white">Offer and price breakup</h3>
+                <p className="mt-1 text-xs text-white/35">
+                  {exact ? "Exact cart pricing captured from the live cart." : "Older cart rows may only have inferred offer evidence."}
+                </p>
+              </div>
+              {hasAnyOffer ? (
+                <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-200">
+                  Offer evidence
+                </span>
+              ) : null}
+            </div>
+
+            {exact ? (
+              <dl className="mt-4 space-y-2 text-sm">
+                <div className="flex justify-between gap-4 text-white/55">
+                  <dt>Subtotal</dt>
+                  <dd>{formatINR(exact.subtotal)}</dd>
+                </div>
+                {exact.couponDiscount > 0 ? (
+                  <div className="flex justify-between gap-4">
+                    <dt className="flex items-center gap-2 text-white/55">
+                      <Tag className="h-3.5 w-3.5" />
+                      Coupon {exact.couponCode ? `(${exact.couponCode})` : ""}
+                    </dt>
+                    <dd className="font-medium text-emerald-300">-{formatINR(exact.couponDiscount)}</dd>
+                  </div>
+                ) : null}
+                {exact.welcomeBackDiscount > 0 ? (
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-white/55">{exact.welcomeBackLabel || "Welcome back offer"}</dt>
+                    <dd className="font-medium text-emerald-300">-{formatINR(exact.welcomeBackDiscount)}</dd>
+                  </div>
+                ) : null}
+                <div className="flex justify-between gap-4 text-white/55">
+                  <dt>Delivery</dt>
+                  <dd className={exact.shippingFee === 0 ? "font-medium text-emerald-300" : "font-medium text-white"}>
+                    {exact.shippingFee === 0
+                      ? `Free${exact.shippingSavings > 0 ? ` (${formatINR(exact.shippingSavings)} saved)` : ""}`
+                      : formatINR(exact.shippingFee)}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4 border-t border-white/10 pt-3 text-base font-semibold text-white">
+                  <dt>Estimated total</dt>
+                  <dd>{formatINR(exact.grandTotal)}</dd>
+                </div>
+              </dl>
+            ) : (
+              <div className="mt-4 space-y-3">
+                <div className="flex justify-between gap-4 text-sm text-white/55">
+                  <span>Cart signal value</span>
+                  <span>{formatINR(row.cartSignalValue)}</span>
+                </div>
+                {row.originalCartSignalValue && fallbackDiscount > 0 ? (
+                  <div className="flex justify-between gap-4 text-sm">
+                    <span className="text-white/55">Estimated welcome-back adjustment</span>
+                    <span className="font-medium text-emerald-300">-{formatINR(fallbackDiscount)}</span>
+                  </div>
+                ) : null}
+                {row.couponCode ? (
+                  <div className="rounded-lg border border-blue-500/15 bg-blue-500/[0.05] px-3 py-2 text-sm text-blue-100/75">
+                    Coupon connected: <span className="font-semibold">{row.couponCode}</span>
+                    {row.couponChannel ? ` via ${row.couponChannel}` : ""}
+                  </div>
+                ) : null}
+                {row.rewardLabel ? (
+                  <div className="rounded-lg border border-emerald-500/15 bg-emerald-500/[0.05] px-3 py-2 text-sm text-emerald-100/75">
+                    Welcome-back reward captured: <span className="font-semibold">{row.rewardLabel}</span>
+                    {row.rewardPercent ? ` (${row.rewardPercent}%)` : ""}
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </section>
+
+          <section className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <h3 className="text-sm font-semibold text-white">Products</h3>
+            <div className="mt-3 divide-y divide-white/10 rounded-lg border border-white/10 bg-black/20">
+              {row.products.length > 0 ? (
+                row.products.map((product) => (
+                  <div key={product.name} className="flex items-center justify-between gap-4 p-3 text-sm">
+                    <div>
+                      <p className="font-semibold text-white">{product.name}</p>
+                      <p className="mt-0.5 text-xs text-white/35">Qty {product.quantity}</p>
+                    </div>
+                    <p className="font-medium text-white">{formatINR(product.value)}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="p-3 text-sm text-white/35">No product snapshot stored.</p>
+              )}
+            </div>
+          </section>
+
+          <section className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <h3 className="text-sm font-semibold text-white">Lead</h3>
+              <div className="mt-3 space-y-3 text-sm">
+                <div className="flex justify-between gap-4">
+                  <span className="text-white/45">Name</span>
+                  <span className="text-right text-white">{row.name || "Unknown visitor"}</span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="text-white/45">Phone</span>
+                  <span className="text-right text-white">{row.phone || "Not captured"}</span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="text-white/45">Email</span>
+                  <span className="break-all text-right text-white">{row.email || "Not captured"}</span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="text-white/45">Sessions</span>
+                  <span className="text-right text-white">{row.sessionIds?.length || 1}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <h3 className="text-sm font-semibold text-white">Journey</h3>
+              <div className="mt-3 space-y-3 text-sm">
+                <div className="flex justify-between gap-4">
+                  <span className="text-white/45">Latest activity</span>
+                  <span className="text-right text-white">{formatDistanceToNow(new Date(row.latestActivity), { addSuffix: true })}</span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="text-white/45">Add to cart</span>
+                  <span className="text-right text-white">{row.addToCartCount}</span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="text-white/45">Cart opens</span>
+                  <span className="text-right text-white">{row.cartOpens}</span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="text-white/45">Checkout</span>
+                  <span className="text-right text-white">
+                    {row.hasCheckout ? `${row.checkoutStatus || "started"} ${row.checkoutValue ? `- ${formatINR(row.checkoutValue)}` : ""}` : "Not started"}
+                  </span>
+                </div>
+                {row.domainHost ? (
+                  <div className="flex justify-between gap-4">
+                    <span className="text-white/45">Domain</span>
+                    <span className="break-all text-right text-white">{row.domainHost}</span>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </section>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("connected");
+  const [selectedRow, setSelectedRow] = useState<CartLeadRow | null>(null);
 
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
@@ -133,7 +363,8 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
   }, [filter, rows, search]);
 
   return (
-    <div className="space-y-4">
+    <>
+      <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative min-w-[240px] flex-1 sm:max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
@@ -180,7 +411,16 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
               return (
                 <div
                   key={row.sessionId}
-                  className="grid gap-4 bg-[#111111] p-4 transition-colors hover:bg-[#151515] xl:grid-cols-[90px_minmax(220px,1fr)_minmax(260px,1.2fr)_minmax(240px,0.9fr)_190px]"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedRow(row)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setSelectedRow(row);
+                    }
+                  }}
+                  className="grid cursor-pointer gap-4 bg-[#111111] p-4 transition-colors hover:bg-[#151515] focus:outline-none focus:ring-1 focus:ring-white/20 xl:grid-cols-[90px_minmax(220px,1fr)_minmax(260px,1.2fr)_minmax(240px,0.9fr)_190px]"
                 >
                   <div className="flex items-start justify-between gap-3 xl:block">
                     <div>
@@ -228,7 +468,7 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
                     ) : null}
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2" onClick={(event) => event.stopPropagation()}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         {row.originalCartSignalValue && row.discountAmount ? (
@@ -245,7 +485,11 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
                             Reward banner tapped {row.rewardBannerClicks}x
                           </p>
                         ) : null}
-                        {row.rewardPercent && row.discountAmount ? (
+                        {row.pricingBreakdown?.couponDiscount ? (
+                          <p className="mt-1 text-xs font-medium text-emerald-300/80">
+                            Coupon {row.pricingBreakdown.couponCode || "offer"} applied -{formatINR(row.pricingBreakdown.couponDiscount)}
+                          </p>
+                        ) : row.rewardPercent && row.discountAmount ? (
                           <p className="mt-1 text-xs font-medium text-emerald-300/80">
                             {row.rewardLabel || `${row.rewardPercent}% reward`} applied • -{formatINR(row.discountAmount)}
                           </p>
@@ -290,6 +534,7 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
                       {row.hasCheckout ? (
                         <Link
                           href="/admin/checkouts"
+                          onClick={(event) => event.stopPropagation()}
                           className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-200 hover:bg-amber-500/20"
                         >
                           <ShoppingCart className="h-3 w-3" />
@@ -319,7 +564,15 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
                     ) : null}
                   </div>
 
-                  <div className="grid content-start gap-2">
+                  <div className="grid content-start gap-2" onClick={(event) => event.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRow(row)}
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs font-semibold text-white/65 transition-all hover:bg-white/[0.08] hover:text-white active:scale-[0.98]"
+                    >
+                      Details
+                      <ExternalLink className="h-3 w-3 opacity-60" />
+                    </button>
                     <a
                       href={buildAdminWhatsAppHref(row.phone, {
                         template: getTemplate(row),
@@ -376,6 +629,14 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
           )}
         </div>
       </div>
-    </div>
+      </div>
+
+      <CartLeadDetailSheet
+        row={selectedRow}
+        onOpenChange={(open) => {
+          if (!open) setSelectedRow(null);
+        }}
+      />
+    </>
   );
 }

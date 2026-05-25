@@ -112,6 +112,9 @@ export const images = pgTable("images", {
   link: varchar("link", { length: 2048 }),
   usage: varchar("usage", { length: 100 }).notNull().default("general"),
   tags: jsonb("tags").$type<string[]>().notNull().default([]),
+  mimeType: varchar("mime_type", { length: 100 }),
+  sizeBytes: integer("size_bytes"),
+  dataBase64: text("data_base64"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -207,6 +210,7 @@ export const checkoutDrafts = pgTable("checkout_drafts", {
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }),
   shippingFee: decimal("shipping_fee", { precision: 10, scale: 2 }),
   grandTotal: decimal("grand_total", { precision: 10, scale: 2 }),
+  pricingBreakdown: jsonb("pricing_breakdown").$type<Record<string, unknown>>().notNull().default({}),
   cartSnapshot: jsonb("cart_snapshot")
     .$type<
       Array<{

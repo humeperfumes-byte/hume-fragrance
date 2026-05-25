@@ -40,6 +40,7 @@ const checkoutDraftSchema = z.object({
   subtotal: z.number().nonnegative().optional(),
   shippingFee: z.number().nonnegative().optional(),
   grandTotal: z.number().nonnegative().optional(),
+  pricingBreakdown: z.record(z.string(), z.unknown()).optional(),
   cartSnapshot: z.array(cartItemSchema).optional(),
   details: z
     .object({
@@ -131,6 +132,7 @@ export async function POST(request: NextRequest) {
         subtotal: typeof data.subtotal === "number" ? data.subtotal.toFixed(2) : null,
         shippingFee: typeof data.shippingFee === "number" ? data.shippingFee.toFixed(2) : null,
         grandTotal: typeof data.grandTotal === "number" ? data.grandTotal.toFixed(2) : null,
+        pricingBreakdown: data.pricingBreakdown ?? {},
         cartSnapshot: data.cartSnapshot ?? [],
         country,
         ipAddress,
@@ -164,6 +166,7 @@ export async function POST(request: NextRequest) {
           subtotal: typeof data.subtotal === "number" ? data.subtotal.toFixed(2) : null,
           shippingFee: typeof data.shippingFee === "number" ? data.shippingFee.toFixed(2) : null,
           grandTotal: typeof data.grandTotal === "number" ? data.grandTotal.toFixed(2) : null,
+          pricingBreakdown: data.pricingBreakdown ?? {},
           cartSnapshot: data.cartSnapshot ?? [],
           country,
           ipAddress,

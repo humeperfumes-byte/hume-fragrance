@@ -20,6 +20,7 @@ const requiredColumns: Record<string, string[]> = {
     "acquisition_referrer_host",
     "country",
     "last_edited_field",
+    "pricing_breakdown",
   ],
   orders: [
     "utm_source",
@@ -63,6 +64,11 @@ const requiredColumns: Record<string, string[]> = {
     "key",
     "value",
     "updated_at",
+  ],
+  images: [
+    "mime_type",
+    "size_bytes",
+    "data_base64",
   ],
 };
 

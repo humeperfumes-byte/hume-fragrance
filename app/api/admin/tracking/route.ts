@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminToken } from "@/lib/admin-auth";
 import { trackDelhiveryWaybill } from "@/lib/tracking/delhivery";
 import { trackSpeedPostConsignment } from "@/lib/tracking/india-post";
+import { trackShiprocketAwb } from "@/lib/tracking/shiprocket";
 import {
   TRACKING_CARRIERS,
   TRACKING_STATUS_META,
@@ -32,6 +33,8 @@ function getProviderEndpoint(carrier: TrackingCarrier): string | undefined {
       return process.env.SPEED_POST_TRACKING_ENDPOINT;
     case "delhivery":
       return process.env.DELHIVERY_TRACKING_ENDPOINT ?? "https://track.delhivery.com/api/v1/packages/json/";
+    case "shiprocket":
+      return undefined;
     case "bluedart":
       return process.env.BLUEDART_TRACKING_ENDPOINT;
     default:
@@ -280,6 +283,10 @@ async function trackWithConfiguredEndpoint(
     return trackDelhiveryWaybill(trackingNumber);
   }
 
+  if (carrier === "shiprocket") {
+    return trackShiprocketAwb(trackingNumber);
+  }
+
   const endpointTemplate = getProviderEndpoint(carrier);
 
   if (!endpointTemplate) {
@@ -351,14 +358,31 @@ export async function POST(request: NextRequest) {
     }
 
     const checkedAt = new Date().toISOString();
-    const results = await Promise.all(
-      trackingNumbers.map((trackingNumber) => trackWithConfiguredEndpoint(body.carrier as TrackingCarrier, trackingNumber, checkedAt)),
+    const carrier = body.carrier as TrackingCarrier;
+    const settledResults = await Promise.allSettled(
+      trackingNumbers.map((trackingNumber) => trackWithConfiguredEndpoint(carrier, trackingNumber, checkedAt)),
     );
+    const results = settledResults.map((result, index) =>
+      result.status === "fulfilled"
+        ? result.value
+        : fallbackResult(
+            carrier,
+            trackingNumbers[index] ?? "",
+            checkedAt,
+            "api",
+            "exception",
+            result.reason instanceof Error ? result.reason.message : "Carrier tracking request failed.",
+            "Retry once. If it still fails, check the carrier API credentials.",
+          ),
+    );
+    const setupFailure = results.find((result) => result.status === "needs_setup");
+    const requestFailure = results.find((result) => result.status === "exception");
 
     return NextResponse.json({
-      ok: true,
+      ok: !setupFailure && !requestFailure,
+      error: setupFailure?.message ?? requestFailure?.message,
       checkedAt,
-      carrier: body.carrier,
+      carrier,
       results,
       providerSetup: Object.fromEntries(
         Object.keys(TRACKING_CARRIERS).map((carrierKey) => {
@@ -369,7 +393,9 @@ export async function POST(request: NextRequest) {
               ? true
               : carrier === "delhivery"
                 ? Boolean(process.env.DELHIVERY_API_TOKEN)
-                : Boolean(getProviderEndpoint(carrier)),
+                : carrier === "shiprocket"
+                  ? Boolean(process.env.SHIPROCKET_API_EMAIL && (process.env.SHIPROCKET_API_KEY || process.env.SHIPROCKET_API_PASSWORD))
+                  : Boolean(getProviderEndpoint(carrier)),
           ];
         }),
       ),

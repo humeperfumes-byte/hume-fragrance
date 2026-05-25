@@ -8,6 +8,10 @@ import { AdminDateWindowControl } from "@/components/admin/AdminDateWindowContro
 import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-data-filters";
 import { parseAdminTimeWindow } from "@/lib/admin-time-window";
 import { getCapturedDomainInfo } from "@/lib/captured-domain";
+import {
+  normalizeSavedPricingBreakdown,
+  type SavedPricingBreakdown,
+} from "@/lib/saved-pricing-breakdown";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +55,11 @@ type RewardSignal = {
   label: string | null;
   percent: number;
   expiresAt: number | null;
+  createdAt: Date;
+};
+
+type PricingSignal = {
+  breakdown: SavedPricingBreakdown;
   createdAt: Date;
 };
 
@@ -219,6 +228,8 @@ function mergeCartLeadRows(rows: CartLeadRow[]): CartLeadRow[] {
         Math.max(existing.abandonmentRisk || 0, row.abandonmentRisk || 0) || null,
       predictedNextAction:
         newest.predictedNextAction || existing.predictedNextAction || row.predictedNextAction,
+      pricingBreakdown:
+        newest.pricingBreakdown || existing.pricingBreakdown || row.pricingBreakdown,
     });
   }
 
@@ -359,15 +370,23 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
     }
 
     const rewardMap = new Map<string, RewardSignal>();
+    const pricingMap = new Map<string, PricingSignal>();
     for (const event of visibleCartRows) {
-      const reward = readRewardSignal(
-        (event.payload || {}) as Record<string, unknown>,
-        event.createdAt,
-      );
-      if (!reward) continue;
-      const existing = rewardMap.get(event.sessionId);
-      if (!existing || reward.percent > existing.percent || reward.createdAt > existing.createdAt) {
-        rewardMap.set(event.sessionId, reward);
+      const payload = (event.payload || {}) as Record<string, unknown>;
+      const reward = readRewardSignal(payload, event.createdAt);
+      if (reward) {
+        const existing = rewardMap.get(event.sessionId);
+        if (!existing || reward.percent > existing.percent || reward.createdAt > existing.createdAt) {
+          rewardMap.set(event.sessionId, reward);
+        }
+      }
+
+      const pricing = normalizeSavedPricingBreakdown(payload.pricingBreakdown);
+      if (pricing) {
+        const existingPricing = pricingMap.get(event.sessionId);
+        if (!existingPricing || event.createdAt > existingPricing.createdAt) {
+          pricingMap.set(event.sessionId, { breakdown: pricing, createdAt: event.createdAt });
+        }
       }
     }
 
@@ -489,6 +508,7 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
           null;
         const intelligence = intelligenceMap.get(entry.sessionId);
         const reward = rewardMap.get(entry.sessionId) || null;
+        const pricing = pricingMap.get(entry.sessionId)?.breakdown || null;
         const couponPhone = coupon?.destination && !isEmail(coupon.destination) ? coupon.destination : null;
         const couponEmail = coupon?.destination && isEmail(coupon.destination) ? coupon.destination : null;
         const phone = draft?.phone || couponPhone;
@@ -608,6 +628,7 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
           intentScore: intelligence?.intentScore ?? null,
           abandonmentRisk: intelligence?.abandonmentRisk ?? null,
           predictedNextAction: intelligence?.predictedNextAction || null,
+          pricingBreakdown: pricing,
         };
       })
       .filter((row) => !row.hasOrder);

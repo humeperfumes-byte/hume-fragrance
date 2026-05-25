@@ -26,13 +26,27 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const usage = searchParams.get("usage");
+    const columns = {
+      id: images.id,
+      label: images.label,
+      url: images.url,
+      link: images.link,
+      usage: images.usage,
+      tags: images.tags,
+      mimeType: images.mimeType,
+      sizeBytes: images.sizeBytes,
+      createdAt: images.createdAt,
+      updatedAt: images.updatedAt,
+    };
     const rows = usage
-      ? await db.select().from(images).where(eq(images.usage, usage))
-      : await db.select().from(images);
+      ? await db.select(columns).from(images).where(eq(images.usage, usage))
+      : await db.select(columns).from(images);
     return NextResponse.json(
       rows.map((row) => ({
         ...row,
-        url: withCloudinaryTransforms(row.url),
+        url: row.url.startsWith("/api/image-assets/")
+          ? row.url
+          : withCloudinaryTransforms(row.url),
       }))
     );
   } catch (error) {

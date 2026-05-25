@@ -168,6 +168,43 @@ const CartDrawer = () => {
     shippingFee;
   const totalSavings =
     normalizedCouponDiscount + welcomeBackDiscount + shippingSavings;
+  const pricingBreakdown = useMemo(
+    () => ({
+      subtotal,
+      regularShippingFee,
+      shippingFee,
+      couponCode: appliedCouponCode,
+      couponLabel: appliedCoupon?.description || appliedCoupon?.code || null,
+      couponDiscount: normalizedCouponDiscount,
+      welcomeBackCode: hasWelcomeBackBenefit ? welcomeBackReward?.code || null : null,
+      welcomeBackLabel,
+      welcomeBackPercent: effectiveWelcomeBackPercent,
+      welcomeBackDiscount,
+      shippingSavings,
+      grandTotal,
+      totalSavings,
+      appliedOfferCodes: [appliedCouponCode, hasWelcomeBackBenefit ? welcomeBackReward?.code : null]
+        .filter(Boolean)
+        .join(" + ") || null,
+    }),
+    [
+      appliedCoupon?.code,
+      appliedCoupon?.description,
+      appliedCouponCode,
+      effectiveWelcomeBackPercent,
+      grandTotal,
+      hasWelcomeBackBenefit,
+      normalizedCouponDiscount,
+      regularShippingFee,
+      shippingFee,
+      shippingSavings,
+      subtotal,
+      totalSavings,
+      welcomeBackDiscount,
+      welcomeBackLabel,
+      welcomeBackReward?.code,
+    ],
+  );
   const appliedPercentOff =
     appliedCoupon &&
     appliedCoupon.type === "percent" &&
@@ -294,6 +331,67 @@ const CartDrawer = () => {
     if (!isCartOpen || items.length === 0) return;
     router.prefetch("/checkout");
   }, [isCartOpen, items.length, router]);
+
+  useEffect(() => {
+    if (!isCartOpen || items.length === 0 || typeof window === "undefined") return;
+
+    window.dispatchEvent(
+      new CustomEvent("hume:tracking", {
+        detail: {
+          eventType: "cart_open",
+          payload: {
+            itemCount: totalItems,
+            subtotal,
+            grandTotal,
+            appliedCouponCode,
+            couponDiscount: normalizedCouponDiscount,
+            welcomeBackLabel,
+            welcomeBackDiscount,
+            shippingSavings,
+            pricingBreakdown,
+            products: items.map((item) => ({
+              id: item.id,
+              name: item.name,
+              quantity: item.quantity,
+              price: item.price,
+              size: item.size,
+              isGift: item.isGift,
+            })),
+          },
+        },
+      }),
+    );
+  }, [
+    appliedCouponCode,
+    grandTotal,
+    isCartOpen,
+    items,
+    normalizedCouponDiscount,
+    pricingBreakdown,
+    shippingSavings,
+    subtotal,
+    totalItems,
+    welcomeBackDiscount,
+    welcomeBackLabel,
+  ]);
+
+  useEffect(() => {
+    if (!appliedCoupon || normalizedCouponDiscount <= 0 || typeof window === "undefined") return;
+
+    window.dispatchEvent(
+      new CustomEvent("hume:tracking", {
+        detail: {
+          eventType: "coupon_auto_applied",
+          payload: {
+            couponCode: appliedCoupon.code,
+            rewardLabel: appliedCoupon.description,
+            trigger: "manual_coupon_apply",
+            pricingBreakdown,
+          },
+        },
+      }),
+    );
+  }, [appliedCoupon, normalizedCouponDiscount, pricingBreakdown]);
 
   useEffect(() => {
     if (!isCartOpen || typeof window === "undefined") return;

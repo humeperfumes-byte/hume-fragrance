@@ -19,6 +19,16 @@ export const TRACKING_CARRIERS = {
     envKeys: ["DELHIVERY_API_TOKEN", "DELHIVERY_TRACKING_ENDPOINT optional"],
     hint: "Usually a 12-14 digit AWB number.",
   },
+  shiprocket: {
+    label: "Shiprocket",
+    shortLabel: "Shiprocket",
+    codeLabel: "AWB / tracking ID",
+    officialUrl: "https://www.shiprocket.in/shipment-tracking/",
+    accent: "from-emerald-400 to-teal-500",
+    tone: "text-emerald-200",
+    envKeys: ["SHIPROCKET_API_EMAIL", "SHIPROCKET_API_KEY or SHIPROCKET_API_PASSWORD"],
+    hint: "Use the AWB generated after booking shipment in Shiprocket.",
+  },
   bluedart: {
     label: "Blue Dart",
     shortLabel: "Blue Dart",

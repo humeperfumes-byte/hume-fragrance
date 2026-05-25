@@ -605,6 +605,41 @@ export default function CheckoutClient() {
   const appliedOfferCodes = [appliedCouponCode, hasWelcomeBackBenefit ? welcomeBackReward?.code : null]
     .filter(Boolean)
     .join(" + ");
+  const pricingBreakdown = useMemo(
+    () => ({
+      subtotal: totalPrice,
+      regularShippingFee,
+      shippingFee,
+      couponCode: appliedCouponCode,
+      couponLabel: appliedCoupon?.description || appliedCoupon?.code || null,
+      couponDiscount,
+      welcomeBackCode: hasWelcomeBackBenefit ? welcomeBackReward?.code || null : null,
+      welcomeBackLabel,
+      welcomeBackPercent: effectiveWelcomeBackPercent,
+      welcomeBackDiscount,
+      shippingSavings,
+      grandTotal,
+      totalSavings: couponDiscount + welcomeBackDiscount + shippingSavings,
+      appliedOfferCodes: appliedOfferCodes || null,
+    }),
+    [
+      appliedCoupon?.code,
+      appliedCoupon?.description,
+      appliedCouponCode,
+      appliedOfferCodes,
+      couponDiscount,
+      effectiveWelcomeBackPercent,
+      grandTotal,
+      hasWelcomeBackBenefit,
+      regularShippingFee,
+      shippingFee,
+      shippingSavings,
+      totalPrice,
+      welcomeBackDiscount,
+      welcomeBackLabel,
+      welcomeBackReward?.code,
+    ],
+  );
   const hasKitInCart = items.some(
     (item) =>
       !item.isGift &&
@@ -744,6 +779,7 @@ export default function CheckoutClient() {
         subtotal: totalPrice,
         shippingFee,
         grandTotal,
+        pricingBreakdown,
         cartSnapshot: items.map((item) => ({
           id: item.id,
           name: item.name,
@@ -757,7 +793,7 @@ export default function CheckoutClient() {
         details,
       };
     },
-    [details, grandTotal, items, pathname, shippingFee, totalPrice],
+    [details, grandTotal, items, pathname, pricingBreakdown, shippingFee, totalPrice],
   );
 
   const persistDraft = useCallback(

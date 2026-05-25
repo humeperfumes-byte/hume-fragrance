@@ -8,6 +8,7 @@ import {
   Bell,
   Download,
   FileText,
+  ImageIcon,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -39,6 +40,7 @@ const navItems = [
   { title: "Customers", url: "/admin/customers", icon: Users },
   { title: "Catalog", url: "/admin/products", icon: Package },
   { title: "Content", url: "/admin/blogs", icon: FileText },
+  { title: "Images", url: "/admin/images", icon: ImageIcon },
   { title: "Data Export", url: "/admin/data-export", icon: Download },
 ];
 
