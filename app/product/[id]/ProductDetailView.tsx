@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -29,11 +29,85 @@ import { withCloudinaryTransforms } from "@/lib/cloudinary";
 export default function ProductDetailView({
   perfume,
   relatedBlogs = [],
+  priceLabel,
+  faqItems: customFaqItems,
 }: {
   perfume: PerfumeData;
   relatedBlogs?: BlogPost[];
+  priceLabel?: string;
+  faqItems?: Array<{ question: string; answer: string }>;
 }) {
   const averageRating = getAverageRating(perfume.reviews);
+  const isComingSoon = Boolean(perfume.badges?.comingSoon);
+  const hasInspirationBrand = Boolean(perfume.inspirationBrand?.trim());
+  const productSubtitle = hasInspirationBrand
+    ? `Inspired by ${perfume.inspirationBrand} ${perfume.inspiration}`
+    : perfume.inspiration;
+  const isRoseWater = perfume.categoryId === "rose-water";
+  const isKapoorCarFragrance = perfume.categoryId === "car-fragrance";
+  const showFragranceNotes = !["rose-water", "car-fragrance"].includes(
+    perfume.categoryId,
+  );
+  const detailCopy = isRoseWater
+    ? {
+        sectionEyebrow: "Rose Water Ritual",
+        sectionTitle: "A clean daily freshness step",
+        durationLabel: "Use",
+        projectionLabel: "Mist Feel",
+        seasonLabel: "Best Weather",
+        occasionLabel: "Best For",
+        storyLabel: "Gulab Jal Story",
+        tipsLabel: "How to Use",
+        whyLabel: "Why HUME Rose Water?",
+        paymentChips: ["Secured Payment", "Face Mist", "Daily Ritual"],
+        trustCards: [
+          "Made for a simple face mist and toner-style skincare ritual.",
+          "Soft rose freshness without a heavy perfume-style character.",
+          "Prepared and packed with HUME's clean, minimal presentation.",
+          "Dispatched within 24 hours on ready stock.",
+        ],
+      }
+    : isKapoorCarFragrance
+      ? {
+          sectionEyebrow: "Car Fragrance Ritual",
+          sectionTitle: "A clean, calm cabin profile",
+          durationLabel: "Use",
+          projectionLabel: "Cabin Presence",
+          seasonLabel: "Best Setting",
+          occasionLabel: "Best For",
+          storyLabel: "Kapoor Story",
+          tipsLabel: "How to Use",
+          whyLabel: "Why HUME Kapoor?",
+          paymentChips: ["Secured Payment", "Car Freshness", "Kapoor Aroma"],
+          trustCards: [
+            "Made for car cabins that need a cleaner, calmer scent profile.",
+            "Built around familiar kapoor freshness instead of sugary car perfume notes.",
+            "Prepared with HUME's minimal, fragrance-led presentation.",
+            "Dispatched within 24 hours on ready stock.",
+          ],
+        }
+    : {
+        sectionEyebrow: "Performance & Character",
+        sectionTitle: "A quiet, composed trail",
+        durationLabel: "Longevity",
+        projectionLabel: "Projection",
+        seasonLabel: "Best Season",
+        occasionLabel: "Occasion",
+        storyLabel: "Scent Story",
+        tipsLabel: "Pairing & Occasion Tips",
+        whyLabel: "Why HUME?",
+        paymentChips: isComingSoon
+          ? ["Waitlist", "Launch Notice", "Checkout Disabled"]
+          : ["Secured Payment", "UPI", "Cards"],
+        trustCards: [
+          "100% authentic ingredients.",
+          "Formulated following IFRA rules.",
+          "Made in our own manufacturing facility.",
+          isComingSoon
+            ? "Ordering opens only when the product is ready for fulfillment."
+            : "Dispatched within 24 hours on ready stock.",
+        ],
+      };
   const [noteImages, setNoteImages] = useState<{
     id: string;
     label: string;
@@ -95,48 +169,72 @@ export default function ProductDetailView({
         : "Perfect for moments when you want to leave a refined trail.",
       `Pairs beautifully with crisp shirts, tailored layers, or minimal evening looks.`,
     ];
-  const faqItems = getProductFaqItems(perfume);
+  const faqItems = customFaqItems ?? getProductFaqItems(perfume);
 
-  const renderNoteGroup = (title: string, notes: string[]) => (
-    <div className="rounded-2xl border border-border/60 bg-gradient-to-b from-background to-secondary/25 p-4 sm:p-5">
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <p className="text-caption text-muted-foreground">{title}</p>
-        </div>
-        <span className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground/70">
-          {notes.length} notes
-        </span>
-      </div>
-      <div className="grid grid-cols-3 gap-4 sm:gap-5">
+  const renderNoteGroup = (title: string, notes: string[]) => {
+    const noteContext =
+      title === "Top Notes"
+        ? "Opening impression"
+        : title === "Heart Notes"
+          ? "Signature body"
+          : "Lasting dry-down";
+    return (
+      <article className="group relative overflow-hidden rounded-[1.25rem] border border-[#e8dfd4] bg-[#fbfaf8] shadow-[0_14px_42px_rgba(22,18,14,0.06)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_56px_rgba(22,18,14,0.09)]">
+        <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[#9b7a4a]/45 to-transparent" />
+        <div className="pointer-events-none absolute -right-20 -top-24 h-48 w-48 rounded-full bg-[#e7d1aa]/35 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-1/4 h-44 w-44 rounded-full bg-[#f7eee1]/80 blur-3xl" />
+
+        <div className="relative grid gap-4 p-4 sm:p-5 lg:grid-cols-[9.5rem_minmax(0,1fr)] lg:items-center lg:p-5">
+          <div className="flex items-end justify-between gap-4 border-b border-[#e8dfd4] pb-4 lg:block lg:border-b-0 lg:border-r lg:pb-0 lg:pr-5">
+            <div>
+              <p className="text-[8px] font-semibold uppercase tracking-[0.28em] text-[#9b7a4a]">
+                {noteContext}
+              </p>
+              <h3 className="mt-2 font-serif text-3xl font-light leading-none text-foreground lg:text-[2rem]">
+                {title.replace(" Notes", "")}
+              </h3>
+            </div>
+            <span className="shrink-0 text-[8px] uppercase tracking-[0.28em] text-muted-foreground/70 lg:mt-4 lg:inline-flex">
+              {notes.length} notes
+            </span>
+          </div>
+
+          <div
+            className="grid grid-cols-[repeat(var(--note-count),minmax(0,1fr))] gap-2 sm:grid-cols-[repeat(var(--note-count),minmax(8.75rem,8.75rem))] sm:justify-start sm:gap-4 lg:grid-cols-[repeat(var(--note-count),minmax(9.25rem,9.25rem))] lg:gap-5"
+            style={{ "--note-count": notes.length } as CSSProperties}
+          >
           {notes.map((note) => {
             const key = note.trim().toLowerCase();
             const image = noteImageLookup.get(key);
             return (
-              <div key={note} className="flex flex-col">
-                <div className="relative aspect-square overflow-hidden rounded-xl border border-border/60 bg-secondary/40 shadow-[0_8px_22px_rgba(39,112,255,0.16)]">
+              <div key={note} className="flex min-w-0 flex-col">
+                <div className="relative aspect-[1.28] w-full overflow-hidden rounded-xl border border-white bg-[#eee8df] shadow-[0_12px_26px_rgba(24,18,14,0.09)] ring-1 ring-black/5">
                   {image?.url ? (
                     <Image
                       src={withCloudinaryTransforms(image.url, { width: 320 })}
                       alt={`${note} note`}
                       fill
-                      sizes="(min-width: 768px) 220px, 30vw"
-                      className="object-cover"
+                      sizes="(min-width: 1024px) 148px, (min-width: 640px) 140px, 25vw"
+                      className="object-cover transition duration-700 group-hover:scale-[1.06]"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-[11px] uppercase tracking-[0.2em] text-muted-foreground border border-border/50">
+                    <div className="flex h-full w-full items-center justify-center px-2 text-center text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                       {note}
                     </div>
                   )}
+                  <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0)_52%,rgba(255,255,255,0.22)_100%)]" />
                 </div>
-                <p className="mt-3 text-center font-semibold text-[8px] uppercase tracking-[0.18em] text-foreground/80">
+                <p className="mt-2.5 truncate text-center text-[8px] font-semibold uppercase tracking-[0.2em] text-foreground/80 sm:text-[9px] lg:text-[8px] lg:tracking-[0.22em]">
                   {note}
                 </p>
               </div>
             );
           })}
-      </div>
-    </div>
-  );
+          </div>
+        </div>
+      </article>
+    );
+  };
 
   return (
     <>
@@ -175,22 +273,26 @@ export default function ProductDetailView({
                     Limited Stock
                   </span>
                 )}
-                {perfume.badges?.soldOut && (
+                {isComingSoon ? (
+                  <span className="inline-flex items-center border border-foreground/30 bg-secondary px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-foreground">
+                    Coming Soon
+                  </span>
+                ) : perfume.badges?.soldOut ? (
                   <span className="inline-flex items-center border border-red-500/50 bg-red-50 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-red-700">
                     Sold Out
                   </span>
-                )}
+                ) : null}
               </div>
 
               <div className="text-center">
               <p className="text-[10px] uppercase tracking-[0.26em] text-muted-foreground mb-2">
-                HUME {perfume.size.toUpperCase()}
+                HUME {isComingSoon ? "COMING SOON" : perfume.size.toUpperCase()}
               </p>
               <h1 className="font-serif text-[2.75rem] md:text-5xl lg:text-6xl font-light italic tracking-tight mb-2">
                 {perfume.name}
               </h1>
               <p className="text-[clamp(0.9rem,1vw,1rem)] italic text-muted-foreground mb-4">
-                Inspired by {perfume.inspirationBrand} {perfume.inspiration}
+                {productSubtitle}
               </p>
 
               <div className="flex items-center justify-center gap-3 mb-5">
@@ -212,133 +314,169 @@ export default function ProductDetailView({
                 </span>
               </div>
 
-              <p className="text-[2.05rem] leading-none text-center font-light mb-8">{formatINR(perfume.price)}</p>
+              <p className="text-[2.05rem] leading-none text-center font-light mb-8">
+                {priceLabel ?? formatINR(perfume.price)}
+              </p>
               </div>
 
               <p className="text-body text-muted-foreground leading-relaxed mb-10">{perfume.description}</p>
 
-              <ProductDetailClient perfume={perfume} />
+              <ProductDetailClient perfume={perfume} priceLabel={priceLabel} />
+            </motion.div>
+          </div>
 
-              <div className="border-t border-border pt-8 mb-10">
-                <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
-                  <div>
-                    <p className="text-caption text-muted-foreground">Fragrance Notes</p>
-                    <h2 className="font-serif text-2xl font-light tracking-wide">A layered composition</h2>
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-120px" }}
+            transition={{ duration: 0.55 }}
+            className="mx-auto mt-14 max-w-5xl lg:mt-20"
+          >
+              {showFragranceNotes ? (
+                <div className="border-t border-border pt-8 mb-12">
+                  <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+                    <div>
+                      <p className="text-caption text-muted-foreground">Fragrance Notes</p>
+                      <h2 className="font-serif text-3xl font-light tracking-wide sm:text-4xl">A layered composition</h2>
+                    </div>
+                    <div className="hidden h-px min-w-28 flex-1 bg-gradient-to-r from-foreground/20 to-transparent sm:block" />
                   </div>
-                  <div className="hidden sm:block h-px w-20 bg-foreground/20" />
-                </div>
 
-                <div className="grid grid-cols-1 gap-6">
-                  {renderNoteGroup("Top Notes", perfume.notes.top)}
-                  {renderNoteGroup("Heart Notes", perfume.notes.heart)}
-                  {renderNoteGroup("Base Notes", perfume.notes.base)}
+                  <div className="grid grid-cols-1 gap-4">
+                    {renderNoteGroup("Top Notes", perfume.notes.top)}
+                    {renderNoteGroup("Heart Notes", perfume.notes.heart)}
+                    {renderNoteGroup("Base Notes", perfume.notes.base)}
+                  </div>
                 </div>
-              </div>
+              ) : null}
 
               <div className="border-t border-border pt-8">
-                <div className="flex flex-wrap items-end justify-between gap-3 mb-4 sm:mb-6">
-                  <div>
-                    <p className="text-caption text-muted-foreground">Performance & Character</p>
-                    <h2 className="font-serif text-2xl font-light tracking-wide">A quiet, composed trail</h2>
-                  </div>
-                  <div className="hidden sm:block h-px w-20 bg-foreground/20" />
-                </div>
+                <div className="relative overflow-hidden rounded-[1.6rem] border border-[#30261d] bg-[#15120f] text-[#fffaf2] shadow-[0_28px_80px_rgba(20,14,10,0.18)]">
+                  <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),transparent_32%),linear-gradient(180deg,#211a15_0%,#14110f_100%)]" />
+                  <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[#d8b46d]/70 to-transparent" />
 
-                <div className="grid grid-cols-2 gap-3 rounded-[30px] border border-border/60 bg-[radial-gradient(circle_at_top_left,rgba(21,117,255,0.12),transparent_50%),radial-gradient(circle_at_bottom_right,rgba(196,56,171,0.08),transparent_42%),linear-gradient(180deg,#ffffff_0%,#f4f7ff_100%)] p-3 sm:p-4 shadow-[0_28px_62px_rgba(16,24,40,0.10)]">
-                  <div className="relative min-h-[90px] sm:min-h-[122px] overflow-hidden rounded-2xl border border-sky-100/70 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-3 sm:p-5 shadow-[0_8px_22px_rgba(17,24,39,0.06)]">
-                    <span className="pointer-events-none absolute -right-6 -top-6 z-0 h-20 w-20 rounded-full bg-sky-100/90 blur-[1px]" />
-                    <span className="pointer-events-none absolute -left-10 bottom-2 z-0 h-20 w-28 rounded-full bg-sky-200/35 blur-xl" />
-                    <div className="relative z-10">
-                      <div className="mb-4 flex items-center justify-between">
-                        <p className="text-[10px] sm:text-caption uppercase tracking-[0.2em] text-muted-foreground">Longevity</p>
-                        <Clock size={12} className="text-foreground/70 sm:h-[14px] sm:w-[14px]" />
+                  <div className="relative grid gap-6 p-5 sm:p-7 lg:grid-cols-[0.85fr_1.35fr] lg:gap-8">
+                    <div className="flex flex-col justify-between border-b border-white/10 pb-6 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-7">
+                      <div>
+                        <p className="text-[10px] font-medium uppercase tracking-[0.34em] text-[#d8b46d]">
+                          {detailCopy.sectionEyebrow}
+                        </p>
+                        <h2 className="mt-4 max-w-sm font-serif text-[2.25rem] font-light leading-[1.05] sm:text-[3rem]">
+                          {detailCopy.sectionTitle}
+                        </h2>
                       </div>
-                      <p className="font-serif text-[1.06rem] sm:text-[1.92rem] font-light leading-snug sm:leading-tight tracking-[-0.01em]">
-                        {perfume.longevity.duration}
-                      </p>
+                      <div className="mt-7 flex items-center gap-3">
+                        <span className="h-px w-16 bg-[#d8b46d]/70" />
+                        <span className="text-[9px] uppercase tracking-[0.3em] text-white/45">
+                          HUME dossier
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="relative min-h-[90px] sm:min-h-[122px] overflow-hidden rounded-2xl border border-violet-100/70 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-3 sm:p-5 shadow-[0_8px_22px_rgba(17,24,39,0.06)]">
-                    <span className="pointer-events-none absolute -right-6 -top-6 z-0 h-20 w-20 rounded-full bg-violet-100/90 blur-[1px]" />
-                    <span className="pointer-events-none absolute -left-10 bottom-2 z-0 h-20 w-28 rounded-full bg-violet-200/35 blur-xl" />
-                    <div className="relative z-10">
-                      <div className="mb-4 flex items-center justify-between">
-                        <p className="text-[10px] sm:text-caption uppercase tracking-[0.2em] text-muted-foreground">Projection</p>
-                        <Wind size={12} className="text-foreground/70 sm:h-[14px] sm:w-[14px]" />
-                      </div>
-                      <p className="font-serif text-[1.06rem] sm:text-[1.92rem] font-light leading-snug sm:leading-tight tracking-[-0.01em]">
-                        {perfume.longevity.sillage}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="relative min-h-[90px] sm:min-h-[122px] overflow-hidden rounded-2xl border border-amber-100/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-3 sm:p-5 shadow-[0_8px_22px_rgba(17,24,39,0.06)]">
-                    <span className="pointer-events-none absolute -right-6 -top-6 z-0 h-20 w-20 rounded-full bg-amber-100/90 blur-[1px]" />
-                    <span className="pointer-events-none absolute -left-10 bottom-2 z-0 h-20 w-28 rounded-full bg-amber-200/35 blur-xl" />
-                    <div className="relative z-10">
-                      <div className="mb-4 flex items-center justify-between">
-                        <p className="text-[10px] sm:text-caption uppercase tracking-[0.2em] text-muted-foreground">Best Season</p>
-                        <Sun size={12} className="text-foreground/70 sm:h-[14px] sm:w-[14px]" />
-                      </div>
-                      <p className="font-serif text-[1.06rem] sm:text-[1.92rem] font-light leading-snug sm:leading-tight tracking-[-0.01em]">
-                        {perfume.longevity.season.join(", ")}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="relative min-h-[90px] sm:min-h-[122px] overflow-hidden rounded-2xl border border-emerald-100/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-3 sm:p-5 shadow-[0_8px_22px_rgba(17,24,39,0.06)]">
-                    <span className="pointer-events-none absolute -right-6 -top-6 z-0 h-20 w-20 rounded-full bg-emerald-100/90 blur-[1px]" />
-                    <span className="pointer-events-none absolute -left-10 bottom-2 z-0 h-20 w-28 rounded-full bg-emerald-200/35 blur-xl" />
-                    <div className="relative z-10">
-                      <div className="mb-4 flex items-center justify-between">
-                        <p className="text-[10px] sm:text-caption uppercase tracking-[0.2em] text-muted-foreground">Occasion</p>
-                        <Calendar size={12} className="text-foreground/70 sm:h-[14px] sm:w-[14px]" />
-                      </div>
-                      <p className="font-serif text-[1.06rem] sm:text-[1.92rem] font-light leading-snug sm:leading-tight tracking-[-0.01em]">
-                        {perfume.longevity.occasion.join(" / ")}
-                      </p>
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                      {[
+                        {
+                          label: detailCopy.durationLabel,
+                          value: perfume.longevity.duration,
+                          icon: Clock,
+                        },
+                        {
+                          label: detailCopy.projectionLabel,
+                          value: perfume.longevity.sillage,
+                          icon: Wind,
+                        },
+                        {
+                          label: detailCopy.seasonLabel,
+                          value: perfume.longevity.season.join(", "),
+                          icon: Sun,
+                        },
+                        {
+                          label: detailCopy.occasionLabel,
+                          value: perfume.longevity.occasion.join(" / "),
+                          icon: Calendar,
+                        },
+                      ].map((item, index) => {
+                        const Icon = item.icon;
+                        return (
+                          <div
+                            key={item.label}
+                            className="relative min-h-[118px] overflow-hidden rounded-2xl border border-white/10 bg-white/[0.065] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:min-h-[142px] sm:p-5"
+                          >
+                            <div className="absolute inset-x-4 top-0 h-px bg-gradient-to-r from-[#d8b46d]/80 to-transparent" />
+                            <div className="mb-5 flex items-start justify-between gap-3">
+                              <div>
+                                <span className="font-serif text-xl leading-none text-[#d8b46d]">
+                                  {String(index + 1).padStart(2, "0")}
+                                </span>
+                                <p className="mt-3 text-[8px] font-medium uppercase tracking-[0.28em] text-white/55 sm:text-[9px]">
+                                  {item.label}
+                                </p>
+                              </div>
+                              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/20 text-[#fffaf2]/75">
+                                <Icon size={14} />
+                              </span>
+                            </div>
+                            <p className="font-serif text-[1.24rem] font-light leading-tight text-[#fffaf2] sm:text-[1.7rem]">
+                              {item.value}
+                            </p>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="border-t border-border pt-8 mt-10">
-                <div className="grid grid-cols-1 gap-5">
-                  <div className="relative overflow-hidden rounded-2xl border border-sky-100/80 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.15),transparent_42%),linear-gradient(180deg,#ffffff_0%,#f7fbff_100%)] p-5 sm:p-6 shadow-[0_14px_34px_rgba(15,23,42,0.08)]">
-                    <span className="pointer-events-none absolute -left-10 top-8 h-20 w-20 rounded-full bg-sky-200/45 blur-2xl" />
-                    <p className="text-caption text-muted-foreground mb-3">Scent Story</p>
-                    <p className="font-serif text-[1.1rem] sm:text-[1.2rem] leading-[1.5] text-foreground/85">
-                      {story}
-                    </p>
-                  </div>
-
-                  <div className="relative overflow-hidden rounded-2xl border border-violet-100/80 bg-[radial-gradient(circle_at_bottom_right,rgba(167,139,250,0.18),transparent_40%),linear-gradient(180deg,#ffffff_0%,#faf8ff_100%)] p-5 sm:p-6 shadow-[0_14px_34px_rgba(15,23,42,0.08)]">
-                    <span className="pointer-events-none absolute -right-10 bottom-0 h-24 w-24 rounded-full bg-violet-200/50 blur-2xl" />
-                    <p className="text-caption text-muted-foreground mb-4">Pairing & Occasion Tips</p>
-                    <div className="space-y-3">
-                      {tips.map((tip) => (
-                        <div key={tip} className="flex items-start gap-3">
-                          <span className="mt-2 h-1.5 w-1.5 rounded-full bg-violet-400/80" />
-                          <p className="text-body text-muted-foreground">{tip}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+              <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                <div className="relative overflow-hidden rounded-[1.15rem] border border-[#e8dfd4] bg-[#fbfaf8] p-5 shadow-[0_16px_44px_rgba(24,18,14,0.07)] sm:p-6">
+                  <div className="absolute left-0 top-6 h-16 w-[3px] bg-[#9b7a4a]" />
+                  <p className="text-caption text-muted-foreground mb-4">
+                    {detailCopy.storyLabel}
+                  </p>
+                  <p className="font-serif text-[1.12rem] leading-[1.58] text-foreground/85 sm:text-[1.27rem]">
+                    {story}
+                  </p>
                 </div>
 
-                <div className="relative mt-6 overflow-hidden rounded-2xl border border-border/70 bg-background/95 p-4 sm:p-6 shadow-[0_14px_34px_rgba(15,23,42,0.08)]">
+                <div className="rounded-[1.15rem] border border-[#e8dfd4] bg-[#f8f4ed] p-5 shadow-[0_16px_44px_rgba(24,18,14,0.07)] sm:p-6">
+                  <p className="text-caption text-muted-foreground mb-5">
+                    {detailCopy.tipsLabel}
+                  </p>
+                  <div className="space-y-3">
+                    {tips.map((tip, index) => (
+                      <div
+                        key={tip}
+                        className="grid grid-cols-[2.25rem_minmax(0,1fr)] gap-4 rounded-xl border border-[#e8dfd4] bg-background/75 p-3.5"
+                      >
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#15120f] font-serif text-sm text-[#d8b46d]">
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                        <p className="text-body text-muted-foreground">{tip}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+                <div className="relative mt-6 overflow-hidden rounded-[1.4rem] border border-[#d9c8ad] bg-[#fbfaf8] p-4 shadow-[0_22px_64px_rgba(24,18,14,0.09)] sm:p-6">
+                  <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[#9b7a4a]/60 to-transparent" />
+                  <div className="pointer-events-none absolute -right-20 -top-24 h-52 w-52 rounded-full bg-[#ead8b8]/45 blur-3xl" />
 
                   <div className="relative z-10 flex items-center justify-between mb-5">
-                    <p className="text-caption text-muted-foreground">Why HUME?</p>
-                    <div className="h-px w-12 bg-foreground/20" />
+                    <div>
+                      <p className="text-caption text-muted-foreground">{detailCopy.whyLabel}</p>
+                      <h3 className="mt-2 font-serif text-2xl font-light sm:text-3xl">
+                        Trust, care, and fulfilment
+                      </h3>
+                    </div>
+                    <div className="hidden h-px w-20 bg-[#9b7a4a]/35 sm:block" />
                   </div>
 
                   <div className="relative z-10 flex flex-wrap gap-2.5 mb-5">
-                    {["Secured Payment", "UPI", "Cards"].map((method) => (
+                    {detailCopy.paymentChips.map((method) => (
                       <span
                         key={method}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background px-3.5 py-1.5 text-[11px] uppercase tracking-[0.2em] text-muted-foreground shadow-sm"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-[#d9c8ad] bg-background px-3.5 py-1.5 text-[11px] uppercase tracking-[0.2em] text-muted-foreground shadow-[0_8px_18px_rgba(24,18,14,0.06)]"
                       >
                         <WalletCards size={12} />
                         {method}
@@ -347,21 +485,31 @@ export default function ProductDetailView({
                   </div>
 
                   <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-background p-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.04)]">
-                      <ShieldCheck size={16} className="mt-0.5 text-foreground/75" />
-                      <p className="text-body">100% authentic ingredients.</p>
+                    <div className="group flex items-start gap-3 rounded-2xl border border-[#e8dfd4] bg-background/90 p-4 shadow-[0_10px_26px_rgba(24,18,14,0.05)] transition duration-300 hover:-translate-y-0.5 hover:border-[#c9aa72]">
+                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#15120f] text-[#d8b46d]">
+                        <ShieldCheck size={15} />
+                      </span>
+                      <p className="text-body">{detailCopy.trustCards[0]}</p>
                     </div>
-                    <div className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-background p-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.04)]">
-                      <FlaskConical size={16} className="mt-0.5 text-foreground/75" />
-                      <p className="text-body">Formulated following IFRA rules.</p>
+                    <div className="group flex items-start gap-3 rounded-2xl border border-[#e8dfd4] bg-background/90 p-4 shadow-[0_10px_26px_rgba(24,18,14,0.05)] transition duration-300 hover:-translate-y-0.5 hover:border-[#c9aa72]">
+                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#15120f] text-[#d8b46d]">
+                        <FlaskConical size={15} />
+                      </span>
+                      <p className="text-body">{detailCopy.trustCards[1]}</p>
                     </div>
-                    <div className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-background p-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.04)]">
-                      <RotateCcw size={16} className="mt-0.5 text-foreground/75" />
-                      <p className="text-body">Made in our own manufacturing facility.</p>
+                    <div className="group flex items-start gap-3 rounded-2xl border border-[#e8dfd4] bg-background/90 p-4 shadow-[0_10px_26px_rgba(24,18,14,0.05)] transition duration-300 hover:-translate-y-0.5 hover:border-[#c9aa72]">
+                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#15120f] text-[#d8b46d]">
+                        <RotateCcw size={15} />
+                      </span>
+                      <p className="text-body">{detailCopy.trustCards[2]}</p>
                     </div>
-                    <div className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-background p-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.04)]">
-                      <Truck size={16} className="mt-0.5 text-foreground/75" />
-                      <p className="text-body">Dispatched within 24 hours on ready stock.</p>
+                    <div className="group flex items-start gap-3 rounded-2xl border border-[#e8dfd4] bg-background/90 p-4 shadow-[0_10px_26px_rgba(24,18,14,0.05)] transition duration-300 hover:-translate-y-0.5 hover:border-[#c9aa72]">
+                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#15120f] text-[#d8b46d]">
+                        <Truck size={15} />
+                      </span>
+                      <p className="text-body">
+                        {detailCopy.trustCards[3]}
+                      </p>
                     </div>
                   </div>
 
@@ -370,7 +518,7 @@ export default function ProductDetailView({
                       href="https://wa.me/919559024822"
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[#25D366] px-5 text-sm font-medium text-white hover:bg-[#20c15a] transition-colors"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#25D366] px-5 text-sm font-medium text-white shadow-[0_12px_24px_rgba(37,211,102,0.24)] transition-colors hover:bg-[#20c15a]"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
                         <path fill="#fff" d="M4.868,43.303l2.694-9.835C5.9,30.59,5.026,27.324,5.027,23.979C5.032,13.514,13.548,5,24.014,5c5.079,0.002,9.845,1.979,13.43,5.566c3.584,3.588,5.558,8.356,5.556,13.428c-0.004,10.465-8.522,18.98-18.986,18.98c-0.001,0,0,0,0,0h-0.008c-3.177-0.001-6.3-0.798-9.073-2.311L4.868,43.303z" />
@@ -385,7 +533,7 @@ export default function ProductDetailView({
                       href="https://www.instagram.com/hume.perfume/"
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-border bg-pink-50 px-5 text-sm font-medium text-foreground hover:bg-[#ededed] transition-colors"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[#d9c8ad] bg-background px-5 text-sm font-medium text-foreground shadow-[0_10px_22px_rgba(24,18,14,0.06)] transition-colors hover:bg-[#f8f4ed]"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 132.004 132" width="18" height="18" aria-hidden="true">
                         <defs>
@@ -411,23 +559,30 @@ export default function ProductDetailView({
                     </a>
                   </div>
                 </div>
-              </div>
 
               <div className="border-t border-border pt-8 mt-10">
-                <p className="text-caption text-muted-foreground mb-4">FAQs</p>
+                <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+                  <div>
+                    <p className="text-caption text-muted-foreground">FAQs</p>
+                    <h3 className="mt-2 font-serif text-3xl font-light">
+                      Questions before you order
+                    </h3>
+                  </div>
+                  <div className="hidden h-px min-w-24 flex-1 bg-gradient-to-r from-[#9b7a4a]/35 to-transparent sm:block" />
+                </div>
                 <div className="space-y-3">
                   {faqItems.map((faq) => (
                     <details
                       key={faq.question}
-                      className="group rounded-xl border border-border/70 bg-background/95 px-4 py-4 shadow-[0_8px_24px_rgba(15,23,42,0.05)] transition-all open:shadow-[0_12px_28px_rgba(15,23,42,0.08)] sm:px-5"
+                      className="group rounded-2xl border border-[#e8dfd4] bg-[#fbfaf8] px-4 py-4 shadow-[0_10px_28px_rgba(24,18,14,0.05)] transition-all open:border-[#c9aa72] open:shadow-[0_16px_36px_rgba(24,18,14,0.08)] sm:px-5"
                     >
                       <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium text-sm sm:text-base">
                         <span>{faq.question}</span>
-                        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/70 text-lg leading-none text-muted-foreground transition-transform duration-200 group-open:rotate-45">
+                        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#d9c8ad] bg-background text-lg leading-none text-muted-foreground transition-transform duration-200 group-open:rotate-45 group-open:bg-[#15120f] group-open:text-[#d8b46d]">
                           +
                         </span>
                       </summary>
-                      <div className="mt-3 border-t border-border/60 pt-3">
+                      <div className="mt-3 border-t border-[#e8dfd4] pt-3">
                         <p className="text-body text-muted-foreground">{faq.answer}</p>
                       </div>
                     </details>
@@ -435,17 +590,15 @@ export default function ProductDetailView({
                 </div>
               </div>
             </motion.div>
-          </div>
         </div>
       </section>
 
-      {perfume.reviews.length > 0 && (
-        <ProductReviews
-          reviews={perfume.reviews}
-          productName={perfume.name}
-          inspiration={`${perfume.inspirationBrand} ${perfume.inspiration}`}
-        />
-      )}
+      <ProductReviews
+        productId={perfume.id}
+        reviews={perfume.reviews}
+        productName={perfume.name}
+        inspiration={productSubtitle}
+      />
       {relatedBlogs.length > 0 && (
         <section className="pb-16 md:pb-24">
           <div className="container-luxury">

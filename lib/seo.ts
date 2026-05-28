@@ -106,6 +106,7 @@ export const getProductSchema = (
     badges?: {
       limitedStock?: boolean;
       soldOut?: boolean;
+      comingSoon?: boolean;
     };
     size?: string;
     gender?: string;
@@ -136,8 +137,9 @@ export const getProductSchema = (
   const priceValidUntil = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)
     .toISOString()
     .split("T")[0];
+  const hasInspirationBrand = Boolean(product.inspirationBrand?.trim());
 
-  const availability = product.badges?.soldOut
+  const availability = product.badges?.soldOut || product.badges?.comingSoon
     ? "https://schema.org/OutOfStock"
     : product.badges?.limitedStock
     ? "https://schema.org/LimitedAvailability"
@@ -157,7 +159,9 @@ export const getProductSchema = (
     url: productUrl,
     keywords: [
       product.name,
-      `${product.inspirationBrand} ${product.inspiration} inspired perfume`,
+      hasInspirationBrand
+        ? `${product.inspirationBrand} ${product.inspiration} inspired perfume`
+        : product.inspiration,
       product.category,
       product.gender,
       ...(product.seoKeywords ?? []),
@@ -174,17 +178,21 @@ export const getProductSchema = (
         name: "India",
       },
     },
-    isRelatedTo: {
-      "@type": "Product",
-      name: `${product.inspirationBrand} ${product.inspiration}`,
-      brand: { "@type": "Brand", name: product.inspirationBrand },
-    },
+    isRelatedTo: hasInspirationBrand
+      ? {
+          "@type": "Product",
+          name: `${product.inspirationBrand} ${product.inspiration}`,
+          brand: { "@type": "Brand", name: product.inspirationBrand },
+        }
+      : undefined,
     additionalProperty: [
       { "@type": "PropertyValue", name: "Concentration", value: "EDP" },
       {
         "@type": "PropertyValue",
-        name: "Inspired Profile",
-        value: `${product.inspirationBrand} ${product.inspiration}`,
+        name: hasInspirationBrand ? "Inspired Profile" : "Product Profile",
+        value: hasInspirationBrand
+          ? `${product.inspirationBrand} ${product.inspiration}`
+          : product.inspiration,
       },
       product.size
         ? { "@type": "PropertyValue", name: "Size", value: product.size.toUpperCase() }

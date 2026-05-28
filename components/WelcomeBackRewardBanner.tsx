@@ -6,6 +6,7 @@ import { ArrowRight, Sparkles } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import {
+  getEffectiveWelcomeBackPercent,
   getWelcomeBackRewardId,
   readWelcomeBackReward,
   type WelcomeBackReward,
@@ -85,7 +86,7 @@ export function WelcomeBackRewardBannerCard({
 export default function WelcomeBackRewardBanner() {
   const pathname = usePathname();
   const hideBanner = shouldHideRewardBanner(pathname);
-  const { isCartOpen, setIsCartOpen, totalItems } = useCart();
+  const { isCartOpen, setIsCartOpen, totalItems, totalPrice } = useCart();
   const [reward, setReward] = useState<WelcomeBackReward | null>(null);
   const [visible, setVisible] = useState(false);
   const displayedRewardIdRef = useRef<string | null>(null);
@@ -145,6 +146,7 @@ export default function WelcomeBackRewardBanner() {
   }, [hideBanner, isCartOpen, reward]);
 
   if (!reward || isCartOpen || hideBanner) return null;
+  const effectivePercent = getEffectiveWelcomeBackPercent(reward, null, totalPrice) as 5 | 10;
 
   const handleViewCart = () => {
     if (typeof window !== "undefined") {
@@ -157,7 +159,7 @@ export default function WelcomeBackRewardBanner() {
               itemCount: totalItems,
               couponCode: reward.code,
               rewardLabel: reward.label,
-              rewardPercent: reward.percent,
+              rewardPercent: effectivePercent,
               visitCount: reward.visitCount,
               expiresAt: reward.expiresAt,
             },
@@ -193,7 +195,7 @@ export default function WelcomeBackRewardBanner() {
           className="fixed inset-x-0 bottom-4 z-[65] flex justify-center px-3 sm:bottom-6 sm:px-4"
         >
           <WelcomeBackRewardBannerCard
-            percent={reward.percent}
+            percent={effectivePercent}
             onViewCart={handleViewCart}
           />
         </motion.div>

@@ -39,6 +39,7 @@ export const WELCOME_BACK_CELEBRATED_REWARD_KEY =
   "hume_welcome_back_celebrated_reward_v1";
 export const WELCOME_BACK_MIN_VISIT_GAP_MS = 10 * 60 * 1000;
 export const WELCOME_BACK_DURATION_MS = 24 * 60 * 60 * 1000;
+export const WELCOME_BACK_10_MIN_SUBTOTAL = 1200;
 
 function numeric(value: string | null): number {
   const parsed = Number(value ?? "0");
@@ -262,23 +263,48 @@ export function getCouponWelcomeBackMode(
 export function getEffectiveWelcomeBackPercent(
   reward: WelcomeBackReward | null,
   coupon: Pick<CouponLike, "welcomeBackMode"> | null | undefined,
+  subtotal?: number,
 ) {
   if (!reward) return 0;
-  if (!coupon) return reward.percent;
+  const applySubtotalGate = (percent: number) => {
+    if (
+      percent >= 10 &&
+      typeof subtotal === "number" &&
+      Number.isFinite(subtotal) &&
+      subtotal < WELCOME_BACK_10_MIN_SUBTOTAL
+    ) {
+      return 5;
+    }
+
+    return percent;
+  };
+
+  if (!coupon) return applySubtotalGate(reward.percent);
 
   const mode = getCouponWelcomeBackMode(coupon);
   if (mode === "disable") return 0;
-  if (mode === "allow") return reward.percent;
-  return Math.min(reward.percent, 5);
+  if (mode === "allow") return applySubtotalGate(reward.percent);
+  return Math.min(applySubtotalGate(reward.percent), 5);
 }
 
 export function getEffectiveWelcomeBackLabel(
   reward: WelcomeBackReward | null,
   coupon: Pick<CouponLike, "welcomeBackMode"> | null | undefined,
+  subtotal?: number,
 ) {
-  const percent = getEffectiveWelcomeBackPercent(reward, coupon);
+  const percent = getEffectiveWelcomeBackPercent(reward, coupon, subtotal);
   if (percent <= 0) return null;
   return percent === 10 ? "Welcome Back 10" : "Welcome Back 5";
+}
+
+export function getEffectiveWelcomeBackCode(
+  reward: WelcomeBackReward | null,
+  coupon: Pick<CouponLike, "welcomeBackMode"> | null | undefined,
+  subtotal?: number,
+) {
+  const percent = getEffectiveWelcomeBackPercent(reward, coupon, subtotal);
+  if (percent <= 0) return null;
+  return percent === 10 ? "WELCOME-BACK-10" : "WELCOME-BACK-5";
 }
 
 export function calculateWelcomeBackDiscount(
@@ -288,7 +314,11 @@ export function calculateWelcomeBackDiscount(
   coupon?: Pick<CouponLike, "welcomeBackMode"> | null,
 ) {
   if (!reward) return 0;
-  const effectivePercent = getEffectiveWelcomeBackPercent(reward, coupon ?? null);
+  const effectivePercent = getEffectiveWelcomeBackPercent(
+    reward,
+    coupon ?? null,
+    subtotal,
+  );
   if (effectivePercent <= 0) return 0;
   const remainingSubtotal = Math.max(0, subtotal - alreadyDiscountedAmount);
   return Math.min(remainingSubtotal, (subtotal * effectivePercent) / 100);

@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { reviews } from "@/db/schema";
+import { products, reviews } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
+import { revalidatePath, revalidateTag } from "next/cache";
+import {
+  getUpcomingProductAsPerfume,
+  getUpcomingProductBySlug,
+} from "@/lib/upcoming-products";
 
 // GET all reviews for a product
 export async function GET(
@@ -61,19 +66,68 @@ export async function POST(
     const body = await request.json();
 
     const reviewSchema = z.object({
-      id: z.string(),
-      author: z.string(),
+      id: z.string().optional(),
+      author: z.string().trim().min(2).max(80),
       avatarUrl: z.string().url().optional(),
       reviewerCity: z.string().max(255).optional(),
       reviewerLanguage: z.string().max(50).optional(),
-      rating: z.number().min(1).max(5),
-      date: z.string(),
-      title: z.string(),
-      content: z.string(),
-      verified: z.boolean().default(false),
+      rating: z.coerce.number().int().min(1).max(5),
+      date: z.string().optional(),
+      title: z.string().trim().min(3).max(120).optional(),
+      content: z.string().trim().min(5).max(1200),
+      replyTo: z.string().trim().min(1).max(200).optional(),
+      verified: z.boolean().optional(),
     });
 
     const validatedData = reviewSchema.parse(body);
+    const [existingProduct] = await db
+      .select({ id: products.id })
+      .from(products)
+      .where(eq(products.id, id))
+      .limit(1);
+
+    if (!existingProduct) {
+      const staticProduct = getUpcomingProductBySlug(id);
+      if (staticProduct) {
+        const perfume = getUpcomingProductAsPerfume(staticProduct);
+        await db
+          .insert(products)
+          .values({
+            id: perfume.id,
+            name: perfume.name,
+            inspiration: perfume.inspiration,
+            inspirationBrand: perfume.inspirationBrand,
+            category: perfume.category,
+            categoryId: perfume.categoryId,
+            gender: perfume.gender,
+            images: perfume.images,
+            price: perfume.price.toString(),
+            priceCurrency: perfume.priceCurrency ?? "INR",
+            description: perfume.description,
+            seoDescription: perfume.seoDescription,
+            seoKeywords: perfume.seoKeywords,
+            badges: perfume.badges ?? {},
+            notes: perfume.notes,
+            longevity: perfume.longevity,
+            size: perfume.size,
+          })
+          .onConflictDoNothing();
+      }
+    }
+
+    const reviewId = validatedData.id ?? `review-${id}-${crypto.randomUUID()}`;
+    const reviewDate = validatedData.date ?? new Date().toISOString().slice(0, 10);
+    const submittedKind = validatedData.reviewerLanguage?.trim().toLowerCase();
+    const reviewKind =
+      submittedKind === "question" || submittedKind === "response"
+        ? submittedKind
+        : "review";
+    const reviewTitle =
+      reviewKind === "question"
+        ? "Question"
+        : reviewKind === "response"
+          ? `Response:${validatedData.replyTo ?? ""}`.slice(0, 120)
+        : validatedData.title ?? `${validatedData.rating}/5 customer review`;
 
     let newReview: typeof reviews.$inferSelect;
     try {
@@ -81,11 +135,15 @@ export async function POST(
         .insert(reviews)
         .values({
           ...validatedData,
+          id: reviewId,
           productId: id,
           avatarUrl: validatedData.avatarUrl ?? null,
-          reviewerCity: validatedData.reviewerCity ?? null,
-          reviewerLanguage: validatedData.reviewerLanguage ?? null,
+          reviewerCity: validatedData.reviewerCity?.trim() || null,
+          reviewerLanguage: reviewKind,
           rating: validatedData.rating.toString(),
+          date: reviewDate,
+          title: reviewTitle,
+          verified: Boolean(validatedData.verified),
         })
         .returning();
     } catch (error) {
@@ -93,17 +151,20 @@ export async function POST(
       [newReview] = await db
         .insert(reviews)
         .values({
-          id: validatedData.id,
+          id: reviewId,
           productId: id,
           author: validatedData.author,
           rating: validatedData.rating.toString(),
-          date: validatedData.date,
-          title: validatedData.title,
+          date: reviewDate,
+          title: reviewTitle,
           content: validatedData.content,
-          verified: validatedData.verified,
+          verified: Boolean(validatedData.verified),
         })
         .returning();
     }
+
+    revalidateTag("products", "max");
+    revalidatePath(`/product/${id}`, "page");
 
     return NextResponse.json(
       {

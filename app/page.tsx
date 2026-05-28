@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import HumeSpecialSection from "@/components/HumeSpecialSection";
 import BestsellerSection from "@/components/BestsellerSection";
+import ComingSoonSection from "@/components/ComingSoonSection";
 import RefillProgramSection from "@/components/RefillProgramSection";
 import SeoHubTeaser from "@/components/SeoHubTeaser";
 import Collection from "@/components/Collection";
@@ -113,6 +114,12 @@ export default async function Home() {
         data-analytics-section="hume_special"
       >
         <HumeSpecialSection perfumes={homepagePerfumes} />
+      </div>
+      <div
+        style={{ contentVisibility: "auto", containIntrinsicSize: "980px" }}
+        data-analytics-section="new_launches"
+      >
+        <ComingSoonSection />
       </div>
       <div data-analytics-section="collection">
         <Collection perfumes={homepagePerfumes} />

@@ -44,6 +44,7 @@ import {
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 import { buildPublicTrackingPath } from "@/lib/tracking-url";
 import { cn } from "@/lib/utils";
+import type { FragranceSelection } from "@/lib/discovery-set";
 
 type AccountOrderItem = {
   id: string;
@@ -53,6 +54,7 @@ type AccountOrderItem = {
   quantity: number;
   price: number;
   isGift?: boolean;
+  sampleSelections?: FragranceSelection[];
 };
 
 type AccountOrder = {
@@ -627,6 +629,11 @@ export default function AccountClient() {
                               Qty {item.quantity}
                               {!item.isGift && item.size ? ` - ${item.size}` : ""}
                             </p>
+                            {item.sampleSelections?.length ? (
+                              <p className="mt-1 line-clamp-1 text-xs text-emerald-700">
+                                Samples: {item.sampleSelections.map((selection) => selection.name).join(", ")}
+                              </p>
+                            ) : null}
                           </div>
                           <span className={item.isGift ? "text-emerald-600" : "text-zinc-700"}>
                             {item.isGift ? "FREE" : formatINR(item.price * item.quantity)}
@@ -738,6 +745,15 @@ export default function AccountClient() {
                             {!item.isGift && item.size ? ` / ${item.size}` : ""}
                             {item.inspiration ? ` / Inspired by ${item.inspiration}` : ""}
                           </p>
+                          {item.sampleSelections?.length ? (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {item.sampleSelections.map((selection) => (
+                                <span key={selection.id} className="rounded-full bg-emerald-50 px-2 py-1 text-xs text-emerald-700">
+                                  {selection.name}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
                         </div>
                         <p className={cn("shrink-0 text-sm font-semibold", item.isGift ? "text-emerald-600" : "text-zinc-950")}>
                           {item.isGift ? "FREE" : formatINR(item.price * item.quantity)}

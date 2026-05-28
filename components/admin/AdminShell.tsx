@@ -12,7 +12,9 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  MessageSquareText,
   Package,
+  Settings,
   ShoppingBag,
   ShoppingBasket,
   ShoppingCart,
@@ -33,6 +35,7 @@ const navItems = [
   { title: "AI Visibility", url: "/admin/ai-visibility", icon: Sparkles },
   { title: "Orders", url: "/admin/orders", icon: ShoppingBag },
   { title: "Tracking", url: "/admin/tracking", icon: Truck },
+  { title: "Reviews", url: "/admin/reviews", icon: MessageSquareText },
   { title: "Stock Requests", url: "/admin/stock-notify", icon: Bell },
   { title: "Checkouts", url: "/admin/checkouts", icon: ShoppingCart },
   { title: "Cart Leads", url: "/admin/cart", icon: ShoppingBasket },
@@ -41,6 +44,7 @@ const navItems = [
   { title: "Catalog", url: "/admin/products", icon: Package },
   { title: "Content", url: "/admin/blogs", icon: FileText },
   { title: "Images", url: "/admin/images", icon: ImageIcon },
+  { title: "Settings", url: "/admin/settings", icon: Settings },
   { title: "Data Export", url: "/admin/data-export", icon: Download },
 ];
 

@@ -11,6 +11,7 @@ const DISABLED_PATH_PREFIXES = [
   "/preview",
   "/email-preview",
   "/refill-subscription",
+  "/discovery-set",
 ];
 
 function shouldUsePremiumScroll(pathname: string) {

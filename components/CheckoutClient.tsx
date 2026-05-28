@@ -24,6 +24,7 @@ import ImageWithFallback from "@/components/ImageWithFallback";
 import {
   calculateCouponDiscount,
   calculateWelcomeBackDiscount,
+  getEffectiveWelcomeBackCode,
   getEffectiveWelcomeBackLabel,
   getEffectiveWelcomeBackPercent,
   readWelcomeBackReward,
@@ -178,6 +179,19 @@ const checkoutFieldOrder: Array<keyof CheckoutDetails> = [
   "pincode",
   "notes",
 ];
+
+function getCartItemDescriptor(item: { category?: string; inspiration?: string }) {
+  const category = item.category?.toLowerCase() ?? "";
+  if (
+    category.includes("discovery set") ||
+    category.includes("rose water") ||
+    category.includes("camphor") ||
+    category.includes("car perfume")
+  ) {
+    return item.inspiration || item.category || "HUME product";
+  }
+  return `Inspired by ${item.inspiration}`;
+}
 
 const indianStateOptions = getAllStatesWithDistricts().sort((a, b) =>
   a.name.localeCompare(b.name),
@@ -587,10 +601,17 @@ export default function CheckoutClient() {
   const effectiveWelcomeBackPercent = getEffectiveWelcomeBackPercent(
     welcomeBackReward,
     appliedCoupon,
+    totalPrice,
   );
   const welcomeBackLabel = getEffectiveWelcomeBackLabel(
     welcomeBackReward,
     appliedCoupon,
+    totalPrice,
+  );
+  const effectiveWelcomeBackCode = getEffectiveWelcomeBackCode(
+    welcomeBackReward,
+    appliedCoupon,
+    totalPrice,
   );
   const hasWelcomeBackBenefit = effectiveWelcomeBackPercent > 0;
   const regularShippingFee =
@@ -602,7 +623,7 @@ export default function CheckoutClient() {
   const grandTotal =
     Math.max(0, totalPrice - couponDiscount - welcomeBackDiscount) +
     shippingFee;
-  const appliedOfferCodes = [appliedCouponCode, hasWelcomeBackBenefit ? welcomeBackReward?.code : null]
+  const appliedOfferCodes = [appliedCouponCode, hasWelcomeBackBenefit ? effectiveWelcomeBackCode : null]
     .filter(Boolean)
     .join(" + ");
   const pricingBreakdown = useMemo(
@@ -613,7 +634,7 @@ export default function CheckoutClient() {
       couponCode: appliedCouponCode,
       couponLabel: appliedCoupon?.description || appliedCoupon?.code || null,
       couponDiscount,
-      welcomeBackCode: hasWelcomeBackBenefit ? welcomeBackReward?.code || null : null,
+      welcomeBackCode: hasWelcomeBackBenefit ? effectiveWelcomeBackCode : null,
       welcomeBackLabel,
       welcomeBackPercent: effectiveWelcomeBackPercent,
       welcomeBackDiscount,
@@ -628,6 +649,7 @@ export default function CheckoutClient() {
       appliedCouponCode,
       appliedOfferCodes,
       couponDiscount,
+      effectiveWelcomeBackCode,
       effectiveWelcomeBackPercent,
       grandTotal,
       hasWelcomeBackBenefit,
@@ -637,7 +659,6 @@ export default function CheckoutClient() {
       totalPrice,
       welcomeBackDiscount,
       welcomeBackLabel,
-      welcomeBackReward?.code,
     ],
   );
   const hasKitInCart = items.some(
@@ -789,6 +810,7 @@ export default function CheckoutClient() {
           price: item.price,
           isGift: item.isGift,
           kitSelections: item.kitSelections,
+          sampleSelections: item.sampleSelections,
         })),
         details,
       };
@@ -952,7 +974,10 @@ export default function CheckoutClient() {
         if (item.isGift) {
           return `* ${item.name} [FREE GIFT] x${item.quantity} - ${linePrice}`;
         }
-        return `* ${item.name} (${item.size ?? "50ml"}, Inspired by ${item.inspiration}) x${item.quantity} - ${linePrice}`;
+        const sampleDetails = item.sampleSelections?.length
+          ? `\n  Samples: ${item.sampleSelections.map((selection) => selection.name).join(", ")}`
+          : "";
+        return `* ${item.name} (${item.size ?? "50ml"}, ${getCartItemDescriptor(item)}) x${item.quantity} - ${linePrice}${sampleDetails}`;
       })
       .join("\n");
 
@@ -1008,6 +1033,7 @@ export default function CheckoutClient() {
         price: item.price,
         isGift: item.isGift,
         kitSelections: item.kitSelections,
+        sampleSelections: item.sampleSelections,
       })),
       subtotal: totalPrice,
       couponDiscount,
@@ -1110,6 +1136,7 @@ export default function CheckoutClient() {
             price: item.price,
             isGift: item.isGift,
             kitSelections: item.kitSelections,
+            sampleSelections: item.sampleSelections,
           })),
           giftItems: giftItems.map((item) => item.name),
           details,
@@ -1129,6 +1156,13 @@ export default function CheckoutClient() {
       .flatMap((item) => {
         if (item.kitSelections?.length) {
           return item.kitSelections.map((selection) => ({
+            id: selection.id,
+            quantity: 1,
+          }));
+        }
+
+        if (item.sampleSelections?.length) {
+          return item.sampleSelections.map((selection) => ({
             id: selection.id,
             quantity: 1,
           }));
@@ -1956,7 +1990,7 @@ export default function CheckoutClient() {
                     </p>
                     {!item.isGift ? (
                       <p className="mt-1 line-clamp-1 text-xs italic text-black/45">
-                        Inspired by {item.inspiration}
+                        {getCartItemDescriptor(item)}
                       </p>
                     ) : null}
                     <div className="mt-1.5 flex items-center justify-between text-xs">
@@ -1976,6 +2010,11 @@ export default function CheckoutClient() {
                           : formatINR(item.price * item.quantity)}
                       </span>
                     </div>
+                    {item.sampleSelections?.length ? (
+                      <p className="mt-2 line-clamp-2 text-[11px] leading-snug text-black/45">
+                        Samples: {item.sampleSelections.map((selection) => selection.name).join(", ")}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
               ))}

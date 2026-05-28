@@ -6,6 +6,11 @@ type AlertOrderItem = {
   price: number;
   size?: string;
   isGift?: boolean;
+  sampleSelections?: Array<{
+    id: string;
+    name: string;
+    inspiration?: string;
+  }>;
 };
 
 export type AdminOrderAlertData = {
@@ -69,7 +74,10 @@ function buildItems(order: AdminOrderAlertData) {
     .slice(0, 8)
     .map((item) => {
       const meta = [item.size, item.isGift ? "Gift" : null].filter(Boolean).join(" / ");
-      return `- ${item.quantity}x ${item.name}${meta ? ` (${meta})` : ""}`;
+      const samples = item.sampleSelections?.length
+        ? `\n  Samples: ${item.sampleSelections.map((selection) => selection.name).join(", ")}`
+        : "";
+      return `- ${item.quantity}x ${item.name}${meta ? ` (${meta})` : ""}${samples}`;
     })
     .join("\n");
 }

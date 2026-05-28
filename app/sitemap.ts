@@ -7,6 +7,8 @@ import { getProductPath } from "@/lib/product-route";
 import { getFestivalSeoSlugs } from "@/lib/festival-seo";
 import { getRequestSiteUrl } from "@/lib/request-site";
 import { AI_RECOMMENDATION_PAGES } from "@/lib/ai-recommendation-pages";
+import { DISCOVERY_SET_PATH } from "@/lib/discovery-set";
+import { DETAIL_UPCOMING_PRODUCTS } from "@/lib/upcoming-products";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = await getRequestSiteUrl();
@@ -49,6 +51,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: new Date(),
     changeFrequency: "weekly" as const,
     priority: 0.75,
+  }));
+  const upcomingProductEntries = DETAIL_UPCOMING_PRODUCTS.map((product) => ({
+    url: `${baseUrl}${product.path}`,
+    lastModified: new Date(),
+    changeFrequency: "weekly" as const,
+    priority: 0.68,
   }));
 
   return [
@@ -119,6 +127,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     },
     {
+      url: `${baseUrl}${DISCOVERY_SET_PATH}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.78,
+    },
+    {
       url: `${baseUrl}/scent-quiz`,
       lastModified: new Date(),
       changeFrequency: "monthly",
@@ -172,5 +186,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...programmaticEntries,
     ...festivalSeoEntries,
     ...recommendationEntries,
+    ...upcomingProductEntries,
   ];
 }

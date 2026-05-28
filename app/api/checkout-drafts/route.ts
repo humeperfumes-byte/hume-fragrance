@@ -5,6 +5,12 @@ import { checkoutDrafts } from "@/db/schema";
 import { resolveIndiaAwareCountry } from "@/lib/admin-market";
 import { isAdminCapturedPath, isInternalAdminRequest } from "@/lib/admin-data-filters";
 
+const fragranceSelectionSchema = z.object({
+  id: z.string().min(1).max(255),
+  name: z.string().min(1).max(255),
+  inspiration: z.string().max(255).optional(),
+});
+
 const cartItemSchema = z.object({
   id: z.string().min(1).max(255),
   name: z.string().min(1).max(255),
@@ -14,13 +20,10 @@ const cartItemSchema = z.object({
   price: z.number().nonnegative(),
   isGift: z.boolean().optional(),
   kitSelections: z
-    .array(
-      z.object({
-        id: z.string().min(1).max(255),
-        name: z.string().min(1).max(255),
-        inspiration: z.string().max(255).optional(),
-      }),
-    )
+    .array(fragranceSelectionSchema)
+    .optional(),
+  sampleSelections: z
+    .array(fragranceSelectionSchema)
     .optional(),
 });
 

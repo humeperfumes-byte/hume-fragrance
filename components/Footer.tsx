@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getAllPublicProducts } from "@/lib/db/products";
+import { DISCOVERY_SET_PATH } from "@/lib/discovery-set";
 import { isVisibleNatureCategory } from "@/lib/nature-categories";
 
 function prettyCategory(label: string) {
@@ -36,6 +37,7 @@ export default async function Footer() {
 
   const shopLinks = [
     { href: "/shop", label: "Shop All Perfumes" },
+    { href: DISCOVERY_SET_PATH, label: "Discovery Set" },
     { href: "/kit-pack", label: "Build Your Kit" },
     { href: "/celebrities-favorites", label: "Celebrities' Favorites" },
   ];

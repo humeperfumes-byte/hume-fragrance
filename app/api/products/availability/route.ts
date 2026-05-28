@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getAllPublicProducts } from "@/lib/db/products";
+import {
+  DETAIL_UPCOMING_PRODUCTS,
+  getUpcomingProductAsPerfume,
+} from "@/lib/upcoming-products";
 
 const availabilitySchema = z.object({
   items: z
@@ -17,7 +21,10 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const data = availabilitySchema.parse(body);
-    const products = await getAllPublicProducts();
+    const products = [
+      ...(await getAllPublicProducts()),
+      ...DETAIL_UPCOMING_PRODUCTS.map(getUpcomingProductAsPerfume),
+    ];
     const productMap = new Map(products.map((product) => [product.id, product]));
 
     const issues = data.items
@@ -51,4 +58,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Unable to check availability" }, { status: 500 });
   }
 }
-

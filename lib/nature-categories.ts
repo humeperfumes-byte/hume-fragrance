@@ -6,6 +6,7 @@ const HIDDEN_NATURE_CATEGORY_KEYS = new Set([
   "incense",
   "earthy",
   "aromatic",
+  "discovery set",
 ]);
 
 function normalizeKey(value: string) {
@@ -15,4 +16,3 @@ function normalizeKey(value: string) {
 export function isVisibleNatureCategory(value: string) {
   return !HIDDEN_NATURE_CATEGORY_KEYS.has(normalizeKey(value));
 }
-

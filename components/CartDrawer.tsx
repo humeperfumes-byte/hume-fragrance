@@ -25,6 +25,7 @@ import {
   calculateCouponDiscount,
   calculateWelcomeBackDiscount,
   formatRewardTimeRemaining,
+  getEffectiveWelcomeBackCode,
   getEffectiveWelcomeBackLabel,
   getEffectiveWelcomeBackPercent,
   isCouponEligible as isCartCouponEligible,
@@ -32,6 +33,7 @@ import {
   trackWelcomeBackVisit,
   type WelcomeBackReward,
 } from "@/lib/cart-discounts";
+import { DISCOVERY_SET_IMAGES, DISCOVERY_SET_PRICE, DISCOVERY_SET_PATH } from "@/lib/discovery-set";
 
 interface Coupon {
   id: string;
@@ -155,10 +157,17 @@ const CartDrawer = () => {
   const effectiveWelcomeBackPercent = getEffectiveWelcomeBackPercent(
     welcomeBackReward,
     appliedCoupon,
+    subtotal,
   );
   const welcomeBackLabel = getEffectiveWelcomeBackLabel(
     welcomeBackReward,
     appliedCoupon,
+    subtotal,
+  );
+  const effectiveWelcomeBackCode = getEffectiveWelcomeBackCode(
+    welcomeBackReward,
+    appliedCoupon,
+    subtotal,
   );
   const hasWelcomeBackBenefit = effectiveWelcomeBackPercent > 0;
   const shippingFee = hasWelcomeBackBenefit ? 0 : regularShippingFee;
@@ -176,14 +185,14 @@ const CartDrawer = () => {
       couponCode: appliedCouponCode,
       couponLabel: appliedCoupon?.description || appliedCoupon?.code || null,
       couponDiscount: normalizedCouponDiscount,
-      welcomeBackCode: hasWelcomeBackBenefit ? welcomeBackReward?.code || null : null,
+      welcomeBackCode: hasWelcomeBackBenefit ? effectiveWelcomeBackCode : null,
       welcomeBackLabel,
       welcomeBackPercent: effectiveWelcomeBackPercent,
       welcomeBackDiscount,
       shippingSavings,
       grandTotal,
       totalSavings,
-      appliedOfferCodes: [appliedCouponCode, hasWelcomeBackBenefit ? welcomeBackReward?.code : null]
+      appliedOfferCodes: [appliedCouponCode, hasWelcomeBackBenefit ? effectiveWelcomeBackCode : null]
         .filter(Boolean)
         .join(" + ") || null,
     }),
@@ -191,6 +200,7 @@ const CartDrawer = () => {
       appliedCoupon?.code,
       appliedCoupon?.description,
       appliedCouponCode,
+      effectiveWelcomeBackCode,
       effectiveWelcomeBackPercent,
       grandTotal,
       hasWelcomeBackBenefit,
@@ -202,7 +212,6 @@ const CartDrawer = () => {
       totalSavings,
       welcomeBackDiscount,
       welcomeBackLabel,
-      welcomeBackReward?.code,
     ],
   );
   const appliedPercentOff =
@@ -217,7 +226,7 @@ const CartDrawer = () => {
     ? Math.max(0, welcomeBackReward.expiresAt - rewardNow)
     : 0;
   const rewardTease =
-    welcomeBackReward?.tier === 10
+    effectiveWelcomeBackPercent === 10
       ? "Still deciding? Bigger secret unlocked ;)"
       : "2nd visit? Secret reward unlocked ;)";
   const isUrgentReward = effectiveWelcomeBackPercent === 10;
@@ -772,6 +781,11 @@ const CartDrawer = () => {
                         >
                           {item.inspiration} {item.size ? `• ${item.size}` : ""}
                         </p>
+                        {item.sampleSelections?.length ? (
+                          <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-emerald-700">
+                            Samples: {item.sampleSelections.map((selection) => selection.name).join(", ")}
+                          </p>
+                        ) : null}
 
                         {item.isGift ? (
                           <div className="mt-3 flex items-center gap-2">
@@ -1085,7 +1099,7 @@ const CartDrawer = () => {
               <article className="grid grid-cols-[66px_minmax(0,1fr)_42px] items-center gap-3 border border-black/10 bg-white p-3">
                 <div className="relative h-16 w-16 overflow-hidden bg-[#eee9e3]">
                   <Image
-                    src="/images/kit.png"
+                    src={DISCOVERY_SET_IMAGES[0]}
                     alt="Discovery Set"
                     fill
                     sizes="66px"
@@ -1094,17 +1108,19 @@ const CartDrawer = () => {
                 </div>
                 <div>
                   <p className="text-sm font-semibold">Discovery Set</p>
-                  <p className="mt-1 text-xs text-black/50">{formatINR(499)}</p>
+                  <p className="mt-1 text-xs text-black/50">
+                    Build 10 testers - {formatINR(DISCOVERY_SET_PRICE)}
+                  </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => {
                     setIsCartOpen(false);
                     showNavigationLoadingToast();
-                    router.push("/kit-pack");
+                    router.push(DISCOVERY_SET_PATH);
                   }}
                   className="flex h-9 w-9 items-center justify-center rounded-full border border-black/20 transition hover:bg-black hover:text-white"
-                  aria-label="View discovery set"
+                  aria-label="Build Discovery Set"
                 >
                   <Plus className="h-4 w-4" />
                 </button>

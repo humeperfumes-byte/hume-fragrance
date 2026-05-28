@@ -646,6 +646,15 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
                                   {item.size ? ` · ${item.size}` : ""}
                                   {!item.isGift ? ` · ${formatINR(toOrderMoney(item.price))} each` : ""}
                                 </p>
+                                {item.sampleSelections?.length ? (
+                                  <div className="mt-2 flex flex-wrap gap-1.5">
+                                    {item.sampleSelections.map((selection) => (
+                                      <span key={selection.id} className="rounded bg-emerald-400/[0.08] px-2 py-1 text-xs text-emerald-100/65">
+                                        {selection.name}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : null}
                               </div>
                               <p className={item.isGift ? "font-medium text-emerald-300" : "font-medium text-white"}>
                                 {item.isGift ? "Free" : formatINR(getOrderItemLineTotal(item))}

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import type { FragranceSelection } from "@/lib/discovery-set";
 
 export interface CartItem {
   id: string;
@@ -16,6 +17,7 @@ export interface CartItem {
     name: string;
     inspiration?: string;
   }>;
+  sampleSelections?: FragranceSelection[];
   quantity: number;
 }
 
@@ -119,7 +121,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     if (!hydrated) return;
     setItems((prev) => {
       const paidSubtotal = prev.reduce(
-        (sum, item) => sum + (!item.isGift ? item.price * item.quantity : 0),
+        (sum, item) =>
+          sum + (!item.isGift ? item.price * item.quantity : 0),
         0
       );
       const allowedGiftCount = paidSubtotal >= 2099 ? 2 : paidSubtotal >= 1499 ? 1 : 0;

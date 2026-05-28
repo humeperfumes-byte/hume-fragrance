@@ -1,3 +1,5 @@
+import { DISCOVERY_SET_PATH, isDiscoverySetProductId } from "@/lib/discovery-set";
+
 type ProductRouteLike = {
   id: string;
   name: string;
@@ -22,6 +24,10 @@ export function getProductSeoSlug(product: ProductRouteLike): string {
 }
 
 export function getProductPath(product: ProductRouteLike): string {
+  if (isDiscoverySetProductId(product.id)) {
+    return DISCOVERY_SET_PATH;
+  }
+
   if (!product.inspirationBrand?.trim()) {
     return `/product/${product.id}`;
   }

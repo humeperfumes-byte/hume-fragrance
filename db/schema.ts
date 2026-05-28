@@ -226,6 +226,11 @@ export const checkoutDrafts = pgTable("checkout_drafts", {
             name: string;
             inspiration?: string;
           }>;
+          sampleSelections?: Array<{
+            id: string;
+            name: string;
+            inspiration?: string;
+          }>;
         }>
       >()
     .notNull()
@@ -290,6 +295,11 @@ export const orders = pgTable("orders", {
           price: number;
           isGift?: boolean;
           kitSelections?: Array<{
+            id: string;
+            name: string;
+            inspiration?: string;
+          }>;
+          sampleSelections?: Array<{
             id: string;
             name: string;
             inspiration?: string;

@@ -14,6 +14,11 @@ import {
 } from "@/lib/seo";
 import { getProductPath, getProductSeoSlug } from "@/lib/product-route";
 import { getRequestSiteUrl } from "@/lib/request-site";
+import {
+  getUpcomingProductAsPerfume,
+  getUpcomingProductBySlug,
+} from "@/lib/upcoming-products";
+import { siteUrlForBase } from "@/lib/site";
 
 export const revalidate = 120;
 
@@ -24,9 +29,31 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const perfume = await getProductByRouteSegment(id);
-  if (!perfume) return { title: "Product Not Found" };
 
   const baseUrl = await getRequestSiteUrl();
+  if (!perfume) {
+    const launchProduct = getUpcomingProductBySlug(id);
+    if (!launchProduct) return { title: "Product Not Found" };
+
+    const product = getUpcomingProductAsPerfume(launchProduct);
+    const canonicalUrl = siteUrlForBase(baseUrl, launchProduct.path);
+
+    return {
+      title: `${launchProduct.name} | HUME Fragrance`,
+      description: product.seoDescription,
+      keywords: product.seoKeywords,
+      alternates: {
+        canonical: canonicalUrl,
+      },
+      openGraph: {
+        title: `${launchProduct.name} | HUME Fragrance`,
+        description: product.seoDescription,
+        url: canonicalUrl,
+        images: product.images?.[0] ? [siteUrlForBase(baseUrl, product.images[0])] : [],
+      },
+    };
+  }
+
   const canonicalUrl = `${baseUrl}${getProductPath(perfume)}`;
 
   return {
@@ -52,7 +79,37 @@ export default async function ProductPage({
   const { id } = await params;
   const perfume = await getProductByRouteSegment(id);
 
-  if (!perfume) notFound();
+  if (!perfume) {
+    const launchProduct = getUpcomingProductBySlug(id);
+    if (!launchProduct) notFound();
+
+    const liveProduct = getUpcomingProductAsPerfume(launchProduct);
+    const baseUrl = await getRequestSiteUrl();
+    const canonicalUrl = siteUrlForBase(baseUrl, launchProduct.path);
+    const jsonLd = [
+      getProductSchema(liveProduct, baseUrl),
+      getProductFAQSchema(liveProduct),
+      getBreadcrumbSchema([
+        { name: "Home", url: baseUrl },
+        { name: "Shop", url: `${baseUrl}/shop` },
+        { name: liveProduct.name, url: canonicalUrl },
+      ]),
+    ];
+
+    return (
+      <main className="bg-background min-h-screen">
+        <JsonLd data={jsonLd} />
+        <Header />
+        <ProductDetailView
+          perfume={liveProduct}
+          relatedBlogs={[]}
+          priceLabel={launchProduct.priceLabel}
+          faqItems={launchProduct.faq}
+        />
+        <Footer />
+      </main>
+    );
+  }
 
   const seoSlug = getProductSeoSlug(perfume);
   if (id !== seoSlug) {

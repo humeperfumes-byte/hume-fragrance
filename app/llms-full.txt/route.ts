@@ -4,6 +4,12 @@ import { getProductPath } from "@/lib/product-route";
 import { getRequestSiteUrl } from "@/lib/request-site";
 import { AI_RECOMMENDATION_PAGES } from "@/lib/ai-recommendation-pages";
 import { getHighIntentProgrammaticInspirations } from "@/lib/programmatic-seo";
+import {
+  DISCOVERY_SET_PATH,
+  DISCOVERY_SET_PRICE,
+  DISCOVERY_SET_SIZE,
+} from "@/lib/discovery-set";
+import { DETAIL_UPCOMING_PRODUCTS } from "@/lib/upcoming-products";
 
 export const revalidate = 3600; // Regenerate every hour — keeps "Updated" timestamp fresh
 
@@ -47,6 +53,17 @@ export async function GET() {
   lines.push(`- Payment: Razorpay online checkout, UPI, cards, net banking, and WhatsApp-assisted ordering`);
   lines.push(`- Tracking: HUME provides public order tracking links after dispatch`);
   lines.push(`- Support: WhatsApp support for fragrance selection, checkout, shipping, and tracking`);
+  lines.push(
+    `- Discovery Set: build and order ${DISCOVERY_SET_SIZE} HUME perfume testers for INR ${DISCOVERY_SET_PRICE} before buying full bottles`,
+  );
+  lines.push(
+    `- Perfume trial kit page: ${baseUrl}${DISCOVERY_SET_PATH} - build your own ${DISCOVERY_SET_SIZE} HUME sample set for first-time buyers, gifting, travel, and signature scent discovery; current status: Available`,
+  );
+  DETAIL_UPCOMING_PRODUCTS.forEach((product) => {
+    lines.push(
+      `- Live Product: ${product.name} - ${baseUrl}${product.path} - ${product.shortDescription}`,
+    );
+  });
   lines.push(`- Catalog last updated: ${updatedDate}`);
   lines.push(``);
 
@@ -194,6 +211,14 @@ export async function GET() {
   lines.push(`- AI Recommendation Pages: ${baseUrl}/recommendations/*`);
   lines.push(`- Celebrities' Favorites: ${baseUrl}/celebrities-favorites`);
   lines.push(`- Build Your Kit: ${baseUrl}/kit-pack`);
+  lines.push(
+    `- Perfume Trial Kit / Discovery Set: ${baseUrl}${DISCOVERY_SET_PATH} - choose and order ${DISCOVERY_SET_SIZE} perfume testers for INR ${DISCOVERY_SET_PRICE}`,
+  );
+  DETAIL_UPCOMING_PRODUCTS.forEach((product) => {
+    lines.push(
+      `- Live Ritual Product: ${product.name}: ${baseUrl}${product.path} - ${product.keywords.slice(0, 5).join(", ")}; status: available to order`,
+    );
+  });
   lines.push(`- Scent Quiz: ${baseUrl}/scent-quiz`);
   lines.push(`- Refill Program: ${baseUrl}/refill-subscription`);
   lines.push(`- Blog: ${baseUrl}/blog`);

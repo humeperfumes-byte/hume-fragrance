@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200" role="img" aria-label="HUME Pure Rose Water coming soon product visual">
+  <defs>
+    <radialGradient id="roseGlow" cx="30%" cy="20%" r="70%">
+      <stop offset="0" stop-color="#fff7f0"/>
+      <stop offset="0.48" stop-color="#eec8c0"/>
+      <stop offset="1" stop-color="#7a2434"/>
+    </radialGradient>
+    <linearGradient id="glass" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.9"/>
+      <stop offset="0.45" stop-color="#f6d5d0" stop-opacity="0.62"/>
+      <stop offset="1" stop-color="#b44a5a" stop-opacity="0.58"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="36" stdDeviation="28" flood-color="#2c080e" flood-opacity="0.32"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="1200" fill="url(#roseGlow)"/>
+  <circle cx="935" cy="215" r="210" fill="#fff4ee" opacity="0.3"/>
+  <circle cx="210" cy="905" r="310" fill="#4d111c" opacity="0.18"/>
+  <g filter="url(#shadow)">
+    <rect x="442" y="210" width="316" height="710" rx="56" fill="url(#glass)" stroke="#fff2e8" stroke-width="8"/>
+    <rect x="492" y="166" width="216" height="92" rx="26" fill="#2b1718"/>
+    <rect x="516" y="120" width="168" height="64" rx="18" fill="#17100f"/>
+    <rect x="475" y="430" width="250" height="280" rx="18" fill="#fffaf5" opacity="0.88"/>
+    <text x="600" y="504" text-anchor="middle" font-family="Georgia, serif" font-size="52" fill="#2b1718">hf</text>
+    <text x="600" y="566" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="700" letter-spacing="6" fill="#7a2434">HUME</text>
+    <text x="600" y="616" text-anchor="middle" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#2b1718">ROSE WATER</text>
+    <text x="600" y="662" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" letter-spacing="4" fill="#7a6a62">GULAB JAL</text>
+  </g>
+  <g fill="none" stroke="#fff7f0" stroke-width="2" opacity="0.45">
+    <path d="M286 245c92 24 155 85 188 183"/>
+    <path d="M785 800c95-50 178-131 247-245"/>
+  </g>
+</svg>

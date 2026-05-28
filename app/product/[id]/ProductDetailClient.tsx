@@ -2,22 +2,53 @@
 
 import { motion } from "framer-motion";
 import { Bell, MessageCircle, ShieldCheck, Truck, WalletCards } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { toast } from "@/hooks/use-toast";
 import type { PerfumeData } from "@/data/perfumes";
 import { formatINR } from "@/lib/currency";
+import { DISCOVERY_SET_PATH, isDiscoverySetProductId } from "@/lib/discovery-set";
 
-export default function ProductDetailClient({ perfume }: { perfume: PerfumeData }) {
+export default function ProductDetailClient({
+  perfume,
+  priceLabel,
+}: {
+  perfume: PerfumeData;
+  priceLabel?: string;
+}) {
   const { addItem } = useCart();
+  const router = useRouter();
+  const isComingSoon = Boolean(perfume.badges?.comingSoon);
   const isSoldOut = Boolean(perfume.badges?.soldOut);
+  const isUnavailable = isComingSoon || isSoldOut;
+  const isDiscoverySet = isDiscoverySetProductId(perfume.id);
+  const isRoseWater = perfume.categoryId === "rose-water";
+  const isKapoorCarFragrance = perfume.categoryId === "car-fragrance";
   const [notifyContact, setNotifyContact] = useState("");
   const [isNotifySaving, setIsNotifySaving] = useState(false);
+  const notifyRef = useRef<HTMLDivElement>(null);
+  const productDescriptor = perfume.inspirationBrand?.trim()
+    ? `${perfume.name} (${perfume.size}) inspired by ${perfume.inspirationBrand} ${perfume.inspiration}`
+    : `${perfume.name} (${perfume.size})`;
   const whatsappMessage = encodeURIComponent(
-    `Hello HUME Fragrance, I am interested in ${perfume.name} (${perfume.size}) inspired by ${perfume.inspirationBrand} ${perfume.inspiration}. Please help me order it.`,
+    isComingSoon
+      ? `Hello HUME Fragrance, I am interested in ${perfume.name} (${perfume.size}). Please notify me when it launches.`
+      : `Hello HUME Fragrance, I am interested in ${productDescriptor}. Please help me order it.`,
   );
 
   const handleAddToCart = () => {
+    if (isDiscoverySet) {
+      router.push(DISCOVERY_SET_PATH);
+      return;
+    }
+
+    if (isComingSoon) {
+      notifyRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      toast({ title: "Join the launch waitlist" });
+      return;
+    }
+
     if (isSoldOut) {
       toast({ title: "Currently sold out" });
       return;
@@ -81,12 +112,14 @@ export default function ProductDetailClient({ perfume }: { perfume: PerfumeData 
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         className={`w-full py-4 text-[11px] uppercase tracking-[0.28em] transition-opacity ${
-          isSoldOut
+          isSoldOut && !isComingSoon
             ? "cursor-not-allowed bg-muted text-muted-foreground"
+            : isComingSoon
+            ? "bg-foreground text-background hover:opacity-90"
             : "bg-foreground text-background hover:opacity-90"
         }`}
       >
-        {isSoldOut ? "Sold Out" : "Add to Bag"}
+        {isDiscoverySet || isComingSoon ? "Join Waitlist" : isSoldOut ? "Sold Out" : "Add to Bag"}
       </motion.button>
 
       <a
@@ -96,32 +129,36 @@ export default function ProductDetailClient({ perfume }: { perfume: PerfumeData 
         className="flex w-full items-center justify-center gap-2 rounded-md border border-[#25D366]/35 bg-[#25D366]/10 px-4 py-3 text-sm font-semibold text-[#128C7E] transition-colors hover:bg-[#25D366]/15"
       >
         <MessageCircle className="h-4 w-4" />
-        Order or ask on WhatsApp
+        {isComingSoon ? "Launch updates on WhatsApp" : "Order or ask on WhatsApp"}
       </a>
 
-      {isSoldOut ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-3">
+      {isUnavailable ? (
+        <div ref={notifyRef} className="rounded-xl border border-border bg-secondary/30 p-3">
           <div className="flex items-start gap-3">
-            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
+            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
               <Bell className="h-4 w-4" />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-emerald-950">Notify when back</p>
-              <p className="mt-1 text-xs leading-5 text-emerald-900/70">
-                Leave email or mobile and we will message you when this perfume is ready.
+              <p className="text-sm font-semibold text-foreground">
+                {isComingSoon ? "Join launch waitlist" : "Notify when back"}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                {isComingSoon
+                  ? "Leave email or mobile and we will message you before this product opens for checkout."
+                  : "Leave email or mobile and we will message you when this perfume is ready."}
               </p>
               <div className="mt-3 flex gap-2">
                 <input
                   value={notifyContact}
                   onChange={(event) => setNotifyContact(event.target.value)}
                   placeholder="Email or mobile"
-                  className="min-h-10 flex-1 rounded-md border border-emerald-200 bg-white px-3 text-sm outline-none focus:border-emerald-500"
+                  className="min-h-10 flex-1 rounded-md border border-border bg-background px-3 text-sm outline-none focus:border-foreground"
                 />
                 <button
                   type="button"
                   onClick={handleNotifySubmit}
                   disabled={isNotifySaving}
-                  className="min-h-10 rounded-md bg-emerald-700 px-4 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"
+                  className="min-h-10 rounded-md bg-foreground px-4 text-xs font-semibold text-background transition hover:opacity-90 disabled:opacity-60"
                 >
                   {isNotifySaving ? "Saving" : "Notify"}
                 </button>
@@ -135,19 +172,31 @@ export default function ProductDetailClient({ perfume }: { perfume: PerfumeData 
         <div className="flex flex-col items-center gap-1 text-center">
           <Truck className="h-4 w-4 text-foreground/70" />
           <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-            24h dispatch
+            {isComingSoon
+              ? "Waitlist open"
+              : isRoseWater
+                ? "Daily mist"
+                : isKapoorCarFragrance
+                  ? "Car ritual"
+                  : "24h dispatch"}
           </p>
         </div>
         <div className="flex flex-col items-center gap-1 text-center">
           <ShieldCheck className="h-4 w-4 text-foreground/70" />
           <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-            IFRA safe
+            {isComingSoon
+              ? "Launch notice"
+              : isRoseWater
+                ? "Gulab jal"
+                : isKapoorCarFragrance
+                  ? "Kapoor aroma"
+                  : "IFRA safe"}
           </p>
         </div>
         <div className="flex flex-col items-center gap-1 text-center">
           <WalletCards className="h-4 w-4 text-foreground/70" />
           <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-            UPI / cards
+            {isComingSoon ? "Checkout off" : "UPI / cards"}
           </p>
         </div>
       </div>
@@ -156,17 +205,19 @@ export default function ProductDetailClient({ perfume }: { perfume: PerfumeData 
         <div className="mx-auto flex max-w-xl items-center justify-between gap-4">
           <div>
             <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Price</p>
-            <p className="font-serif text-xl">{formatINR(perfume.price)}</p>
+            <p className="font-serif text-xl">{priceLabel ?? formatINR(perfume.price)}</p>
           </div>
           <button
             onClick={handleAddToCart}
             className={`inline-flex min-w-[9rem] items-center justify-center px-6 py-3 text-[10px] uppercase tracking-[0.28em] ${
-              isSoldOut
+              isSoldOut && !isComingSoon
                 ? "cursor-not-allowed bg-muted text-muted-foreground"
+                : isComingSoon
+                ? "bg-foreground text-background"
                 : "bg-foreground text-background"
             }`}
           >
-            {isSoldOut ? "Sold Out" : "Add to Bag"}
+            {isDiscoverySet || isComingSoon ? "Waitlist" : isSoldOut ? "Sold Out" : "Add to Bag"}
           </button>
         </div>
       </div>

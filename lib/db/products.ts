@@ -4,6 +4,7 @@ import { eq, inArray, sql } from "drizzle-orm";
 import { type PerfumeData } from "@/data/perfumes";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getProductSeoSlug } from "@/lib/product-route";
+import { DISCOVERY_SET_PRICE, isDiscoverySetProductId } from "@/lib/discovery-set";
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
 
@@ -115,7 +116,7 @@ function transformProduct(
     dbCategoryTags: mappedCategories.map((c) => ({ id: c.id, label: c.label || c.id })),
     gender: product.gender,
     images: imageUrls.map((url) => withCloudinaryTransforms(url)),
-    price: parseFloat(product.price),
+    price: isDiscoverySetProductId(product.id) ? DISCOVERY_SET_PRICE : parseFloat(product.price),
     priceCurrency: "INR",
     description: product.description,
     seoDescription: product.seoDescription,

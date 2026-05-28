@@ -415,6 +415,18 @@ function CheckoutDetailSheet({
                         </div>
                       </div>
                     ) : null}
+                    {item.sampleSelections?.length ? (
+                      <div className="mt-2 rounded-md border border-emerald-400/10 bg-emerald-400/[0.04] p-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200/45">Discovery samples</p>
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          {item.sampleSelections.map((selection) => (
+                            <span key={selection.id} className="rounded bg-emerald-400/[0.08] px-2 py-1 text-xs text-emerald-100/65">
+                              {selection.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 ))
               ) : (

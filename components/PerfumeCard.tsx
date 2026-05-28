@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { formatINR } from "@/lib/currency";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getProductPath } from "@/lib/product-route";
+import { DISCOVERY_SET_PATH, isDiscoverySetProductId } from "@/lib/discovery-set";
 
 interface PerfumeCardProps {
   id: string;
@@ -53,6 +54,7 @@ const PerfumeCard = ({
   const { addItem } = useCart();
   const router = useRouter();
   const [upgradeImage, setUpgradeImage] = useState(false);
+  const isDiscoverySet = isDiscoverySetProductId(id);
   const productPath = getProductPath({
     id,
     name,
@@ -99,6 +101,10 @@ const PerfumeCard = ({
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (isDiscoverySet) {
+      router.push(DISCOVERY_SET_PATH);
+      return;
+    }
     if (soldOut) {
       toast({
         title: "Currently sold out",
@@ -163,8 +169,13 @@ const PerfumeCard = ({
             />
             <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/5 transition-all duration-500" />
           </Link>
-          {(bestSeller || humeSpecial || limitedStock || soldOut) && (
+          {(isDiscoverySet || bestSeller || humeSpecial || limitedStock || soldOut) && (
             <div className="absolute left-3 top-3 flex flex-col gap-2">
+              {isDiscoverySet && (
+                <span className="inline-flex items-center bg-[#2a2116] px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-[#f7d79b]">
+                  Discovery Set
+                </span>
+              )}
               {soldOut && (
                 <span className="inline-flex items-center bg-red-600 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-white">
                   Sold Out
@@ -194,8 +205,14 @@ const PerfumeCard = ({
                 ? "cursor-not-allowed opacity-60"
                 : "md:hover:-translate-y-0.5 md:hover:border-white/60 md:hover:bg-white/24 md:hover:shadow-[0_24px_46px_rgba(15,23,42,0.30),inset_0_1px_0_rgba(255,255,255,0.68)]"
             }`}
-            aria-label={soldOut ? `${name} is sold out` : `Add ${name} to bag`}
-            title={soldOut ? "Sold out" : "Add to bag"}
+            aria-label={
+              isDiscoverySet
+                ? "Build Discovery Set"
+                : soldOut
+                  ? `${name} is sold out`
+                  : `Add ${name} to bag`
+            }
+            title={isDiscoverySet ? "Build Discovery Set" : soldOut ? "Sold out" : "Add to bag"}
           >
             <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.46)_0%,rgba(255,255,255,0.12)_38%,rgba(255,255,255,0.04)_100%)]" />
             <span className="pointer-events-none absolute -left-5 -top-5 h-12 w-12 rounded-full bg-white/35 blur-xl" />

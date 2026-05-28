@@ -38,6 +38,7 @@ export default function NavigationLoadingToast() {
   const pathname = usePathname();
   const activeToastRef = useRef<ToastHandle | null>(null);
   const fallbackTimerRef = useRef<number | null>(null);
+  const lastDocumentLocationRef = useRef<string | null>(null);
 
   const dismissLoadingToast = useCallback(() => {
     activeToastRef.current?.dismiss();
@@ -63,10 +64,13 @@ export default function NavigationLoadingToast() {
   }, [dismissLoadingToast]);
 
   useEffect(() => {
+    lastDocumentLocationRef.current = `${window.location.pathname}${window.location.search}`;
     dismissLoadingToast();
   }, [dismissLoadingToast, pathname]);
 
   useEffect(() => {
+    lastDocumentLocationRef.current = `${window.location.pathname}${window.location.search}`;
+
     const handleClick = (event: MouseEvent) => {
       if (event.button !== 0 || isModifiedClick(event)) return;
       if (!getInternalHref(event.target)) return;
@@ -77,7 +81,18 @@ export default function NavigationLoadingToast() {
     };
 
     const handlePopState = () => {
+      const currentDocumentLocation = `${window.location.pathname}${window.location.search}`;
+      if (currentDocumentLocation === lastDocumentLocationRef.current) {
+        dismissLoadingToast();
+        return;
+      }
+
+      lastDocumentLocationRef.current = currentDocumentLocation;
       showLoadingToast();
+    };
+
+    const handleHashChange = () => {
+      dismissLoadingToast();
     };
 
     const handleProgrammaticNavigation = (event: Event) => {
@@ -97,6 +112,7 @@ export default function NavigationLoadingToast() {
 
     document.addEventListener("click", handleClick, true);
     window.addEventListener("popstate", handlePopState);
+    window.addEventListener("hashchange", handleHashChange);
     window.addEventListener(
       NAVIGATION_LOADING_EVENT,
       handleProgrammaticNavigation,
@@ -105,6 +121,7 @@ export default function NavigationLoadingToast() {
     return () => {
       document.removeEventListener("click", handleClick, true);
       window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("hashchange", handleHashChange);
       window.removeEventListener(
         NAVIGATION_LOADING_EVENT,
         handleProgrammaticNavigation,

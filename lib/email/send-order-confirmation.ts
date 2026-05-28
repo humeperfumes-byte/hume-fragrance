@@ -26,6 +26,11 @@ export interface OrderEmailData {
     quantity: number;
     price: number;
     isGift?: boolean;
+    sampleSelections?: Array<{
+      id: string;
+      name: string;
+      inspiration?: string;
+    }>;
   }>;
 }
 
@@ -50,7 +55,15 @@ export async function sendOrderConfirmationEmail(order: OrderEmailData) {
       inspiredBy: item.inspiration || "Original",
       quantity: item.quantity,
       price: `Rs. ${item.price.toFixed(2)}`,
-      meta: item.size ? `${item.size}${item.isGift ? ' | Gift' : ''}` : undefined,
+      meta: [
+        item.size,
+        item.isGift ? "Gift" : null,
+        item.sampleSelections?.length
+          ? `Samples: ${item.sampleSelections.map((selection) => selection.name).join(", ")}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" | ") || undefined,
       // The template falls back to a default image if imageUrl is undefined
     }));
 

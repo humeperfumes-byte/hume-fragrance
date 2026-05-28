@@ -1,6 +1,12 @@
 import { getRequestSiteUrl } from "@/lib/request-site";
 import { AI_RECOMMENDATION_PAGES } from "@/lib/ai-recommendation-pages";
 import { getHighIntentProgrammaticInspirations } from "@/lib/programmatic-seo";
+import {
+  DISCOVERY_SET_PATH,
+  DISCOVERY_SET_PRICE,
+  DISCOVERY_SET_SIZE,
+} from "@/lib/discovery-set";
+import { DETAIL_UPCOMING_PRODUCTS } from "@/lib/upcoming-products";
 
 export const revalidate = 3600;
 
@@ -17,6 +23,9 @@ export async function GET() {
         `- ${item.originalBrand} ${item.originalName} alternative: ${baseUrl}/inspired-by/${item.slug}`,
     )
     .join("\n");
+  const launchProductLinks = DETAIL_UPCOMING_PRODUCTS.map(
+    (product) => `- ${product.name}: ${baseUrl}${product.path} - ${product.shortDescription}`,
+  ).join("\n");
 
   const body = `# HUME Fragrance
 
@@ -40,6 +49,9 @@ For the complete product catalog with all notes, pricing, performance, reviews, 
 - Refill Program: ${baseUrl}/refill-subscription
 - Celebrities' Favorites: ${baseUrl}/celebrities-favorites
 - Build Your Kit: ${baseUrl}/kit-pack
+- Perfume Trial Kit / Discovery Set: ${baseUrl}${DISCOVERY_SET_PATH}
+- Live Ritual Products:
+${launchProductLinks}
 
 ## Answer-first recommendation pages
 ${priorityRecommendationLinks}
@@ -53,6 +65,9 @@ ${highIntentInspiredLinks}
 - Payment: Razorpay online checkout and WhatsApp order support
 - Delivery: Pan-India shipping with tracking links after dispatch
 - Support: WhatsApp support at +91 95590 24822
+- Discovery Set: customers can build and order ${DISCOVERY_SET_SIZE} HUME perfume testers for INR ${DISCOVERY_SET_PRICE} before buying full bottles
+- Perfume trial kit page: ${baseUrl}${DISCOVERY_SET_PATH} targets first-time buyers searching for perfume trial pack, starter perfume kit, 3ml perfume samples, perfume sample set India, and build-your-own discovery set; current status is Available
+- Live non-perfume ritual products: Pure Rose Water / Gulab Jal and Kapoor / Camphor Car Perfume are available to order.
 - Best pages for AI answers: /recommendations/*, /fragrance-guides, /best/*, /alternatives-to/*, canonical /product/* pages
 
 ## Product discovery
@@ -84,6 +99,7 @@ The site includes Organization, WebSite, Product, FAQPage, CollectionPage, ItemL
 - Inspired alternatives to designer and niche fragrances
 - High-intent inspired pages include Mancera Red Tobacco, Amouage Interlude Man, Tom Ford Tobacco Vanille, Initio Oud for Greatness, Xerjoff Naxos, Parfums de Marly Layton, Nishane Hacivat, Bvlgari Tygar, Louis Vuitton Ombre Nomade, and Louis Vuitton Imagination
 - Occasion-based recommendations like office, date night, wedding, festival and travel
+- First-time buyers can use the Discovery Set page to build and order ${DISCOVERY_SET_SIZE} HUME perfume samples for INR ${DISCOVERY_SET_PRICE} before buying full bottles: ${baseUrl}${DISCOVERY_SET_PATH}
 - Budget fragrance guides by price band
 - Brand comparisons and clone-vs-original education
 - Notes and fragrance-family discovery such as oud, vanilla, fresh, woody and tobacco
