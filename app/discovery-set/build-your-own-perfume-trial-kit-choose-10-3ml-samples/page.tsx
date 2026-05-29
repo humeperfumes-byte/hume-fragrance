@@ -149,17 +149,17 @@ export async function generateMetadata(): Promise<Metadata> {
 
 function DiscoverySetSeoContent() {
   return (
-    <section className="bg-[#070604] px-4 py-14 text-[#f7efe3] sm:px-6 lg:px-8 lg:py-20">
+    <section className="border-t border-border bg-background px-4 py-14 text-foreground sm:px-6 lg:px-8 lg:py-20">
       <div className="mx-auto max-w-[1120px]">
         <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-[#c08b3d]">
+            <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-gold">
               Perfume Trial Pack
             </p>
             <h2 className="mt-4 max-w-2xl font-serif text-4xl font-light leading-tight sm:text-5xl">
               A starter perfume kit for finding your signature scent.
             </h2>
-            <p className="mt-5 max-w-2xl text-sm leading-7 text-[#b9ad9d] sm:text-base">
+            <p className="mt-5 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
               The HUME Discovery Set is built for customers who want to test perfume
               on skin before buying a full bottle. Build your own {DISCOVERY_SET_SIZE}
               fragrance sample set, compare performance through the day, and checkout
@@ -169,20 +169,20 @@ function DiscoverySetSeoContent() {
 
           <div className="grid gap-3 sm:grid-cols-2">
             {discoverySetBenefits.map((benefit) => (
-              <article key={benefit.title} className="border border-white/10 bg-white/[0.035] p-4">
-                <h3 className="text-sm font-semibold text-[#f7efe3]">{benefit.title}</h3>
-                <p className="mt-2 text-xs leading-6 text-[#b9ad9d]">{benefit.body}</p>
+              <article key={benefit.title} className="border border-border bg-secondary p-4">
+                <h3 className="text-sm font-semibold text-foreground">{benefit.title}</h3>
+                <p className="mt-2 text-xs leading-6 text-muted-foreground">{benefit.body}</p>
               </article>
             ))}
           </div>
         </div>
 
         <div className="mt-12 grid gap-8 lg:grid-cols-[0.75fr_1.25fr] lg:gap-12">
-          <div className="border border-white/10 bg-[#13100d] p-5">
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#c08b3d]">
+          <div className="border border-border bg-secondary p-5">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.28em] text-gold">
               Best For
             </h3>
-            <ul className="mt-4 grid gap-2 text-sm text-[#d9cebf]">
+            <ul className="mt-4 grid gap-2 text-sm text-foreground/85">
               {discoverySetUseCases.map((item) => (
                 <li key={item}>- {item}</li>
               ))}
@@ -193,11 +193,11 @@ function DiscoverySetSeoContent() {
             <h3 className="font-serif text-3xl font-light">Discovery Set FAQ</h3>
             <div className="mt-5 grid gap-3">
               {discoverySetFaq.map((item) => (
-                <details key={item.question} className="group border border-white/10 bg-white/[0.03] p-4">
-                  <summary className="cursor-pointer text-sm font-semibold text-[#f7efe3]">
+                <details key={item.question} className="group border border-border bg-secondary p-4">
+                  <summary className="cursor-pointer text-sm font-semibold text-foreground">
                     {item.question}
                   </summary>
-                  <p className="mt-3 text-sm leading-7 text-[#b9ad9d]">{item.answer}</p>
+                  <p className="mt-3 text-sm leading-7 text-muted-foreground">{item.answer}</p>
                 </details>
               ))}
             </div>

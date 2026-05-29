@@ -119,6 +119,7 @@ export const UPCOMING_PRODUCTS: UpcomingProduct[] = [
     eyebrow: "Gulab Jal",
     category: "Rose Water / Skin Ritual",
     inspiration: "100% pure gulab jal for face mist, skin ritual and daily freshness",
+    image: "/images/upcoming/rose-water1.png",
     priceLabel: formatINR(PURE_ROSE_WATER_PRICE),
     shortDescription:
       "Pure gulab jal for face mist, daily freshness and simple Indian skincare rituals.",
@@ -202,9 +203,11 @@ export const UPCOMING_PRODUCTS: UpcomingProduct[] = [
       size: "100ml",
       gender: "Unisex",
       images: [
-        "/images/upcoming/pure-rose-water.svg",
-        "/images/perfume-packaging.png",
-        "/images/notes.png",
+        "/images/upcoming/rose-water1.png",
+        "/images/upcoming/rose-water2.png",
+        "/images/upcoming/rose-water3.png",
+        "/images/upcoming/rose-water4.png",
+        "/images/upcoming/rose-water5.png",
       ],
       description:
         "Pure gulab jal for face mist, daily freshness and simple Indian skincare routines.",
@@ -236,6 +239,7 @@ export const UPCOMING_PRODUCTS: UpcomingProduct[] = [
     eyebrow: "Car Fragrance",
     category: "Camphor / Car Perfume",
     inspiration: "Kapoor aroma for car bad odour control and a clean natural car ritual",
+    image: "/images/upcoming/kapoor1.png",
     priceLabel: formatINR(KAPOOR_CAR_STABILISER_PRICE),
     shortDescription:
       "A kapoor-inspired car fragrance for a cleaner-smelling cabin and natural camphor freshness.",
@@ -320,9 +324,10 @@ export const UPCOMING_PRODUCTS: UpcomingProduct[] = [
       size: "Car fragrance",
       gender: "Unisex",
       images: [
-        "/images/upcoming/kapoor-car-perfume.svg",
-        "/images/perfume-packaging.png",
-        "/images/black-perfume.png",
+        "/images/upcoming/kapoor1.png",
+        "/images/upcoming/kapoor2.png",
+        "/images/upcoming/kapoor3.png",
+        "/images/upcoming/kapoor4.png",
       ],
       description:
         "A kapoor-inspired car fragrance for a cleaner-smelling cabin and natural camphor freshness.",
@@ -379,6 +384,7 @@ export function getUpcomingProductAsPerfume(product: UpcomingProduct): PerfumeDa
     pairingTips: product.detail.pairingTips,
     badges: {
       humeSpecial: true,
+      comingSoon: product.id === "pure-rose-water-gulab-jal" || product.id === "kapoor-camphor-car-perfume",
     },
     notes: product.detail.notes,
     longevity: product.detail.longevity,

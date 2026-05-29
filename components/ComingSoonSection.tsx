@@ -29,9 +29,6 @@ function ComingSoonVisual({ product }: { product: UpcomingProduct }) {
           <p className="mt-3 font-serif text-4xl font-light text-black/80">
             {product.visualLabel}
           </p>
-          <p className="mt-4 text-[10px] uppercase tracking-[0.24em] text-black/45">
-            Now Live
-          </p>
         </div>
       </div>
     </div>
@@ -44,7 +41,7 @@ export default function ComingSoonSection() {
       <div className="container-luxury">
         <div className="mb-8 flex items-center justify-between">
           <h2 className="font-serif text-4xl font-light italic md:text-5xl">
-            New Launches
+            Coming Soon
           </h2>
           <p className="hidden text-[11px] uppercase tracking-[0.3em] text-muted-foreground sm:block">
             Shop Live
@@ -57,11 +54,6 @@ export default function ComingSoonSection() {
               <div className="relative mb-4 overflow-hidden bg-secondary shadow-[0_12px_30px_rgba(12,14,18,0.12)] sm:mb-5">
                 <div className="relative aspect-[3/4] w-full">
                   <ComingSoonVisual product={product} />
-                </div>
-                <div className="absolute left-3 top-3 flex flex-col gap-2">
-                  <span className="inline-flex items-center bg-[#2a2116] px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-[#f7d79b]">
-                    Now Live
-                  </span>
                 </div>
                 <span className="absolute bottom-3 right-3 z-10 inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border border-white/45 bg-white/18 text-white shadow-[0_18px_36px_rgba(15,23,42,0.24),inset_0_1px_0_rgba(255,255,255,0.55),inset_0_-1px_0_rgba(255,255,255,0.18)] ring-1 ring-black/5 backdrop-blur-md backdrop-saturate-150 sm:h-12 sm:w-12">
                   <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.46)_0%,rgba(255,255,255,0.12)_38%,rgba(255,255,255,0.04)_100%)]" />
@@ -81,13 +73,13 @@ export default function ComingSoonSection() {
                     {visual}
                   </Link>
 
-                  <p className="mb-2 min-h-[2rem] text-[9px] uppercase leading-[1.45] tracking-[0.18em] text-muted-foreground/75 sm:text-[10px]">
+                  <p className="mb-1.5 text-[8px] font-light uppercase leading-[1.35] tracking-[0.14em] text-muted-foreground/75 sm:text-[9px]">
                     {product.category}
                   </p>
-                  <h3 className="mb-1 font-serif text-[1.22rem] font-light leading-tight tracking-wide md:text-2xl">
+                  <h3 className="mb-0.5 line-clamp-2 font-serif text-base font-light leading-tight tracking-wide md:text-lg">
                     {product.name}
                   </h3>
-                  <p className="line-clamp-2 text-[0.86rem] italic leading-snug text-muted-foreground/90 sm:text-[0.95rem]">
+                  <p className="line-clamp-2 text-[10px] font-light leading-snug text-muted-foreground/90 sm:text-[11px]">
                     Inspired by {product.inspiration}
                   </p>
                   <p className="mt-10 text-[1.28rem] font-light leading-none tracking-tight text-foreground/90 sm:text-[1.35rem]">

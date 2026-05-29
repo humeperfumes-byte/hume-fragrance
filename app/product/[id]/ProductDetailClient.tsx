@@ -119,7 +119,7 @@ export default function ProductDetailClient({
             : "bg-foreground text-background hover:opacity-90"
         }`}
       >
-        {isDiscoverySet || isComingSoon ? "Join Waitlist" : isSoldOut ? "Sold Out" : "Add to Bag"}
+        {isDiscoverySet ? "Join Waitlist" : isComingSoon ? "Coming Soon" : isSoldOut ? "Sold Out" : "Add to Bag"}
       </motion.button>
 
       <a
@@ -217,7 +217,7 @@ export default function ProductDetailClient({
                 : "bg-foreground text-background"
             }`}
           >
-            {isDiscoverySet || isComingSoon ? "Waitlist" : isSoldOut ? "Sold Out" : "Add to Bag"}
+            {isDiscoverySet ? "Waitlist" : isComingSoon ? "Coming Soon" : isSoldOut ? "Sold Out" : "Add to Bag"}
           </button>
         </div>
       </div>
