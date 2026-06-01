@@ -8,7 +8,8 @@ export const DISCOVERY_SET_SIZE = "10 x 3ml";
 export const DISCOVERY_SET_SAMPLE_COUNT = 10;
 
 export const DISCOVERY_SET_IMAGES = [
-  "/images/bg/tester box.png",
+  "/images/bg/tester_box1.png",
+  "/images/bg/tester_box.png",
   "/images/bg/tester1.png",
   "/images/bg/tester2.png",
   "/images/bg/tester3.png",

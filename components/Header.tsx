@@ -14,6 +14,8 @@ import SearchOverlay from "./SearchOverlay";
 import { celebrityFavorites } from "@/lib/celebrity-favorites";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
+import AnnouncementBar from "@/components/AnnouncementBar";
+import { DISCOVERY_SET_PATH } from "@/lib/discovery-set";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -53,6 +55,7 @@ const Header = () => {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm">
+      <AnnouncementBar />
       <div className="container-luxury">
         <div className="flex items-center justify-between py-5">
           <div className="flex items-center gap-6">
@@ -244,6 +247,17 @@ const Header = () => {
                     >
                       <span className="inline-flex w-full items-center justify-between font-serif text-[1.45rem] italic leading-none">
                         <span>Best Sellers</span>
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        navigateTo(DISCOVERY_SET_PATH);
+                      }}
+                      className="w-full border-b border-border pb-2 text-left"
+                    >
+                      <span className="inline-flex w-full items-center justify-between font-serif text-[1.45rem] italic leading-none">
+                        <span>Discovery Set</span>
                       </span>
                     </button>
                     <button

@@ -20,7 +20,7 @@ Primary files:
 - Admin shell: `components/admin/AdminShell.tsx`
 - Admin layout: `app/admin/(dashboard)/layout.tsx`
 - Dashboard: `app/admin/(dashboard)/dashboard/page.tsx`
-- Intelligence: `app/admin/(dashboard)/intelligence/page.tsx`
+- Intelligence: currently disabled; direct visits redirect to Dashboard
 - Checkouts: `app/admin/(dashboard)/checkouts/page.tsx`
 - Cart leads: `app/admin/(dashboard)/cart/page.tsx`
 - Coupon leads: `app/admin/(dashboard)/coupon-leads/page.tsx`
@@ -53,7 +53,6 @@ Avoid:
 Current admin navigation:
 
 - Dashboard
-- Intelligence
 - Orders
 - Checkouts
 - Cart Leads
@@ -79,7 +78,7 @@ Admin top bar has:
 
 Important business rule:
 
-- Dashboard and Intelligence are market-filtered operating views.
+- Dashboard is a market-filtered operating view.
 - Detail work pages such as Checkouts should show all operational rows unless
   the user explicitly asks otherwise.
 
@@ -167,6 +166,13 @@ API:
 - `app/api/admin/dashboard/route.ts`
 
 ## Intelligence
+
+Current status:
+
+- Behavioral Intelligence is disabled to reduce Neon database load.
+- The admin navigation no longer links to it.
+- `app/admin/(dashboard)/intelligence/page.tsx` redirects to Dashboard.
+- `app/api/admin/intelligence/route.ts` returns an empty disabled response.
 
 Purpose:
 

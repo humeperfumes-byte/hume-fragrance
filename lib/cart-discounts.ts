@@ -39,7 +39,7 @@ export const WELCOME_BACK_CELEBRATED_REWARD_KEY =
   "hume_welcome_back_celebrated_reward_v1";
 export const WELCOME_BACK_MIN_VISIT_GAP_MS = 10 * 60 * 1000;
 export const WELCOME_BACK_DURATION_MS = 24 * 60 * 60 * 1000;
-export const WELCOME_BACK_10_MIN_SUBTOTAL = 1200;
+export const WELCOME_BACK_10_MIN_SUBTOTAL = 1000;
 
 function numeric(value: string | null): number {
   const parsed = Number(value ?? "0");

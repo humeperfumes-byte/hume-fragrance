@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import type { FragranceSelection } from "@/lib/discovery-set";
+import { useSiteControls } from "@/hooks/use-site-controls";
 
 export interface CartItem {
   id: string;
@@ -40,6 +41,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const settings = useSiteControls();
 
   const emitTracking = (eventType: string, payload?: Record<string, unknown>) => {
     if (typeof window === "undefined") return;
@@ -116,7 +118,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const clearCart = () => setItems([]);
 
   // Keep gift eligibility consistent with spend tiers:
-  // 1 gift above 1499, 2 gifts above 2099.
+      // 1 gift above the first threshold, 2 gifts above the second threshold.
   useEffect(() => {
     if (!hydrated) return;
     setItems((prev) => {
@@ -125,7 +127,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           sum + (!item.isGift ? item.price * item.quantity : 0),
         0
       );
-      const allowedGiftCount = paidSubtotal >= 2099 ? 2 : paidSubtotal >= 1499 ? 1 : 0;
+      const allowedGiftCount =
+        paidSubtotal >= settings.giftTwoThreshold
+          ? 2
+          : paidSubtotal >= settings.giftOneThreshold
+            ? 1
+            : 0;
       const paidItems = prev.filter((item) => !item.isGift);
       const nextGiftItems = Array.from({ length: allowedGiftCount }, (_, index) => ({
         id: `gift-tier-${index + 1}`,
@@ -148,7 +155,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       }
       return next;
     });
-  }, [items, hydrated]);
+  }, [items, hydrated, settings.giftOneThreshold, settings.giftTwoThreshold]);
 
   // Persist cart to local storage
   useEffect(() => {

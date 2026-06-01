@@ -9,6 +9,7 @@ import { celebrityFavorites } from "@/lib/celebrity-favorites";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getClientCachedProducts } from "@/lib/client-products-cache";
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
+import { DISCOVERY_SET_PATH } from "@/lib/discovery-set";
 
 type FilterType = "nature" | "gender" | "occasion" | "celebrity";
 
@@ -31,6 +32,12 @@ const shopSections: ShopSection[] = [
     title: "Discover",
     icon: Sparkles,
     items: [
+      {
+        label: "Discovery Set",
+        description: "Build your own 10 x 3ml sample set",
+        filterType: "occasion",
+        href: DISCOVERY_SET_PATH,
+      },
       {
         label: "Scent Quiz (60s)",
         description: "Find your fragrance in one minute",

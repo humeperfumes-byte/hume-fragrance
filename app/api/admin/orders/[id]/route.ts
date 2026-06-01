@@ -100,3 +100,26 @@ export async function PATCH(
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const unauthorized = requireAdminToken(req);
+  if (unauthorized) return unauthorized;
+
+  try {
+    const { id: orderId } = await params;
+
+    if (!orderId) {
+      return NextResponse.json({ error: "Order ID is required" }, { status: 400 });
+    }
+
+    await db.delete(orders).where(eq(orders.id, orderId));
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("Failed to delete order:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}

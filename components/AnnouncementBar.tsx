@@ -3,15 +3,15 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { detectGeoRegionClient, getGeoExperience } from "@/lib/geo";
+import { useSiteControls } from "@/hooks/use-site-controls";
 
 const AnnouncementBar = () => {
   const [isVisible, setIsVisible] = useState(true);
-  const geoCopy = getGeoExperience(detectGeoRegionClient());
+  const settings = useSiteControls();
 
   return (
     <AnimatePresence>
-      {isVisible && (
+      {isVisible && settings.announcementEnabled && (
         <motion.div
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: "auto", opacity: 1 }}
@@ -21,9 +21,7 @@ const AnnouncementBar = () => {
         >
           <div className="relative flex items-center justify-center py-2.5 px-10">
             <span className="font-light">
-              {geoCopy.announcement.split("HUME15")[0]}
-              <span className="font-medium">HUME15</span>
-              {geoCopy.announcement.split("HUME15")[1] ?? ""}
+              {settings.announcementText}
             </span>
             <button
               onClick={() => setIsVisible(false)}
@@ -40,4 +38,3 @@ const AnnouncementBar = () => {
 };
 
 export default AnnouncementBar;
-

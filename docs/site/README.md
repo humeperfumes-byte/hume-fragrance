@@ -51,7 +51,8 @@ Global wrappers:
 - Global analytics trackers:
   - `components/ConsentTimelineTracker.tsx`
   - `components/CartAnalyticsTracker.tsx`
-  - `components/analytics/BehavioralTracker.tsx`
+  - `components/analytics/BehavioralTracker.tsx` exists but is currently not
+    mounted because behavioral intelligence is disabled for Neon cost control
 
 ## Global Runtime Flow
 

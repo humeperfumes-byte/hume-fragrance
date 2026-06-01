@@ -229,7 +229,7 @@ export default function DashboardPage() {
         label: "Fix funnel leaks",
         value: formatRate(analytics.conversionFunnel.draftToOrderRate),
         helper: "Checkout draft to order conversion",
-        href: `/admin/intelligence${marketQuery}`,
+        href: `/admin/checkouts${marketQuery}`,
         tone: "neutral",
       },
     ];

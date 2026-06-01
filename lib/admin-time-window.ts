@@ -17,11 +17,11 @@ export const ADMIN_TIME_WINDOW_OPTIONS: AdminTimeWindowOption[] = [
 
 export function parseAdminTimeWindow(value: string | string[] | null | undefined) {
   const raw = Array.isArray(value) ? value[0] : value;
-  const parsed = Number(raw || "720");
+  const parsed = Number(raw || "24");
   const hours = ADMIN_TIME_WINDOW_OPTIONS.some((option) => option.hours === parsed)
     ? parsed
-    : 720;
-  const option = ADMIN_TIME_WINDOW_OPTIONS.find((entry) => entry.hours === hours) ?? ADMIN_TIME_WINDOW_OPTIONS[7];
+    : 24;
+  const option = ADMIN_TIME_WINDOW_OPTIONS.find((entry) => entry.hours === hours) ?? ADMIN_TIME_WINDOW_OPTIONS[0];
 
   return {
     hours,

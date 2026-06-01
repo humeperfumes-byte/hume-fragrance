@@ -134,7 +134,7 @@ It should feel like a daily operating system, not decorative analytics.
 Core admin views:
 
 - Dashboard: revenue, funnel, abandoned value, source quality, product demand
-- Intelligence: customer journey and intent signals
+- Intelligence: currently disabled to reduce Neon database load
 - Checkouts: abandoned checkout CRM
 - Cart Leads: cart/coupon/checkout connected leads
 - Coupon Leads: coupon claim follow-up opportunities
@@ -143,7 +143,7 @@ Core admin views:
 
 Admin must support:
 
-- India vs All market view for Dashboard/Intelligence
+- India vs All market view for Dashboard
 - date windows such as last 24 hours, 2 days, 3 days, 5 days, 10 days, etc.
 - owner/admin traffic filtering
 - visible actions, not hover-only actions

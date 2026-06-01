@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { CheckCircle2, Copy, ExternalLink, MessageCircle, Package, Truck } from "lucide-react";
+import { CheckCircle2, Copy, ExternalLink, MessageCircle, Package, Trash2, Truck } from "lucide-react";
 import { buildPublicTrackingUrl } from "@/lib/tracking-url";
 
 export function formatINR(amount: number | string): string {
@@ -299,6 +299,27 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
         }),
       });
       if (!res.ok) throw new Error("Failed to update tracking");
+      window.location.reload();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleRemoveOrder = async () => {
+    if (!selectedOrder) return;
+    const confirmed = window.confirm(
+      `Remove order ${selectedOrder.orderNumber}? This is useful for flow tests, but it will delete the order record from admin.`,
+    );
+    if (!confirmed) return;
+
+    setIsUpdating(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${selectedOrder.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to remove order");
       window.location.reload();
     } catch (error) {
       console.error(error);
@@ -757,6 +778,16 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
                         CANCEL ORDER
                       </Button>
                     )}
+                    <Button
+                      type="button"
+                      onClick={handleRemoveOrder}
+                      disabled={isUpdating}
+                      variant="outline"
+                      className="col-span-2 rounded-xl border-red-500/40 bg-red-500/[0.04] text-red-300 hover:bg-red-500/10 font-bold text-[10px] tracking-widest uppercase h-10"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      REMOVE TEST ORDER
+                    </Button>
                   </div>
                 </div>
 

@@ -13,6 +13,7 @@ import {
 import { detectGeoRegionClient, getGeoExperience } from "@/lib/geo";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import type { HeroSlide } from "@/lib/db/images";
+import { useSiteControls } from "@/hooks/use-site-controls";
 
 const fallbackSlides = [
   {
@@ -41,6 +42,7 @@ const Hero = ({
   initialSlides?: HeroSlide[];
 }) => {
   const geoCopy = getGeoExperience(detectGeoRegionClient());
+  const settings = useSiteControls();
   const rotatingOffers = geoCopy.offers;
   const [api, setApi] = useState<CarouselApi | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -148,7 +150,7 @@ const Hero = ({
                 {rotatingOffers[offerIndex]}
               </motion.p>
               <p className="mt-2 text-sm text-muted-foreground">
-                {geoCopy.announcement}
+                {settings.heroOfferText}
               </p>
             </div>
           </motion.div>

@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
-  Brain,
   Bell,
   Download,
   FileText,
@@ -31,7 +30,6 @@ import { parseAdminMarket } from "@/lib/admin-market";
 
 const navItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
-  { title: "Intelligence", url: "/admin/intelligence", icon: Brain },
   { title: "AI Visibility", url: "/admin/ai-visibility", icon: Sparkles },
   { title: "Orders", url: "/admin/orders", icon: ShoppingBag },
   { title: "Tracking", url: "/admin/tracking", icon: Truck },

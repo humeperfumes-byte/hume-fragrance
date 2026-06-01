@@ -36,6 +36,7 @@ import {
 } from "@/lib/customer-account";
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 import { isRazorpayAllowedHost } from "@/lib/razorpay-domain";
+import { useSiteControls } from "@/hooks/use-site-controls";
 
 const CHECKOUT_STORAGE_KEY = "hume_checkout_details_v1";
 const CHECKOUT_SESSION_KEY = "hume_checkout_session_id";
@@ -45,8 +46,6 @@ const APPLIED_COUPON_STORAGE_KEY = "hume_applied_coupon_code";
 const LAST_ORDER_SIGNATURE_KEY = "hume_last_order_signature_v1";
 const LAST_ORDER_ID_KEY = "hume_last_order_id_v1";
 const LAST_ORDER_NUMBER_KEY = "hume_last_order_number_v1";
-const FREE_DELIVERY_THRESHOLD = 500;
-const DELIVERY_FEE_BELOW_THRESHOLD = 100;
 const RAZORPAY_CHECKOUT_SCRIPT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 const RAZORPAY_SCRIPT_TIMEOUT_MS = 15000;
 
@@ -488,6 +487,7 @@ export default function CheckoutClient() {
   const router = useRouter();
   const pathname = usePathname();
   const { items, totalPrice, clearCart } = useCart();
+  const settings = useSiteControls();
   const checkoutSessionIdRef = useRef<string | null>(null);
   const autosaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedSignatureRef = useRef<string>("");
@@ -518,14 +518,17 @@ export default function CheckoutClient() {
       return defaultDetails;
     }
   });
+  const freeDeliveryThreshold = settings.freeDeliveryThreshold;
+  const deliveryFeeBelowThreshold = settings.shippingChargeBelowThreshold;
+  const isOnlinePaymentAvailable = settings.razorpayEnabled && isRazorpayAvailable;
 
   useEffect(() => {
-    const available = isRazorpayAvailableForCurrentHost();
+    const available = settings.razorpayEnabled && isRazorpayAvailableForCurrentHost();
     setIsRazorpayAvailable(available);
     if (available) {
       void loadRazorpayScript();
     }
-  }, []);
+  }, [settings.razorpayEnabled]);
 
   useEffect(() => {
     let active = true;
@@ -593,30 +596,30 @@ export default function CheckoutClient() {
   );
   const couponDiscount = Math.min(totalPrice, couponResult.discount);
   const welcomeBackDiscount = calculateWelcomeBackDiscount(
-    welcomeBackReward,
+    settings.welcomeBackEnabled ? welcomeBackReward : null,
     totalPrice,
     couponDiscount,
     appliedCoupon,
   );
   const effectiveWelcomeBackPercent = getEffectiveWelcomeBackPercent(
-    welcomeBackReward,
+    settings.welcomeBackEnabled ? welcomeBackReward : null,
     appliedCoupon,
     totalPrice,
   );
   const welcomeBackLabel = getEffectiveWelcomeBackLabel(
-    welcomeBackReward,
+    settings.welcomeBackEnabled ? welcomeBackReward : null,
     appliedCoupon,
     totalPrice,
   );
   const effectiveWelcomeBackCode = getEffectiveWelcomeBackCode(
-    welcomeBackReward,
+    settings.welcomeBackEnabled ? welcomeBackReward : null,
     appliedCoupon,
     totalPrice,
   );
   const hasWelcomeBackBenefit = effectiveWelcomeBackPercent > 0;
   const regularShippingFee =
-    totalPrice > 0 && totalPrice < FREE_DELIVERY_THRESHOLD
-      ? DELIVERY_FEE_BELOW_THRESHOLD
+    totalPrice > 0 && totalPrice < freeDeliveryThreshold
+      ? deliveryFeeBelowThreshold
       : 0;
   const shippingFee = hasWelcomeBackBenefit ? 0 : regularShippingFee;
   const shippingSavings = Math.max(0, regularShippingFee - shippingFee);
@@ -1240,7 +1243,7 @@ export default function CheckoutClient() {
   };
 
   const handleRazorpayPayment = async () => {
-    if (!isRazorpayAvailable) {
+    if (!isOnlinePaymentAvailable) {
       toast({
         title: "Online payment is not available here",
         description: "Please place this order through WhatsApp checkout.",
@@ -1453,6 +1456,14 @@ export default function CheckoutClient() {
   };
 
   const handleWhatsAppOrder = async () => {
+    if (!settings.whatsappCheckoutEnabled) {
+      toast({
+        title: "WhatsApp checkout is disabled",
+        description: "Please use the available checkout option.",
+      });
+      return;
+    }
+
     if (items.length === 0) {
       toast({
         title: "Your cart is empty",
@@ -1478,7 +1489,7 @@ export default function CheckoutClient() {
     });
 
     const encodedMessage = encodeURIComponent(whatsappMessage);
-    window.open(`https://wa.me/919559024822?text=${encodedMessage}`, "_blank");
+    window.open(`https://wa.me/${settings.whatsappNumber}?text=${encodedMessage}`, "_blank");
 
     if (appliedOfferCodes) {
       const sessionId =
@@ -1492,7 +1503,7 @@ export default function CheckoutClient() {
           channel: "whatsapp",
           eventType: "sent",
           couponCode: appliedOfferCodes,
-          destination: "919559024822",
+          destination: settings.whatsappNumber,
           path: pathname,
           referrer:
             typeof document !== "undefined" ? document.referrer : undefined,
@@ -1931,7 +1942,7 @@ export default function CheckoutClient() {
                   </p>
                 </div>
               ) : null}
-              {isRazorpayAvailable ? (
+              {isOnlinePaymentAvailable ? (
                 <Button
                   onClick={handleRazorpayPayment}
                   disabled={isPaymentProcessing}
@@ -1940,14 +1951,16 @@ export default function CheckoutClient() {
                   <OrderButtonContent processing={isPaymentProcessing} />
                 </Button>
               ) : null}
-              <Button
-                onClick={handleWhatsAppOrder}
-                disabled={isPaymentProcessing}
-                className={whatsappButtonClassName}
-              >
-                <WhatsAppIcon className="mr-3 h-11 w-11 scale-150" />
-                Order via WhatsApp
-              </Button>
+              {settings.whatsappCheckoutEnabled ? (
+                <Button
+                  onClick={handleWhatsAppOrder}
+                  disabled={isPaymentProcessing}
+                  className={whatsappButtonClassName}
+                >
+                  <WhatsAppIcon className="mr-3 h-11 w-11 scale-150" />
+                  Order via WhatsApp
+                </Button>
+              ) : null}
             </div>
           </div>
 
@@ -2069,7 +2082,7 @@ export default function CheckoutClient() {
                 </div>
                 {shippingFee > 0 ? (
                   <p className="text-xs text-black/40">
-                    Shop above {formatINR(FREE_DELIVERY_THRESHOLD)} for free
+                    Shop above {formatINR(freeDeliveryThreshold)} for free
                     delivery.
                   </p>
                 ) : null}
@@ -2080,7 +2093,11 @@ export default function CheckoutClient() {
               <div className="flex items-center justify-between rounded-2xl bg-[#f7f7f8] px-4 py-3 text-xs">
                 <span className="text-black/45">Payment</span>
                 <span className="font-medium text-black/75">
-                  {isRazorpayAvailable ? "Online or WhatsApp" : "WhatsApp"}
+                  {isOnlinePaymentAvailable
+                    ? settings.whatsappCheckoutEnabled
+                      ? "Online or WhatsApp"
+                      : "Online"
+                    : "WhatsApp"}
                 </span>
               </div>
               <div className="flex items-center justify-between border-t border-[#ececf2] pt-4 text-base font-semibold">
@@ -2098,7 +2115,7 @@ export default function CheckoutClient() {
                   </p>
                 </div>
               ) : null}
-              {isRazorpayAvailable ? (
+              {isOnlinePaymentAvailable ? (
                 <Button
                   onClick={handleRazorpayPayment}
                   disabled={isPaymentProcessing}
@@ -2107,14 +2124,16 @@ export default function CheckoutClient() {
                   <OrderButtonContent processing={isPaymentProcessing} />
                 </Button>
               ) : null}
-              <Button
-                onClick={handleWhatsAppOrder}
-                disabled={isPaymentProcessing}
-                className={whatsappButtonClassName}
-              >
-                <WhatsAppIcon className="mr-3 h-11 w-11 scale-150" />
-                Order via WhatsApp
-              </Button>
+              {settings.whatsappCheckoutEnabled ? (
+                <Button
+                  onClick={handleWhatsAppOrder}
+                  disabled={isPaymentProcessing}
+                  className={whatsappButtonClassName}
+                >
+                  <WhatsAppIcon className="mr-3 h-11 w-11 scale-150" />
+                  Order via WhatsApp
+                </Button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -2125,7 +2144,7 @@ export default function CheckoutClient() {
               Secure Checkout
             </p>
             <p className="mt-2 text-sm text-foreground">
-              {isRazorpayAvailable
+              {isOnlinePaymentAvailable
                 ? "Pay securely online with Razorpay or keep WhatsApp confirmation as backup."
                 : "Place the order on WhatsApp and we will confirm payment and dispatch details."}
             </p>

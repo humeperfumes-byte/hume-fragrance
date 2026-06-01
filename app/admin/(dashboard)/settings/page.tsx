@@ -1,6 +1,7 @@
 import { Settings, SlidersHorizontal } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { AdminSettingsControls } from "@/components/admin/AdminSettingsControls";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,8 @@ export default function AdminSettingsPage() {
           </p>
         </div>
       </section>
+
+      <AdminSettingsControls />
     </div>
   );
 }

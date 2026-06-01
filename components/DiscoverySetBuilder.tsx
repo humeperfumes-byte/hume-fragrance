@@ -25,7 +25,7 @@ function isEligibleSamplePerfume(perfume: PerfumeData) {
 }
 
 const SAMPLE_COUNT = 10;
-const DISCOVERY_SET_HERO_IMAGE = "/images/bg/tester box.png";
+const DISCOVERY_SET_HERO_IMAGE = "/images/bg/tester_box1.png";
 const DISCOVERY_SET_HERO_GALLERY = [
   {
     src: DISCOVERY_SET_HERO_IMAGE,
@@ -33,9 +33,14 @@ const DISCOVERY_SET_HERO_GALLERY = [
     priority: true,
   },
   {
+    src: "/images/bg/tester_box.png",
+    alt: "HUME Discovery Set tester box preview",
+    priority: true,
+  },
+  {
     src: "/images/bg/tester1.png",
     alt: "HUME Discovery Set tester preview 1",
-    priority: true,
+    priority: false,
   },
   {
     src: "/images/bg/tester2.png",

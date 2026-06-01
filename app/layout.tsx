@@ -9,7 +9,6 @@ import BrowserRecoveryGuard from "@/components/BrowserRecoveryGuard";
 import ConsentCaptureBanner from "@/components/ConsentCaptureBanner";
 import ConsentTimelineTracker from "@/components/ConsentTimelineTracker";
 import CartAnalyticsTracker from "@/components/CartAnalyticsTracker";
-import { BehavioralTracker } from "@/components/analytics/BehavioralTracker";
 import SmoothScroll from "@/components/SmoothScroll";
 import { SITE_URL } from "@/lib/site";
 
@@ -110,9 +109,6 @@ export default async function RootLayout({
           </Suspense>
           <Suspense fallback={null}>
             <CartAnalyticsTracker />
-          </Suspense>
-          <Suspense fallback={null}>
-            <BehavioralTracker />
           </Suspense>
           <SmoothScroll />
         </Providers>

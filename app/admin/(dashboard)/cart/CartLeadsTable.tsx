@@ -336,7 +336,7 @@ function CartLeadDetailSheet({
 
 export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<Filter>("connected");
+  const [filter, setFilter] = useState<Filter>("all");
   const [selectedRow, setSelectedRow] = useState<CartLeadRow | null>(null);
 
   const filteredRows = useMemo(() => {
@@ -380,12 +380,12 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
           onChange={(event) => setFilter(event.target.value as Filter)}
           className="h-10 rounded-lg border border-white/10 bg-[#111111] px-3 text-sm font-medium text-white outline-none focus:border-white/25"
         >
+          <option value="all">All cart sessions</option>
           <option value="connected">Connected leads</option>
           <option value="hot">Hot potential</option>
           <option value="contactable">Contactable</option>
           <option value="coupon">Coupon + cart</option>
           <option value="checkout">Checkout started</option>
-          <option value="all">All cart sessions</option>
         </select>
         <p className="text-xs font-medium text-white/35">{filteredRows.length} leads</p>
       </div>

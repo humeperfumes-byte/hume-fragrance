@@ -21,6 +21,7 @@ import { formatINR } from "@/lib/currency";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { stripRegionPrefix } from "@/lib/region-routing";
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
+import { useSiteControls } from "@/hooks/use-site-controls";
 import {
   calculateCouponDiscount,
   calculateWelcomeBackDiscount,
@@ -96,11 +97,12 @@ const CartDrawer = () => {
     isCartOpen,
     setIsCartOpen,
   } = useCart();
+  const settings = useSiteControls();
 
-  const freeDeliveryThreshold = 500;
-  const deliveryChargeBelowThreshold = 100;
-  const firstGiftThreshold = 1499;
-  const secondGiftThreshold = 2099;
+  const freeDeliveryThreshold = settings.freeDeliveryThreshold;
+  const deliveryChargeBelowThreshold = settings.shippingChargeBelowThreshold;
+  const firstGiftThreshold = settings.giftOneThreshold;
+  const secondGiftThreshold = settings.giftTwoThreshold;
 
   const [visibleCoupons, setVisibleCoupons] = useState<Coupon[]>([]);
   const [allCoupons, setAllCoupons] = useState<Coupon[]>([]);
@@ -271,6 +273,10 @@ const CartDrawer = () => {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!settings.welcomeBackEnabled) {
+      setWelcomeBackReward(null);
+      return;
+    }
     const result = trackWelcomeBackVisit(window.localStorage);
     setWelcomeBackReward(result.reward);
     if (result.reward) {
@@ -294,7 +300,7 @@ const CartDrawer = () => {
         }),
       );
     }
-  }, []);
+  }, [settings.welcomeBackEnabled]);
 
   useEffect(() => {
     if (!welcomeBackReward) return;
@@ -1054,13 +1060,14 @@ const CartDrawer = () => {
                         const isEligible = isCouponEligible(coupon);
                         const buyGet = parseBuyGetConfig(coupon);
                         const offerText =
-                          coupon.type === "percent"
+                          coupon.description?.trim() ||
+                          (coupon.type === "percent"
                             ? `${coupon.value}% off`
                             : coupon.type === "fixed"
-                              ? `Flat ${formatINR(coupon.value)} off${coupon.minSubtotal > 0 ? " on first purchase" : ""}`
+                              ? `Flat ${formatINR(coupon.value)} off`
                               : buyGet
                                 ? `Buy ${buyGet.buy} Get ${buyGet.get} Free on all 50ml EDPs`
-                                : coupon.description;
+                                : coupon.description);
 
                         return (
                           <div

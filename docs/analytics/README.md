@@ -10,7 +10,8 @@ Primary systems:
 
 - Consent timeline: `components/ConsentTimelineTracker.tsx`
 - Cart events: `components/CartAnalyticsTracker.tsx`
-- Behavioral events: `components/analytics/BehavioralTracker.tsx`
+- Behavioral events: currently disabled; legacy component lives at
+  `components/analytics/BehavioralTracker.tsx`
 - Acquisition source detection: `lib/acquisition-source.ts`
 - Cart events API: `app/api/cart-events/route.ts`
 - Behavioral API: `app/api/analytics/behavior/route.ts`
@@ -71,13 +72,21 @@ These events power:
 
 ## Behavioral Events
 
+Current status:
+
+- Behavioral intelligence is disabled to reduce Neon database writes.
+- `app/layout.tsx` does not mount `BehavioralTracker`.
+- `app/api/analytics/behavior/route.ts` returns `204` without writing rows.
+- Do not re-enable behavioral writes until there is a clear cost budget and a
+  stricter sampling/batching plan.
+
 Stored in:
 
 - `behavioral_events`
 - `session_intelligence`
 - `section_attribution`
 
-Cost-control rule:
+Cost-control rule if re-enabled later:
 
 - Normal browsing should not write heavy behavior rows.
 - Behavioral intelligence unlocks only after buying intent appears.

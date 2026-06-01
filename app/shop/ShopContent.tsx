@@ -7,6 +7,7 @@ import { SlidersHorizontal, X } from "lucide-react";
 import PerfumeCard from "@/components/PerfumeCard";
 import type { PerfumeData } from "@/data/perfumes";
 import { celebrityFavorites } from "@/lib/celebrity-favorites";
+import { DISCOVERY_SET_IMAGES, isDiscoverySetProductId } from "@/lib/discovery-set";
 import { isVisibleNatureCategory } from "@/lib/nature-categories";
 
 type FilterType = "nature" | "selection" | "gender" | "occasion" | "celebrity";
@@ -380,7 +381,11 @@ export default function ShopContent({ perfumes }: { perfumes: PerfumeData[] }) {
                       category={perfume.category}
                       categoryTags={perfume.categoryTags}
                       categoryIds={perfume.categoryIds}
-                      image={perfume.images[0]}
+                      image={
+                        isDiscoverySetProductId(perfume.id)
+                          ? DISCOVERY_SET_IMAGES[0]
+                          : perfume.images[0]
+                      }
                       price={perfume.price}
                       index={index}
                       bestSeller={perfume.badges?.bestSeller}

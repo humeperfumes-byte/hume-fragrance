@@ -158,7 +158,9 @@ For deeper checkout rules, read:
 
 `components/analytics/BehavioralTracker.tsx`
 
-- Page view, scroll, section view/dwell, exit intent, click, and hover tracking.
+- Legacy behavioral tracker for page view, exit intent, click, and form-focus
+  tracking. It is currently not mounted in `app/layout.tsx` because behavioral
+  intelligence is disabled for Neon cost control.
 
 `components/CartAnalyticsTracker.tsx`
 
