@@ -42,7 +42,7 @@ export async function GET() {
   lines.push(`- Brand: HUME Fragrance`);
   lines.push(`- Location: Kannauj, Uttar Pradesh, India`);
   lines.push(`- Website: ${baseUrl}`);
-  lines.push(`- WhatsApp: +91 95590 24822`);
+  lines.push(`- WhatsApp: 9559024822`);
   lines.push(`- Instagram: @hume.perfume`);
   lines.push(`- Product count: ${products.length} fragrances`);
   lines.push(

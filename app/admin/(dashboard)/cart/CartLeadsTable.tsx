@@ -23,6 +23,7 @@ import { formatINR } from "@/lib/currency";
 import { buildAdminEmailHref, buildAdminWhatsAppHref, type AdminLeadTemplate } from "@/lib/admin-message-templates";
 import type { CapturedDomainKind } from "@/lib/captured-domain";
 import type { SavedPricingBreakdown } from "@/lib/saved-pricing-breakdown";
+import { displayPhoneNumber } from "@/lib/phone";
 
 export type CartLeadRow = {
   sessionId: string;
@@ -285,7 +286,7 @@ function CartLeadDetailSheet({
                 </div>
                 <div className="flex justify-between gap-4">
                   <span className="text-white/45">Phone</span>
-                  <span className="text-right text-white">{row.phone || "Not captured"}</span>
+                  <span className="text-right text-white">{displayPhoneNumber(row.phone) || "Not captured"}</span>
                 </div>
                 <div className="flex justify-between gap-4">
                   <span className="text-white/45">Email</span>
@@ -438,7 +439,7 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
                       <p className="truncate text-lg font-semibold text-white">{row.name || "Unknown visitor"}</p>
                     </div>
                     {row.phone ? (
-                      <p className="truncate text-sm text-white/45">{row.phone}</p>
+                      <p className="truncate text-sm text-white/45">{displayPhoneNumber(row.phone)}</p>
                     ) : row.email ? (
                       <p className="truncate text-sm text-white/45">{row.email}</p>
                     ) : (

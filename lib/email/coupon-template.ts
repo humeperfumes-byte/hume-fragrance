@@ -15,7 +15,7 @@ export function buildCouponEmailText(couponCode: string) {
     "Use this code at checkout to unlock 10% off your order.",
     "",
     "Need help choosing a scent?",
-    "WhatsApp: +91 95590 24822",
+    "WhatsApp: 9559024822",
   ].join("\n");
 }
 
@@ -77,7 +77,7 @@ export function buildCouponEmailHtml(couponCode: string, recipientEmail: string)
                 </table>
                 <p style="margin:0 0 8px;font-size:13px;line-height:1.6;color:#d6d2cb;">Need help selecting your fragrance?</p>
                 <p style="margin:0;font-size:14px;">
-                  <a href="https://wa.me/919559024822" style="color:#ffffff;text-decoration:none;font-weight:600;">WhatsApp us: +91 95590 24822</a>
+                  <a href="https://wa.me/919559024822" style="color:#ffffff;text-decoration:none;font-weight:600;">WhatsApp us: 9559024822</a>
                 </p>
               </td>
             </tr>

@@ -37,6 +37,7 @@ import {
   isTrackingCarrier,
 } from "@/lib/tracking/carriers";
 import { buildPublicTrackingUrl } from "@/lib/tracking-url";
+import { displayPhoneNumber } from "@/lib/phone";
 
 type LookupResponse = {
   ok: boolean;
@@ -355,7 +356,7 @@ export default function TrackingSystemClient({ initialTrackedOrders = [] }: Trac
                       </Badge>
                     </div>
                     <p className="mt-1 truncate text-sm text-white/45">
-                      {order.fullName || "No customer name"}{order.phone ? ` / ${order.phone}` : ""}
+                      {order.fullName || "No customer name"}{order.phone ? ` / ${displayPhoneNumber(order.phone)}` : ""}
                     </p>
                     <p className="mt-1 truncate text-xs text-white/30">
                       {[order.city, order.state].filter(Boolean).join(", ") || "No location added"}

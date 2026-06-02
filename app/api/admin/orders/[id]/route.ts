@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAdminToken } from "@/lib/admin-auth";
+import { displayPhoneNumber } from "@/lib/phone";
 
 type OrderPatch = Partial<typeof orders.$inferInsert>;
 
@@ -17,6 +18,7 @@ const textFields = [
   "trackingStatus",
   "fullName",
   "phone",
+  "alternatePhone",
   "email",
   "addressLine1",
   "addressLine2",
@@ -37,6 +39,11 @@ function cleanText(value: unknown) {
   return text.length > 0 ? text : undefined;
 }
 
+function cleanPhone(value: unknown) {
+  if (value === null || value === undefined) return undefined;
+  return displayPhoneNumber(String(value)) || undefined;
+}
+
 function cleanMoney(value: unknown) {
   if (value === null || value === undefined || value === "") return undefined;
   const numberValue = Number(value);
@@ -54,7 +61,9 @@ function buildOrderPatch(data: Record<string, unknown>): OrderPatch {
 
   textFields.forEach((field) => {
     if (Object.prototype.hasOwnProperty.call(data, field)) {
-      patch[field] = cleanText(data[field]);
+      patch[field] = field === "phone" || field === "alternatePhone"
+        ? cleanPhone(data[field])
+        : cleanText(data[field]);
     }
   });
 

@@ -78,7 +78,7 @@ export default async function Footer() {
             </p>
             <div className="space-y-2 text-body opacity-70 mt-5">
               <p>hello@humefragrance.com</p>
-              <p>WhatsApp: +91 95590 24822</p>
+              <p>WhatsApp: 9559024822</p>
               <p>Kannauj, India&apos;s City of Scent</p>
             </div>
             <div className="mt-5 flex flex-wrap gap-3">

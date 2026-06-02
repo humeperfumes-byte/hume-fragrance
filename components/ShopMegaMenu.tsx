@@ -10,6 +10,7 @@ import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getClientCachedProducts } from "@/lib/client-products-cache";
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 import { DISCOVERY_SET_PATH } from "@/lib/discovery-set";
+import { PERFUME_MATURATION_PATH } from "@/lib/perfume-maturation";
 
 type FilterType = "nature" | "gender" | "occasion" | "celebrity";
 
@@ -55,6 +56,12 @@ const shopSections: ShopSection[] = [
         description: "Sustainable refill membership",
         filterType: "occasion",
         href: "/refill-subscription",
+      },
+      {
+        label: "Fresh Perfume Guide",
+        description: "Why perfumes mature over 2-4 weeks",
+        filterType: "occasion",
+        href: PERFUME_MATURATION_PATH,
       },
     ],
   },

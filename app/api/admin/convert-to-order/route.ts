@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
       utmContent: draft.utmContent,
       fullName: draft.fullName,
       phone: draft.phone,
+      alternatePhone: draft.alternatePhone,
       email: draft.email,
       addressLine1: draft.addressLine1,
       addressLine2: draft.addressLine2,

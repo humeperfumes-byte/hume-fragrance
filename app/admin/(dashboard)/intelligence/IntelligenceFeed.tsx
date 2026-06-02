@@ -20,6 +20,7 @@ import {
   Filter,
 } from "lucide-react";
 import { buildGmailComposeHref } from "@/lib/admin-message-templates";
+import { displayPhoneNumber } from "@/lib/phone";
 
 const POLL_INTERVAL = 60_000;
 
@@ -220,7 +221,7 @@ export function IntelligenceFeed({
                       <div className="flex items-center gap-2 mt-0.5">
                         {x.contactPhone && (
                           <span className="text-[10px] text-white/30 flex items-center gap-1">
-                            <Phone className="h-2.5 w-2.5" /> {x.contactPhone}
+                            <Phone className="h-2.5 w-2.5" /> {displayPhoneNumber(x.contactPhone)}
                           </span>
                         )}
                         {x.contactEmail && (

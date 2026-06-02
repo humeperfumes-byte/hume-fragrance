@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { Mail, MessageCircle, Search, Filter, ExternalLink, ShoppingCart, Package, Zap, AlertTriangle } from "lucide-react";
 import { buildAdminEmailHref, buildAdminWhatsAppHref, buildGmailComposeHref } from "@/lib/admin-message-templates";
+import { displayPhoneNumber } from "@/lib/phone";
 
 type CrossRef = {
   hasCheckout: boolean;
@@ -286,7 +287,7 @@ export function CouponLeadsTable({ events }: { events: EnrichedCouponEvent[] }) 
                     {event.xref.checkoutName && (
                       <p className="text-xs text-white/40 mt-0.5 truncate">
                         {event.xref.checkoutName}
-                        {event.xref.checkoutPhone && ` • ${event.xref.checkoutPhone}`}
+                        {event.xref.checkoutPhone && ` - ${displayPhoneNumber(event.xref.checkoutPhone)}`}
                       </p>
                     )}
                     <JourneyBadges xref={event.xref} />
@@ -414,3 +415,4 @@ export function CouponLeadsTable({ events }: { events: EnrichedCouponEvent[] }) 
     </div>
   );
 }
+

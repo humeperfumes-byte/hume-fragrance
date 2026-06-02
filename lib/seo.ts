@@ -50,7 +50,7 @@ export const getOrganizationSchema = (baseUrl = SITE_URL) => ({
     "@type": "ContactPoint",
     contactType: "customer service",
     availableLanguage: "en",
-    telephone: "+91-9559024822",
+    telephone: "+919559024822",
     areaServed: "IN",
   },
   address: {

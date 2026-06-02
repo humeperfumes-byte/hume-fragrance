@@ -16,6 +16,7 @@ import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 import AnnouncementBar from "@/components/AnnouncementBar";
 import { DISCOVERY_SET_PATH } from "@/lib/discovery-set";
+import { PERFUME_MATURATION_PATH } from "@/lib/perfume-maturation";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -269,6 +270,17 @@ const Header = () => {
                     >
                       <span className="inline-flex w-full items-center justify-between font-serif text-[1.45rem] italic leading-none">
                         <span>Refill Program</span>
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        navigateTo(PERFUME_MATURATION_PATH);
+                      }}
+                      className="w-full border-b border-border pb-2 text-left"
+                    >
+                      <span className="inline-flex w-full items-center justify-between font-serif text-[1.45rem] italic leading-none">
+                        <span>Fresh Perfume Guide</span>
                       </span>
                     </button>
                   </div>

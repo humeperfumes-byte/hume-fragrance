@@ -1,4 +1,5 @@
 import { SITE_URL, siteUrlForBase } from "@/lib/site";
+import { displayPhoneNumber } from "@/lib/phone";
 
 type AlertOrderItem = {
   name: string;
@@ -125,7 +126,7 @@ export async function sendAdminOrderAlert(order: AdminOrderAlertData) {
   }
 
   const customerName = clean(order.details.fullName) || "No name";
-  const phone = clean(order.details.phone) || "No phone";
+  const phone = displayPhoneNumber(order.details.phone) || "No phone";
   const email = clean(order.details.email);
   const address = buildAddress(order);
   const items = buildItems(order);

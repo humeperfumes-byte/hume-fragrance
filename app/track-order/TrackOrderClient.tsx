@@ -21,6 +21,7 @@ import {
   type TrackingResult,
 } from "@/lib/tracking/carriers";
 import { cn } from "@/lib/utils";
+import { displayPhoneNumber } from "@/lib/phone";
 
 type TrackingResponse = {
   ok?: boolean;
@@ -155,7 +156,7 @@ export default function TrackOrderClient({ initialTrackingNumber = "" }: TrackOr
                 {result.destination.phone ? (
                   <p className="mt-1 flex items-center gap-2 text-sm text-zinc-700">
                     <Phone className="h-3.5 w-3.5 text-emerald-700" />
-                    {result.destination.phone}
+                    {displayPhoneNumber(result.destination.phone)}
                   </p>
                 ) : null}
                 {destinationAddressLines.length ? (

@@ -64,7 +64,7 @@ ${highIntentInspiredLinks}
 - Brand origin: Kannauj, Uttar Pradesh
 - Payment: Razorpay online checkout and WhatsApp order support
 - Delivery: Pan-India shipping with tracking links after dispatch
-- Support: WhatsApp support at +91 95590 24822
+- Support: WhatsApp support at 9559024822
 - Discovery Set: customers can build and order ${DISCOVERY_SET_SIZE} HUME perfume testers for INR ${DISCOVERY_SET_PRICE} before buying full bottles
 - Perfume trial kit page: ${baseUrl}${DISCOVERY_SET_PATH} targets first-time buyers searching for perfume trial pack, starter perfume kit, 3ml perfume samples, perfume sample set India, and build-your-own discovery set; current status is Available
 - Live non-perfume ritual products: Pure Rose Water / Gulab Jal and Kapoor / Camphor Car Perfume are available to order.

@@ -37,6 +37,7 @@ import {
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 import { isRazorpayAllowedHost } from "@/lib/razorpay-domain";
 import { useSiteControls } from "@/hooks/use-site-controls";
+import { displayPhoneNumber, toTenDigitPhone } from "@/lib/phone";
 
 const CHECKOUT_STORAGE_KEY = "hume_checkout_details_v1";
 const CHECKOUT_SESSION_KEY = "hume_checkout_session_id";
@@ -242,9 +243,7 @@ function getCitiesForState(stateName: string) {
 }
 
 function formatIndianMobileInput(value: string) {
-  const digits = value.replace(/\D/g, "").slice(0, 10);
-  if (digits.length <= 5) return digits;
-  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+  return toTenDigitPhone(value);
 }
 
 function WhatsAppIcon({ className = "" }: { className?: string }) {
@@ -512,7 +511,12 @@ export default function CheckoutClient() {
       const raw = window.localStorage.getItem(CHECKOUT_STORAGE_KEY);
       const savedAccount = readStoredCustomerAccount(window.localStorage);
       const parsed = raw ? (JSON.parse(raw) as Partial<CheckoutDetails>) : {};
-      return { ...defaultDetails, ...(savedAccount ?? {}), ...parsed };
+      const hydrated = { ...defaultDetails, ...(savedAccount ?? {}), ...parsed };
+      return {
+        ...hydrated,
+        phone: displayPhoneNumber(hydrated.phone),
+        alternatePhone: displayPhoneNumber(hydrated.alternatePhone),
+      };
     } catch (error) {
       console.error("Failed to hydrate checkout details:", error);
       return defaultDetails;
@@ -1015,9 +1019,9 @@ export default function CheckoutClient() {
       "",
       "Customer details:",
       `Name: ${details.fullName.trim()}`,
-      `Phone: ${details.phone.trim()}`,
+      `Phone: ${displayPhoneNumber(details.phone)}`,
       details.alternatePhone.trim()
-        ? `Alternative phone: ${details.alternatePhone.trim()}`
+        ? `Alternative phone: ${displayPhoneNumber(details.alternatePhone)}`
         : null,
       details.email.trim() ? `Email: ${details.email.trim()}` : null,
       `Address: ${addressBlock}`,
@@ -1625,7 +1629,7 @@ export default function CheckoutClient() {
                         }
                         onBlur={() => handleFieldBlur("phone")}
                         onKeyDown={handleFieldKeyDown("phone")}
-                        placeholder="79003-47512"
+                        placeholder="7900347512"
                         inputMode="tel"
                         autoComplete="tel-national"
                         className="h-full flex-1 rounded-none border-0 bg-transparent px-3 text-[0.82rem] font-medium shadow-none focus-visible:ring-0"
@@ -1652,7 +1656,7 @@ export default function CheckoutClient() {
                           }
                           onBlur={() => handleFieldBlur("alternatePhone")}
                           onKeyDown={handleFieldKeyDown("alternatePhone")}
-                          placeholder="98765-43210"
+                          placeholder="9876543210"
                           inputMode="tel"
                           autoComplete="tel"
                           className={checkoutFieldClassName}

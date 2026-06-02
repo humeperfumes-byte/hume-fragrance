@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { checkoutDrafts } from "@/db/schema";
 import { resolveIndiaAwareCountry } from "@/lib/admin-market";
 import { isAdminCapturedPath, isInternalAdminRequest } from "@/lib/admin-data-filters";
+import { displayPhoneNumber } from "@/lib/phone";
 
 const fragranceSelectionSchema = z.object({
   id: z.string().min(1).max(255),
@@ -49,6 +50,7 @@ const checkoutDraftSchema = z.object({
     .object({
       fullName: z.string().max(255).optional(),
       phone: z.string().max(50).optional(),
+      alternatePhone: z.string().max(50).optional(),
       email: z.string().max(255).optional(),
       addressLine1: z.string().max(2000).optional(),
       addressLine2: z.string().max(2000).optional(),
@@ -100,9 +102,11 @@ export async function POST(request: NextRequest) {
       request.headers.get("x-vercel-ip-country") ||
       request.headers.get("cf-ipcountry") ||
       null;
+    const phone = displayPhoneNumber(data.details.phone);
+    const alternatePhone = displayPhoneNumber(data.details.alternatePhone);
     const country = resolveIndiaAwareCountry({
       headerCountry,
-      phone: data.details.phone,
+      phone,
       pincode: data.details.pincode,
       state: data.details.state,
     });
@@ -123,7 +127,8 @@ export async function POST(request: NextRequest) {
         utmTerm: data.utmTerm ?? null,
         utmContent: data.utmContent ?? null,
         fullName: data.details.fullName?.trim() || null,
-        phone: data.details.phone?.trim() || null,
+        phone: phone || null,
+        alternatePhone: alternatePhone || null,
         email: data.details.email?.trim() || null,
         addressLine1: data.details.addressLine1?.trim() || null,
         addressLine2: data.details.addressLine2?.trim() || null,
@@ -157,7 +162,8 @@ export async function POST(request: NextRequest) {
           utmTerm: data.utmTerm ?? null,
           utmContent: data.utmContent ?? null,
           fullName: data.details.fullName?.trim() || null,
-          phone: data.details.phone?.trim() || null,
+          phone: phone || null,
+          alternatePhone: alternatePhone || null,
           email: data.details.email?.trim() || null,
           addressLine1: data.details.addressLine1?.trim() || null,
           addressLine2: data.details.addressLine2?.trim() || null,

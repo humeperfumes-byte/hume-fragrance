@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       searchParams.get("address") ||
       "Athens Dubey, Kannauj, Uttar Pradesh 209725",
     supportEmail: "support@humefragrance.com",
-    supportPhone: "+91 95590 24822",
+    supportPhone: "9559024822",
     assetBaseUrl: origin,
     items: [
       {

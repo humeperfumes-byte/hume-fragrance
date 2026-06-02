@@ -22,6 +22,7 @@ import { toast } from "@/hooks/use-toast";
 import { formatINR } from "@/lib/currency";
 import { buildAdminEmailHref, buildAdminWhatsAppHref } from "@/lib/admin-message-templates";
 import { getSavedPricingOfferSummary, normalizeSavedPricingBreakdown } from "@/lib/saved-pricing-breakdown";
+import { displayPhoneNumber } from "@/lib/phone";
 
 export type CustomerRecord = {
   key: string;
@@ -150,7 +151,7 @@ function buildCustomerCopy(customer: CustomerRecord) {
 
   return [
     `Name: ${customer.name}`,
-    `Phone: ${customer.phone || "Not added"}`,
+    `Phone: ${displayPhoneNumber(customer.phone) || "Not added"}`,
     `Email: ${customer.email || "Not added"}`,
     address.length ? `Address: ${address.join(", ")}` : "Address: Not added",
     `Notes: ${getCustomerNotes(customer) || "None"}`,
@@ -363,7 +364,7 @@ function CustomerDetailSheet({
               </h3>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <DetailRow label="Full name" value={customer.name} />
-                <DetailRow label="Phone" value={customer.phone} />
+                <DetailRow label="Phone" value={displayPhoneNumber(customer.phone)} />
                 <DetailRow label="Email" value={customer.email} />
                 <DetailRow label="First seen" value={formatMaybeDate(customer.firstSeenAt)} />
               </div>
@@ -588,7 +589,7 @@ export function CustomersTable({ customers }: { customers: CustomerRecord[] }) {
               </div>
               <div className="min-w-0 text-white/55">
                 <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/30 xl:hidden">Contact</p>
-                <p className="truncate">{customer.phone || "No phone"}</p>
+                <p className="truncate">{displayPhoneNumber(customer.phone) || "No phone"}</p>
                 <p className="truncate text-xs">{customer.email || "No email"}</p>
               </div>
               <div className="grid grid-cols-2 gap-3 xl:contents">

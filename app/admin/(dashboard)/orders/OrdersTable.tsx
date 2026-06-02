@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { CheckCircle2, Copy, ExternalLink, MessageCircle, Package, Trash2, Truck } from "lucide-react";
 import { buildPublicTrackingUrl } from "@/lib/tracking-url";
+import { displayPhoneNumber } from "@/lib/phone";
 
 export function formatINR(amount: number | string): string {
   return new Intl.NumberFormat("en-IN", {
@@ -379,7 +380,7 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
                     <TableCell>
                       <div className="flex flex-col gap-0.5">
                         <span className="text-lg text-white group-hover:text-primary transition-colors">{order.fullName || "Guest"}</span>
-                        <span className="text-[11px] text-white/30 font-medium tracking-tight">{order.phone || order.email || "No contact"}</span>
+                        <span className="text-[11px] text-white/30 font-medium tracking-tight">{displayPhoneNumber(order.phone) || order.email || "No contact"}</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -470,29 +471,82 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
                         </div>
                         <div className="grid gap-4 sm:grid-cols-2">
                           <div className="space-y-2">
-                            <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">Phone</label>
+                            <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">Primary Phone</label>
                             <input 
                               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 text-white"
-                              value={editForm.phone || ""}
-                              onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                              value={displayPhoneNumber(editForm.phone)}
+                              onChange={(e) => setEditForm({ ...editForm, phone: displayPhoneNumber(e.target.value) })}
                             />
                           </div>
                           <div className="space-y-2">
-                            <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">Email</label>
-                            <input 
+                            <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">Alternate Phone</label>
+                            <input
                               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 text-white"
-                              value={editForm.email || ""}
-                              onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                              value={displayPhoneNumber(editForm.alternatePhone)}
+                              placeholder="Optional"
+                              onChange={(e) => setEditForm({ ...editForm, alternatePhone: displayPhoneNumber(e.target.value) })}
                             />
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">Address Details</label>
-                          <input 
+                          <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">Email</label>
+                          <input
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 text-white"
+                            value={editForm.email || ""}
+                            onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">Address Line 1</label>
+                          <input
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 text-white"
                             value={editForm.addressLine1 || ""}
-                            placeholder="Street Address"
+                            placeholder="House / street / area"
                             onChange={(e) => setEditForm({ ...editForm, addressLine1: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">Address Line 2</label>
+                          <input
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 text-white"
+                            value={editForm.addressLine2 || ""}
+                            placeholder="Landmark / apartment / optional"
+                            onChange={(e) => setEditForm({ ...editForm, addressLine2: e.target.value })}
+                          />
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-3">
+                          <div className="space-y-2">
+                            <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">City</label>
+                            <input
+                              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 text-white"
+                              value={editForm.city || ""}
+                              onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">State</label>
+                            <input
+                              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 text-white"
+                              value={editForm.state || ""}
+                              onChange={(e) => setEditForm({ ...editForm, state: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">Pincode</label>
+                            <input
+                              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 text-white"
+                              value={editForm.pincode || ""}
+                              onChange={(e) => setEditForm({ ...editForm, pincode: e.target.value.replace(/\D/g, "").slice(0, 6) })}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">Order Notes</label>
+                          <textarea
+                            className="min-h-24 w-full resize-y bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 text-white placeholder:text-white/20"
+                            value={editForm.notes || ""}
+                            placeholder="Delivery instruction or customer change request"
+                            onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
                           />
                         </div>
                       </div>
@@ -508,16 +562,20 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
                       <div className="text-sm space-y-3">
                         <div className="flex justify-between items-center"><span className="text-white/40">Full Name</span> <span className="font-medium text-white">{selectedOrder.fullName || "N/A"}</span></div>
                         <div className="flex justify-between items-center"><span className="text-white/40">Email</span> <span className="font-medium text-white">{selectedOrder.email || "N/A"}</span></div>
-                        <div className="flex justify-between items-center"><span className="text-white/40">WhatsApp</span> <span className="font-medium text-white">{selectedOrder.phone || "N/A"}</span></div>
+                        <div className="flex justify-between items-center"><span className="text-white/40">WhatsApp</span> <span className="font-medium text-white">{displayPhoneNumber(selectedOrder.phone) || "N/A"}</span></div>
+                        {selectedOrder.alternatePhone ? (
+                          <div className="flex justify-between items-center"><span className="text-white/40">Alternate</span> <span className="font-medium text-white">{displayPhoneNumber(selectedOrder.alternatePhone)}</span></div>
+                        ) : null}
                       </div>
                     </div>
 
                     <div className="space-y-4 rounded-2xl border border-white/5 bg-white/[0.02] p-4 sm:rounded-3xl sm:p-6">
                       <h4 className="font-bold text-[10px] uppercase tracking-[0.2em] text-white/30">Logistics Destination</h4>
                       <div className="text-sm space-y-1 text-white/80 leading-relaxed">
-                        <p className="text-white font-medium">{selectedOrder.addressLine1}</p>
+                        <p className="text-white font-medium">{selectedOrder.addressLine1 || "No address line 1"}</p>
                         {selectedOrder.addressLine2 && <p>{selectedOrder.addressLine2}</p>}
-                        <p>{selectedOrder.city}, {selectedOrder.state} {selectedOrder.pincode}</p>
+                        <p>{[selectedOrder.city, selectedOrder.state, selectedOrder.pincode].filter(Boolean).join(", ") || "City/state/pincode not added"}</p>
+                        {selectedOrder.notes ? <p className="mt-3 rounded-xl border border-white/5 bg-black/20 p-3 text-white/50">{selectedOrder.notes}</p> : null}
                         <p className="text-white/40 uppercase text-[10px] mt-2 font-bold tracking-widest">India</p>
                       </div>
                     </div>

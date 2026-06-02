@@ -28,6 +28,7 @@ import { formatINR } from "@/lib/currency";
 import { buildAdminEmailHref, buildAdminLeadMessage, buildAdminWhatsAppHref } from "@/lib/admin-message-templates";
 import { getCapturedDomainInfo, type CapturedDomainKind } from "@/lib/captured-domain";
 import { normalizeSavedPricingBreakdown, type SavedPricingBreakdown } from "@/lib/saved-pricing-breakdown";
+import { displayPhoneNumber } from "@/lib/phone";
 
 function getDraftValue(draft: CheckoutDraft): number {
   return Number.parseFloat(String(draft.grandTotal ?? "0") || "0");
@@ -445,7 +446,7 @@ function CheckoutDetailSheet({
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/30">Phone</p>
-                  <p className="mt-1 text-white">{draft.phone || "Not added"}</p>
+                  <p className="mt-1 text-white">{displayPhoneNumber(draft.phone) || "Not added"}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/30">Email</p>
@@ -790,7 +791,7 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
                   {draft.phone ? (
                     <div className="flex min-w-0 items-center gap-2">
                       <Phone className="h-3.5 w-3.5 shrink-0 text-white/25" />
-                      <span className="truncate">{draft.phone}</span>
+                      <span className="truncate">{displayPhoneNumber(draft.phone)}</span>
                     </div>
                   ) : null}
                   {draft.email ? (

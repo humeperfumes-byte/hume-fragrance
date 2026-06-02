@@ -45,6 +45,7 @@ import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 import { buildPublicTrackingPath } from "@/lib/tracking-url";
 import { cn } from "@/lib/utils";
 import type { FragranceSelection } from "@/lib/discovery-set";
+import { displayPhoneNumber } from "@/lib/phone";
 
 type AccountOrderItem = {
   id: string;
@@ -525,7 +526,7 @@ export default function AccountClient() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold">{account?.fullName}</p>
-                  <p className="text-xs text-zinc-500">{account?.phone}</p>
+                  <p className="text-xs text-zinc-500">{displayPhoneNumber(account?.phone)}</p>
                 </div>
               </div>
 
@@ -769,7 +770,7 @@ export default function AccountClient() {
                     Delivery details
                   </p>
                   <p className="mt-3 font-semibold">{account?.fullName || "Customer"}</p>
-                  <p className="mt-1 text-sm">{account?.phone || "Phone not available"}</p>
+                  <p className="mt-1 text-sm">{displayPhoneNumber(account?.phone) || "Phone not available"}</p>
                   {account?.email ? <p className="mt-1 text-sm">{account.email}</p> : null}
                   <p className="mt-3 text-sm leading-6">{profileAddress}</p>
                 </div>

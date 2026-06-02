@@ -13,6 +13,7 @@ import type { BlogPost } from "@/data/blogPosts";
 import { isVisibleNatureCategory } from "@/lib/nature-categories";
 import { formatINR } from "@/lib/currency";
 import { toast } from "@/hooks/use-toast";
+import { displayPhoneNumber } from "@/lib/phone";
 
 type ProductForm = {
   name: string;
@@ -1182,7 +1183,7 @@ export default function AdminDashboard() {
                               <div className="space-y-2">
                                 <div className="flex flex-wrap items-center gap-2">
                                   <p className="font-semibold">
-                                    {draft.fullName || draft.phone || draft.email || "Anonymous draft"}
+                                    {draft.fullName || displayPhoneNumber(draft.phone) || draft.email || "Anonymous draft"}
                                   </p>
                                   <span className="rounded-full bg-secondary px-2.5 py-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
                                     {draft.status.replace(/_/g, " ")}
@@ -1198,7 +1199,7 @@ export default function AdminDashboard() {
                                       {draft.acquisitionCategory ? ` (${draft.acquisitionCategory})` : ""}
                                     </p>
                                   ) : null}
-                                  {draft.phone ? <p>Phone: {draft.phone}</p> : null}
+                                  {draft.phone ? <p>Phone: {displayPhoneNumber(draft.phone)}</p> : null}
                                   {draft.email ? <p>Email: {draft.email}</p> : null}
                                   {location ? <p>Location: {location}</p> : null}
                                   {draft.path ? <p>Path: {draft.path}</p> : null}

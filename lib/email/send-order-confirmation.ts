@@ -86,7 +86,7 @@ export async function sendOrderConfirmationEmail(order: OrderEmailData) {
       tax: "Rs. 0.00",
       shippingAddress,
       supportEmail: "support@humefragrance.com",
-      supportPhone: "+91 95590 24822",
+      supportPhone: "9559024822",
       items,
     });
 
@@ -98,7 +98,7 @@ export async function sendOrderConfirmationEmail(order: OrderEmailData) {
       `Total: Rs. ${Number(order.grandTotal || 0).toFixed(2)}`,
       `Shipping address: ${shippingAddress}`,
       "",
-      "Need help? WhatsApp us at +91 95590 24822.",
+      "Need help? WhatsApp us at 9559024822.",
     ].join("\n");
 
     const sendResult = await sendHumeEmail({

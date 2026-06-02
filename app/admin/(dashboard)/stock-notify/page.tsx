@@ -1,6 +1,7 @@
 import { Bell, Mail, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { listStockNotifyRequests } from "@/lib/stock-notify";
+import { displayPhoneNumber } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +59,7 @@ export default async function StockNotifyPage() {
                   {request.phone ? (
                     <a href={`https://wa.me/${request.phone.replace(/\D/g, "").length === 10 ? `91${request.phone.replace(/\D/g, "")}` : request.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-white">
                       <Phone className="h-3.5 w-3.5" />
-                      {request.phone}
+                      {displayPhoneNumber(request.phone)}
                     </a>
                   ) : null}
                 </div>

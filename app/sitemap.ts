@@ -9,6 +9,7 @@ import { getRequestSiteUrl } from "@/lib/request-site";
 import { AI_RECOMMENDATION_PAGES } from "@/lib/ai-recommendation-pages";
 import { DISCOVERY_SET_PATH } from "@/lib/discovery-set";
 import { DETAIL_UPCOMING_PRODUCTS } from "@/lib/upcoming-products";
+import { PERFUME_MATURATION_PATH } from "@/lib/perfume-maturation";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = await getRequestSiteUrl();
@@ -113,6 +114,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.8,
+    },
+    {
+      url: `${baseUrl}${PERFUME_MATURATION_PATH}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.65,
     },
     {
       url: `${baseUrl}/celebrities-favorites`,

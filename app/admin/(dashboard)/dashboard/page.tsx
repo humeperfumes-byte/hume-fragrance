@@ -19,6 +19,7 @@ import { toast } from "@/hooks/use-toast";
 import { formatINR } from "@/lib/currency";
 import { parseAdminMarket } from "@/lib/admin-market";
 import { ADMIN_TIME_WINDOW_OPTIONS } from "@/lib/admin-time-window";
+import { displayPhoneNumber } from "@/lib/phone";
 
 type DashboardAnalytics = {
   ok: boolean;
@@ -487,7 +488,7 @@ export default function DashboardPage() {
                         <div className="min-w-0">
                           <p className="font-medium text-white">{order.orderNumber}</p>
                           <p className="mt-1 text-xs text-white/35">
-                            {order.fullName || order.phone || "Guest"} - {formatDate(order.createdAt)}
+                            {order.fullName || displayPhoneNumber(order.phone) || "Guest"} - {formatDate(order.createdAt)}
                           </p>
                         </div>
                         <div className="shrink-0 text-right">
@@ -580,7 +581,7 @@ export default function DashboardPage() {
                           <div>
                             <p className="font-medium text-white">{customer.name}</p>
                             <p className="mt-1 text-xs text-white/35">
-                              {customer.phone || customer.email || "No contact"} - Last {formatDate(customer.lastOrderAt)}
+                              {displayPhoneNumber(customer.phone) || customer.email || "No contact"} - Last {formatDate(customer.lastOrderAt)}
                             </p>
                           </div>
                           <div className="text-right">
