@@ -20,6 +20,14 @@ type ProductBadges = Partial<{
 type ProductVisibility = "public" | "seo_only";
 let hasLoggedLegacyReviewsFallback = false;
 
+function readExecuteRows<T>(result: unknown): T[] {
+  if (Array.isArray(result)) return result as T[];
+  if (result && typeof result === "object" && "rows" in result) {
+    return (result as { rows: T[] }).rows;
+  }
+  return [];
+}
+
 async function fetchReviewsByProductIds(productIds: string[]): Promise<ReviewRow[]> {
   if (productIds.length === 0) return [];
   try {
@@ -49,7 +57,7 @@ async function fetchReviewsByProductIds(productIds: string[]): Promise<ReviewRow
         sql`, `
       )})
     `);
-    return result.rows as ReviewRow[];
+    return readExecuteRows<ReviewRow>(result);
   }
 }
 

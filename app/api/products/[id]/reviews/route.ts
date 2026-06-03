@@ -9,6 +9,14 @@ import {
   getUpcomingProductBySlug,
 } from "@/lib/upcoming-products";
 
+function readExecuteRows<T>(result: unknown): T[] {
+  if (Array.isArray(result)) return result as T[];
+  if (result && typeof result === "object" && "rows" in result) {
+    return (result as { rows: T[] }).rows;
+  }
+  return [];
+}
+
 // GET all reviews for a product
 export async function GET(
   request: NextRequest,
@@ -38,7 +46,7 @@ export async function GET(
         from reviews
         where product_id = ${id}
       `);
-      productReviews = result.rows as Array<typeof reviews.$inferSelect>;
+      productReviews = readExecuteRows<typeof reviews.$inferSelect>(result);
     }
 
     return NextResponse.json(

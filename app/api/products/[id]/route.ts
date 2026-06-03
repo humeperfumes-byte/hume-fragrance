@@ -56,6 +56,14 @@ const productSchema = z.object({
 type ProductUpdateInput = z.infer<typeof productSchema>;
 type ProductUpdateRecord = Partial<typeof products.$inferInsert> & { updatedAt: Date };
 
+function readExecuteRows<T>(result: unknown): T[] {
+  if (Array.isArray(result)) return result as T[];
+  if (result && typeof result === "object" && "rows" in result) {
+    return (result as { rows: T[] }).rows;
+  }
+  return [];
+}
+
 async function fetchProductReviews(id: string) {
   try {
     return await db.select().from(reviews).where(eq(reviews.productId, id));
@@ -78,7 +86,7 @@ async function fetchProductReviews(id: string) {
       from reviews
       where product_id = ${id}
     `);
-    return result.rows as Array<typeof reviews.$inferSelect>;
+    return readExecuteRows<typeof reviews.$inferSelect>(result);
   }
 }
 
