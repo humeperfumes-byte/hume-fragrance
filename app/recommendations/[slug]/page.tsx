@@ -6,7 +6,6 @@ import Footer from "@/components/Footer";
 import PerfumeCard from "@/components/PerfumeCard";
 import { JsonLd } from "@/components/JsonLd";
 import {
-  AI_RECOMMENDATION_PAGES,
   getAiRecommendationPage,
   getRecommendedProducts,
 } from "@/lib/ai-recommendation-pages";
@@ -22,7 +21,7 @@ type PageProps = {
 export const revalidate = 300;
 
 export function generateStaticParams() {
-  return AI_RECOMMENDATION_PAGES.map((page) => ({ slug: page.slug }));
+  return [];
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

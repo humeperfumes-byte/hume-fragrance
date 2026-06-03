@@ -9,13 +9,14 @@ import { Button } from "@/components/ui/button";
 import { getAllProducts } from "@/lib/db/products";
 import {
   buildBestPageFaq,
-  getAllProgrammaticAlternatives,
   getProgrammaticAlternativeBySlug,
 } from "@/lib/programmatic-seo";
 import { getRequestSiteUrl } from "@/lib/request-site";
 
+export const revalidate = 300;
+
 export async function generateStaticParams() {
-  return getAllProgrammaticAlternatives().map((item) => ({ slug: item.slug }));
+  return [];
 }
 
 export async function generateMetadata({

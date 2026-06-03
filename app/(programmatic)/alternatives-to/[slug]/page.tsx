@@ -6,10 +6,7 @@ import Footer from "@/components/Footer";
 import PerfumeCard from "@/components/PerfumeCard";
 import { JsonLd } from "@/components/JsonLd";
 import { getAllProducts, getProductById } from "@/lib/db/products";
-import {
-  getAllProgrammaticInspirations,
-  getAlternativeToBySlug,
-} from "@/lib/programmatic-seo";
+import { getAlternativeToBySlug } from "@/lib/programmatic-seo";
 import { getRequestSiteUrl } from "@/lib/request-site";
 
 const formatPrice = (amount: number) =>
@@ -18,6 +15,8 @@ const formatPrice = (amount: number) =>
     currency: "INR",
     maximumFractionDigits: 0,
   }).format(amount);
+
+export const revalidate = 300;
 
 async function resolveMappedProduct(
   item: NonNullable<ReturnType<typeof getAlternativeToBySlug>>,
@@ -35,7 +34,7 @@ async function resolveMappedProduct(
 }
 
 export async function generateStaticParams() {
-  return getAllProgrammaticInspirations().map((item) => ({ slug: item.slug }));
+  return [];
 }
 
 export async function generateMetadata({

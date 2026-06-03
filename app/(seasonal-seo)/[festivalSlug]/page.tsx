@@ -598,7 +598,7 @@ const getSmartRecommendations = (
 };
 
 export async function generateStaticParams() {
-  return getFestivalSeoSlugs().map((festivalSlug) => ({ festivalSlug }));
+  return [];
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

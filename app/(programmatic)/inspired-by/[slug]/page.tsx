@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { getAllProducts, getProductById } from "@/lib/db/products";
 import {
   buildInspiredFaq,
-  getAllProgrammaticInspirations,
   getProgrammaticInspirationBySlug,
 } from "@/lib/programmatic-seo";
 import { getProductPath } from "@/lib/product-route";
@@ -22,8 +21,10 @@ const formatPrice = (amount: number) =>
     maximumFractionDigits: 0,
   }).format(amount);
 
+export const revalidate = 300;
+
 export async function generateStaticParams() {
-  return getAllProgrammaticInspirations().map((item) => ({ slug: item.slug }));
+  return [];
 }
 
 export async function generateMetadata({
