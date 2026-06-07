@@ -70,6 +70,12 @@ export function maskEmail(email: string) {
   return `${visible}@${domain}`;
 }
 
+export function maskPhone(phone: string) {
+  const digits = normalizePhone(phone);
+  if (digits.length !== 10) return "saved mobile";
+  return `${digits.slice(0, 2)}******${digits.slice(-2)}`;
+}
+
 export function generateOtp() {
   const easyCodes = [
     "9293",

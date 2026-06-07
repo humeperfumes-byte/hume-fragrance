@@ -12,7 +12,7 @@ import { getProductPath } from "@/lib/product-route";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getRequestSiteUrl } from "@/lib/request-site";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,

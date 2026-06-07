@@ -77,6 +77,34 @@ export function ProductsTable({
     }
   };
 
+  const handleToggleVisibility = async (product: Product) => {
+    const nextVisibility = product.visibility === "public" ? "seo_only" : "public";
+
+    try {
+      const res = await fetch(`/api/products/${product.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visibility: nextVisibility }),
+      });
+      if (!res.ok) throw new Error("Failed to update product visibility");
+
+      setProducts((current) =>
+        current.map((item) =>
+          item.id === product.id ? { ...item, visibility: nextVisibility } : item,
+        ),
+      );
+      toast({
+        title:
+          nextVisibility === "public"
+            ? "Product is visible on main site"
+            : "Product is hidden for SEO/direct URL only",
+      });
+      router.refresh();
+    } catch {
+      toast({ title: "Error updating visibility", variant: "destructive" });
+    }
+  };
+
   const handleKitAvailabilityChange = async (outOfStock: boolean) => {
     const previous = kitOutOfStock;
     setKitOutOfStock(outOfStock);
@@ -212,6 +240,14 @@ export function ProductsTable({
                         <DropdownMenuContent align="end" className="rounded-xl">
                           <DropdownMenuItem className="cursor-pointer" onClick={() => window.open(`/product/${product.id}`, '_blank')}>
                             View Live
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => handleToggleVisibility(product)}
+                          >
+                            {product.visibility === "public"
+                              ? "Hide from main site"
+                              : "Show in main site"}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="cursor-pointer"

@@ -7,7 +7,7 @@ import { getAccessoryById } from "@/lib/db/accessories";
 import AccessoryDetailClient from "./AccessoryDetailClient";
 import { getRequestSiteUrl } from "@/lib/request-site";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,

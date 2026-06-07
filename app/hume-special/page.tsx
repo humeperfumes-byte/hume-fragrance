@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     "Discover all HUME Special perfumes - curated premium inspired fragrances with standout profiles.",
 };
 
-export const revalidate = 120;
+export const dynamic = "force-dynamic";
 
 export default async function HumeSpecialPage() {
   const baseUrl = await getRequestSiteUrl();

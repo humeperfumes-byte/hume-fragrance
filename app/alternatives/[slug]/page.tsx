@@ -7,13 +7,13 @@ import PerfumeCard from "@/components/PerfumeCard";
 import { JsonLd } from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/seo";
 import { getAllProducts } from "@/lib/db/products";
-import { getIntentPageBySlug, intentPages } from "@/lib/intent-pages";
+import { getIntentPageBySlug } from "@/lib/intent-pages";
 import { getRequestSiteUrl } from "@/lib/request-site";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export async function generateStaticParams() {
-  return intentPages.map((page) => ({ slug: page.slug }));
+  return [];
 }
 
 export async function generateMetadata({

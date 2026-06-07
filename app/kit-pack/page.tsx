@@ -3,9 +3,11 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import KitPackShowcase from "@/components/KitPackShowcase";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
-  title: "Build Your Kit - 4 x 20ml",
-  description: "Create a custom 4 x 20ml perfume kit from our inspired fragrance collection.",
+  title: "Build Your Kit - 5 x 15ml",
+  description: "Create a custom 5 x 15ml perfume kit from our inspired fragrance collection.",
 };
 
 export default function KitPackPage() {
@@ -17,4 +19,3 @@ export default function KitPackPage() {
     </main>
   );
 }
-

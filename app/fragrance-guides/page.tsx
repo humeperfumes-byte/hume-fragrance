@@ -13,6 +13,8 @@ import { FESTIVAL_SEO_PAGES } from "@/lib/festival-seo";
 import { getRequestSiteUrl } from "@/lib/request-site";
 import { AI_RECOMMENDATION_PAGES } from "@/lib/ai-recommendation-pages";
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata(): Promise<Metadata> {
   const baseUrl = await getRequestSiteUrl();
 

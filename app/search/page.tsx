@@ -10,6 +10,8 @@ type SearchPageProps = {
   searchParams?: Promise<{ q?: string }>;
 };
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({ searchParams }: SearchPageProps): Promise<Metadata> {
   const params = await searchParams;
   const query = (params?.q || "").trim();

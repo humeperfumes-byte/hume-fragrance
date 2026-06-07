@@ -9,7 +9,7 @@ import BrowserRecoveryGuard from "@/components/BrowserRecoveryGuard";
 import ConsentCaptureBanner from "@/components/ConsentCaptureBanner";
 import ConsentTimelineTracker from "@/components/ConsentTimelineTracker";
 import CartAnalyticsTracker from "@/components/CartAnalyticsTracker";
-import SmoothScroll from "@/components/SmoothScroll";
+import ScrollRestoration from "@/components/ScrollRestoration";
 import { SITE_URL } from "@/lib/site";
 
 const montserrat = Montserrat({
@@ -110,7 +110,9 @@ export default async function RootLayout({
           <Suspense fallback={null}>
             <CartAnalyticsTracker />
           </Suspense>
-          <SmoothScroll />
+          <Suspense fallback={null}>
+            <ScrollRestoration />
+          </Suspense>
         </Providers>
         {cloudflareBeaconToken ? (
           <Script

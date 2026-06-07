@@ -8,7 +8,7 @@ import ShopContent from "./ShopContent";
 import SeoHubTeaser from "@/components/SeoHubTeaser";
 import { getRequestSiteUrl } from "@/lib/request-site";
 
-export const revalidate = 120;
+export const dynamic = "force-dynamic";
 
 export default async function ShopPage() {
   const baseUrl = await getRequestSiteUrl();

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import TrustPolicyPage from "@/components/TrustPolicyPage";
 import { SITE_URL } from "@/lib/site";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Shipping Policy",
   description:
@@ -42,4 +44,3 @@ export default function ShippingPolicyPage() {
     />
   );
 }
-

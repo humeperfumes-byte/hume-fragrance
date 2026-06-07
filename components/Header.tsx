@@ -14,9 +14,7 @@ import SearchOverlay from "./SearchOverlay";
 import { celebrityFavorites } from "@/lib/celebrity-favorites";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
-import AnnouncementBar from "@/components/AnnouncementBar";
 import { DISCOVERY_SET_PATH } from "@/lib/discovery-set";
-import { PERFUME_MATURATION_PATH } from "@/lib/perfume-maturation";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -56,7 +54,6 @@ const Header = () => {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm">
-      <AnnouncementBar />
       <div className="container-luxury">
         <div className="flex items-center justify-between py-5">
           <div className="flex items-center gap-6">
@@ -106,12 +103,6 @@ const Header = () => {
                 className="relative text-[11px] font-semibold uppercase tracking-[0.22em] text-black/80 transition-colors hover:text-black after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-[40%] after:bg-current after:transition-all after:duration-300 hover:after:w-full"
               >
                 Build Your Kit
-              </Link>
-              <Link
-                href="/refill-subscription"
-                className="relative text-[11px] font-semibold uppercase tracking-[0.22em] text-black/80 transition-colors hover:text-black after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-[40%] after:bg-current after:transition-all after:duration-300 hover:after:w-full"
-              >
-                Refill
               </Link>
             </nav>
             <button
@@ -255,51 +246,13 @@ const Header = () => {
                         setIsMenuOpen(false);
                         navigateTo(DISCOVERY_SET_PATH);
                       }}
-                      className="w-full border-b border-border pb-2 text-left"
-                    >
-                      <span className="inline-flex w-full items-center justify-between font-serif text-[1.45rem] italic leading-none">
-                        <span>Discovery Set</span>
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        navigateTo("/refill-subscription");
-                      }}
-                      className="w-full border-b border-border pb-2 text-left"
-                    >
-                      <span className="inline-flex w-full items-center justify-between font-serif text-[1.45rem] italic leading-none">
-                        <span>Refill Program</span>
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        navigateTo(PERFUME_MATURATION_PATH);
-                      }}
-                      className="w-full border-b border-border pb-2 text-left"
-                    >
-                      <span className="inline-flex w-full items-center justify-between font-serif text-[1.45rem] italic leading-none">
-                        <span>Fresh Perfume Guide</span>
-                      </span>
-                    </button>
-                  </div>
-                </section>
-
-                <section>
-                  <div className="space-y-2.5">
-                    <button
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        navigateTo("/scent-quiz");
-                      }}
-                      className="w-full border border-foreground bg-foreground px-3 py-2 text-left text-background"
+                      className="w-full border border-[#2a2116] bg-[#2a2116] px-3 py-2 text-left text-[#f7d79b]"
                     >
                       <div className="flex items-center justify-between">
                         <p className="font-serif text-[1.18rem]">
-                          Scent Quiz <span className="text-[0.65em] italic opacity-80">(60s)</span>
+                          Discovery Set <span className="text-[0.65em] text-[#f7d79b]/70">10 testers</span>
                         </p>
-                        <span className="text-[1.45rem] opacity-70">→</span>
+                        <span className="text-[1.45rem] opacity-75">→</span>
                       </div>
                     </button>
                     <button
@@ -307,13 +260,27 @@ const Header = () => {
                         setIsMenuOpen(false);
                         navigateTo("/kit-pack");
                       }}
-                      className="w-full border border-foreground/45 px-3 py-2 text-left"
+                      className="w-full border border-[#2a2116] bg-[#2a2116] px-3 py-2 text-left text-[#f7d79b]"
                     >
                       <div className="flex items-center justify-between">
                         <p className="font-serif text-[1.18rem]">
-                          Build Your Kit <span className="text-[0.65em] text-muted-foreground">Pack of 4</span>
+                          Build Your Kit <span className="text-[0.65em] text-[#f7d79b]/70">Pack of 5</span>
                         </p>
-                        <span className="text-[1.45rem] text-muted-foreground">→</span>
+                        <span className="text-[1.45rem] opacity-75">→</span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        navigateTo("/scent-quiz");
+                      }}
+                      className="mt-2 flex w-full items-center justify-between border-b border-border pb-2 text-left text-foreground/70"
+                    >
+                      <div className="flex w-full items-center justify-between">
+                        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.22em]">
+                          Scent Quiz <span className="ml-1 font-normal lowercase tracking-normal opacity-70">60s</span>
+                        </p>
+                        <span className="text-[1.15rem] opacity-60">→</span>
                       </div>
                     </button>
                   </div>

@@ -14,7 +14,7 @@ import { getRequestSiteUrl } from "@/lib/request-site";
 import { getBreadcrumbSchema, getOrganizationSchema } from "@/lib/seo";
 import { siteUrlForBase } from "@/lib/site";
 
-export const revalidate = 120;
+export const dynamic = "force-dynamic";
 
 const discoverySetImages = [
   "/images/bg/tester_box1.png",

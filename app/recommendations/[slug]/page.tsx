@@ -18,7 +18,7 @@ type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export function generateStaticParams() {
   return [];

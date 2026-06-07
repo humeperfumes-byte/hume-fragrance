@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Save } from "lucide-react";
+import { Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -49,6 +49,7 @@ export function AdminSettingsControls() {
   const [settings, setSettings] = useState<AdminControls>(defaultAdminControls);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -93,6 +94,30 @@ export function AdminSettingsControls() {
       toast({ title: "Failed to save settings", variant: "destructive" });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const runRetentionCleanup = async () => {
+    setCleaning(true);
+    try {
+      const response = await fetch("/api/admin/retention", { method: "POST" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || "Failed to clean analytics");
+
+      const deleted = data?.deleted ?? {};
+      const totalDeleted = Object.values(deleted as Record<string, unknown>).reduce<number>(
+        (sum, value) => sum + Number(value || 0),
+        0,
+      );
+      toast({
+        title: "Analytics cleaned",
+        description: `${totalDeleted} old rows removed. Retention is ${data.retentionDays ?? 30} days.`,
+      });
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Cleanup failed", variant: "destructive" });
+    } finally {
+      setCleaning(false);
     }
   };
 
@@ -180,6 +205,18 @@ export function AdminSettingsControls() {
             checked={settings.behavioralIntelligenceEnabled}
             onCheckedChange={(value) => update("behavioralIntelligenceEnabled", value)}
           />
+        </SettingRow>
+        <SettingRow title="Analytics retention" description="Cart, coupon, behavioral, and intelligence analytics older than 30 days are deleted daily.">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={runRetentionCleanup}
+            disabled={cleaning}
+            className="border-white/10 bg-white/[0.04] text-white hover:bg-white/10 hover:text-white"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            {cleaning ? "Cleaning" : "Clean Now"}
+          </Button>
         </SettingRow>
         <SettingRow title="Default admin window" description="Preferred dashboard window for future admin screens.">
           <select

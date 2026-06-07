@@ -7,7 +7,7 @@ import { getAllBlogPosts } from "@/lib/db/blog";
 import BlogClient from "./BlogClient";
 import { getRequestSiteUrl } from "@/lib/request-site";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Blog — Fragrance Guides, Tips & Comparisons",

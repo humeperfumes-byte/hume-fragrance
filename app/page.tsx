@@ -24,7 +24,7 @@ import { getImagesByUsage } from "@/lib/db/images";
 import type { HomepagePerfumeCardData } from "@/types/homepage";
 import { SITE_URL } from "@/lib/site";
 
-export const revalidate = 120;
+export const dynamic = "force-dynamic";
 
 export function generateMetadata(): Metadata {
   return {

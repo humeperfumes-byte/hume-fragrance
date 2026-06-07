@@ -21,6 +21,8 @@ type Props = {
   params: Promise<{ festivalSlug: string }>;
 };
 
+export const dynamic = "force-dynamic";
+
 const ALLOWED_SLUGS = new Set(getFestivalSeoSlugs());
 const SPOTLIGHT_LAYOUT_SLUGS = new Set([
   "perfume-for-office",

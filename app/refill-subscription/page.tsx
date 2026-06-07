@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     "The HUME Refill Program. Refill your used HUME perfume bottle for ₹800 with sustainable premium service.",
 };
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 const steps = [
   {

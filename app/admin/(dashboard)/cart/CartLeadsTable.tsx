@@ -50,7 +50,12 @@ export type CartLeadRow = {
   rewardLabel: string | null;
   rewardPercent: number | null;
   rewardEvidence: boolean;
-  products: Array<{ name: string; quantity: number; value: number }>;
+  products: Array<{
+    name: string;
+    quantity: number;
+    value: number;
+    samples?: Array<{ name: string; inspiration?: string | null }>;
+  }>;
   potentialScore: number;
   hasContact: boolean;
   hasCoupon: boolean;
@@ -266,6 +271,19 @@ function CartLeadDetailSheet({
                     <div>
                       <p className="font-semibold text-white">{product.name}</p>
                       <p className="mt-0.5 text-xs text-white/35">Qty {product.quantity}</p>
+                      {product.samples?.length ? (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {product.samples.map((sample) => (
+                            <span
+                              key={`${product.name}-${sample.name}`}
+                              className="rounded-md border border-amber-500/15 bg-amber-500/[0.06] px-2 py-1 text-[11px] text-amber-100/75"
+                              title={sample.inspiration || undefined}
+                            >
+                              {sample.name}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
                     <p className="font-medium text-white">{formatINR(product.value)}</p>
                   </div>

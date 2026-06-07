@@ -3,7 +3,7 @@ import Footer from "@/components/Footer";
 import CelebrityFavoriteCard from "@/components/CelebrityFavoriteCard";
 import { getAllPublicProducts } from "@/lib/db/products";
 
-export const revalidate = 120;
+export const dynamic = "force-dynamic";
 
 export default async function CelebritiesFavoritesPage({
   searchParams,

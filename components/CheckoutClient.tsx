@@ -497,8 +497,6 @@ export default function CheckoutClient() {
   const [allCoupons, setAllCoupons] = useState<Coupon[]>([]);
   const [welcomeBackReward, setWelcomeBackReward] =
     useState<WelcomeBackReward | null>(null);
-  const [kitOutOfStock, setKitOutOfStock] = useState(false);
-  const [kitHoldNotice, setKitHoldNotice] = useState(false);
   const [isRazorpayAvailable, setIsRazorpayAvailable] = useState(false);
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [isStateListOpen, setIsStateListOpen] = useState(false);
@@ -533,26 +531,6 @@ export default function CheckoutClient() {
       void loadRazorpayScript();
     }
   }, [settings.razorpayEnabled]);
-
-  useEffect(() => {
-    let active = true;
-
-    fetch("/api/kit-availability", { cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok) return null;
-        return (await response.json()) as { outOfStock?: boolean };
-      })
-      .then((data) => {
-        if (active && data) setKitOutOfStock(Boolean(data.outOfStock));
-      })
-      .catch((error) => {
-        console.error("Failed to load kit availability:", error);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
 
   useEffect(() => {
     try {
@@ -668,14 +646,6 @@ export default function CheckoutClient() {
       welcomeBackLabel,
     ],
   );
-  const hasKitInCart = items.some(
-    (item) =>
-      !item.isGift &&
-      (Boolean(item.kitSelections?.length) ||
-        item.category === "Kit" ||
-        item.id.startsWith("kit-")),
-  );
-
   const giftItems = useMemo(() => items.filter((item) => item.isGift), [items]);
   const selectedStateCities = useMemo(
     () => getCitiesForState(details.state),
@@ -862,6 +832,47 @@ export default function CheckoutClient() {
       }
     },
     [buildDraftPayload],
+  );
+
+  const captureCheckoutAction = useCallback(
+    (
+      eventType:
+        | "checkout_razorpay_clicked"
+        | "checkout_razorpay_order_created"
+        | "checkout_razorpay_popup_opened"
+        | "checkout_razorpay_dismissed"
+        | "checkout_razorpay_payment_failed"
+        | "checkout_razorpay_verified"
+        | "checkout_razorpay_verify_failed"
+        | "checkout_whatsapp_clicked",
+      payload: Record<string, unknown> = {},
+    ) => {
+      if (typeof window === "undefined") return;
+
+      const sessionId = checkoutSessionIdRef.current ?? getOrCreateCheckoutSessionId();
+      checkoutSessionIdRef.current = sessionId;
+
+      void fetch("/api/cart-events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        keepalive: true,
+        body: JSON.stringify({
+          sessionId,
+          eventType,
+          path: getCheckoutUrl(pathname),
+          quantity: items.length,
+          payload: {
+            source: "checkout",
+            subtotal: totalPrice,
+            shippingFee,
+            grandTotal,
+            itemCount: items.length,
+            ...payload,
+          },
+        }),
+      });
+    },
+    [grandTotal, items.length, pathname, shippingFee, totalPrice],
   );
 
   const updateField = (field: keyof CheckoutDetails, value: string) => {
@@ -1217,35 +1228,6 @@ export default function CheckoutClient() {
     }
   };
 
-  const holdKitLeadIfUnavailable = async () => {
-    if (!hasKitInCart || !kitOutOfStock) return false;
-
-    setIsPaymentProcessing(true);
-    try {
-      await persistDraft(undefined, "complete", true);
-      setKitHoldNotice(true);
-      window.dispatchEvent(
-        new CustomEvent("hume:tracking", {
-          detail: {
-            eventType: "kit_out_of_stock_lead",
-            payload: {
-              subtotal: totalPrice,
-              grandTotal,
-              itemCount: items.length,
-            },
-          },
-        }),
-      );
-      toast({
-        title: "Kit request received",
-        description: "The kit is currently out of stock. We saved your details and will connect with you soon.",
-      });
-      return true;
-    } finally {
-      setIsPaymentProcessing(false);
-    }
-  };
-
   const handleRazorpayPayment = async () => {
     if (!isOnlinePaymentAvailable) {
       toast({
@@ -1265,6 +1247,9 @@ export default function CheckoutClient() {
       return;
     }
 
+    captureCheckoutAction("checkout_razorpay_clicked", {
+      razorpayAvailable: isOnlinePaymentAvailable,
+    });
     setIsPaymentProcessing(true);
     await waitForButtonPaint();
 
@@ -1277,8 +1262,6 @@ export default function CheckoutClient() {
       setIsPaymentProcessing(false);
       return;
     }
-
-    if (await holdKitLeadIfUnavailable()) return;
 
     const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
     if (!keyId) {
@@ -1333,6 +1316,13 @@ export default function CheckoutClient() {
         throw new Error(orderData.error || "Unable to create payment order.");
       }
 
+      captureCheckoutAction("checkout_razorpay_order_created", {
+        orderNumber: identity.orderNumber,
+        localOrderId: identity.id,
+        razorpayOrderId: orderData.order_id,
+        amount,
+      });
+
       await persistOrder({
         checkoutChannel: "razorpay",
         paymentMethod: "Razorpay Online Payment",
@@ -1369,6 +1359,11 @@ export default function CheckoutClient() {
         },
         modal: {
           ondismiss: () => {
+            captureCheckoutAction("checkout_razorpay_dismissed", {
+              orderNumber: identity.orderNumber,
+              localOrderId: identity.id,
+              razorpayOrderId: orderData.order_id,
+            });
             setIsPaymentProcessing(false);
             toast({
               title: "Payment cancelled",
@@ -1390,8 +1385,22 @@ export default function CheckoutClient() {
             };
 
             if (!verifyResponse.ok || !verifyData.success) {
+              captureCheckoutAction("checkout_razorpay_verify_failed", {
+                orderNumber: identity.orderNumber,
+                localOrderId: identity.id,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                error: verifyData.error || "Payment verification failed.",
+              });
               throw new Error(verifyData.error || "Payment verification failed.");
             }
+
+            captureCheckoutAction("checkout_razorpay_verified", {
+              orderNumber: identity.orderNumber,
+              localOrderId: identity.id,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+            });
 
             const paymentMessage = [
               buildOrderMessage(),
@@ -1436,6 +1445,14 @@ export default function CheckoutClient() {
       });
 
       razorpay.on("payment.failed", (response) => {
+        captureCheckoutAction("checkout_razorpay_payment_failed", {
+          orderNumber: identity.orderNumber,
+          localOrderId: identity.id,
+          razorpayOrderId: orderData.order_id,
+          reason: response.error?.reason,
+          description: response.error?.description,
+          code: response.error?.code,
+        });
         setIsPaymentProcessing(false);
         toast({
           title: "Payment failed",
@@ -1447,6 +1464,11 @@ export default function CheckoutClient() {
         });
       });
 
+      captureCheckoutAction("checkout_razorpay_popup_opened", {
+        orderNumber: identity.orderNumber,
+        localOrderId: identity.id,
+        razorpayOrderId: orderData.order_id,
+      });
       razorpay.open();
     } catch (error) {
       setIsPaymentProcessing(false);
@@ -1480,10 +1502,13 @@ export default function CheckoutClient() {
 
     if (!validate()) return;
     if (!(await ensureCartAvailability())) return;
-    if (await holdKitLeadIfUnavailable()) return;
-
     const identity = getOrderIdentity();
     const whatsappMessage = buildOrderMessage();
+    captureCheckoutAction("checkout_whatsapp_clicked", {
+      orderNumber: identity.orderNumber,
+      localOrderId: identity.id,
+      destination: settings.whatsappNumber,
+    });
     await persistDraft(undefined, "whatsapp_initiated", true);
     const orderSaved = await persistOrder({
       checkoutChannel: "whatsapp",
@@ -1938,14 +1963,6 @@ export default function CheckoutClient() {
             </div>
 
             <div className="mt-4 flex flex-col gap-4 lg:hidden">
-              {kitHoldNotice ? (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-                  <p className="font-semibold">Kit request saved</p>
-                  <p className="mt-1 text-xs leading-relaxed text-amber-900/75">
-                    The kit is currently out of stock. We have your details and will connect with you soon.
-                  </p>
-                </div>
-              ) : null}
               {isOnlinePaymentAvailable ? (
                 <Button
                   onClick={handleRazorpayPayment}
@@ -2111,14 +2128,6 @@ export default function CheckoutClient() {
             </div>
 
             <div className="mt-5 hidden flex-col gap-4 lg:flex">
-              {kitHoldNotice ? (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-                  <p className="font-semibold">Kit request saved</p>
-                  <p className="mt-1 text-xs leading-relaxed text-amber-900/75">
-                    The kit is currently out of stock. We have your details and will connect with you soon.
-                  </p>
-                </div>
-              ) : null}
               {isOnlinePaymentAvailable ? (
                 <Button
                   onClick={handleRazorpayPayment}

@@ -47,15 +47,9 @@ const shopSections: ShopSection[] = [
       },
       {
         label: "Build Your Kit",
-        description: "Create your own 4 x 20ml set",
+        description: "Create your own 5 x 15ml set",
         filterType: "occasion",
         href: "/kit-pack",
-      },
-      {
-        label: "Refill Program",
-        description: "Sustainable refill membership",
-        filterType: "occasion",
-        href: "/refill-subscription",
       },
       {
         label: "Fresh Perfume Guide",
@@ -325,7 +319,7 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
                                     <>
                                       Build Your Kit{" "}
                                       <span className="text-[0.85rem] align-middle text-white/80">
-                                        (pack of 4)
+                                        (pack of 5)
                                       </span>
                                     </>
                                   ) : (

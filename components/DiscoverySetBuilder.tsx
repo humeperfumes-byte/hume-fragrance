@@ -169,6 +169,28 @@ export default function DiscoverySetBuilder() {
       return;
     }
 
+    window.dispatchEvent(
+      new CustomEvent("hume:tracking", {
+        detail: {
+          eventType: "add_to_cart",
+          payload: {
+            source: "discovery_set_builder",
+            productId: "hume-discovery-set",
+            productName: "HUME Discovery Set",
+            price: DISCOVERY_SET_PRICE,
+            quantity: 1,
+            sampleCount: SAMPLE_COUNT,
+            samples: selected.map((perfume, index) => ({
+              position: index + 1,
+              id: perfume.id,
+              name: perfume.name,
+              inspiration: perfume.inspiration,
+            })),
+          },
+        },
+      }),
+    );
+
     setShowComingSoon(true);
     toast({
       title: "Coming soon",
@@ -554,11 +576,17 @@ export default function DiscoverySetBuilder() {
                             className="object-cover transition-transform duration-500 group-hover:scale-105"
                             loading="lazy"
                           />
-                          {isSelected ? (
-                            <span className="absolute right-3 top-3 inline-flex h-7 w-7 items-center justify-center rounded-full border border-background/80 bg-foreground text-[0.72rem] font-bold text-background shadow-[0_8px_20px_rgba(12,14,18,0.15)]">
-                              {selectedPosition}
+                          <span
+                            className={`absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-[1.25rem] font-light leading-none shadow-[0_10px_22px_rgba(12,14,18,0.22),inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-md backdrop-saturate-150 transition sm:right-2.5 sm:top-2.5 sm:h-10 sm:w-10 sm:rounded-xl sm:text-[1.55rem] ${
+                              isSelected
+                                ? "bg-foreground text-background"
+                                : "border border-white/65 bg-black/28 text-white ring-1 ring-black/10"
+                            }`}
+                          >
+                            <span className={isSelected ? "text-xs font-semibold sm:text-sm" : "-mt-0.5 drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]"}>
+                              {isSelected ? selectedPosition : "+"}
                             </span>
-                          ) : null}
+                          </span>
                         </div>
 
                         <div className="mt-1.5 sm:mt-2">

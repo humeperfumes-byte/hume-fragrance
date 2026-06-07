@@ -13,6 +13,7 @@ import {
   RefreshCw,
   ShieldCheck,
   ShoppingBag,
+  Smartphone,
   Truck,
   UserRound,
   WalletCards,
@@ -94,6 +95,7 @@ type OtpRequestResponse = {
   requestId?: string;
   expiresInMinutes?: number;
   deliveryHint?: string;
+  deliveryChannel?: "sms" | "email";
   dryRun?: boolean;
   error?: string;
 };
@@ -297,7 +299,8 @@ export default function AccountClient() {
       setOtpRequest(data);
       setOtpCode("");
       setResendSeconds(OTP_RESEND_SECONDS);
-      setLoginStatus(`Code sent to ${data.deliveryHint || "your saved email"}.`);
+      const destinationType = data.deliveryChannel === "sms" ? "mobile" : "email";
+      setLoginStatus(`Code sent to ${data.deliveryHint || `your saved ${destinationType}`}.`);
     } catch (requestError) {
       setLoginError(requestError instanceof Error ? requestError.message : "Unable to send login code.");
     } finally {
@@ -385,7 +388,7 @@ export default function AccountClient() {
               <div>
                 <p className="text-sm font-semibold text-zinc-950">Already checked out?</p>
                 <p className="mt-1 text-xs leading-5 text-zinc-500">
-                  Enter the email or mobile number used at checkout. We will send a 4 digit code to the saved email.
+                  Enter the email or mobile number used at checkout. We will send a 4 digit code to that saved contact.
                 </p>
               </div>
             </div>
@@ -404,7 +407,11 @@ export default function AccountClient() {
                 disabled={isRequestingOtp || resendSeconds > 0 || !loginIdentifier.trim()}
                 className="h-12 rounded-full bg-zinc-950 px-6 text-white hover:bg-zinc-800"
               >
-                <Mail className="h-4 w-4" />
+                {loginIdentifier.replace(/\D/g, "").length >= 10 && !loginIdentifier.includes("@") ? (
+                  <Smartphone className="h-4 w-4" />
+                ) : (
+                  <Mail className="h-4 w-4" />
+                )}
                 {isRequestingOtp
                   ? "Sending..."
                   : resendSeconds > 0

@@ -91,24 +91,11 @@ function getTrackingUrl(order: Pick<Order, "trackingNumber" | "trackingUrl">) {
   return buildPublicTrackingUrl(order.trackingNumber, origin) || order.trackingUrl || "";
 }
 
-function getCarrierLabel(carrier?: string | null) {
-  if (!carrier) return "Speed Post";
-  if (carrier === "speed_post") return "Speed Post";
-  if (carrier === "delhivery") return "Delhivery";
-  if (carrier === "shiprocket") return "Shiprocket";
-  if (carrier === "bluedart") return "Blue Dart";
-  return carrier;
-}
-
 function buildTrackingMessage(order: Order) {
   const trackingUrl = getTrackingUrl(order);
   return [
-    `Hi ${order.fullName || "there"},`,
+    `Hi ${order.fullName || "there"}, your order tracking link is here`,
     "",
-    `Your HUME order #${order.orderNumber} has been shipped.`,
-    order.trackingNumber
-      ? `Tracking ID: ${order.trackingNumber} (${getCarrierLabel(order.fulfillmentCarrier)})`
-      : null,
     trackingUrl ? `Track here: ${trackingUrl}` : null,
     "",
     "Thank you for choosing HUME Fragrance.",
@@ -139,14 +126,6 @@ function buildDeliveredMessage(order: Order) {
   ].join("\n");
 }
 
-function getOrderSuccessImageUrl() {
-  const origin =
-    typeof window !== "undefined"
-      ? window.location.origin
-      : "https://www.humefragrance.com";
-  return `${origin}/images/email/order%20confirmation%20email%20hero%20image.png`;
-}
-
 function buildOrderSuccessMessage(order: Order) {
   const itemLines = (order.cartSnapshot || [])
     .filter((item) => !item.isGift)
@@ -157,16 +136,14 @@ function buildOrderSuccessMessage(order: Order) {
     `Hi ${order.fullName || "there"},`,
     "",
     "Order Success",
+    `Your HUME Fragrance order #${order.orderNumber} has been placed successfully.`,
     "",
-    `Your HUME order #${order.orderNumber} has been placed successfully.`,
     order.grandTotal ? `Order total: ${formatINR(Number(order.grandTotal))}` : null,
+    "",
     itemLines.length ? "Items:" : null,
     ...itemLines,
     "",
-    `Order success image: ${getOrderSuccessImageUrl()}`,
-    "",
     "We will start preparing your order and share the tracking details once it is dispatched.",
-    "",
     "Team HUME Fragrance",
   ]
     .filter(Boolean)

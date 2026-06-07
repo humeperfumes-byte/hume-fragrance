@@ -16,7 +16,7 @@ const formatPrice = (amount: number) =>
     maximumFractionDigits: 0,
   }).format(amount);
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 async function resolveMappedProduct(
   item: NonNullable<ReturnType<typeof getAlternativeToBySlug>>,

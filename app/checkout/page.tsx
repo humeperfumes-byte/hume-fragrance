@@ -2,6 +2,8 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CheckoutClient from "@/components/CheckoutClient";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Checkout",
   description:

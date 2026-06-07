@@ -109,10 +109,15 @@ function buildOrderTrackingUrl(order: TrackedOrder) {
 }
 
 function buildOrderCustomerUpdate(order: TrackedOrder) {
-  const carrier = TRACKING_CARRIERS[normalizeOrderCarrier(order.fulfillmentCarrier)].shortLabel;
-  const name = order.fullName?.split(" ")[0] || "there";
+  const name = order.fullName || "there";
   const trackingLink = buildOrderTrackingUrl(order);
-  return `Hi ${name}, your HUME order ${order.orderNumber} has been shipped via ${carrier}. Tracking ID: ${order.trackingNumber}. Track here: ${trackingLink}`;
+  return [
+    `Hi ${name}, your order tracking link is here`,
+    "",
+    `Track here: ${trackingLink}`,
+    "",
+    "Thank you for choosing HUME Fragrance.",
+  ].join("\n");
 }
 
 function buildOrderWhatsAppUrl(order: TrackedOrder) {

@@ -94,7 +94,7 @@ function mergeProducts(
   left: CartLeadRow["products"],
   right: CartLeadRow["products"],
 ): CartLeadRow["products"] {
-  const map = new Map<string, { name: string; quantity: number; value: number }>();
+  const map = new Map<string, CartLeadRow["products"][number]>();
 
   for (const product of [...left, ...right]) {
     const key = productKey(product.name) || product.name;
@@ -103,10 +103,32 @@ function mergeProducts(
       name: existing?.name || product.name,
       quantity: Math.max(existing?.quantity || 0, product.quantity),
       value: Math.max(existing?.value || 0, product.value),
+      samples: existing?.samples?.length ? existing.samples : product.samples,
     });
   }
 
   return Array.from(map.values()).sort((a, b) => b.value - a.value);
+}
+
+function readSampleSelections(payload: Record<string, unknown>) {
+  const rawSamples = payload.samples;
+  if (!Array.isArray(rawSamples)) return undefined;
+
+  const samples = rawSamples
+    .map((sample) => {
+      if (!sample || typeof sample !== "object") return null;
+      const data = sample as Record<string, unknown>;
+      const name = String(data.name ?? "").trim();
+      if (!name) return null;
+
+      return {
+        name,
+        inspiration: String(data.inspiration ?? "").trim() || null,
+      };
+    })
+    .filter((sample): sample is { name: string; inspiration: string | null } => Boolean(sample));
+
+  return samples.length ? samples : undefined;
 }
 
 function getLeadJourneyKey(row: CartLeadRow): string {
@@ -404,7 +426,7 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
         ipAddress: string | null;
         userAgent: string | null;
         path: string | null;
-        products: Map<string, { name: string; quantity: number; value: number }>;
+        products: Map<string, CartLeadRow["products"][number]>;
       }
     >();
 
@@ -424,7 +446,7 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
           ipAddress: event.ipAddress,
           userAgent: event.userAgent,
           path: event.path,
-          products: new Map<string, { name: string; quantity: number; value: number }>(),
+          products: new Map<string, CartLeadRow["products"][number]>(),
         };
 
       if (event.createdAt > entry.latestActivity) {
@@ -440,6 +462,7 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
       if (event.eventType === "reward_banner_click") entry.rewardBannerClicks += 1;
 
       if (event.eventType === "add_to_cart") {
+        const payload = (event.payload || {}) as Record<string, unknown>;
         entry.addToCartCount += 1;
         const quantity = event.quantity || 1;
         const value = money(event.price) * quantity;
@@ -450,6 +473,7 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
           name: event.productName || "Unknown product",
           quantity: (product?.quantity || 0) + quantity,
           value: (product?.value || 0) + value,
+          samples: product?.samples?.length ? product.samples : readSampleSelections(payload),
         });
       }
 
@@ -519,6 +543,10 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
             name: item.name,
             quantity: item.quantity,
             value: item.price * item.quantity,
+            samples: item.sampleSelections?.map((sample) => ({
+              name: sample.name,
+              inspiration: sample.inspiration || null,
+            })),
           }))
           .sort((a, b) => b.value - a.value);
         const checkoutValue = draft?.grandTotal ? money(draft.grandTotal) : null;
@@ -567,7 +595,7 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
                     .map((product) => productKey(product.name))
                     .sort();
                   const productSignature = productKeys.join("|");
-                  const isKitJourney = productKeys.some((key) => key.includes("custom 4 x 20ml kit"));
+                  const isKitJourney = productKeys.some((key) => key.includes("custom 5 x 15ml kit"));
                   if (hasCheckout && isKitJourney) {
                     return `checkout-product::${productSignature}`;
                   }

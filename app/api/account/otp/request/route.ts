@@ -11,10 +11,13 @@ import {
   hasRecentOtp,
   hashOtp,
   maskEmail,
+  maskPhone,
+  normalizePhone,
   parseAccountIdentity,
 } from "@/lib/account-login";
 import { buildAccountOtpEmail } from "@/lib/email/account-otp-template";
 import { sendHumeEmail } from "@/lib/email/hume-mail-service";
+import { sendHumeOtpSms } from "@/lib/sms/hume-sms-service";
 
 const requestSchema = z.object({
   identifier: z.string().min(4).max(255),
@@ -59,9 +62,19 @@ export async function POST(request: NextRequest) {
     }
 
     const destinationEmail = profile.email || (identity.type === "email" ? identity.value : "");
-    if (!destinationEmail) {
+    const destinationPhone = normalizePhone(profile.phone || (identity.type === "phone" ? identity.value : ""));
+    const shouldSendSms = identity.type === "phone";
+
+    if (shouldSendSms && destinationPhone.length !== 10) {
       return NextResponse.json(
-        { ok: false, error: "This mobile number has no email saved. Login with the email used at checkout." },
+        { ok: false, error: "This account does not have a valid mobile number saved." },
+        { status: 422 },
+      );
+    }
+
+    if (!shouldSendSms && !destinationEmail) {
+      return NextResponse.json(
+        { ok: false, error: "This account does not have an email saved. Login with the mobile number used at checkout." },
         { status: 422 },
       );
     }
@@ -74,36 +87,79 @@ export async function POST(request: NextRequest) {
       id: requestId,
       identityType: identity.type,
       identifier: identity.value,
-      destinationEmail,
+      destinationEmail: destinationEmail || "",
       otpHash: hashOtp(otp, requestId),
       expiresAt: addMinutes(new Date(), accountOtpConfig.otpTtlMinutes),
       ipAddress,
       userAgent,
     });
 
-    const email = buildAccountOtpEmail({
-      otp,
-      customerName: profile.fullName,
-      expiresInMinutes: accountOtpConfig.otpTtlMinutes,
-    });
+    let sendResult:
+      | Awaited<ReturnType<typeof sendHumeOtpSms>>
+      | Awaited<ReturnType<typeof sendHumeEmail>>;
+    let deliveryHint = "";
+    let deliveryChannel: "sms" | "email" = "email";
 
-    const sendResult = await sendHumeEmail({
-      to: destinationEmail,
-      subject: `Your HUME login code is ${otp}`,
-      html: email.html,
-      text: email.text,
-      messageType: "account_otp",
-      relatedType: "account_login_otp",
-      relatedId: requestId,
-      payload: {
-        identityType: identity.type,
-        identifier: identity.value,
-      },
-    });
+    if (shouldSendSms) {
+      sendResult = await sendHumeOtpSms({
+        to: destinationPhone,
+        otp,
+      });
+      deliveryHint = maskPhone(destinationPhone);
+      deliveryChannel = "sms";
+    } else {
+      const email = buildAccountOtpEmail({
+        otp,
+        customerName: profile.fullName,
+        expiresInMinutes: accountOtpConfig.otpTtlMinutes,
+      });
+
+      sendResult = await sendHumeEmail({
+        to: destinationEmail,
+        subject: `Your HUME login code is ${otp}`,
+        html: email.html,
+        text: email.text,
+        messageType: "account_otp",
+        relatedType: "account_login_otp",
+        relatedId: requestId,
+        payload: {
+          identityType: identity.type,
+          identifier: identity.value,
+          deliveryChannel: "email",
+        },
+      });
+      deliveryHint = maskEmail(destinationEmail);
+    }
+
+    if (!sendResult.ok && shouldSendSms && destinationEmail) {
+      const email = buildAccountOtpEmail({
+        otp,
+        customerName: profile.fullName,
+        expiresInMinutes: accountOtpConfig.otpTtlMinutes,
+      });
+
+      sendResult = await sendHumeEmail({
+        to: destinationEmail,
+        subject: `Your HUME login code is ${otp}`,
+        html: email.html,
+        text: email.text,
+        messageType: "account_otp",
+        relatedType: "account_login_otp",
+        relatedId: requestId,
+        payload: {
+          identityType: identity.type,
+          identifier: identity.value,
+          deliveryChannel: "email_fallback",
+          smsError: sendResult.error,
+        },
+      });
+      deliveryHint = maskEmail(destinationEmail);
+      deliveryChannel = "email";
+    }
 
     if (!sendResult.ok) {
       return NextResponse.json(
-        { ok: false, error: "Unable to send the login code right now." },
+        { ok: false, error: shouldSendSms ? "Unable to send the login code to this mobile number right now." : "Unable to send the login code right now." },
         { status: 500 },
       );
     }
@@ -112,7 +168,8 @@ export async function POST(request: NextRequest) {
       ok: true,
       requestId,
       expiresInMinutes: accountOtpConfig.otpTtlMinutes,
-      deliveryHint: maskEmail(destinationEmail),
+      deliveryHint,
+      deliveryChannel,
       dryRun: sendResult.status === "dry_run",
     });
   } catch (error) {
