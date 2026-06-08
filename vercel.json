@@ -3,10 +3,6 @@
     {
       "path": "/api/cron/retention",
       "schedule": "30 20 * * *"
-    },
-    {
-      "path": "/api/cron/payment-pending-reminders",
-      "schedule": "*/15 * * * *"
     }
   ],
   "headers": [

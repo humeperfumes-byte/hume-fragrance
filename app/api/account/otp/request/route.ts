@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
 
     if (!sendResult.ok && shouldSendSms && destinationEmail) {
       console.warn("Account OTP SMS failed; falling back to email.", {
-        provider: sendResult.provider,
+        provider: "provider" in sendResult ? sendResult.provider : undefined,
         mode: "mode" in sendResult ? sendResult.mode : undefined,
         error: sendResult.error,
       });
