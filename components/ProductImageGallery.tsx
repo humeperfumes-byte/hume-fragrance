@@ -90,12 +90,12 @@ const ProductImageGallery = ({ images, videos = [], name }: ProductImageGalleryP
         </CarouselContent>
       </Carousel>
 
-      <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
+      <div className="grid grid-cols-5 gap-2 pb-1 sm:flex sm:gap-3 sm:overflow-x-auto sm:scrollbar-none">
         {mediaItems.map((item, index) => (
           <button
             key={index}
             onClick={() => api?.scrollTo(index)}
-            className={`relative shrink-0 h-20 w-20 sm:h-24 sm:w-24 bg-secondary/70 p-1 border transition-all duration-200 ${
+            className={`relative aspect-square min-w-0 bg-secondary/70 p-1 border transition-all duration-200 sm:h-24 sm:w-24 sm:shrink-0 ${
               selectedIndex === index
                 ? "border-foreground"
                 : "border-border/60 hover:border-foreground/40"
