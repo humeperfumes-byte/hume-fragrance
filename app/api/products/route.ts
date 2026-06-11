@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
           humeSpecial: z.boolean().optional(),
           limitedStock: z.boolean().optional(),
           soldOut: z.boolean().optional(),
+          comingSoon: z.boolean().optional(),
         })
         .optional()
         .default({}),

@@ -30,6 +30,7 @@ interface PerfumeCardProps {
   hidePrice?: boolean;
   prioritizeImage?: boolean;
   disableEntranceAnimation?: boolean;
+  compactBadges?: boolean;
 }
 
 const PerfumeCard = ({
@@ -50,6 +51,7 @@ const PerfumeCard = ({
   hidePrice = false,
   prioritizeImage,
   disableEntranceAnimation = false,
+  compactBadges = false,
 }: PerfumeCardProps) => {
   const { addItem } = useCart();
   const router = useRouter();
@@ -68,6 +70,18 @@ const PerfumeCard = ({
   });
   const displayPrice = formatINR(price);
   const isPriorityCard = prioritizeImage ?? index === 0;
+  const primaryBadge =
+    isDiscoverySet
+      ? { full: "Discovery Set", compact: "Set", className: "bg-[#2a2116] text-[#f7d79b]" }
+      : soldOut
+        ? { full: "Sold Out", compact: "Sold", className: "bg-red-600 text-white" }
+        : bestSeller
+          ? { full: "Best Seller", compact: "Best Seller", className: "bg-foreground text-background" }
+          : humeSpecial
+            ? { full: "HUME Special", compact: "HUME Special", className: "bg-emerald-100 text-emerald-800" }
+            : limitedStock
+              ? { full: "Limited Stock", compact: "Low", className: "bg-amber-200/90 text-amber-900" }
+              : null;
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -169,33 +183,21 @@ const PerfumeCard = ({
             />
             <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/5 transition-all duration-500" />
           </Link>
-          {(isDiscoverySet || bestSeller || humeSpecial || limitedStock || soldOut) && (
-            <div className="absolute left-3 top-3 flex flex-col gap-2">
-              {isDiscoverySet && (
-                <span className="inline-flex items-center bg-[#2a2116] px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-[#f7d79b]">
-                  Discovery Set
-                </span>
-              )}
-              {soldOut && (
-                <span className="inline-flex items-center bg-red-600 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-white">
-                  Sold Out
-                </span>
-              )}
-              {bestSeller && (
-                <span className="inline-flex items-center text-[10px] uppercase tracking-[0.2em] px-2 py-1 bg-foreground text-background">
-                  Best Seller
-                </span>
-              )}
-              {humeSpecial && (
-                <span className="inline-flex items-center text-[10px] uppercase tracking-[0.2em] px-2 py-1 bg-emerald-100 text-emerald-800">
-                  HUME Special
-                </span>
-              )}
-              {limitedStock && (
-                <span className="inline-flex items-center text-[10px] uppercase tracking-[0.2em] px-2 py-1 bg-amber-200/90 text-amber-900">
-                  Limited Stock
-                </span>
-              )}
+          {primaryBadge && (
+            <div
+              className={`absolute flex flex-col ${
+                compactBadges ? "left-2 top-2 gap-1" : "left-3 top-3 gap-2"
+              }`}
+            >
+              <span
+                className={`inline-flex w-fit items-center uppercase ${primaryBadge.className} ${
+                  compactBadges
+                    ? "px-1.5 py-0.5 text-[7px] tracking-[0.12em]"
+                    : "px-2 py-1 text-[10px] tracking-[0.2em]"
+                }`}
+              >
+                {compactBadges ? primaryBadge.compact : primaryBadge.full}
+              </span>
             </div>
           )}
           <button

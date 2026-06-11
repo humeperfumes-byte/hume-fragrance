@@ -7,6 +7,7 @@ import ComingSoonSection from "@/components/ComingSoonSection";
 import RefillProgramSection from "@/components/RefillProgramSection";
 import SeoHubTeaser from "@/components/SeoHubTeaser";
 import Collection from "@/components/Collection";
+import HomeKitDiscoveryTeasers from "@/components/HomeKitDiscoveryTeasers";
 import HomeVideoCarouselSection from "@/components/HomeVideoCarouselSection";
 import HomeFaqSection from "@/components/HomeFaqSection";
 import HomeReviewsSection from "@/components/HomeReviewsSection";
@@ -43,13 +44,6 @@ const Craft = nextDynamic(() => import("@/components/Craft"), {
 const About = nextDynamic(() => import("@/components/About"), {
   loading: () => <div className="py-24 md:py-32" />,
 });
-const KitPackShowcase = nextDynamic(
-  () => import("@/components/KitPackShowcase"),
-  {
-    loading: () => <div className="py-24 md:py-32" />,
-  },
-);
-
 export default async function Home() {
   const baseUrl = SITE_URL;
 
@@ -69,7 +63,9 @@ export default async function Home() {
         : 0;
   }
 
-  const homepagePerfumes: HomepagePerfumeCardData[] = perfumes
+  const availablePerfumes = perfumes.filter((product) => !product.badges?.soldOut);
+
+  const homepagePerfumes: HomepagePerfumeCardData[] = availablePerfumes
     .map((product) => ({
       id: product.id,
       name: product.name,
@@ -119,22 +115,22 @@ export default async function Home() {
         style={{ contentVisibility: "auto", containIntrinsicSize: "980px" }}
         data-analytics-section="new_launches"
       >
-        <ComingSoonSection />
+        <ComingSoonSection products={availablePerfumes} />
       </div>
       <div data-analytics-section="collection">
         <Collection perfumes={homepagePerfumes} />
+      </div>
+      <div
+        style={{ contentVisibility: "auto", containIntrinsicSize: "1500px" }}
+        data-analytics-section="kit_and_discovery"
+      >
+        <HomeKitDiscoveryTeasers />
       </div>
       <div
         style={{ contentVisibility: "auto", containIntrinsicSize: "760px" }}
         data-analytics-section="home_video"
       >
         <HomeVideoCarouselSection />
-      </div>
-      <div
-        style={{ contentVisibility: "auto", containIntrinsicSize: "1500px" }}
-        data-analytics-section="kit_pack"
-      >
-        <KitPackShowcase />
       </div>
       <div
         style={{ contentVisibility: "auto", containIntrinsicSize: "1100px" }}

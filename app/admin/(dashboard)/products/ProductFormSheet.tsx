@@ -31,6 +31,7 @@ export function ProductFormSheet({ open, onOpenChange, onSuccess }: ProductFormS
     humeSpecial: false,
     limitedStock: false,
     soldOut: false,
+    comingSoon: false,
     description: "",
     seoDescription: "",
     seoKeywordsCsv: "",
@@ -46,7 +47,7 @@ export function ProductFormSheet({ open, onOpenChange, onSuccess }: ProductFormS
     setForm({ ...form, [e.target.id]: e.target.value });
   };
 
-  const handleCheckedChange = (id: "bestSeller" | "humeSpecial" | "limitedStock" | "soldOut", checked: boolean) => {
+  const handleCheckedChange = (id: "bestSeller" | "humeSpecial" | "limitedStock" | "soldOut" | "comingSoon", checked: boolean) => {
     setForm({ ...form, [id]: checked });
   };
 
@@ -76,6 +77,7 @@ export function ProductFormSheet({ open, onOpenChange, onSuccess }: ProductFormS
         humeSpecial: form.humeSpecial,
         limitedStock: form.limitedStock,
         soldOut: form.soldOut,
+        comingSoon: form.comingSoon,
       },
       description: form.description,
       seoDescription: form.seoDescription,
@@ -172,6 +174,7 @@ export function ProductFormSheet({ open, onOpenChange, onSuccess }: ProductFormS
                   {[
                     ["bestSeller", "Best Seller"],
                     ["humeSpecial", "HUME Special"],
+                    ["comingSoon", "Coming Soon"],
                     ["limitedStock", "Limited Stock"],
                     ["soldOut", "Sold Out"],
                   ].map(([id, label]) => (
@@ -181,10 +184,10 @@ export function ProductFormSheet({ open, onOpenChange, onSuccess }: ProductFormS
                     >
                       <input
                         type="checkbox"
-                        checked={Boolean(form[id as "bestSeller" | "humeSpecial" | "limitedStock" | "soldOut"])}
+                        checked={Boolean(form[id as "bestSeller" | "humeSpecial" | "limitedStock" | "soldOut" | "comingSoon"])}
                         onChange={(event) =>
                           handleCheckedChange(
-                            id as "bestSeller" | "humeSpecial" | "limitedStock" | "soldOut",
+                            id as "bestSeller" | "humeSpecial" | "limitedStock" | "soldOut" | "comingSoon",
                             event.target.checked,
                           )
                         }

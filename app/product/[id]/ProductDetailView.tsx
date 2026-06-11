@@ -200,7 +200,7 @@ export default function ProductDetailView({
           </div>
 
           <div
-            className="grid grid-cols-[repeat(var(--note-count),minmax(0,1fr))] gap-2 sm:grid-cols-[repeat(var(--note-count),minmax(8.75rem,8.75rem))] sm:justify-start sm:gap-4 lg:grid-cols-[repeat(var(--note-count),minmax(9.25rem,9.25rem))] lg:gap-5"
+            className="grid grid-cols-[repeat(var(--note-count),minmax(5.75rem,6.75rem))] justify-center gap-2 sm:grid-cols-[repeat(var(--note-count),minmax(8.75rem,8.75rem))] sm:justify-start sm:gap-4 lg:grid-cols-[repeat(var(--note-count),minmax(9.25rem,9.25rem))] lg:gap-5"
             style={{ "--note-count": notes.length } as CSSProperties}
           >
           {notes.map((note) => {
@@ -330,7 +330,7 @@ export default function ProductDetailView({
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-120px" }}
             transition={{ duration: 0.55 }}
-            className="mx-auto mt-14 max-w-5xl lg:mt-20"
+            className="mx-auto mt-6 max-w-5xl md:mt-14 lg:mt-20"
           >
               {showFragranceNotes ? (
                 <div className="border-t border-border pt-8 mb-12">

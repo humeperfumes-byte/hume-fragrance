@@ -74,6 +74,7 @@ export default async function HumeSpecialPage() {
                   humeSpecial={perfume.badges?.humeSpecial}
                   limitedStock={perfume.badges?.limitedStock}
                   soldOut={perfume.badges?.soldOut}
+                  compactBadges
                 />
               ))}
             </div>
@@ -115,6 +116,7 @@ export default async function HumeSpecialPage() {
                   humeSpecial={perfume.badges?.humeSpecial}
                   limitedStock={perfume.badges?.limitedStock}
                   soldOut={perfume.badges?.soldOut}
+                  compactBadges
                 />
               ))}
             </div>

@@ -5,7 +5,7 @@ import ImageWithFallback from "@/components/ImageWithFallback";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Search, ExternalLink, UserRound } from "lucide-react";
+import { ArrowRight, Menu, X, Search, Sparkles, ExternalLink, UserRound } from "lucide-react";
 import { HiOutlineShoppingBag } from "react-icons/hi2";
 import { useCart } from "@/context/CartContext";
 import ShopMegaMenu from "./ShopMegaMenu";
@@ -51,6 +51,12 @@ const Header = () => {
     }
     navigateTo(`/shop?filter=${filterType}&value=${encodeURIComponent(value)}`);
   };
+
+  const genderMenuItems = [
+    { label: "Men", className: "bg-[#f4f8ff]", icon: "/images/icons/men-icon.png" },
+    { label: "Women", className: "bg-[#fff6f7]", icon: "/images/icons/women-icon.png" },
+    { label: "Unisex", className: "bg-[#f8fbf6]" },
+  ];
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm">
@@ -205,7 +211,7 @@ const Header = () => {
                 </button>
               </div>
 
-              <div className="px-6 py-5 space-y-6">
+              <div className="px-4 py-5 space-y-6">
                 <section>
                   <div className="space-y-3">
                     <button
@@ -274,30 +280,47 @@ const Header = () => {
                         setIsMenuOpen(false);
                         navigateTo("/scent-quiz");
                       }}
-                      className="mt-2 flex w-full items-center justify-between border-b border-border pb-2 text-left text-foreground/70"
+                      className="mt-3 flex w-full items-center justify-between rounded-full border border-[#e5ddd1] bg-[#fbf8f2] px-3 py-2.5 text-left text-foreground shadow-[0_8px_18px_rgba(42,33,22,0.06)] transition-luxury hover:border-[#2a2116]/25 hover:bg-white"
                     >
-                      <div className="flex w-full items-center justify-between">
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#2a2116] text-[#f7d79b]">
+                          <Sparkles size={13} />
+                        </span>
                         <p className="text-[0.72rem] font-semibold uppercase tracking-[0.22em]">
-                          Scent Quiz <span className="ml-1 font-normal lowercase tracking-normal opacity-70">60s</span>
+                          Scent Quiz
                         </p>
-                        <span className="text-[1.15rem] opacity-60">→</span>
+                        <span className="rounded-full border border-[#e1d7c8] bg-white/70 px-2 py-0.5 text-[10px] font-medium lowercase tracking-normal text-muted-foreground">
+                          60s
+                        </span>
                       </div>
+                      <ArrowRight size={16} className="shrink-0 text-[#8b806f]" />
                     </button>
                   </div>
                 </section>
 
                 <section>
-                  <p className="text-[11px] uppercase tracking-[0.38em] text-muted-foreground mb-2">
-                    By Occasion
-                  </p>
                   <div className="grid grid-cols-3 gap-2">
-                    {["Gym", "Daily Wear", "Office", "Date Night", "Party", "Formal"].map((occasion) => (
+                    {genderMenuItems.map((item) => (
                       <button
-                        key={occasion}
-                        onClick={() => handleMobileFilterClick("occasion", occasion)}
-                        className="inline-flex min-h-7 items-center justify-center border border-border px-2 text-center text-xs font-light tracking-tight hover:bg-muted/50"
+                        key={item.label}
+                        onClick={() => handleMobileFilterClick("gender", item.label)}
+                        className={`group flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-full border border-[#e6e0d8] ${item.className} px-2 text-[#1f2933] transition-luxury hover:border-foreground/30 hover:bg-white max-[400px]:gap-1 max-[400px]:px-1.5 max-[350px]:gap-0.5 max-[350px]:px-1`}
                       >
-                        {occasion}
+                        {item.icon ? (
+                          <ImageWithFallback
+                            src={item.icon}
+                            fallbackSrc={item.icon}
+                            alt=""
+                            width={500}
+                            height={500}
+                            sizes="26px"
+                            className="pointer-events-none h-6 w-6 shrink-0 object-contain opacity-90 transition-transform duration-300 group-hover:scale-105"
+                            loading="lazy"
+                          />
+                        ) : null}
+                        <span className="truncate text-[12px] font-medium leading-none tracking-[0.01em]">
+                          {item.label}
+                        </span>
                       </button>
                     ))}
                   </div>

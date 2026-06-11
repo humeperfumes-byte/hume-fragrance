@@ -29,6 +29,7 @@ export const products = pgTable("products", {
       humeSpecial?: boolean;
       limitedStock?: boolean;
       soldOut?: boolean;
+      comingSoon?: boolean;
     }>()
     .notNull()
     .default({}),

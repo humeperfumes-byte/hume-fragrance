@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { Resend } from "resend";
 import { db } from "../../db";
 import { emailEvents } from "../../db/schema";
@@ -25,6 +25,7 @@ export type HumeEmailInput = {
   relatedType?: string;
   relatedId?: string;
   payload?: Record<string, unknown>;
+  idempotencyKey?: string;
 };
 
 export type HumeEmailResult = {
@@ -34,7 +35,25 @@ export type HumeEmailResult = {
   eventId?: string;
   providerMessageId?: string;
   error?: string;
+  deduped?: boolean;
 };
+
+type ExistingEmailEvent = {
+  id: string;
+  status: HumeEmailStatus;
+  providerMessageId: string | null;
+  error: string | null;
+};
+
+type EmailEventClaim =
+  | { id: string; deduped: false }
+  | {
+      id: string;
+      deduped: true;
+      status: HumeEmailStatus;
+      providerMessageId?: string;
+      error?: string;
+    };
 
 function cleanEmail(email: string) {
   return email.trim().toLowerCase();
@@ -59,6 +78,14 @@ function normalizeError(error: unknown) {
   } catch {
     return "Unknown email provider error";
   }
+}
+
+function readExecuteRows<T>(result: unknown): T[] {
+  if (Array.isArray(result)) return result as T[];
+  if (result && typeof result === "object" && "rows" in result) {
+    return (result as { rows: T[] }).rows;
+  }
+  return [];
 }
 
 export function isHumeMailConfigured() {
@@ -90,15 +117,70 @@ async function markEmailEvent(
   }
 }
 
-async function createEmailEvent(input: HumeEmailInput, fromEmail: string) {
+async function createEmailEvent(
+  input: HumeEmailInput,
+  fromEmail: string,
+): Promise<EmailEventClaim | undefined> {
   const id = randomUUID();
+  const toEmail = cleanEmail(input.to);
+  const idempotencyKey = input.idempotencyKey?.trim();
 
   try {
+    if (idempotencyKey) {
+      return await db.transaction(async (tx) => {
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${idempotencyKey}))`);
+
+        const existingResult = await tx.execute(sql`
+          select
+            id,
+            status,
+            provider_message_id as "providerMessageId",
+            error
+          from email_events
+          where message_type = ${input.messageType}
+            and to_email = ${toEmail}
+            and coalesce(related_type, '') = ${input.relatedType ?? ""}
+            and coalesce(related_id, '') = ${input.relatedId ?? ""}
+            and (
+              status in ('sent', 'dry_run')
+              or (status = 'pending' and created_at > now() - interval '15 minutes')
+            )
+          order by created_at desc
+          limit 1
+        `);
+        const existing = readExecuteRows<ExistingEmailEvent>(existingResult)[0];
+        if (existing) {
+          return {
+            id: existing.id,
+            deduped: true,
+            status: existing.status,
+            providerMessageId: existing.providerMessageId ?? undefined,
+            error: existing.error ?? undefined,
+          };
+        }
+
+        await tx.insert(emailEvents).values({
+          id,
+          messageType: input.messageType,
+          provider: "resend",
+          toEmail,
+          fromEmail,
+          subject: input.subject,
+          status: "pending",
+          relatedType: input.relatedType ?? null,
+          relatedId: input.relatedId ?? null,
+          payload: input.payload ?? {},
+        });
+
+        return { id, deduped: false };
+      });
+    }
+
     await db.insert(emailEvents).values({
       id,
       messageType: input.messageType,
       provider: "resend",
-      toEmail: cleanEmail(input.to),
+      toEmail,
       fromEmail,
       subject: input.subject,
       status: "pending",
@@ -106,7 +188,7 @@ async function createEmailEvent(input: HumeEmailInput, fromEmail: string) {
       relatedId: input.relatedId ?? null,
       payload: input.payload ?? {},
     });
-    return id;
+    return { id, deduped: false };
   } catch (error) {
     console.error("Email event insert failed:", error);
     return undefined;
@@ -116,7 +198,21 @@ async function createEmailEvent(input: HumeEmailInput, fromEmail: string) {
 export async function sendHumeEmail(input: HumeEmailInput): Promise<HumeEmailResult> {
   const toEmail = cleanEmail(input.to);
   const fromEmail = getFromEmail(input.from);
-  const eventId = await createEmailEvent({ ...input, to: toEmail }, fromEmail);
+  const eventClaim = await createEmailEvent({ ...input, to: toEmail }, fromEmail);
+  const eventId = eventClaim?.id;
+
+  if (eventClaim?.deduped) {
+    const sent = eventClaim.status === "sent" || eventClaim.status === "pending";
+    return {
+      ok: true,
+      sent,
+      status: eventClaim.status,
+      eventId,
+      providerMessageId: eventClaim.providerMessageId,
+      error: eventClaim.error,
+      deduped: true,
+    };
+  }
 
   if (process.env.EMAIL_DRY_RUN === "true") {
     await markEmailEvent(eventId, { status: "dry_run" });

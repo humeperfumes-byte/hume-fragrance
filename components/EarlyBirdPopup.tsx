@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -49,6 +49,8 @@ const EarlyBirdPopup = () => {
   const [startingCode, setStartingCode] = useState<string>(EARLY_BIRD_COUPON_CODE);
   const [emailSent, setEmailSent] = useState(false);
   const [whatsappLink, setWhatsappLink] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     const dismissed =
@@ -71,8 +73,13 @@ const EarlyBirdPopup = () => {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (submittingRef.current || submitted) return;
+
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail) return;
+
+    submittingRef.current = true;
+    setSubmitting(true);
 
     const sessionId = getOrCreateSessionId();
     window.localStorage.setItem(INTENT_STORAGE_KEY, "true");
@@ -106,6 +113,9 @@ const EarlyBirdPopup = () => {
       }
     } catch (error) {
       console.error("Failed to send starting code:", error);
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
 
     setSubmitted(true);
@@ -188,13 +198,15 @@ const EarlyBirdPopup = () => {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               className="w-full border border-border/70 bg-transparent px-3 py-2 text-sm outline-none focus:border-foreground/60"
+              disabled={submitting}
               required
             />
             <button
               type="submit"
+              disabled={submitting}
               className="w-full bg-foreground py-2 text-xs uppercase tracking-[0.28em] text-background"
             >
-              Claim 10% Off
+              {submitting ? "Sending..." : "Claim 10% Off"}
             </button>
             <button
               type="button"

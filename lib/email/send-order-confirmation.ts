@@ -109,6 +109,7 @@ export async function sendOrderConfirmationEmail(order: OrderEmailData) {
       messageType: "order_confirmation",
       relatedType: "order",
       relatedId: order.orderNumber,
+      idempotencyKey: `order-confirmation:${order.orderNumber}:${order.details.email.trim().toLowerCase()}`,
       payload: {
         paymentMethod: order.paymentMethod ?? null,
         shippingMethod: order.shippingMethod ?? null,

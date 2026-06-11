@@ -85,48 +85,54 @@ export async function POST(request: NextRequest) {
     }
 
     const couponCode = await getEarlyBirdCouponCode();
-
-    await captureCouponEvent(
-      {
-        sessionId: data.sessionId,
-        channel: "email",
-        eventType: "requested",
-        couponCode,
-        destination: data.email,
-        path: data.path,
-        referrer: data.referrer,
-        payload: { source: data.source ?? "early_bird_popup" },
-      },
-      request,
-    );
+    const email = data.email.trim().toLowerCase();
 
     let emailSent = false;
+    let deduped = false;
 
     if (isHumeMailConfigured()) {
       const emailResult = await sendHumeEmail({
-        to: data.email,
+        to: email,
         subject: buildCouponEmailSubject(couponCode),
         text: buildCouponEmailText(couponCode),
-        html: buildCouponEmailHtml(couponCode, data.email),
+        html: buildCouponEmailHtml(couponCode, email),
         messageType: "coupon_code",
         relatedType: "coupon",
         relatedId: couponCode,
+        idempotencyKey: `coupon-code:${couponCode}:${email}`,
         payload: {
           source: data.source ?? "early_bird_popup",
           sessionId: data.sessionId ?? null,
         },
       });
       emailSent = emailResult.sent;
+      deduped = Boolean(emailResult.deduped);
     }
 
-    if (emailSent) {
+    if (!deduped) {
+      await captureCouponEvent(
+        {
+          sessionId: data.sessionId,
+          channel: "email",
+          eventType: "requested",
+          couponCode,
+          destination: email,
+          path: data.path,
+          referrer: data.referrer,
+          payload: { source: data.source ?? "early_bird_popup" },
+        },
+        request,
+      );
+    }
+
+    if (emailSent && !deduped) {
       await captureCouponEvent(
         {
           sessionId: data.sessionId,
           channel: "email",
           eventType: "sent",
           couponCode,
-          destination: data.email,
+          destination: email,
           path: data.path,
           referrer: data.referrer,
           payload: { source: data.source ?? "early_bird_popup", provider: "resend" },
@@ -135,13 +141,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const whatsappText = `Hi HUME, please share my starting code. I registered with ${data.email}. Suggested code: ${couponCode}`;
+    const whatsappText = `Hi HUME, please share my starting code. I registered with ${email}. Suggested code: ${couponCode}`;
     const whatsappLink = `https://wa.me/919559024822?text=${encodeURIComponent(whatsappText)}`;
 
     return NextResponse.json({
       ok: true,
       couponCode,
       emailSent,
+      deduped,
       whatsappLink,
       providerConfigured: isHumeMailConfigured(),
     });

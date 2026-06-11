@@ -32,6 +32,7 @@ const productSchema = z.object({
       humeSpecial: z.boolean().optional(),
       limitedStock: z.boolean().optional(),
       soldOut: z.boolean().optional(),
+      comingSoon: z.boolean().optional(),
     })
     .optional(),
   notes: z

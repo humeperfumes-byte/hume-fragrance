@@ -33,6 +33,7 @@ export function ProductsTable({
       humeSpecial?: boolean;
       limitedStock?: boolean;
       soldOut?: boolean;
+      comingSoon?: boolean;
     };
 
   const handleDelete = async (id: string) => {
@@ -52,7 +53,7 @@ export function ProductsTable({
 
   const handleToggleBadge = async (
     product: Product,
-    badge: "bestSeller" | "humeSpecial" | "limitedStock" | "soldOut",
+    badge: "bestSeller" | "humeSpecial" | "limitedStock" | "soldOut" | "comingSoon",
     enabled: boolean,
   ) => {
     const nextBadges = { ...getBadges(product), [badge]: enabled };
@@ -226,6 +227,7 @@ export function ProductsTable({
                         }
                         {badges.bestSeller ? <Badge className="border-none bg-black text-white shadow-none">Best</Badge> : null}
                         {badges.humeSpecial ? <Badge className="border-none bg-emerald-500/10 text-emerald-600 shadow-none">Special</Badge> : null}
+                        {badges.comingSoon ? <Badge className="border-none bg-sky-500/15 text-sky-700 shadow-none">Coming soon</Badge> : null}
                         {badges.limitedStock ? <Badge className="border-none bg-amber-500/15 text-amber-700 shadow-none">Low stock</Badge> : null}
                         {badges.soldOut ? <Badge className="border-none bg-red-500/15 text-red-600 shadow-none">Sold out</Badge> : null}
                       </div>
@@ -254,6 +256,12 @@ export function ProductsTable({
                             onClick={() => handleToggleBadge(product, "limitedStock", !badges.limitedStock)}
                           >
                             {badges.limitedStock ? "Clear low stock" : "Mark low stock"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => handleToggleBadge(product, "comingSoon", !badges.comingSoon)}
+                          >
+                            {badges.comingSoon ? "Remove coming soon" : "Add to coming soon"}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="cursor-pointer"

@@ -105,6 +105,14 @@ export default function ShopContent({ perfumes }: { perfumes: PerfumeData[] }) {
     [perfumes, activeFilterType, activeFilterValue]
   );
 
+  const displayPerfumes = useMemo(
+    () =>
+      [...filteredPerfumes].sort(
+        (a, b) => Number(Boolean(a.badges?.soldOut)) - Number(Boolean(b.badges?.soldOut))
+      ),
+    [filteredPerfumes]
+  );
+
   const dynamicNatureOptions = useMemo(() => {
     const map = new Map<string, string>();
     perfumes.forEach((perfume) => {
@@ -371,7 +379,7 @@ export default function ShopContent({ perfumes }: { perfumes: PerfumeData[] }) {
                 layout
                 className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8 items-start"
               >
-                {filteredPerfumes.map((perfume, index) => (
+                {displayPerfumes.map((perfume, index) => (
                   <div key={perfume.id}>
                     <PerfumeCard
                       id={perfume.id}
@@ -392,6 +400,7 @@ export default function ShopContent({ perfumes }: { perfumes: PerfumeData[] }) {
                       humeSpecial={perfume.badges?.humeSpecial}
                       limitedStock={perfume.badges?.limitedStock}
                       soldOut={perfume.badges?.soldOut}
+                      compactBadges
                     />
                   </div>
                 ))}

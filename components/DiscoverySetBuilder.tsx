@@ -220,9 +220,6 @@ export default function DiscoverySetBuilder() {
             <p className="text-[9px] font-bold uppercase tracking-[0.32em] text-gold sm:text-[10px]">
               Discovery Collection
             </p>
-            <p className="mt-3 inline-flex border border-[#d0a35b]/35 bg-[#2a2116] px-3 py-1 text-[9px] font-bold uppercase tracking-[0.22em] text-[#e8bd74]">
-              Coming soon
-            </p>
             <h1 className="mt-4 font-serif text-[3.1rem] font-light leading-[0.92] tracking-tight sm:text-[4.7rem] lg:text-[5.3rem]">
               HUME Discovery Set
             </h1>
@@ -295,13 +292,13 @@ export default function DiscoverySetBuilder() {
 
             <div className="mt-8 grid gap-3 sm:max-w-[28rem] sm:grid-cols-2">
               <a
-                href="#choose-testers"
+                href="#sample-grid"
                 className="inline-flex h-11 items-center justify-center bg-primary px-5 text-[10px] font-bold uppercase tracking-[0.18em] text-primary-foreground transition hover:bg-primary/90"
               >
                 Choose testers
               </a>
               <a
-                href="#choose-testers"
+                href="#sample-grid"
                 className="hidden h-11 items-center justify-center border border-border bg-secondary px-5 text-[10px] font-bold uppercase tracking-[0.18em] text-foreground transition hover:bg-muted sm:inline-flex"
               >
                 Choose testers
@@ -432,9 +429,6 @@ export default function DiscoverySetBuilder() {
               <span>{formatINR(DISCOVERY_SET_PRICE)}</span>
               <span className="h-4 w-px bg-border" aria-hidden="true" />
               <span>{DISCOVERY_SET_SIZE}</span>
-              <span className="border border-[#d0a35b]/35 bg-[#2a2116] px-2.5 py-1 text-[9px] uppercase tracking-[0.16em] text-[#e8bd74]">
-                Coming soon
-              </span>
             </div>
 
             <div className="mt-6 border border-border bg-secondary p-4 shadow-[0_22px_70px_rgba(12,14,18,0.06)] sm:p-5 lg:mt-7">
@@ -537,7 +531,7 @@ export default function DiscoverySetBuilder() {
               ))}
             </div>
 
-            <div className="mt-5">
+            <div id="sample-grid" className="mt-5 scroll-mt-20 md:scroll-mt-24">
               {loadingPerfumes ? (
                 <div className="py-16 text-center text-sm text-muted-foreground">Loading samples...</div>
               ) : filteredPerfumes.length === 0 ? (

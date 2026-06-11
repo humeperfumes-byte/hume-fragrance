@@ -2,8 +2,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { UPCOMING_PRODUCTS, type UpcomingProduct } from "@/lib/upcoming-products";
+import type { PerfumeData } from "@/data/perfumes";
+import { formatINR } from "@/lib/currency";
+import { getProductPath } from "@/lib/product-route";
 
-function ComingSoonVisual({ product }: { product: UpcomingProduct }) {
+type ComingSoonCardProduct = Pick<
+  UpcomingProduct,
+  "id" | "path" | "name" | "category" | "inspiration" | "priceLabel" | "image" | "visualClassName" | "visualLabel"
+>;
+
+function ComingSoonVisual({ product }: { product: ComingSoonCardProduct }) {
   if (product.image) {
     return (
       <Image
@@ -35,21 +43,52 @@ function ComingSoonVisual({ product }: { product: UpcomingProduct }) {
   );
 }
 
-export default function ComingSoonSection() {
+function getDbComingSoonProduct(product: PerfumeData): ComingSoonCardProduct {
+  return {
+    id: product.id,
+    path: getProductPath(product),
+    name: product.name,
+    category: product.category,
+    inspiration: product.inspirationBrand
+      ? `${product.inspirationBrand} ${product.inspiration}`
+      : product.inspiration,
+    priceLabel: formatINR(product.price),
+    image: product.images[0],
+    visualLabel: product.name,
+  };
+}
+
+export default function ComingSoonSection({
+  products = [],
+}: {
+  products?: PerfumeData[];
+}) {
+  const dbProducts = products
+    .filter((product) => product.badges?.comingSoon)
+    .map(getDbComingSoonProduct);
+  const staticProductIds = new Set(dbProducts.map((product) => product.id));
+  const carouselProducts: ComingSoonCardProduct[] = [
+    ...dbProducts,
+    ...UPCOMING_PRODUCTS.filter((product) => !staticProductIds.has(product.id)),
+  ].slice(0, 5);
+
   return (
-    <section id="new-launches" className="pt-20 pb-8 md:pt-24 md:pb-10">
+    <section id="new-launches" className="pt-8 pb-3 md:pt-24 md:pb-10">
       <div className="container-luxury">
         <div className="mb-8 flex items-center justify-between">
           <h2 className="font-serif text-4xl font-light italic md:text-5xl">
             Coming Soon
           </h2>
-          <p className="hidden text-[11px] uppercase tracking-[0.3em] text-muted-foreground sm:block">
-            Shop Live
-          </p>
+          <Link
+            href="/shop"
+            className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground hover:text-foreground border-b border-border pb-1 md:text-caption"
+          >
+            See All
+          </Link>
         </div>
 
         <div className="flex touch-auto snap-x snap-proximity gap-6 overflow-x-auto overscroll-x-contain scroll-smooth pb-3 scrollbar-none">
-          {UPCOMING_PRODUCTS.map((product) => {
+          {carouselProducts.map((product) => {
             const visual = (
               <div className="relative mb-4 overflow-hidden bg-secondary shadow-[0_12px_30px_rgba(12,14,18,0.12)] sm:mb-5">
                 <div className="relative aspect-[3/4] w-full">

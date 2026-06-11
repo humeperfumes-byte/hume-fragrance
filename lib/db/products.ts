@@ -4,7 +4,7 @@ import { eq, inArray, sql } from "drizzle-orm";
 import { type PerfumeData } from "@/data/perfumes";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getProductSeoSlug } from "@/lib/product-route";
-import { DISCOVERY_SET_PRICE, isDiscoverySetProductId } from "@/lib/discovery-set";
+import { DISCOVERY_SET_PRICE, DISCOVERY_SET_SIZE, isDiscoverySetProductId } from "@/lib/discovery-set";
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
 
@@ -16,6 +16,7 @@ type ProductBadges = Partial<{
   humeSpecial: boolean;
   limitedStock: boolean;
   soldOut: boolean;
+  comingSoon: boolean;
 }>;
 type ProductVisibility = "public" | "seo_only";
 let hasLoggedLegacyReviewsFallback = false;
@@ -67,6 +68,12 @@ async function fetchReviewsByProductId(productId: string): Promise<ReviewRow[]> 
 
 function getStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function getCustomerFacingSize(product: ProductRow): string {
+  if (isDiscoverySetProductId(product.id)) return DISCOVERY_SET_SIZE;
+  if (["rose-water", "car-fragrance"].includes(product.categoryId)) return product.size;
+  return "50ml";
 }
 
 // Transform database product to PerfumeData format
@@ -134,10 +141,11 @@ function transformProduct(
       humeSpecial: Boolean(badges.humeSpecial),
       limitedStock: Boolean(badges.limitedStock),
       soldOut: Boolean(badges.soldOut),
+      comingSoon: Boolean(badges.comingSoon),
     },
     notes: product.notes as PerfumeData["notes"],
     longevity: product.longevity as PerfumeData["longevity"],
-    size: product.size,
+    size: getCustomerFacingSize(product),
     reviews: mappedReviews.slice(0, 12),
   };
 }

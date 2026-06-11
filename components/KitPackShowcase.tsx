@@ -245,7 +245,7 @@ export default function KitPackShowcase() {
             </div>
 
             <a
-              href="#build-kit"
+              href="#kit-grid"
               className="mt-8 inline-flex h-12 items-center justify-center bg-[#151515] px-6 text-[10px] font-bold uppercase tracking-[0.2em] text-white transition hover:bg-black"
             >
               Start building
@@ -429,7 +429,7 @@ export default function KitPackShowcase() {
               </div>
             ) : null}
 
-            <div className="mt-6">
+            <div id="kit-grid" className="mt-6 scroll-mt-20 md:scroll-mt-24">
               {loadingPerfumes ? (
                 <div className="py-16 text-center text-sm text-muted-foreground">Loading perfumes...</div>
               ) : filteredPerfumes.length === 0 ? (

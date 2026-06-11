@@ -9,12 +9,12 @@ export default function BestsellerSection({
 }) {
   const bestsellerProducts = perfumes
     .filter((p) => p.badges?.bestSeller)
-    .slice(0, 4);
+    .slice(0, 5);
 
   if (bestsellerProducts.length === 0) return null;
 
   return (
-    <section className="pt-16 md:pt-20 pb-8 md:pb-10">
+    <section className="pt-12 pb-3 md:pt-20 md:pb-10">
       <div className="container-luxury">
         <div className="mb-8 flex items-center justify-between">
           <h2 className="font-serif text-4xl md:text-5xl font-light italic">

@@ -184,7 +184,7 @@ const Hero = ({
                         {slide.link?.startsWith("http") ? (
                           <a
                             href={slide.link}
-                            className="block w-full h-full"
+                            className="relative block w-full h-full"
                             target="_blank"
                             rel="noreferrer"
                           >
@@ -203,7 +203,7 @@ const Hero = ({
                         ) : (
                           <Link
                             href={slide.link ?? "/shop"}
-                            className="block w-full h-full"
+                            className="relative block w-full h-full"
                           >
                             <Image
                               src={optimizedSlideUrl}

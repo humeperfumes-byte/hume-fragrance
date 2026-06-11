@@ -13,10 +13,38 @@ type AdminPageProps = {
   searchParams?: Promise<{ hours?: string }> | { hours?: string };
 };
 
+type CouponEventRow = typeof couponCodeEvents.$inferSelect;
+
+function getLeadKey(event: CouponEventRow) {
+  const destination =
+    event.destination?.trim().toLowerCase() ||
+    event.sessionId?.trim().toLowerCase() ||
+    event.id;
+  const couponCode = event.couponCode?.trim().toUpperCase() || "NO_CODE";
+  return `${event.channel}:${couponCode}:${destination}`;
+}
+
+function dedupeCouponLeadEvents(events: CouponEventRow[]) {
+  const byLead = new Map<string, CouponEventRow>();
+
+  for (const event of events) {
+    const key = getLeadKey(event);
+    const existing = byLead.get(key);
+
+    if (!existing || (existing.eventType !== "sent" && event.eventType === "sent")) {
+      byLead.set(key, event);
+    }
+  }
+
+  return Array.from(byLead.values()).sort(
+    (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+  );
+}
+
 export default async function CouponLeadsPage({ searchParams }: AdminPageProps) {
   const params = await searchParams;
   const timeWindow = parseAdminTimeWindow(params?.hours);
-  let events: (typeof couponCodeEvents.$inferSelect)[] = [];
+  let events: CouponEventRow[] = [];
   let dbError = false;
 
   try {
@@ -54,6 +82,7 @@ export default async function CouponLeadsPage({ searchParams }: AdminPageProps) 
   }
 
   // ── Cross-reference: gather session IDs and fetch related data ──
+  events = dedupeCouponLeadEvents(events);
   const sessionIds = [...new Set(events.map((e) => e.sessionId).filter(Boolean))] as string[];
   const draftsMap = new Map<string, { status: string; fullName: string | null; phone: string | null; email: string | null; grandTotal: string | null; leadStatus: string }>();
   const ordersMap = new Map<string, { orderNumber: string; status: string; grandTotal: string | null }>();
