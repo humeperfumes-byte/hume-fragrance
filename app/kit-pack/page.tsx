@@ -6,7 +6,7 @@ import KitPackShowcase from "@/components/KitPackShowcase";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Build Your Kit - 5 x 15ml",
+  title: "15 ml kit - 5 x 15ml",
   description: "Create a custom 5 x 15ml perfume kit from our inspired fragrance collection.",
 };
 

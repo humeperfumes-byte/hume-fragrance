@@ -210,7 +210,7 @@ export async function GET() {
   lines.push(`- Fragrance Guides Hub: ${baseUrl}/fragrance-guides`);
   lines.push(`- AI Recommendation Pages: ${baseUrl}/recommendations/*`);
   lines.push(`- Celebrities' Favorites: ${baseUrl}/celebrities-favorites`);
-  lines.push(`- Build Your Kit: ${baseUrl}/kit-pack`);
+  lines.push(`- 15 ml kit: ${baseUrl}/kit-pack`);
   lines.push(
     `- Perfume Trial Kit / Discovery Set: ${baseUrl}${DISCOVERY_SET_PATH} - choose and order ${DISCOVERY_SET_SIZE} perfume testers for INR ${DISCOVERY_SET_PRICE}`,
   );

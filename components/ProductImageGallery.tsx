@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { X, ZoomIn, ZoomOut } from "lucide-react";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
@@ -27,11 +27,13 @@ const ProductImageGallery = ({ images, videos = [], name }: ProductImageGalleryP
 
   const [api, setApi] = useState<CarouselApi | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const selectedIndexRef = useRef(0);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [isZoomed, setIsZoomed] = useState(false);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const carouselOptions = useMemo(() => ({ loop: true }), []);
   const blurDataURL =
-    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iNDIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjQyIiBmaWxsPSIjZWVlY2VjIi8+PC9zdmc+";
+    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iNDIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjQyIiBmaWxsPSIjZmZmZmZmIi8+PC9zdmc+";
 
   useEffect(() => {
     if (!api) {
@@ -40,9 +42,9 @@ const ProductImageGallery = ({ images, videos = [], name }: ProductImageGalleryP
 
     const handleSelect = () => {
       const nextIndex = api.selectedScrollSnap();
-      setSelectedIndex((currentIndex) =>
-        currentIndex === nextIndex ? currentIndex : nextIndex,
-      );
+      if (selectedIndexRef.current === nextIndex) return;
+      selectedIndexRef.current = nextIndex;
+      setSelectedIndex(nextIndex);
     };
 
     api.on("select", handleSelect);
@@ -54,6 +56,22 @@ const ProductImageGallery = ({ images, videos = [], name }: ProductImageGalleryP
       api.off("reInit", handleSelect);
     };
   }, [api]);
+
+  useEffect(() => {
+    if (!api || mediaItems.length <= 1 || lightboxIndex !== null) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      api.scrollNext();
+    }, 3000);
+
+    return () => window.clearInterval(intervalId);
+  }, [api, mediaItems.length, lightboxIndex]);
 
   const markImageFailed = (src: string) => {
     setFailedImages((current) => {
@@ -107,13 +125,13 @@ const ProductImageGallery = ({ images, videos = [], name }: ProductImageGalleryP
     <div className="space-y-4">
       <Carousel
         setApi={setApi}
-        opts={{ loop: true }}
+        opts={carouselOptions}
         className="w-full"
       >
         <CarouselContent className="-ml-0">
           {mediaItems.map((item, index) => (
             <CarouselItem key={`${item.src}-${index}`} className="pl-0 basis-full">
-              <div className="aspect-[3/4] lg:aspect-square bg-secondary overflow-hidden relative">
+              <div className="aspect-[3/4] lg:aspect-square bg-background overflow-hidden relative">
                 {item.type === "video" ? (
                   <video
                     src={item.src}

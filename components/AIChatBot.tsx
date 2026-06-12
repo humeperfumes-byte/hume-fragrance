@@ -21,7 +21,7 @@ const quickActions = [
   { label: "Office fresh", value: "fresh office perfume for men" },
   { label: "Shipping info", value: "shipping" },
   { label: "Refill program", value: "refill" },
-  { label: "Build your kit", value: "kit" },
+  { label: "15 ml kit", value: "kit" },
   { label: "Current offers", value: "offers" },
   { label: "Contact support", value: "support" },
 ];
@@ -228,8 +228,8 @@ function getBotReply(input: string): Omit<ChatMessage, "id" | "role"> {
 
   if (value.includes("kit") || value.includes("build")) {
     return {
-      text: "You can build a custom kit from our fragrance lineup.",
-      links: [{ href: "/kit-pack", label: "Build Your Kit" }],
+      text: "You can create a custom 15 ml kit from our fragrance lineup.",
+      links: [{ href: "/kit-pack", label: "15 ml kit" }],
     };
   }
 

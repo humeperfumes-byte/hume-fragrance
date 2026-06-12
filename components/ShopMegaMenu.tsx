@@ -46,7 +46,7 @@ const shopSections: ShopSection[] = [
         href: "/scent-quiz",
       },
       {
-        label: "Build Your Kit",
+        label: "15 ml kit",
         description: "Create your own 5 x 15ml set",
         filterType: "occasion",
         href: "/kit-pack",
@@ -315,9 +315,9 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
                                 className="group flex w-full items-center justify-between border border-zinc-800 bg-zinc-950 px-4 py-3 text-left text-white cursor-pointer transition-luxury hover:bg-zinc-900"
                               >
                                 <span className="font-serif text-[1.25rem] leading-none tracking-wide">
-                                  {item.label === "Build Your Kit" ? (
+                                  {item.label === "15 ml kit" ? (
                                     <>
-                                      Build Your Kit{" "}
+                                      15 ml kit{" "}
                                       <span className="text-[0.85rem] align-middle text-white/80">
                                         (pack of 5)
                                       </span>

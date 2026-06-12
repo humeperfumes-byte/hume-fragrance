@@ -4,13 +4,14 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import { useCart } from "@/context/CartContext";
 import { toast } from "@/hooks/use-toast";
 import { formatINR } from "@/lib/currency";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getProductPath } from "@/lib/product-route";
 import { DISCOVERY_SET_PATH, isDiscoverySetProductId } from "@/lib/discovery-set";
+import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 
 interface PerfumeCardProps {
   id: string;
@@ -131,7 +132,21 @@ const PerfumeCard = ({
     });
   };
 
-  const handleProductClick = () => {
+  const handleProductClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    showNavigationLoadingToast();
+
     if (typeof window === "undefined") return;
     window.dispatchEvent(
       new CustomEvent("hume:tracking", {
@@ -146,6 +161,8 @@ const PerfumeCard = ({
         },
       }),
     );
+
+    router.push(productPath);
   };
 
   return (

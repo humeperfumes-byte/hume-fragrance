@@ -15,6 +15,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TemplateMessagesPanel } from "@/components/admin/TemplateMessagesPanel";
 import { toast } from "@/hooks/use-toast";
 import { formatINR } from "@/lib/currency";
 import { parseAdminMarket } from "@/lib/admin-market";
@@ -616,8 +617,11 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+
         </>
       ) : null}
+
+      <TemplateMessagesPanel />
     </div>
   );
 }

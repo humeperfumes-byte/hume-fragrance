@@ -48,7 +48,7 @@ For the complete product catalog with all notes, pricing, performance, reviews, 
 - Best Sellers: ${baseUrl}/bestseller
 - Refill Program: ${baseUrl}/refill-subscription
 - Celebrities' Favorites: ${baseUrl}/celebrities-favorites
-- Build Your Kit: ${baseUrl}/kit-pack
+- 15 ml kit: ${baseUrl}/kit-pack
 - Perfume Trial Kit / Discovery Set: ${baseUrl}${DISCOVERY_SET_PATH}
 - Live Ritual Products:
 ${launchProductLinks}

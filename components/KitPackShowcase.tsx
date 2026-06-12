@@ -170,10 +170,10 @@ export default function KitPackShowcase() {
             className="max-w-2xl"
           >
             <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-[#8d6b32]">
-              Build your signature rotation
+              15 ml perfume rotation
             </p>
             <h1 className="mt-4 max-w-[42rem] font-serif text-[3.3rem] font-light leading-[0.9] tracking-tight sm:text-[5rem] lg:text-[5.8rem]">
-              Build Your Kit
+              15 ml kit
             </h1>
 
             <div className="mt-6 lg:hidden">
@@ -187,7 +187,7 @@ export default function KitPackShowcase() {
                 >
                   <Image
                     src={activeHeroImage}
-                    alt="Build Your Kit perfume preview"
+                    alt="15 ml kit perfume preview"
                     fill
                     sizes="92vw"
                     className="object-cover"
@@ -200,7 +200,7 @@ export default function KitPackShowcase() {
                     <button
                       key={`mobile-thumb-${image}`}
                       type="button"
-                      aria-label={`Show Build Your Kit preview ${index + 1}`}
+                      aria-label={`Show 15 ml kit preview ${index + 1}`}
                       onClick={() => setActiveHeroIndex(index)}
                       className={`relative h-14 w-14 shrink-0 overflow-hidden border bg-[#f8f7f4] transition duration-300 ${
                         activeHeroIndex === index
@@ -210,7 +210,7 @@ export default function KitPackShowcase() {
                     >
                       <Image
                         src={image}
-                        alt={`Build Your Kit preview thumbnail ${index + 1}`}
+                        alt={`15 ml kit preview thumbnail ${index + 1}`}
                         fill
                         sizes="56px"
                         className="object-cover"
@@ -268,7 +268,7 @@ export default function KitPackShowcase() {
               >
                 <Image
                   src={activeHeroImage}
-                  alt="Build Your Kit perfume preview"
+                  alt="15 ml kit perfume preview"
                   fill
                   sizes="(max-width: 768px) 92vw, 30vw"
                   className="object-cover"
@@ -282,7 +282,7 @@ export default function KitPackShowcase() {
                   <button
                     key={image}
                     type="button"
-                    aria-label={`Show Build Your Kit preview ${index + 1}`}
+                    aria-label={`Show 15 ml kit preview ${index + 1}`}
                     onClick={() => setActiveHeroIndex(index)}
                     className={`relative h-14 w-14 shrink-0 overflow-hidden border bg-[#f8f7f4] transition duration-300 sm:h-16 sm:w-16 lg:h-16 lg:w-16 ${
                       activeHeroIndex === index
@@ -292,7 +292,7 @@ export default function KitPackShowcase() {
                   >
                     <Image
                       src={image}
-                      alt={`Build Your Kit preview thumbnail ${index + 1}`}
+                      alt={`15 ml kit preview thumbnail ${index + 1}`}
                       fill
                       sizes="80px"
                       className="object-cover"

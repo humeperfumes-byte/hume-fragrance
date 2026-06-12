@@ -93,15 +93,15 @@ export default function HomeKitDiscoveryTeasers() {
         <article className="flex flex-col">
           <Link href="/kit-pack" className="group block">
             <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-[#8d6b32] min-[400px]:text-[10px] min-[400px]:tracking-[0.34em]">
-              Build your signature rotation
+              15 ml perfume rotation
             </p>
             <h2 className="mt-3 font-serif text-[2.55rem] font-light leading-[0.92] tracking-tight min-[400px]:mt-4 min-[400px]:text-[3.1rem] sm:text-[4.3rem]">
-              Build Your Kit
+              15 ml kit
             </h2>
           </Link>
 
           <div className="mt-5 min-[400px]:mt-6">
-            <ImageGalleryTeaser images={KIT_IMAGES} title="Build Your Kit" href="/kit-pack" />
+            <ImageGalleryTeaser images={KIT_IMAGES} title="15 ml kit" href="/kit-pack" />
           </div>
 
           <div className="mt-6 flex flex-wrap items-end gap-x-4 gap-y-3 min-[400px]:mt-7 min-[400px]:gap-x-5">

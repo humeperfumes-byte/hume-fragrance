@@ -414,7 +414,7 @@ export const homeFaqItems = [
   {
     question: "Can I try smaller formats before choosing a full bottle?",
     answer:
-      "Yes. HUME offers build-your-kit and smaller-format discovery options so you can try multiple scent profiles before deciding on your full-bottle favorites.",
+      "Yes. HUME offers a 15 ml kit and smaller-format discovery options so you can try multiple scent profiles before deciding on your full-bottle favorites.",
   },
   {
     question: "Do you offer refill options?",

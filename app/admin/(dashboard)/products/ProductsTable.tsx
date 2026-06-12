@@ -162,7 +162,7 @@ export function ProductsTable({
           onClick={() => window.open("/kit-pack", "_blank")}
           className="rounded-xl"
         >
-          Build Your Kit
+          15 ml kit
         </Button>
         <Button onClick={() => setIsFormOpen(true)} className="rounded-xl">
           <Plus className="mr-2 h-4 w-4" /> Add Product
