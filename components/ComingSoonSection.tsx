@@ -87,7 +87,7 @@ export default function ComingSoonSection({
           </Link>
         </div>
 
-        <div className="flex touch-auto snap-x snap-proximity gap-6 overflow-x-auto overscroll-x-contain scroll-smooth pb-3 scrollbar-none">
+        <div className="flex touch-auto snap-x snap-proximity gap-4 overflow-x-auto overscroll-x-contain scroll-smooth pb-3 scrollbar-none sm:gap-6">
           {carouselProducts.map((product) => {
             const visual = (
               <div className="relative mb-4 overflow-hidden bg-secondary shadow-[0_12px_30px_rgba(12,14,18,0.12)] sm:mb-5">

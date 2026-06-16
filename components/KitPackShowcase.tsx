@@ -159,10 +159,10 @@ export default function KitPackShowcase() {
 
   return (
     <main className="bg-background text-foreground">
-      <section className="relative min-h-screen overflow-hidden border-b border-border bg-[#f8f7f4] pt-16 md:pt-28">
+      <section className="relative overflow-hidden border-b border-border bg-[#f8f7f4] pt-14 md:min-h-screen md:pt-28">
         <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(255,255,255,0.92)_0%,rgba(245,243,238,0.96)_42%,rgba(226,221,212,0.72)_100%)]" />
 
-        <div className="relative mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-[1360px] items-center gap-10 px-5 py-5 sm:px-8 md:min-h-[calc(100vh-6rem)] md:py-10 lg:grid-cols-[0.95fr_1.05fr] lg:px-10">
+        <div className="relative mx-auto grid w-full max-w-[1360px] items-center gap-6 px-4 py-4 sm:px-8 md:min-h-[calc(100vh-6rem)] md:gap-10 md:py-10 lg:grid-cols-[0.95fr_1.05fr] lg:px-10">
           <motion.div
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
@@ -172,11 +172,11 @@ export default function KitPackShowcase() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-[#8d6b32]">
               15 ml perfume rotation
             </p>
-            <h1 className="mt-4 max-w-[42rem] font-serif text-[3.3rem] font-light leading-[0.9] tracking-tight sm:text-[5rem] lg:text-[5.8rem]">
+            <h1 className="mt-3 max-w-[42rem] font-serif text-[2.55rem] font-light leading-[0.92] tracking-tight sm:mt-4 sm:text-[5rem] lg:text-[5.8rem]">
               15 ml kit
             </h1>
 
-            <div className="mt-6 lg:hidden">
+            <div className="mt-4 lg:hidden sm:mt-6">
               <div className="flex w-full flex-col gap-2">
                 <motion.div
                   key={`mobile-${activeHeroImage}`}
@@ -226,19 +226,19 @@ export default function KitPackShowcase() {
               travel, office bags, and gifting.
             </p>
 
-            <div className="mt-7 flex flex-wrap items-end gap-x-5 gap-y-3">
+            <div className="mt-5 flex flex-wrap items-end gap-x-5 gap-y-3 sm:mt-7">
               <div>
                 <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-zinc-500">
                   Kit price
                 </p>
-                <p className="mt-1 text-3xl font-semibold">{formatINR(KIT_TOTAL)}</p>
+                <p className="mt-1 text-[2.15rem] font-semibold sm:text-3xl">{formatINR(KIT_TOTAL)}</p>
               </div>
-              <div className="h-10 w-px bg-zinc-300" aria-hidden="true" />
+              <div className="h-8 w-px bg-zinc-300 sm:h-10" aria-hidden="true" />
               <div>
                 <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-zinc-500">
                   Includes
                 </p>
-                <p className="mt-1 text-lg font-semibold">
+                <p className="mt-1 text-base font-semibold sm:text-lg">
                   {KIT_COUNT} x {KIT_SIZE}
                 </p>
               </div>
@@ -246,7 +246,7 @@ export default function KitPackShowcase() {
 
             <a
               href="#kit-grid"
-              className="mt-8 inline-flex h-12 items-center justify-center bg-[#151515] px-6 text-[10px] font-bold uppercase tracking-[0.2em] text-white transition hover:bg-black"
+              className="mt-6 inline-flex h-12 items-center justify-center bg-[#151515] px-6 text-[10px] font-bold uppercase tracking-[0.2em] text-white transition hover:bg-black sm:mt-8"
             >
               Start building
             </a>
@@ -305,20 +305,20 @@ export default function KitPackShowcase() {
         </div>
       </section>
 
-      <section id="build-kit" className="scroll-mt-20 border-b border-border bg-background py-16 md:py-20">
-        <div className="mx-auto grid w-full max-w-[1360px] gap-9 px-5 sm:px-8 lg:grid-cols-[0.76fr_1.24fr] lg:px-10">
+      <section id="build-kit" className="scroll-mt-20 border-b border-border bg-background py-12 sm:py-16 md:py-20">
+        <div className="mx-auto grid w-full max-w-[1360px] gap-6 px-4 sm:gap-9 sm:px-8 lg:grid-cols-[0.76fr_1.24fr] lg:px-10">
           <aside className="lg:sticky lg:top-24 lg:self-start">
             <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#8d6b32]">
               Kit tray
             </p>
-            <h2 className="mt-3 font-serif text-[2.8rem] font-light leading-[0.9] sm:text-[4rem]">
+            <h2 className="mt-2 font-serif text-[2.15rem] font-light leading-[0.92] sm:mt-3 sm:text-[4rem]">
               Pick your 5
             </h2>
             <p className="mt-4 hidden max-w-[28rem] text-sm leading-6 text-muted-foreground sm:block">
               Each slot becomes one {KIT_SIZE} perfume. Select exactly {KIT_COUNT}, then add the completed kit to your bag.
             </p>
 
-            <div className="mt-6 border border-border bg-secondary p-4">
+            <div className="mt-5 border border-border bg-secondary p-3.5 sm:mt-6 sm:p-4">
               <div className="flex items-center justify-between gap-4">
                 <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
                   Selected perfumes
@@ -384,12 +384,12 @@ export default function KitPackShowcase() {
           </aside>
 
           <div>
-            <div className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex flex-col gap-3 border-b border-border pb-3 sm:pb-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
                   Available HUME perfumes
                 </p>
-                <h3 className="mt-2 font-serif text-3xl font-light">Choose from the collection</h3>
+                <h3 className="mt-1.5 font-serif text-[1.9rem] font-light sm:mt-2 sm:text-3xl">Choose from the collection</h3>
               </div>
               <div className="flex w-full max-w-[18rem] items-center border-b border-border pb-1">
                 <input
@@ -429,7 +429,7 @@ export default function KitPackShowcase() {
               </div>
             ) : null}
 
-            <div id="kit-grid" className="mt-6 scroll-mt-20 md:scroll-mt-24">
+            <div id="kit-grid" className="mt-5 scroll-mt-20 md:mt-6 md:scroll-mt-24">
               {loadingPerfumes ? (
                 <div className="py-16 text-center text-sm text-muted-foreground">Loading perfumes...</div>
               ) : filteredPerfumes.length === 0 ? (
@@ -451,7 +451,7 @@ export default function KitPackShowcase() {
                           isDisabled ? "opacity-45" : "hover:-translate-y-1"
                         }`}
                       >
-                        <div className="relative aspect-square overflow-hidden border border-border bg-secondary">
+                        <div className="relative aspect-square overflow-hidden bg-secondary shadow-[0_12px_28px_rgba(12,14,18,0.06)] ring-1 ring-black/6 transition group-hover:shadow-[0_16px_36px_rgba(12,14,18,0.1)] group-hover:ring-foreground/14">
                           <Image
                             src={withCloudinaryTransforms(perfume.images?.[0] || "/images/logo.png", { width: 520 })}
                             alt={perfume.name}
@@ -461,10 +461,10 @@ export default function KitPackShowcase() {
                             loading="lazy"
                           />
                           <span
-                            className={`absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-[1.25rem] font-light leading-none shadow-[0_10px_22px_rgba(12,14,18,0.22),inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-md backdrop-saturate-150 transition sm:right-2.5 sm:top-2.5 sm:h-10 sm:w-10 sm:rounded-xl sm:text-[1.55rem] ${
+                            className={`absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-[0.62rem] text-[1.22rem] font-light leading-none shadow-[0_14px_28px_rgba(12,14,18,0.14),inset_0_1px_0_rgba(255,255,255,0.78)] backdrop-blur-xl backdrop-saturate-150 transition sm:right-2.5 sm:top-2.5 sm:h-10 sm:w-10 sm:rounded-[0.8rem] sm:text-[1.5rem] ${
                               isSelected
-                                ? "bg-foreground text-background"
-                                : "border border-white/65 bg-black/28 text-white ring-1 ring-black/10"
+                                ? "bg-white/88 text-[#1c1c1c]"
+                                : "border border-black/20 bg-white/44 text-black"
                             }`}
                           >
                             <span className={isSelected ? "text-xs font-semibold sm:text-sm" : "-mt-0.5 drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]"}>

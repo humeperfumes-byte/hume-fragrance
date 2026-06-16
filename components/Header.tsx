@@ -262,7 +262,10 @@ const Header = () => {
                     >
                       <div className="flex items-center justify-between">
                         <p className="font-serif text-[1.18rem]">
-                          Discovery Set <span className="text-[0.65em] text-[#f7d79b]/70">10 testers</span>
+                          Discovery Set{" "}
+                          <span className="inline-flex items-center rounded-full border border-[#f7d79b]/18 bg-white/8 px-1.5 py-0.5 font-sans text-[0.5em] font-medium uppercase tracking-[0.08em] text-[#f7d79b]/78 not-italic align-middle">
+                            10 testers
+                          </span>
                         </p>
                         <span className="text-[1.45rem] opacity-75">→</span>
                       </div>
@@ -276,7 +279,10 @@ const Header = () => {
                     >
                       <div className="flex items-center justify-between">
                         <p className="font-serif text-[1.18rem]">
-                          15 ml kit <span className="text-[0.65em] text-[#f7d79b]/70">Pack of 5</span>
+                          15 ml kit{" "}
+                          <span className="inline-flex items-center rounded-full border border-[#f7d79b]/18 bg-white/8 px-1.5 py-0.5 font-sans text-[0.5em] font-medium uppercase tracking-[0.08em] text-[#f7d79b]/78 not-italic align-middle">
+                            Pack of 5
+                          </span>
                         </p>
                         <span className="text-[1.45rem] opacity-75">→</span>
                       </div>

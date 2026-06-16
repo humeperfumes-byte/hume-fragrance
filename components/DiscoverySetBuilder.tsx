@@ -207,10 +207,10 @@ export default function DiscoverySetBuilder() {
 
   return (
     <>
-      <section className="relative min-h-screen overflow-hidden bg-background pt-20 text-foreground md:pt-24">
+      <section className="relative overflow-hidden bg-background pt-16 text-foreground md:min-h-screen md:pt-24">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_32%,hsl(42_35%_55%_/_0.14),transparent_34%),linear-gradient(120deg,hsl(30_10%_98%)_0%,hsl(0_0%_100%)_46%,hsl(30_5%_96%)_100%)]" />
 
-        <div className="relative mx-auto grid min-h-[calc(100vh-5rem)] w-full max-w-[1280px] items-center gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[0.72fr_1.28fr] lg:px-8 lg:py-8">
+        <div className="relative mx-auto grid w-full max-w-[1280px] items-center gap-7 px-4 py-6 sm:px-6 md:min-h-[calc(100vh-5rem)] md:gap-10 md:py-10 lg:grid-cols-[0.72fr_1.28fr] lg:px-8 lg:py-8">
           <motion.div
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
@@ -220,11 +220,11 @@ export default function DiscoverySetBuilder() {
             <p className="text-[9px] font-bold uppercase tracking-[0.32em] text-gold sm:text-[10px]">
               Discovery Collection
             </p>
-            <h1 className="mt-4 font-serif text-[3.1rem] font-light leading-[0.92] tracking-tight sm:text-[4.7rem] lg:text-[5.3rem]">
+            <h1 className="mt-3 font-serif text-[2.65rem] font-light leading-[0.92] tracking-tight sm:mt-4 sm:text-[4.7rem] lg:text-[5.3rem]">
               HUME Discovery Set
             </h1>
 
-            <div className="mt-5 lg:hidden">
+            <div className="mt-4 lg:hidden">
               <motion.div
                 key={`mobile-${activeHeroImage.src}`}
                 initial={{ opacity: 0.55, scale: 0.985 }}
@@ -274,23 +274,23 @@ export default function DiscoverySetBuilder() {
               </div>
             </div>
 
-            <p className="mt-5 max-w-[30rem] text-sm leading-6 text-muted-foreground sm:text-base sm:leading-7">
+            <p className="mt-4 max-w-[30rem] text-[0.95rem] leading-6 text-muted-foreground sm:mt-5 sm:text-base sm:leading-7">
               A 10-piece tester box for finding the scent that actually works on your skin before committing to a full bottle.
             </p>
 
-            <div className="mt-6 flex flex-wrap items-end gap-x-5 gap-y-3">
+            <div className="mt-5 flex flex-wrap items-end gap-x-5 gap-y-3 sm:mt-6">
               <div>
                 <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-muted-foreground">Launch price</p>
-                <p className="mt-1 text-2xl font-semibold">{formatINR(DISCOVERY_SET_PRICE)}</p>
+                <p className="mt-1 text-[1.85rem] font-semibold sm:text-2xl">{formatINR(DISCOVERY_SET_PRICE)}</p>
               </div>
-              <div className="h-10 w-px bg-border" aria-hidden="true" />
+              <div className="h-8 w-px bg-border sm:h-10" aria-hidden="true" />
               <div>
                 <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-muted-foreground">Includes</p>
-                <p className="mt-1 text-base font-semibold">{DISCOVERY_SET_SIZE}</p>
+                <p className="mt-1 text-[0.98rem] font-semibold sm:text-base">{DISCOVERY_SET_SIZE}</p>
               </div>
             </div>
 
-            <div className="mt-8 grid gap-3 sm:max-w-[28rem] sm:grid-cols-2">
+            <div className="mt-6 grid gap-3 sm:mt-8 sm:max-w-[28rem] sm:grid-cols-2">
               <a
                 href="#sample-grid"
                 className="inline-flex h-11 items-center justify-center bg-primary px-5 text-[10px] font-bold uppercase tracking-[0.18em] text-primary-foreground transition hover:bg-primary/90"
@@ -404,10 +404,10 @@ export default function DiscoverySetBuilder() {
 
       <section
         id="choose-testers"
-        className="scroll-mt-20 border-t border-border bg-background pt-20 pb-16 text-foreground md:pt-24 md:pb-20"
+        className="scroll-mt-20 border-t border-border bg-background pt-12 pb-12 text-foreground md:pt-24 md:pb-20"
       >
       <div className="mx-auto w-full max-w-[1280px] px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-10 lg:grid-cols-[0.72fr_1.28fr] lg:items-start lg:gap-10">
+        <div className="grid gap-7 md:gap-10 lg:grid-cols-[0.72fr_1.28fr] lg:items-start lg:gap-10">
           <motion.aside
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -417,7 +417,7 @@ export default function DiscoverySetBuilder() {
             <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-gold sm:text-[10px]">
               Discovery Set
             </p>
-            <h1 className="mt-3 max-w-[31rem] font-serif text-[2.7rem] font-light leading-[0.9] tracking-tight sm:text-[4.1rem] lg:text-[4.25rem] xl:text-[4.55rem]">
+            <h1 className="mt-2 max-w-[31rem] font-serif text-[2.15rem] font-light leading-[0.92] tracking-tight sm:mt-3 sm:text-[4.1rem] lg:text-[4.25rem] xl:text-[4.55rem]">
               Build your 10 sample box
             </h1>
             <p className="mt-4 hidden max-w-[28rem] text-[0.95rem] leading-6 text-muted-foreground sm:block lg:text-[0.92rem]">
@@ -425,13 +425,13 @@ export default function DiscoverySetBuilder() {
               before choosing your full bottle.
             </p>
 
-            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold text-foreground sm:text-sm">
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold text-foreground sm:mt-4 sm:text-sm">
               <span>{formatINR(DISCOVERY_SET_PRICE)}</span>
               <span className="h-4 w-px bg-border" aria-hidden="true" />
               <span>{DISCOVERY_SET_SIZE}</span>
             </div>
 
-            <div className="mt-6 border border-border bg-secondary p-4 shadow-[0_22px_70px_rgba(12,14,18,0.06)] sm:p-5 lg:mt-7">
+            <div className="mt-5 border border-border bg-secondary p-3.5 shadow-[0_22px_70px_rgba(12,14,18,0.06)] sm:mt-6 sm:p-5 lg:mt-7">
               <div className="flex items-center justify-between gap-4">
                 <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground sm:text-[10px]">
                   Physical tray layout
@@ -554,10 +554,10 @@ export default function DiscoverySetBuilder() {
                         }`}
                       >
                         <div
-                          className={`relative aspect-square w-full overflow-hidden border transition ${
+                          className={`relative aspect-square w-full overflow-hidden bg-secondary transition shadow-[0_12px_28px_rgba(12,14,18,0.06)] ${
                             isSelected
-                              ? "border-foreground ring-2 ring-foreground/30"
-                              : "border-border ring-1 ring-border/80 group-hover:border-foreground/30 group-hover:ring-foreground/15"
+                              ? "ring-2 ring-foreground/28 shadow-[0_16px_34px_rgba(12,14,18,0.1)]"
+                              : "ring-1 ring-black/6 group-hover:ring-foreground/14 group-hover:shadow-[0_16px_36px_rgba(12,14,18,0.1)]"
                           }`}
                         >
                           <Image
@@ -571,10 +571,10 @@ export default function DiscoverySetBuilder() {
                             loading="lazy"
                           />
                           <span
-                            className={`absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-[1.25rem] font-light leading-none shadow-[0_10px_22px_rgba(12,14,18,0.22),inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-md backdrop-saturate-150 transition sm:right-2.5 sm:top-2.5 sm:h-10 sm:w-10 sm:rounded-xl sm:text-[1.55rem] ${
+                            className={`absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-[0.62rem] text-[1.22rem] font-light leading-none shadow-[0_14px_28px_rgba(12,14,18,0.14),inset_0_1px_0_rgba(255,255,255,0.78)] backdrop-blur-xl backdrop-saturate-150 transition sm:right-2.5 sm:top-2.5 sm:h-10 sm:w-10 sm:rounded-[0.8rem] sm:text-[1.5rem] ${
                               isSelected
-                                ? "bg-foreground text-background"
-                                : "border border-white/65 bg-black/28 text-white ring-1 ring-black/10"
+                                ? "bg-white/88 text-[#1c1c1c]"
+                                : "border border-black/20 bg-white/44 text-black"
                             }`}
                           >
                             <span className={isSelected ? "text-xs font-semibold sm:text-sm" : "-mt-0.5 drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]"}>

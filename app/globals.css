@@ -264,6 +264,10 @@
   .container-luxury {
     @apply max-w-7xl mx-auto px-6 lg:px-12;
   }
+  .home-mobile-tight .container-luxury,
+  .shop-mobile-tight .container-luxury {
+    @apply px-4 sm:px-6 lg:px-12;
+  }
   .text-display {
     font-family: var(--font-serif);
     @apply text-5xl md:text-7xl lg:text-8xl font-light tracking-wider leading-none;

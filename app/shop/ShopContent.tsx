@@ -377,7 +377,7 @@ export default function ShopContent({ perfumes }: { perfumes: PerfumeData[] }) {
             {filteredPerfumes.length > 0 ? (
               <motion.div
                 layout
-                className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8 items-start"
+                className="grid grid-cols-2 gap-4 items-start md:grid-cols-3 md:gap-8 xl:grid-cols-4"
               >
                 {displayPerfumes.map((perfume, index) => (
                   <div key={perfume.id}>

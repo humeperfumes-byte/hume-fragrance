@@ -37,7 +37,7 @@ import {
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 import { isRazorpayAllowedHost } from "@/lib/razorpay-domain";
 import { useSiteControls } from "@/hooks/use-site-controls";
-import { displayPhoneNumber, toTenDigitPhone } from "@/lib/phone";
+import { displayPhoneNumber, toPhoneDigits, toTenDigitPhone } from "@/lib/phone";
 
 const CHECKOUT_STORAGE_KEY = "hume_checkout_details_v1";
 const CHECKOUT_SESSION_KEY = "hume_checkout_session_id";
@@ -243,7 +243,26 @@ function getCitiesForState(stateName: string) {
 }
 
 function formatIndianMobileInput(value: string) {
-  return toTenDigitPhone(value);
+  const rawDigits = toPhoneDigits(value);
+  if (!rawDigits) return "";
+
+  let digits = rawDigits;
+  if (digits.startsWith("91") && digits.length > 10) {
+    digits = digits.slice(2);
+  }
+
+  if (digits.startsWith("0")) {
+    const trimmed = digits.slice(0, 11);
+    const nationalNumber = trimmed.slice(1);
+    const firstGroup = nationalNumber.slice(0, 5);
+    const secondGroup = nationalNumber.slice(5, 10);
+    return ["0", firstGroup, secondGroup].filter(Boolean).join(" ");
+  }
+
+  const trimmed = digits.slice(0, 10);
+  const firstGroup = trimmed.slice(0, 5);
+  const secondGroup = trimmed.slice(5, 10);
+  return [firstGroup, secondGroup].filter(Boolean).join(" ");
 }
 
 function WhatsAppIcon({ className = "" }: { className?: string }) {
@@ -512,8 +531,8 @@ export default function CheckoutClient() {
       const hydrated = { ...defaultDetails, ...(savedAccount ?? {}), ...parsed };
       return {
         ...hydrated,
-        phone: displayPhoneNumber(hydrated.phone),
-        alternatePhone: displayPhoneNumber(hydrated.alternatePhone),
+        phone: formatIndianMobileInput(hydrated.phone),
+        alternatePhone: formatIndianMobileInput(hydrated.alternatePhone),
       };
     } catch (error) {
       console.error("Failed to hydrate checkout details:", error);
@@ -961,12 +980,12 @@ export default function CheckoutClient() {
       return false;
     }
 
-    const phoneDigits = details.phone.replace(/\D/g, "");
-    if (phoneDigits.length < 10) {
+    const normalizedPhone = toTenDigitPhone(details.phone);
+    if (normalizedPhone.length < 10) {
       toast({
         title: "Enter a valid phone number",
         description:
-          "A 10 digit mobile number works best for order confirmation.",
+          "Enter a 10 digit mobile number. If your saved number starts with 0, that is okay too.",
       });
       return false;
     }
@@ -1347,7 +1366,7 @@ export default function CheckoutClient() {
         prefill: {
           name: details.fullName.trim(),
           email: details.email.trim(),
-          contact: details.phone.trim(),
+          contact: toTenDigitPhone(details.phone),
         },
         notes: {
           humeOrderNumber: identity.orderNumber,
@@ -1654,17 +1673,20 @@ export default function CheckoutClient() {
                         }
                         onBlur={() => handleFieldBlur("phone")}
                         onKeyDown={handleFieldKeyDown("phone")}
-                        placeholder="7900347512"
+                        placeholder="79003 47512"
                         inputMode="tel"
                         autoComplete="tel-national"
                         className="h-full flex-1 rounded-none border-0 bg-transparent px-3 text-[0.82rem] font-medium shadow-none focus-visible:ring-0"
                       />
-                      {details.phone.replace(/\D/g, "").length >= 10 ? (
+                      {toTenDigitPhone(details.phone).length === 10 ? (
                         <div className="flex items-center pr-3 text-[#4bc43f]">
                           <CheckCircle2 className="h-4 w-4" />
                         </div>
                       ) : null}
                     </div>
+                    <p className="mt-1.5 text-[0.66rem] font-medium text-[#8f93a0]">
+                      Enter 10 digits, or start with 0 if your browser autofills it.
+                    </p>
                     {showAlternatePhone ? (
                       <div className="mt-1.5">
                         <label className={checkoutLabelClassName}>
@@ -1681,7 +1703,7 @@ export default function CheckoutClient() {
                           }
                           onBlur={() => handleFieldBlur("alternatePhone")}
                           onKeyDown={handleFieldKeyDown("alternatePhone")}
-                          placeholder="9876543210"
+                          placeholder="98765 43210"
                           inputMode="tel"
                           autoComplete="tel"
                           className={checkoutFieldClassName}

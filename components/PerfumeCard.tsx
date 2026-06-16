@@ -213,7 +213,16 @@ const PerfumeCard = ({
                     : "px-2 py-1 text-[10px] tracking-[0.2em]"
                 }`}
               >
-                {compactBadges ? primaryBadge.compact : primaryBadge.full}
+                {soldOut && compactBadges ? (
+                  <>
+                    <span className="sm:hidden">Sold-Out</span>
+                    <span className="hidden sm:inline">{primaryBadge.compact}</span>
+                  </>
+                ) : compactBadges ? (
+                  primaryBadge.compact
+                ) : (
+                  primaryBadge.full
+                )}
               </span>
             </div>
           )}
@@ -244,7 +253,7 @@ const PerfumeCard = ({
         <div className="flex flex-1 flex-col">
           <Link
             href={productPath}
-            className="block min-h-[8rem] sm:min-h-[8.45rem]"
+            className="block min-h-[6.6rem] sm:min-h-[8.45rem]"
             onMouseEnter={() => router.prefetch(productPath)}
             onClick={handleProductClick}
           >
@@ -254,12 +263,12 @@ const PerfumeCard = ({
             <h3 className="mb-1 line-clamp-2 font-serif text-[1.22rem] font-light leading-tight tracking-wide md:text-2xl">
               {name}
             </h3>
-            <p className="line-clamp-2 text-[0.86rem] italic leading-snug text-muted-foreground/90 sm:text-[0.95rem]">
+            <p className="line-clamp-2 text-[0.72rem] italic leading-snug text-muted-foreground/90 sm:text-[0.95rem]">
               Inspired by {inspiration}
             </p>
           </Link>
           {!hidePrice && (
-            <div className="mt-3">
+            <div className="mt-2 sm:mt-3">
               <p className="text-[1.28rem] leading-none font-light tracking-tight text-foreground/90 sm:text-[1.35rem]">
                 {displayPrice}
               </p>

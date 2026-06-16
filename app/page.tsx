@@ -96,7 +96,7 @@ export default async function Home() {
   ];
 
   return (
-    <main className="bg-background min-h-screen">
+    <main className="home-mobile-tight bg-background min-h-screen">
       <JsonLd data={jsonLd} />
       <Header />
       <div data-analytics-section="hero">

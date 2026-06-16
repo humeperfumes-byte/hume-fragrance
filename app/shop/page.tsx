@@ -23,7 +23,7 @@ export default async function ShopPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="shop-mobile-tight min-h-screen bg-background">
       <JsonLd data={shopJsonLd} />
       <Header />
       <Suspense

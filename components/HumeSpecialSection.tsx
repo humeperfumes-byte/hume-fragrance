@@ -28,7 +28,7 @@ export default function HumeSpecialSection({
           </Link>
         </div>
 
-        <div className="flex touch-auto gap-6 overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-proximity scrollbar-none pb-3">
+        <div className="flex touch-auto gap-4 overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-proximity scrollbar-none pb-3 sm:gap-6">
           {humeSpecialProducts.map((perfume, index) => (
             <div
               key={perfume.id}

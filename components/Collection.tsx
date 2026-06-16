@@ -101,7 +101,7 @@ const Collection = ({ perfumes }: { perfumes: HomepagePerfumeCardData[] }) => {
         {/* Perfume Grid */}
         <motion.div
           layout
-          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8 items-start"
+          className="grid grid-cols-2 gap-4 items-start md:grid-cols-3 md:gap-8 lg:grid-cols-4"
         >
           {visiblePerfumes.map((perfume, index) => (
             <div
