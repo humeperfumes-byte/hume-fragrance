@@ -15,7 +15,6 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TemplateMessagesPanel } from "@/components/admin/TemplateMessagesPanel";
 import { toast } from "@/hooks/use-toast";
 import { formatINR } from "@/lib/currency";
 import { parseAdminMarket } from "@/lib/admin-market";
@@ -260,15 +259,15 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="flex w-full flex-wrap items-center gap-3 md:w-auto">
-          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 sm:flex-none">
+        <div className="flex w-full items-center justify-end gap-2 md:w-auto">
+          <div className="flex min-w-[190px] items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2">
             <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">
               Window
             </span>
             <select
               value={timeWindowHours}
               onChange={(event) => setTimeWindowHours(event.target.value)}
-              className="min-w-0 flex-1 cursor-pointer bg-transparent text-sm font-medium text-white outline-none sm:flex-none"
+              className="min-w-0 flex-1 cursor-pointer bg-transparent text-sm font-medium text-white outline-none"
             >
               {ADMIN_TIME_WINDOW_OPTIONS.map((option) => (
                 <option key={option.hours} value={option.hours}>
@@ -621,7 +620,6 @@ export default function DashboardPage() {
         </>
       ) : null}
 
-      <TemplateMessagesPanel />
     </div>
   );
 }

@@ -19,6 +19,7 @@ function isEligibleSamplePerfume(perfume: PerfumeData) {
   return (
     !isDiscoverySetProductId(perfume.id) &&
     !perfume.badges?.soldOut &&
+    !perfume.badges?.comingSoon &&
     !blockedCategories.has(perfume.categoryId?.toLowerCase()) &&
     !blockedCategories.has(perfume.category?.toLowerCase())
   );

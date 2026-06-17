@@ -32,6 +32,7 @@ function isKitEligible(perfume: PerfumeData) {
   const blockedCategories = new Set(["kit", "gift", "accessory", "discovery-set"]);
   return (
     !perfume.badges?.soldOut &&
+    !perfume.badges?.comingSoon &&
     !blockedCategories.has(perfume.categoryId?.toLowerCase()) &&
     !blockedCategories.has(perfume.category?.toLowerCase())
   );
@@ -105,8 +106,8 @@ export default function KitPackShowcase() {
   };
 
   const togglePerfume = (perfume: PerfumeData) => {
-    if (perfume.badges?.soldOut) {
-      toast({ title: "This perfume is currently sold out" });
+    if (perfume.badges?.soldOut || perfume.badges?.comingSoon) {
+      toast({ title: "This perfume is not available for the kit yet" });
       return;
     }
 

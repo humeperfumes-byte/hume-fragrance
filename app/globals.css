@@ -224,6 +224,7 @@
 @layer components {
   .admin-shell {
     font-family: var(--font-sans);
+    color-scheme: dark;
   }
   .admin-shell h1,
   .admin-shell h2,
@@ -260,6 +261,69 @@
   .admin-shell .tracking-wide,
   .admin-shell .tracking-widest {
     letter-spacing: 0 !important;
+  }
+  .admin-shell [class*="bg-card"] {
+    background-color: rgb(255 255 255 / 0.035) !important;
+  }
+  .admin-shell [class*="bg-secondary"] {
+    background-color: rgb(255 255 255 / 0.035) !important;
+  }
+  .admin-shell [class*="border-border"] {
+    border-color: rgb(255 255 255 / 0.1) !important;
+  }
+  .admin-shell [class*="text-muted-foreground"] {
+    color: rgb(255 255 255 / 0.45) !important;
+  }
+  .admin-shell h1 {
+    color: rgb(255 255 255 / 0.96);
+    font-size: clamp(1.35rem, 1.1rem + 0.8vw, 1.75rem);
+    line-height: 1.15;
+  }
+  .admin-shell h2,
+  .admin-shell h3 {
+    color: rgb(255 255 255 / 0.92);
+  }
+  .admin-shell input:not([type="checkbox"]):not([type="radio"]),
+  .admin-shell textarea,
+  .admin-shell select {
+    border-color: rgb(255 255 255 / 0.1);
+    background-color: rgb(255 255 255 / 0.04);
+    color: rgb(255 255 255 / 0.92);
+  }
+  .admin-shell input::placeholder,
+  .admin-shell textarea::placeholder {
+    color: rgb(255 255 255 / 0.25);
+  }
+  .admin-shell select option {
+    background: #111111;
+    color: white;
+  }
+  .admin-shell table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  .admin-shell thead tr {
+    background-color: rgb(255 255 255 / 0.025);
+  }
+  .admin-shell th {
+    color: rgb(255 255 255 / 0.42) !important;
+    font-size: 0.68rem;
+    font-weight: 700 !important;
+    letter-spacing: 0.08em !important;
+  }
+  .admin-shell td {
+    color: rgb(255 255 255 / 0.82);
+  }
+  .admin-shell tbody tr {
+    transition: background-color 160ms ease, border-color 160ms ease;
+  }
+  .admin-shell tbody tr:hover {
+    background-color: rgb(255 255 255 / 0.035);
+  }
+  .admin-shell code {
+    border: 1px solid rgb(255 255 255 / 0.1);
+    background-color: rgb(255 255 255 / 0.06);
+    color: rgb(255 255 255 / 0.82);
   }
   .container-luxury {
     @apply max-w-7xl mx-auto px-6 lg:px-12;

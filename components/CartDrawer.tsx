@@ -49,6 +49,89 @@ interface Coupon {
   welcomeBackMode?: string;
 }
 
+function pluralizeItem(count: number) {
+  return `${count} item${count === 1 ? "" : "s"}`;
+}
+
+function getCouponOfferSummary(coupon: Coupon) {
+  const buyGet = parseBuyGetConfig(coupon);
+  if (buyGet) {
+    return `Buy ${buyGet.buy} and get ${buyGet.get} free on eligible perfumes.`;
+  }
+  if (coupon.type === "percent") {
+    return `${coupon.value}% off on qualifying carts.`;
+  }
+  if (coupon.type === "fixed") {
+    return `Flat ${formatINR(coupon.value)} off on qualifying carts.`;
+  }
+  return coupon.description?.trim() || coupon.code;
+}
+
+function getCouponDetailContent(
+  coupon: Coupon,
+  {
+    subtotal,
+    paidItemCount,
+    isEligible,
+  }: {
+    subtotal: number;
+    paidItemCount: number;
+    isEligible: boolean;
+  },
+) {
+  const buyGet = parseBuyGetConfig(coupon);
+  const amountShort = Math.max(0, coupon.minSubtotal - subtotal);
+  const requiredUnits = buyGet ? buyGet.buy + buyGet.get : 0;
+  const remainingItems = buyGet ? Math.max(0, requiredUnits - paidItemCount) : 0;
+
+  if (isEligible) {
+    return {
+      statusLabel: "Ready now",
+      headline: buyGet
+        ? `This cart now qualifies for ${buyGet.buy} paid and ${buyGet.get} free.`
+        : `This cart is ready for ${coupon.code}.`,
+      body: buyGet
+        ? `Apply this code now and the lowest-priced eligible ${pluralizeItem(buyGet.get)} in the cart will turn free.`
+        : `Apply this code now to update your total instantly.`,
+      note:
+        coupon.minSubtotal > 0
+          ? `Minimum cart value for this offer: ${formatINR(coupon.minSubtotal)}.`
+          : null,
+    };
+  }
+
+  if (buyGet && remainingItems > 0 && amountShort > 0) {
+    return {
+      statusLabel: "How to unlock",
+      headline: `Add ${pluralizeItem(remainingItems)} and ${formatINR(amountShort)} more to avail this offer.`,
+      body: `That will round up to ${buyGet.buy} items paid and ${buyGet.get} item${buyGet.get === 1 ? "" : "s"} free.`,
+      note: `The lowest-priced eligible ${pluralizeItem(buyGet.get)} becomes free once the full offer condition is met.`,
+    };
+  }
+
+  if (buyGet && remainingItems > 0) {
+    return {
+      statusLabel: "How to unlock",
+      headline: `Add ${pluralizeItem(remainingItems)} more to avail this offer.`,
+      body: `That will round up to ${buyGet.buy} items paid and ${buyGet.get} item${buyGet.get === 1 ? "" : "s"} free.`,
+      note: `The lowest-priced eligible ${pluralizeItem(buyGet.get)} becomes free once the full offer condition is met.`,
+    };
+  }
+
+  return {
+    statusLabel: "How to unlock",
+    headline: `Add ${formatINR(amountShort)} more to avail this offer.`,
+    body:
+      coupon.minSubtotal > 0
+        ? `This coupon starts working once your cart reaches ${formatINR(coupon.minSubtotal)}.`
+        : `This coupon is not ready on the current cart yet.`,
+    note:
+      buyGet && requiredUnits > 0
+        ? `This offer also needs ${pluralizeItem(requiredUnits)} in the cart to complete the buy ${buyGet.buy} get ${buyGet.get} free rule.`
+        : null,
+  };
+}
+
 const APPLIED_COUPON_STORAGE_KEY = "hume_applied_coupon_code";
 const SPECIAL5_CODE = "SPECIAL-5";
 const REWARD_CONFETTI = [
@@ -110,6 +193,9 @@ const CartDrawer = () => {
     null,
   );
   const [couponInput, setCouponInput] = useState("");
+  const [expandedCouponCode, setExpandedCouponCode] = useState<string | null>(
+    null,
+  );
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [welcomeBackReward, setWelcomeBackReward] =
     useState<WelcomeBackReward | null>(null);
@@ -124,6 +210,7 @@ const CartDrawer = () => {
   const { prefix: currentPrefix } = stripRegionPrefix(pathname || "/");
   const isIndiaRootStorefront = currentPrefix === "";
   const listableCoupons = isIndiaRootStorefront ? visibleCoupons : [];
+  const isEmptyCart = items.length === 0;
 
   const subtotal = totalPrice;
   const paidItemCount = items.reduce(
@@ -522,6 +609,7 @@ const CartDrawer = () => {
   const handleApplyToggleCoupon = (coupon: Coupon) => {
     if (appliedCouponCode === coupon.code) {
       setAppliedCouponCode(null);
+      setExpandedCouponCode(null);
       toast({
         title: "Coupon removed",
       });
@@ -544,6 +632,7 @@ const CartDrawer = () => {
       return;
     }
     setAppliedCouponCode(coupon.code);
+    setExpandedCouponCode(null);
     toast({
       title: "Coupon applied",
     });
@@ -587,6 +676,7 @@ const CartDrawer = () => {
 
     setAppliedCouponCode(coupon.code);
     setCouponInput("");
+    setExpandedCouponCode(null);
     toast({
       title: "Coupon applied",
     });
@@ -629,29 +719,7 @@ const CartDrawer = () => {
         onWheel={(event) => event.stopPropagation()}
         onTouchMove={(event) => event.stopPropagation()}
       >
-        {items.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center text-center">
-            <p className="font-serif text-3xl leading-tight">
-              Your selection is empty
-            </p>
-            <p className="mt-3 max-w-xs text-sm leading-relaxed text-black/50">
-              Add a fragrance to unlock cart offers, free delivery, and gift
-              rewards.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setIsCartOpen(false);
-                showNavigationLoadingToast();
-                router.push("/shop");
-              }}
-              className="mt-6 h-11 bg-black px-6 text-sm font-semibold text-white transition hover:bg-black/85"
-            >
-              Shop Fragrances
-            </button>
-          </div>
-        ) : (
-          <>
+        <>
             {welcomeBackReward && welcomeBackLabel && rewardTimeRemaining > 0 ? (
               <section
                 className={`mb-4 overflow-hidden border text-white shadow-[0_14px_34px_rgba(21,17,12,0.16)] ${
@@ -734,8 +802,18 @@ const CartDrawer = () => {
             </section>
 
             <section className="mt-5 divide-y divide-black/10 border-y border-black/10">
-              <AnimatePresence initial={false}>
-                {items.map((item) => {
+              {isEmptyCart ? (
+                <div className="py-8 text-center">
+                  <p className="text-sm font-semibold uppercase tracking-[0.12em] text-black/45">
+                    0 items in cart
+                  </p>
+                  <p className="mx-auto mt-2 max-w-[18rem] text-sm leading-relaxed text-black/50">
+                    Add a fragrance and your cart items will appear here while offers, gifts, and totals stay visible below.
+                  </p>
+                </div>
+              ) : (
+                <AnimatePresence initial={false}>
+                  {items.map((item) => {
                   const freeUnitsFromCoupon =
                     couponResult.freeUnitByItemId.get(item.id) ?? 0;
                   const paidUnits = Math.max(
@@ -754,15 +832,15 @@ const CartDrawer = () => {
                     lineTotal - lineDiscount,
                   );
 
-                  return (
-                    <motion.article
-                      key={item.id}
-                      layout
-                      initial={{ opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -12 }}
-                      className="grid grid-cols-[82px_minmax(0,1fr)_auto] gap-3 py-4"
-                    >
+                    return (
+                      <motion.article
+                        key={item.id}
+                        layout
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -12 }}
+                        className="grid grid-cols-[82px_minmax(0,1fr)_auto] gap-3 py-4"
+                      >
                       <div className="relative h-20 w-20 overflow-hidden bg-[#eee9e3]">
                         <ImageWithFallback
                           src={withCloudinaryTransforms(
@@ -985,10 +1063,11 @@ const CartDrawer = () => {
                           ) : null}
                         </div>
                       </div>
-                    </motion.article>
-                  );
-                })}
-              </AnimatePresence>
+                      </motion.article>
+                    );
+                  })}
+                </AnimatePresence>
+              )}
             </section>
 
             {(allCoupons.length > 0 || appliedCoupon) && (
@@ -1058,39 +1137,77 @@ const CartDrawer = () => {
                       )
                       .map((coupon) => {
                         const isEligible = isCouponEligible(coupon);
-                        const buyGet = parseBuyGetConfig(coupon);
-                        const offerText =
-                          coupon.description?.trim() ||
-                          (coupon.type === "percent"
-                            ? `${coupon.value}% off`
-                            : coupon.type === "fixed"
-                              ? `Flat ${formatINR(coupon.value)} off`
-                              : buyGet
-                                ? `Buy ${buyGet.buy} Get ${buyGet.get} Free on all 50ml EDPs`
-                                : coupon.description);
+                        const offerText = getCouponOfferSummary(coupon);
+                        const detailContent = getCouponDetailContent(coupon, {
+                          subtotal,
+                          paidItemCount,
+                          isEligible,
+                        });
+                        const isExpanded = expandedCouponCode === coupon.code;
 
                         return (
                           <div
                             key={coupon.id}
-                            className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 ${
-                              !isEligible ? "opacity-60" : ""
-                            }`}
+                            className="px-4 py-3"
                           >
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold uppercase tracking-[0.02em]">
-                                {coupon.code}
-                              </p>
-                              <p className="mt-0.5 text-xs leading-snug text-black/55">
-                                {offerText}
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => handleApplyToggleCoupon(coupon)}
-                              className="inline-flex h-8 min-w-[70px] items-center justify-center border border-black/75 bg-transparent px-3 text-[11px] font-semibold tracking-[0.1em] text-black transition hover:bg-black hover:text-white"
+                            <div
+                              className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 ${
+                                !isEligible ? "opacity-60" : ""
+                              }`}
                             >
-                              {isEligible ? "Apply" : "View"}
-                            </button>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold uppercase tracking-[0.02em]">
+                                  {coupon.code}
+                                </p>
+                                <p className="mt-0.5 text-xs leading-snug text-black/55">
+                                  {offerText}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  isEligible
+                                    ? handleApplyToggleCoupon(coupon)
+                                    : setExpandedCouponCode((current) =>
+                                        current === coupon.code ? null : coupon.code,
+                                      )
+                                }
+                                className="inline-flex h-8 min-w-[70px] items-center justify-center border border-black/75 bg-transparent px-3 text-[11px] font-semibold tracking-[0.1em] text-black transition hover:bg-black hover:text-white"
+                              >
+                                {isEligible ? "Apply" : isExpanded ? "Hide" : "View"}
+                              </button>
+                            </div>
+
+                            {!isEligible && isExpanded ? (
+                              <div className="mt-3 border border-[#ddd5cd] bg-white/75 p-3 shadow-[0_10px_24px_rgba(24,18,14,0.04)]">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-black/40">
+                                      {detailContent.statusLabel}
+                                    </p>
+                                    <p className="mt-1 text-sm font-semibold leading-snug text-black">
+                                      {detailContent.headline}
+                                    </p>
+                                  </div>
+                                  <span className="shrink-0 bg-[#f3efe9] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-black/55">
+                                    {coupon.code}
+                                  </span>
+                                </div>
+                                <p className="mt-2 text-xs leading-5 text-black/70">
+                                  {detailContent.body}
+                                </p>
+                                {coupon.description?.trim() ? (
+                                  <p className="mt-2 text-xs leading-5 text-black/52">
+                                    Offer: {coupon.description.trim()}
+                                  </p>
+                                ) : null}
+                                {detailContent.note ? (
+                                  <p className="mt-2 text-[11px] leading-5 text-black/45">
+                                    {detailContent.note}
+                                  </p>
+                                ) : null}
+                              </div>
+                            ) : null}
                           </div>
                         );
                       })}
@@ -1133,12 +1250,10 @@ const CartDrawer = () => {
                 </button>
               </article>
             </section>
-          </>
-        )}
+        </>
       </div>
 
-      {items.length > 0 && (
-        <footer className="shrink-0 border-t border-black/10 bg-[#fbfaf8] px-5 py-4">
+      <footer className="shrink-0 border-t border-black/10 bg-[#fbfaf8] px-5 py-4">
           <div className="text-sm">
             <button
               type="button"
@@ -1189,12 +1304,14 @@ const CartDrawer = () => {
                   <span className="text-black/55">Shipping</span>
                   <span
                     className={
-                      shippingFee === 0
+                      shippingFee === 0 && !isEmptyCart
                         ? "font-semibold text-[#0f6b46]"
                         : "font-semibold"
                     }
                   >
-                    {shippingFee === 0
+                    {isEmptyCart
+                      ? formatINR(0)
+                      : shippingFee === 0
                       ? `Free${shippingSavings > 0 ? ` (${formatINR(shippingSavings)} saved)` : ""}`
                       : formatINR(shippingFee)}
                   </span>
@@ -1205,13 +1322,13 @@ const CartDrawer = () => {
 
           <Button
             onClick={handleContinueCheckout}
+            disabled={isEmptyCart}
             className="mt-4 h-12 w-full rounded-none bg-black text-sm font-semibold text-white hover:bg-black/85"
           >
             Checkout
             <ArrowRight className="h-4 w-4" />
           </Button>
         </footer>
-      )}
     </>
   );
 

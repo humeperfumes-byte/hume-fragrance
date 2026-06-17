@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, MessageSquareText } from "lucide-react";
+import { Check, Copy, MessageSquareText, Pencil, RotateCcw } from "lucide-react";
 
 type TemplateMessage = {
   title: string;
@@ -154,10 +154,43 @@ const templateMessages: TemplateMessage[] = [
 
 export function TemplateMessagesPanel() {
   const [copiedTitle, setCopiedTitle] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string | null>(null);
+  const [templateValues, setTemplateValues] = useState<Record<string, Record<string, string>>>({});
+
+  const getPlaceholders = (body: string) =>
+    Array.from(new Set(Array.from(body.matchAll(/\{([a-zA-Z0-9_]+)\}/g)).map((match) => match[1])));
+
+  const buildTemplateBody = (template: TemplateMessage) => {
+    const values = templateValues[template.title] ?? {};
+    return template.body.replace(/\{([a-zA-Z0-9_]+)\}/g, (match, key: string) => {
+      const value = values[key]?.trim();
+      return value || match;
+    });
+  };
+
+  const handleValueChange = (templateTitle: string, key: string, value: string) => {
+    setTemplateValues((current) => ({
+      ...current,
+      [templateTitle]: {
+        ...(current[templateTitle] ?? {}),
+        [key]: value,
+      },
+    }));
+  };
+
+  const resetTemplateValues = (templateTitle: string) => {
+    setTemplateValues((current) => {
+      const next = { ...current };
+      delete next[templateTitle];
+      return next;
+    });
+  };
 
   const handleCopy = async (template: TemplateMessage) => {
-    await navigator.clipboard.writeText(template.body);
+    await navigator.clipboard.writeText(buildTemplateBody(template));
     setCopiedTitle(template.title);
+    resetTemplateValues(template.title);
+    setEditingTitle(null);
     window.setTimeout(() => setCopiedTitle(null), 1800);
   };
 
@@ -181,6 +214,9 @@ export function TemplateMessagesPanel() {
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         {templateMessages.map((template) => {
           const copied = copiedTitle === template.title;
+          const editing = editingTitle === template.title;
+          const placeholders = getPlaceholders(template.body);
+          const body = buildTemplateBody(template);
 
           return (
             <article
@@ -192,19 +228,68 @@ export function TemplateMessagesPanel() {
                   <p className={`text-sm font-semibold ${template.tone}`}>{template.title}</p>
                   <p className="mt-1 text-xs text-white/35">{template.helper}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleCopy(template)}
-                  className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 text-xs font-semibold text-white/65 transition-colors hover:bg-white/10 hover:text-white"
-                  aria-label={`Copy ${template.title} template`}
-                >
-                  {copied ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}
-                  {copied ? "Copied" : "Copy"}
-                </button>
+                <div className="flex shrink-0 gap-2">
+                  {placeholders.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEditingTitle((current) =>
+                          current === template.title ? null : template.title,
+                        )
+                      }
+                      className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 text-xs font-semibold text-white/65 transition-colors hover:bg-white/10 hover:text-white"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Edit
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(template)}
+                    className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 text-xs font-semibold text-white/65 transition-colors hover:bg-white/10 hover:text-white"
+                    aria-label={`Copy ${template.title} template`}
+                  >
+                    {copied ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copied ? "Copied" : "Copy"}
+                  </button>
+                </div>
               </div>
 
+              {editing ? (
+                <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-xs font-semibold text-white/70">Edit placeholders before copying</p>
+                    <button
+                      type="button"
+                      onClick={() => resetTemplateValues(template.title)}
+                      className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white/40 transition hover:text-white/70"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      Reset
+                    </button>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {placeholders.map((placeholder) => (
+                      <label key={placeholder} className="space-y-1.5">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/35">
+                          {placeholder}
+                        </span>
+                        <input
+                          value={templateValues[template.title]?.[placeholder] ?? ""}
+                          onChange={(event) =>
+                            handleValueChange(template.title, placeholder, event.target.value)
+                          }
+                          placeholder={`Enter ${placeholder}`}
+                          className="h-9 w-full rounded-lg border border-white/10 bg-black/25 px-3 text-sm text-white outline-none transition placeholder:text-white/20 focus:border-white/30"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
               <pre className="mt-4 max-h-72 overflow-auto whitespace-pre-wrap rounded-xl border border-white/5 bg-[#0c0c0c] p-4 text-xs leading-6 text-white/70">
-                {template.body}
+                {body}
               </pre>
             </article>
           );

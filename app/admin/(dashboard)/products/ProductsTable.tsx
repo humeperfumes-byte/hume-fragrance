@@ -3,15 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Product } from "@/db/schema";
+import type { Product } from "@/db/schema";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { formatINR } from "@/lib/currency";
 import { ProductFormSheet } from "./ProductFormSheet";
 
 export function ProductsTable({
@@ -23,6 +22,7 @@ export function ProductsTable({
 }) {
   const [products, setProducts] = useState(initialProducts);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [kitOutOfStock, setKitOutOfStock] = useState(initialKitOutOfStock);
   const [kitSaving, setKitSaving] = useState(false);
   const router = useRouter();
@@ -36,14 +36,29 @@ export function ProductsTable({
       comingSoon?: boolean;
     };
 
+  const openCreateForm = () => {
+    setEditingProduct(null);
+    setIsFormOpen(true);
+  };
+
+  const openEditForm = (product: Product) => {
+    setEditingProduct(product);
+    setIsFormOpen(true);
+  };
+
+  const handleFormOpenChange = (open: boolean) => {
+    setIsFormOpen(open);
+    if (!open) setEditingProduct(null);
+  };
+
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this product?")) return;
     
     try {
-      const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/products/${encodeURIComponent(id)}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
       
-      setProducts(products.filter(p => p.id !== id));
+      setProducts(products.filter((p) => p.id !== id));
       toast({ title: "Product deleted" });
       router.refresh();
     } catch {
@@ -59,7 +74,7 @@ export function ProductsTable({
     const nextBadges = { ...getBadges(product), [badge]: enabled };
 
     try {
-      const res = await fetch(`/api/products/${product.id}`, {
+      const res = await fetch(`/api/products/${encodeURIComponent(product.id)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ badges: nextBadges }),
@@ -82,7 +97,7 @@ export function ProductsTable({
     const nextVisibility = product.visibility === "public" ? "seo_only" : "public";
 
     try {
-      const res = await fetch(`/api/products/${product.id}`, {
+      const res = await fetch(`/api/products/${encodeURIComponent(product.id)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ visibility: nextVisibility }),
@@ -164,7 +179,7 @@ export function ProductsTable({
         >
           15 ml kit
         </Button>
-        <Button onClick={() => setIsFormOpen(true)} className="rounded-xl">
+        <Button onClick={openCreateForm} className="rounded-xl">
           <Plus className="mr-2 h-4 w-4" /> Add Product
         </Button>
         </div>
@@ -177,8 +192,6 @@ export function ProductsTable({
               <TableRow className="border-border/50">
                 <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground w-[80px]">Image</TableHead>
                 <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Product</TableHead>
-                <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Category</TableHead>
-                <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground text-right">Price</TableHead>
                 <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground text-center">Status</TableHead>
                 <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground w-[50px]"></TableHead>
               </TableRow>
@@ -186,7 +199,7 @@ export function ProductsTable({
             <TableBody>
               {products.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
                     No products found. Add one to get started.
                   </TableCell>
                 </TableRow>
@@ -217,8 +230,6 @@ export function ProductsTable({
                         <span className="text-xs text-muted-foreground">Inspired by: {product.inspirationBrand} {product.inspiration}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm">{product.category}</TableCell>
-                    <TableCell className="text-right font-medium">{formatINR(Number(product.price))}</TableCell>
                     <TableCell className="text-center">
                       <div className="flex flex-wrap justify-center gap-1.5">
                         {product.visibility === "public" 
@@ -240,7 +251,10 @@ export function ProductsTable({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="rounded-xl">
-                          <DropdownMenuItem className="cursor-pointer" onClick={() => window.open(`/product/${product.id}`, '_blank')}>
+                          <DropdownMenuItem className="cursor-pointer" onClick={() => openEditForm(product)}>
+                            <Pencil className="mr-2 h-4 w-4" /> Edit product
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="cursor-pointer" onClick={() => window.open(`/product/${encodeURIComponent(product.id)}`, "_blank")}>
                             View Live
                           </DropdownMenuItem>
                           <DropdownMenuItem
@@ -298,9 +312,19 @@ export function ProductsTable({
 
       <ProductFormSheet 
         open={isFormOpen} 
-        onOpenChange={setIsFormOpen} 
-        onSuccess={() => {
+        onOpenChange={handleFormOpenChange}
+        product={editingProduct}
+        onSuccess={(savedProduct) => {
           setIsFormOpen(false);
+          setEditingProduct(null);
+          if (savedProduct) {
+            setProducts((current) => {
+              const exists = current.some((item) => item.id === savedProduct.id);
+              return exists
+                ? current.map((item) => (item.id === savedProduct.id ? savedProduct : item))
+                : [savedProduct, ...current];
+            });
+          }
           router.refresh();
         }} 
       />
