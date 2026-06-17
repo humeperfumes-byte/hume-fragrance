@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { CheckCircle2, Copy, ExternalLink, MessageCircle, Package, Trash2, Truck } from "lucide-react";
 import { buildPublicTrackingUrl } from "@/lib/tracking-url";
 import { displayPhoneNumber } from "@/lib/phone";
+import { toast } from "@/hooks/use-toast";
 
 export function formatINR(amount: number | string): string {
   return new Intl.NumberFormat("en-IN", {
@@ -89,6 +90,43 @@ function getPaymentTrail(message: string | null) {
 function getTrackingUrl(order: Pick<Order, "trackingNumber" | "trackingUrl">) {
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   return buildPublicTrackingUrl(order.trackingNumber, origin) || order.trackingUrl || "";
+}
+
+function onlyDigits(value: string | null | undefined) {
+  return value?.replace(/\D/g, "") || "";
+}
+
+function CopyableOrderValue({
+  label,
+  value,
+  copyValue,
+  onCopy,
+  className = "",
+}: {
+  label: string;
+  value: string | null | undefined;
+  copyValue?: string | null;
+  onCopy: (text: string, label?: string) => void;
+  className?: string;
+}) {
+  const displayValue = value?.trim() || "N/A";
+  const finalCopyValue = (copyValue ?? value ?? "").trim();
+  const canCopy = Boolean(finalCopyValue && displayValue !== "N/A");
+
+  if (!canCopy) {
+    return <span className={className}>{displayValue}</span>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onCopy(finalCopyValue, `${label} copied`)}
+      className={`cursor-copy rounded-md px-1.5 py-0.5 text-right transition hover:bg-white/10 hover:text-emerald-100 focus:outline-none focus:ring-1 focus:ring-emerald-300/40 ${className}`}
+      title={`Copy ${label}`}
+    >
+      {displayValue}
+    </button>
+  );
 }
 
 function buildTrackingMessage(order: Order) {
@@ -227,9 +265,10 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
     window.open(`https://wa.me/${waPhone}?text=${message}`, "_blank");
   };
 
-  const copyText = async (text: string) => {
+  const copyText = async (text: string, label = "Copied") => {
     if (!text) return;
-    await navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(text.trim());
+    toast({ title: label });
   };
 
   const openWhatsAppWithMessage = (order: Order, message: string) => {
@@ -537,11 +576,35 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
                     <div className="space-y-5 rounded-2xl border border-white/5 bg-white/[0.02] p-4 sm:rounded-3xl sm:p-6">
                       <h4 className="font-bold text-[10px] uppercase tracking-[0.2em] text-white/30">Customer Profile</h4>
                       <div className="text-sm space-y-3">
-                        <div className="flex justify-between items-center"><span className="text-white/40">Full Name</span> <span className="font-medium text-white">{selectedOrder.fullName || "N/A"}</span></div>
-                        <div className="flex justify-between items-center"><span className="text-white/40">Email</span> <span className="font-medium text-white">{selectedOrder.email || "N/A"}</span></div>
-                        <div className="flex justify-between items-center"><span className="text-white/40">WhatsApp</span> <span className="font-medium text-white">{displayPhoneNumber(selectedOrder.phone) || "N/A"}</span></div>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-white/40">Full Name</span>
+                          <CopyableOrderValue label="name" value={selectedOrder.fullName} onCopy={copyText} className="font-medium text-white" />
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-white/40">Email</span>
+                          <CopyableOrderValue label="email" value={selectedOrder.email} onCopy={copyText} className="font-medium text-white" />
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-white/40">WhatsApp</span>
+                          <CopyableOrderValue
+                            label="WhatsApp"
+                            value={displayPhoneNumber(selectedOrder.phone)}
+                            copyValue={onlyDigits(selectedOrder.phone)}
+                            onCopy={copyText}
+                            className="font-medium text-white"
+                          />
+                        </div>
                         {selectedOrder.alternatePhone ? (
-                          <div className="flex justify-between items-center"><span className="text-white/40">Alternate</span> <span className="font-medium text-white">{displayPhoneNumber(selectedOrder.alternatePhone)}</span></div>
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-white/40">Alternate</span>
+                            <CopyableOrderValue
+                              label="alternate phone"
+                              value={displayPhoneNumber(selectedOrder.alternatePhone)}
+                              copyValue={onlyDigits(selectedOrder.alternatePhone)}
+                              onCopy={copyText}
+                              className="font-medium text-white"
+                            />
+                          </div>
                         ) : null}
                       </div>
                     </div>
@@ -549,11 +612,36 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
                     <div className="space-y-4 rounded-2xl border border-white/5 bg-white/[0.02] p-4 sm:rounded-3xl sm:p-6">
                       <h4 className="font-bold text-[10px] uppercase tracking-[0.2em] text-white/30">Logistics Destination</h4>
                       <div className="text-sm space-y-1 text-white/80 leading-relaxed">
-                        <p className="text-white font-medium">{selectedOrder.addressLine1 || "No address line 1"}</p>
-                        {selectedOrder.addressLine2 && <p>{selectedOrder.addressLine2}</p>}
-                        <p>{[selectedOrder.city, selectedOrder.state, selectedOrder.pincode].filter(Boolean).join(", ") || "City/state/pincode not added"}</p>
-                        {selectedOrder.notes ? <p className="mt-3 rounded-xl border border-white/5 bg-black/20 p-3 text-white/50">{selectedOrder.notes}</p> : null}
-                        <p className="text-white/40 uppercase text-[10px] mt-2 font-bold tracking-widest">India</p>
+                        <CopyableOrderValue
+                          label="address line 1"
+                          value={selectedOrder.addressLine1 || "No address line 1"}
+                          copyValue={selectedOrder.addressLine1}
+                          onCopy={copyText}
+                          className="block w-fit max-w-full text-left font-medium text-white"
+                        />
+                        {selectedOrder.addressLine2 ? (
+                          <CopyableOrderValue
+                            label="address line 2"
+                            value={selectedOrder.addressLine2}
+                            onCopy={copyText}
+                            className="block w-fit max-w-full text-left text-white/80"
+                          />
+                        ) : null}
+                        <CopyableOrderValue
+                          label="city state pincode"
+                          value={[selectedOrder.city, selectedOrder.state, selectedOrder.pincode].filter(Boolean).join(", ") || "City/state/pincode not added"}
+                          copyValue={[selectedOrder.city, selectedOrder.state, selectedOrder.pincode].filter(Boolean).join(", ")}
+                          onCopy={copyText}
+                          className="block w-fit max-w-full text-left text-white/80"
+                        />
+                        {selectedOrder.notes ? (
+                          <CopyableOrderValue
+                            label="order notes"
+                            value={selectedOrder.notes}
+                            onCopy={copyText}
+                            className="mt-3 block w-fit max-w-full rounded-xl border border-white/5 bg-black/20 p-3 text-left text-white/50"
+                          />
+                        ) : null}
                       </div>
                     </div>
 
