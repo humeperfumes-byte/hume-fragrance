@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { orders, Order } from "@/db/schema";
-import { desc, gte } from "drizzle-orm";
+import { orders, products, type Order, type Product } from "@/db/schema";
+import { asc, desc, gte } from "drizzle-orm";
 import { OrdersTable } from "./OrdersTable";
 import { AdminDateWindowControl } from "@/components/admin/AdminDateWindowControl";
 import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-data-filters";
@@ -16,6 +16,7 @@ export default async function OrdersPage({ searchParams }: AdminPageProps) {
   const params = await searchParams;
   const timeWindow = parseAdminTimeWindow(params?.hours);
   let allOrders: Order[] = [];
+  let productOptions: Product[] = [];
   let tableExists = true;
 
   try {
@@ -29,6 +30,12 @@ export default async function OrdersPage({ searchParams }: AdminPageProps) {
   } catch (error) {
     console.error("Orders table might be missing:", error);
     tableExists = false;
+  }
+
+  try {
+    productOptions = await db.select().from(products).orderBy(asc(products.name));
+  } catch (error) {
+    console.error("Unable to load product replacement options:", error);
   }
 
   return (
@@ -55,7 +62,7 @@ export default async function OrdersPage({ searchParams }: AdminPageProps) {
           </div>
         </div>
       ) : (
-        <OrdersTable initialOrders={allOrders} />
+        <OrdersTable initialOrders={allOrders} productOptions={productOptions} />
       )}
     </div>
   );

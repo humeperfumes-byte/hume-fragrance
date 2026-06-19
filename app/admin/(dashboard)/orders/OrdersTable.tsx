@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { format } from "date-fns";
-import { Order } from "@/db/schema";
+import type { Order, Product } from "@/db/schema";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -129,6 +129,19 @@ function CopyableOrderValue({
   );
 }
 
+function getProductOptionLabel(product: Product) {
+  const status = product.badges?.soldOut
+    ? " - Sold out"
+    : product.badges?.comingSoon
+      ? " - Coming soon"
+      : "";
+  return `${product.name} - Inspired by ${product.inspiration} - ${formatINR(product.price)}${status}`;
+}
+
+function canReplaceOrderItem(item: OrderCartItem) {
+  return !item.isGift && !item.kitSelections?.length && !item.sampleSelections?.length;
+}
+
 function buildTrackingMessage(order: Order) {
   const trackingUrl = getTrackingUrl(order);
   return [
@@ -188,11 +201,22 @@ function buildOrderSuccessMessage(order: Order) {
     .join("\n");
 }
 
-export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
+export function OrdersTable({
+  initialOrders,
+  productOptions = [],
+}: {
+  initialOrders: Order[];
+  productOptions?: Product[];
+}) {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Order>>({});
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+  const [replacementSelections, setReplacementSelections] = useState<Record<number, string>>({});
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressTriggeredRef = useRef(false);
 
   // Status badge coloring
   const getStatusBadge = (status: string) => {
@@ -271,6 +295,82 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
     toast({ title: label });
   };
 
+  const clearLongPressTimer = () => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const toggleOrderSelection = (orderId: string) => {
+    setSelectedOrderIds((current) =>
+      current.includes(orderId)
+        ? current.filter((id) => id !== orderId)
+        : [...current, orderId],
+    );
+  };
+
+  const beginOrderSelection = (orderId: string) => {
+    longPressTriggeredRef.current = true;
+    setIsSelectionMode(true);
+    setSelectedOrderIds((current) => (current.includes(orderId) ? current : [...current, orderId]));
+  };
+
+  const cancelOrderSelection = () => {
+    clearLongPressTimer();
+    setIsSelectionMode(false);
+    setSelectedOrderIds([]);
+  };
+
+  const openOrderDetails = (order: Order) => {
+    setSelectedOrder(order);
+    setEditForm(order);
+    setReplacementSelections({});
+  };
+
+  const handleOrderRowClick = (order: Order) => {
+    if (longPressTriggeredRef.current) {
+      longPressTriggeredRef.current = false;
+      return;
+    }
+
+    if (isSelectionMode) {
+      toggleOrderSelection(order.id);
+      return;
+    }
+
+    openOrderDetails(order);
+  };
+
+  const handleBulkRemoveOrders = async () => {
+    if (!selectedOrderIds.length) return;
+    const confirmed = window.confirm(
+      `Remove ${selectedOrderIds.length} selected order${selectedOrderIds.length === 1 ? "" : "s"}? This deletes the order records from admin.`,
+    );
+    if (!confirmed) return;
+
+    setIsUpdating(true);
+    try {
+      const responses = await Promise.all(
+        selectedOrderIds.map((orderId) =>
+          fetch(`/api/admin/orders/${orderId}`, {
+            method: "DELETE",
+          }),
+        ),
+      );
+      const failed = responses.find((response) => !response.ok);
+      if (failed) throw new Error("Failed to remove selected orders");
+
+      toast({ title: "Selected orders removed" });
+      window.location.reload();
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Bulk delete failed", variant: "destructive" });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const openWhatsAppWithMessage = (order: Order, message: string) => {
     const phone = order.phone?.replace(/\D/g, "");
     const waPhone = phone && phone.length === 10 ? `91${phone}` : phone;
@@ -324,6 +424,60 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
     }
   };
 
+  const handleReplaceOrderItem = async (itemIndex: number) => {
+    if (!selectedOrder) return;
+    const replacementId = replacementSelections[itemIndex];
+    const replacement = productOptions.find((product) => product.id === replacementId);
+    const currentItem = selectedOrder.cartSnapshot?.[itemIndex];
+
+    if (!replacement || !currentItem) {
+      toast({ title: "Choose a replacement product", variant: "destructive" });
+      return;
+    }
+
+    if (!canReplaceOrderItem(currentItem)) {
+      toast({ title: "This item cannot be replaced here", variant: "destructive" });
+      return;
+    }
+
+    const nextItem: OrderCartItem = {
+      ...currentItem,
+      id: replacement.id,
+      name: replacement.name,
+      inspiration: replacement.inspiration,
+      size: replacement.size,
+      price: toOrderMoney(replacement.price),
+    };
+    const nextItems = selectedOrder.cartSnapshot.map((item, index) => (index === itemIndex ? nextItem : item));
+    const oldLineTotal = getOrderItemLineTotal(currentItem);
+    const nextLineTotal = getOrderItemLineTotal(nextItem);
+    const priceDelta = nextLineTotal - oldLineTotal;
+    const priceBreakdown = getOrderPriceBreakdown(selectedOrder);
+    const nextSubtotal = Math.max(0, priceBreakdown.subtotal + priceDelta);
+    const nextGrandTotal = Math.max(0, priceBreakdown.grandTotal + priceDelta);
+
+    setIsUpdating(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${selectedOrder.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          cartSnapshot: nextItems,
+          subtotal: nextSubtotal.toFixed(2),
+          grandTotal: nextGrandTotal.toFixed(2),
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to replace order item");
+
+      toast({ title: `${currentItem.name} replaced with ${replacement.name}` });
+      window.location.reload();
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Replacement failed", variant: "destructive" });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const handleRemoveOrder = async () => {
     if (!selectedOrder) return;
     const confirmed = window.confirm(
@@ -347,10 +501,43 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
 
   return (
     <div className="rounded-3xl border border-white/5 bg-white/[0.02] shadow-2xl backdrop-blur-md overflow-hidden">
+      {isSelectionMode ? (
+        <div className="flex flex-col gap-3 border-b border-white/10 bg-white/[0.04] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div>
+            <p className="text-sm font-semibold text-white">{selectedOrderIds.length} selected</p>
+            <p className="text-xs text-white/35">Tap more rows to add or remove them from this batch.</p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={cancelOrderSelection}
+              disabled={isUpdating}
+              className="rounded-xl border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.07]"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleBulkRemoveOrders}
+              disabled={isUpdating || selectedOrderIds.length === 0}
+              className="rounded-xl bg-red-500 text-white hover:bg-red-600"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Selected
+            </Button>
+          </div>
+        </div>
+      ) : null}
       <div className="overflow-x-auto">
         <Table>
           <TableHeader className="bg-white/[0.03]">
             <TableRow className="border-white/5 hover:bg-transparent">
+              {isSelectionMode ? (
+                <TableHead className="w-12 px-6 py-5">
+                  <span className="sr-only">Selected</span>
+                </TableHead>
+              ) : null}
               <TableHead className="w-[120px] font-bold text-[10px] uppercase tracking-[0.2em] text-white/30 py-5 px-6">Order ID</TableHead>
               <TableHead className="font-bold text-[10px] uppercase tracking-[0.2em] text-white/30 py-5">Date</TableHead>
               <TableHead className="font-bold text-[10px] uppercase tracking-[0.2em] text-white/30 py-5">Customer</TableHead>
@@ -364,7 +551,7 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
           <TableBody>
             {initialOrders.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={8} className="h-[400px] text-center">
+                <TableCell colSpan={isSelectionMode ? 9 : 8} className="h-[400px] text-center">
                   <div className="flex flex-col items-center justify-center space-y-3">
                     <div className="rounded-full bg-white/[0.03] p-6 border border-white/5 shadow-2xl">
                       <Package className="h-8 w-8 text-white/20" />
@@ -379,16 +566,42 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
             ) : (
               initialOrders.map((order) => {
                 const totalItems = order.cartSnapshot?.reduce((acc: number, item: { quantity: number }) => acc + item.quantity, 0) || 0;
+                const isSelected = selectedOrderIds.includes(order.id);
                 
                 return (
                   <TableRow 
                     key={order.id} 
-                    className="cursor-pointer hover:bg-white/[0.02] transition-all duration-300 border-white/5 group"
-                    onClick={() => {
-                      setSelectedOrder(order);
-                      setEditForm(order);
+                    className={`cursor-pointer transition-all duration-300 border-white/5 group ${
+                      isSelected ? "bg-emerald-400/[0.08] hover:bg-emerald-400/[0.1]" : "hover:bg-white/[0.02]"
+                    }`}
+                    onPointerDown={(event) => {
+                      if (event.button !== 0 || isSelectionMode) return;
+                      longPressTriggeredRef.current = false;
+                      clearLongPressTimer();
+                      longPressTimerRef.current = window.setTimeout(() => beginOrderSelection(order.id), 520);
                     }}
+                    onPointerUp={clearLongPressTimer}
+                    onPointerCancel={clearLongPressTimer}
+                    onPointerLeave={clearLongPressTimer}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      beginOrderSelection(order.id);
+                    }}
+                    onClick={() => handleOrderRowClick(order)}
                   >
+                    {isSelectionMode ? (
+                      <TableCell className="px-6 py-5">
+                        <span
+                          className={`flex h-5 w-5 items-center justify-center rounded-md border text-[11px] font-bold ${
+                            isSelected
+                              ? "border-emerald-300 bg-emerald-300 text-black"
+                              : "border-white/20 bg-white/[0.03] text-transparent"
+                          }`}
+                        >
+                          {isSelected ? <CheckCircle2 className="h-3.5 w-3.5" /> : null}
+                        </span>
+                      </TableCell>
+                    ) : null}
                     <TableCell className="px-6 py-5 font-mono text-[10px] text-white/40 font-bold tracking-widest">{order.orderNumber}</TableCell>
                     <TableCell className="text-[12px] text-white/40 font-medium italic">
                       {format(new Date(order.createdAt), "MMM d, h:mm a")}
@@ -433,6 +646,7 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
         if (!open) {
           setSelectedOrder(null);
           setIsEditing(false);
+          setReplacementSelections({});
         }
       }}>
         <SheetContent className="sm:max-w-md w-full overflow-y-auto bg-[#0a0a0a] border-l border-white/5 text-white font-sans">
@@ -797,6 +1011,42 @@ export function OrdersTable({ initialOrders }: { initialOrders: Order[] }) {
                                         {selection.name}
                                       </span>
                                     ))}
+                                  </div>
+                                ) : null}
+                                {canReplaceOrderItem(item) && productOptions.length > 0 ? (
+                                  <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                                    <select
+                                      value={replacementSelections[i] || ""}
+                                      onChange={(event) =>
+                                        setReplacementSelections((current) => ({
+                                          ...current,
+                                          [i]: event.target.value,
+                                        }))
+                                      }
+                                      className="h-10 min-w-0 rounded-xl border border-white/10 bg-black/30 px-3 text-xs text-white outline-none focus:border-emerald-300/50"
+                                    >
+                                      <option className="bg-[#111]" value="">
+                                        Replace this product
+                                      </option>
+                                      {productOptions.map((product) => (
+                                        <option
+                                          key={product.id}
+                                          className="bg-[#111]"
+                                          value={product.id}
+                                          disabled={product.id === item.id || product.badges?.soldOut || product.badges?.comingSoon}
+                                        >
+                                          {getProductOptionLabel(product)}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <Button
+                                      type="button"
+                                      onClick={() => handleReplaceOrderItem(i)}
+                                      disabled={isUpdating || !replacementSelections[i]}
+                                      className="h-10 rounded-xl bg-white text-black hover:bg-white/90"
+                                    >
+                                      Replace
+                                    </Button>
                                   </div>
                                 ) : null}
                               </div>

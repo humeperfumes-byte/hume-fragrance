@@ -79,6 +79,14 @@ function buildOrderPatch(data: Record<string, unknown>): OrderPatch {
     }
   });
 
+  if (Object.prototype.hasOwnProperty.call(data, "cartSnapshot") && Array.isArray(data.cartSnapshot)) {
+    patch.cartSnapshot = data.cartSnapshot as OrderPatch["cartSnapshot"];
+  }
+
+  if (Object.prototype.hasOwnProperty.call(data, "giftItems") && Array.isArray(data.giftItems)) {
+    patch.giftItems = data.giftItems as OrderPatch["giftItems"];
+  }
+
   return patch;
 }
 
