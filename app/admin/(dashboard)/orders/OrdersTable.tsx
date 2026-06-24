@@ -324,7 +324,10 @@ export function OrdersTable({
 
   const openOrderDetails = (order: Order) => {
     setSelectedOrder(order);
-    setEditForm(order);
+    setEditForm({
+      ...order,
+      fulfillmentCarrier: order.fulfillmentCarrier || "shiprocket",
+    });
     setReplacementSelections({});
   };
 
@@ -402,18 +405,25 @@ export function OrdersTable({
   const handleSaveTracking = async () => {
     if (!selectedOrder) return;
     const trackingNumber = String(editForm.trackingNumber || "").trim().toUpperCase();
-    const fulfillmentCarrier = String(editForm.fulfillmentCarrier || "speed_post").trim();
+    const fulfillmentCarrier = String(editForm.fulfillmentCarrier || "shiprocket").trim();
     const trackingUrl = buildPublicTrackingUrl(trackingNumber, window.location.origin);
+
+    const payload: Record<string, any> = {
+      fulfillmentCarrier,
+      trackingNumber,
+      trackingUrl,
+    };
+
+    if (trackingNumber) {
+      payload.status = "shipped";
+      payload.shippedAt = new Date().toISOString();
+    }
 
     setIsUpdating(true);
     try {
       const res = await fetch(`/api/admin/orders/${selectedOrder.id}`, {
         method: "PATCH",
-        body: JSON.stringify({
-          fulfillmentCarrier,
-          trackingNumber,
-          trackingUrl,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Failed to update tracking");
       window.location.reload();
@@ -499,8 +509,51 @@ export function OrdersTable({
     }
   };
 
+  // Calculate earnings stats
+  const paidStatuses = new Set(["processing", "shipped", "delivered", "complete", "payment_authorized"]);
+  const paidOrders = initialOrders.filter((o) => paidStatuses.has(o.status));
+  const totalEarnings = paidOrders.reduce((sum, o) => sum + Number(o.grandTotal || 0), 0);
+  const totalCount = paidOrders.length;
+  const aov = totalCount > 0 ? totalEarnings / totalCount : 0;
+
+  // Pending checkout count
+  const pendingOrders = initialOrders.filter((o) => ["whatsapp_initiated", "payment_pending"].includes(o.status));
+  const pendingCount = pendingOrders.length;
+
   return (
-    <div className="rounded-3xl border border-white/5 bg-white/[0.02] shadow-2xl backdrop-blur-md overflow-hidden">
+    <div className="space-y-6">
+      {/* Top Stats Cards */}
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        {/* Total Earnings */}
+        <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 sm:p-5 shadow-lg backdrop-blur-md">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Total Earnings</p>
+          <p className="mt-2 text-xl sm:text-2xl font-semibold text-white">{formatINR(totalEarnings)}</p>
+          <p className="mt-1 text-xs text-emerald-400 font-medium">From {totalCount} paid orders</p>
+        </div>
+
+        {/* Paid Orders */}
+        <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 sm:p-5 shadow-lg backdrop-blur-md">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Paid Orders</p>
+          <p className="mt-2 text-xl sm:text-2xl font-semibold text-white">{totalCount}</p>
+          <p className="mt-1 text-xs text-white/35">Successfully processed</p>
+        </div>
+
+        {/* Average Order Value */}
+        <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 sm:p-5 shadow-lg backdrop-blur-md">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Avg. Order Value</p>
+          <p className="mt-2 text-xl sm:text-2xl font-semibold text-white">{formatINR(aov)}</p>
+          <p className="mt-1 text-xs text-white/35">Average basket size</p>
+        </div>
+
+        {/* Pending Checkout */}
+        <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 sm:p-5 shadow-lg backdrop-blur-md">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Pending Checkout</p>
+          <p className="mt-2 text-xl sm:text-2xl font-semibold text-white">{pendingCount}</p>
+          <p className="mt-1 text-xs text-amber-400/90 font-medium">Abandoned/Initiated intents</p>
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-white/5 bg-white/[0.02] shadow-2xl backdrop-blur-md overflow-hidden">
       {isSelectionMode ? (
         <div className="flex flex-col gap-3 border-b border-white/10 bg-white/[0.04] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>
@@ -823,41 +876,58 @@ export function OrdersTable({
                       </div>
                     </div>
 
-                    <div className="space-y-4 rounded-2xl border border-white/5 bg-white/[0.02] p-4 sm:rounded-3xl sm:p-6">
-                      <h4 className="font-bold text-[10px] uppercase tracking-[0.2em] text-white/30">Logistics Destination</h4>
-                      <div className="text-sm space-y-1 text-white/80 leading-relaxed">
-                        <CopyableOrderValue
-                          label="address line 1"
-                          value={selectedOrder.addressLine1 || "No address line 1"}
-                          copyValue={selectedOrder.addressLine1}
-                          onCopy={copyText}
-                          className="block w-fit max-w-full text-left font-medium text-white"
-                        />
-                        {selectedOrder.addressLine2 ? (
-                          <CopyableOrderValue
-                            label="address line 2"
-                            value={selectedOrder.addressLine2}
-                            onCopy={copyText}
-                            className="block w-fit max-w-full text-left text-white/80"
-                          />
-                        ) : null}
-                        <CopyableOrderValue
-                          label="city state pincode"
-                          value={[selectedOrder.city, selectedOrder.state, selectedOrder.pincode].filter(Boolean).join(", ") || "City/state/pincode not added"}
-                          copyValue={[selectedOrder.city, selectedOrder.state, selectedOrder.pincode].filter(Boolean).join(", ")}
-                          onCopy={copyText}
-                          className="block w-fit max-w-full text-left text-white/80"
-                        />
-                        {selectedOrder.notes ? (
-                          <CopyableOrderValue
-                            label="order notes"
-                            value={selectedOrder.notes}
-                            onCopy={copyText}
-                            className="mt-3 block w-fit max-w-full rounded-xl border border-white/5 bg-black/20 p-3 text-left text-white/50"
-                          />
-                        ) : null}
-                      </div>
-                    </div>
+                    {(() => {
+                      const fullAddressParts = [
+                        selectedOrder.addressLine1?.trim(),
+                        selectedOrder.addressLine2?.trim(),
+                        [selectedOrder.city?.trim(), selectedOrder.state?.trim(), selectedOrder.pincode?.trim()].filter(Boolean).join(", ")
+                      ].filter(Boolean);
+                      const fullAddress = fullAddressParts.join("\n");
+
+                      return (
+                        <div className="space-y-4 rounded-2xl border border-white/5 bg-white/[0.02] p-4 sm:rounded-3xl sm:p-6">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-bold text-[10px] uppercase tracking-[0.2em] text-white/30">Logistics Destination</h4>
+                            {fullAddressParts.length > 0 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyText(fullAddress, "Full address copied")}
+                                className="h-7 px-2 text-[10px] font-bold text-emerald-400 hover:text-emerald-300 hover:bg-white/5 flex items-center gap-1.5"
+                              >
+                                <Copy className="h-3 w-3" />
+                                COPY FULL ADDRESS
+                              </Button>
+                            )}
+                          </div>
+                          {fullAddressParts.length > 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => copyText(fullAddress, "Full address copied")}
+                              className="group w-full text-left rounded-xl bg-black/20 hover:bg-white/5 border border-white/5 p-4 transition-all duration-300 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
+                              title="Click to copy full address"
+                            >
+                              <div className="text-sm font-medium text-white whitespace-pre-wrap leading-relaxed text-left">
+                                {fullAddress}
+                              </div>
+                              <div className="mt-3 flex items-center gap-1.5 text-[10px] text-white/20 group-hover:text-emerald-400 transition-colors">
+                                <Copy className="h-3 w-3" />
+                                <span>Click anywhere in this block to copy address</span>
+                              </div>
+                            </button>
+                          ) : (
+                            <p className="text-sm text-white/40 italic">No destination address added</p>
+                          )}
+                          {selectedOrder.notes ? (
+                            <div className="mt-2 text-xs text-white/45 bg-amber-500/[0.02] border border-amber-500/5 rounded-xl p-3">
+                              <span className="font-bold text-[9px] uppercase tracking-widest text-amber-300/80 block mb-1">Order Notes:</span>
+                              <p>{selectedOrder.notes}</p>
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })()}
 
                     <div className="space-y-4 rounded-2xl border border-emerald-400/10 bg-emerald-400/[0.035] p-4 sm:rounded-3xl sm:p-6">
                       <div className="flex items-center justify-between gap-3">
@@ -878,14 +948,14 @@ export function OrdersTable({
                             Carrier
                           </label>
                           <select
-                            value={editForm.fulfillmentCarrier || "speed_post"}
+                            value={editForm.fulfillmentCarrier || "shiprocket"}
                             onChange={(event) =>
                               setEditForm({ ...editForm, fulfillmentCarrier: event.target.value })
                             }
                             className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none focus:border-emerald-300/50"
                           >
-                            <option className="bg-[#111]" value="speed_post">Speed Post</option>
                             <option className="bg-[#111]" value="shiprocket">Shiprocket</option>
+                            <option className="bg-[#111]" value="speed_post">Speed Post</option>
                             <option className="bg-[#111]" value="delhivery">Delhivery</option>
                             <option className="bg-[#111]" value="bluedart">Blue Dart</option>
                           </select>
@@ -1212,6 +1282,7 @@ export function OrdersTable({
           )}
         </SheetContent>
       </Sheet>
+      </div>
     </div>
   );
 }

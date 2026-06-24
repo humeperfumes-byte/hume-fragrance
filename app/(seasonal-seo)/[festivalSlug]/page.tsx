@@ -25,6 +25,9 @@ export const dynamic = "force-dynamic";
 
 const ALLOWED_SLUGS = new Set(getFestivalSeoSlugs());
 const SPOTLIGHT_LAYOUT_SLUGS = new Set([
+  "perfume-under-1000",
+  "perfume-under-500",
+  "perfume-for-summer",
   "perfume-for-office",
   "perfume-for-date-night",
   "best-date-night-perfume-men",
@@ -53,6 +56,9 @@ const SPOTLIGHT_LAYOUT_SLUGS = new Set([
 ]);
 
 const SPOTLIGHT_IMAGE_BY_SLUG: Record<string, string> = {
+  "perfume-under-1000": "/images/occasions/budget.png",
+  "perfume-under-500": "/images/occasions/budget.png",
+  "perfume-for-summer": "/images/occasions/summer.png",
   "perfume-for-office": "/images/occasions/office.png",
   "best-office-perfume-men": "/images/occasions/office.png",
   "perfume-for-date-night": "/images/occasions/date-night.png",
@@ -109,6 +115,7 @@ const ROUTE_CATEGORY_PREFERENCES: Record<string, string[]> = {
   "perfume-for-groom": ["amber", "woody", "sweet", "luxury"],
   "perfume-for-students": ["fresh", "citrus", "clean", "budget"],
   "perfume-for-businessmen": ["woody", "amber", "professional", "signature"],
+  "perfume-for-summer": ["fresh", "citrus", "aquatic", "marine", "cooling", "clean"],
   "perfume-for-daily-office-men": ["fresh", "woody", "office", "clean"],
   "perfume-for-office": ["fresh", "woody", "professional", "clean"],
   "best-office-perfume-men": ["fresh", "woody", "professional", "balanced"],
@@ -519,9 +526,10 @@ const scoreProductByPreferences = (
 const getInspiredProductRecommendations = (
   page: { slug: string; festivalName: string; focusKeywords: string[] },
   products: Awaited<ReturnType<typeof getAllProducts>>,
+  limit: number = 4,
 ) => {
   const fallback = sortRecommendedProducts(products, page.focusKeywords);
-  if (!page.slug.endsWith("-inspired-perfume")) return fallback.slice(0, 4);
+  if (!page.slug.endsWith("-inspired-perfume")) return fallback.slice(0, limit);
 
   const target = normalizeText(page.festivalName);
   const targetTokens = tokenize(page.festivalName);
@@ -548,7 +556,7 @@ const getInspiredProductRecommendations = (
     .sort((a, b) => b.score - a.score)
     .map((item) => item.product);
 
-  if (matched.length === 0) return fallback.slice(0, 4);
+  if (matched.length === 0) return fallback.slice(0, limit);
 
   const combined = [...matched, ...fallback].reduce<typeof products>(
     (acc, product) => {
@@ -558,23 +566,39 @@ const getInspiredProductRecommendations = (
     [],
   );
 
-  return combined.slice(0, 4);
+  return combined.slice(0, limit);
 };
 
 const getSmartRecommendations = (
   page: { slug: string; festivalName: string; focusKeywords: string[] },
   products: Awaited<ReturnType<typeof getAllProducts>>,
+  limit: number = 4,
 ) => {
-  const fallback = sortRecommendedProducts(products, page.focusKeywords);
+  const budgetMatch = page.slug.match(/under-(\d+)/);
+  const budget = budgetMatch ? parseInt(budgetMatch[1], 10) : null;
+
+  let filteredProducts = products;
+  if (budget !== null) {
+    const underBudget = products.filter((p) => {
+      const price = typeof p.price === "number" ? p.price : parseFloat(p.price as unknown as string);
+      return price <= budget;
+    });
+    // If we have products under budget, use them. Otherwise, fallback to all products.
+    if (underBudget.length > 0) {
+      filteredProducts = underBudget;
+    }
+  }
+
+  const fallback = sortRecommendedProducts(filteredProducts, page.focusKeywords);
 
   if (page.slug.endsWith("-inspired-perfume")) {
-    return getInspiredProductRecommendations(page, products);
+    return getInspiredProductRecommendations(page, filteredProducts, limit);
   }
 
   const preferences = ROUTE_CATEGORY_PREFERENCES[page.slug];
-  if (!preferences || preferences.length === 0) return fallback.slice(0, 4);
+  if (!preferences || preferences.length === 0) return fallback.slice(0, limit);
 
-  const ranked = products
+  const ranked = filteredProducts
     .map((product) => ({
       product,
       score:
@@ -586,7 +610,7 @@ const getSmartRecommendations = (
     .sort((a, b) => b.score - a.score)
     .map((item) => item.product);
 
-  if (ranked.length === 0) return fallback.slice(0, 4);
+  if (ranked.length === 0) return fallback.slice(0, limit);
 
   const combined = [...ranked, ...fallback].reduce<typeof products>(
     (acc, product) => {
@@ -596,7 +620,7 @@ const getSmartRecommendations = (
     [],
   );
 
-  return combined.slice(0, 4);
+  return combined.slice(0, limit);
 };
 
 export async function generateStaticParams() {
@@ -632,15 +656,22 @@ export default async function FestivalSeoPage({ params }: Props) {
   if (!page) notFound();
 
   const products = await getAllProducts();
-  const recommended = getSmartRecommendations(page, products);
-  const showRecommendationsEarly = true;
   const useSpotlightLayout = SPOTLIGHT_LAYOUT_SLUGS.has(page.slug);
+  const limit = useSpotlightLayout ? 8 : 4;
+  const recommended = getSmartRecommendations(page, products, limit);
+  const showRecommendationsEarly = true;
   const spotlightImage =
     SPOTLIGHT_IMAGE_BY_SLUG[page.slug] ?? "/images/occasions/diwali.png";
   const longSections = buildFestivalLongContent(page);
   const relatedLinks = FESTIVAL_SEO_PAGES.filter(
     (entry) => entry.slug !== page.slug,
   ).slice(0, 4);
+
+  const budgetMatch = page.slug.match(/under-(\d+)/);
+  const budget = budgetMatch ? parseInt(budgetMatch[1], 10) : null;
+  const showBudgetCallout = budget !== null && budget < 700;
+
+  const baseUrl = await getRequestSiteUrl();
 
   const faqJsonLd = {
     "@context": "https://schema.org",
@@ -655,9 +686,59 @@ export default async function FestivalSeoPage({ params }: Props) {
     })),
   };
 
+  const collectionJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: page.title,
+    description: page.metaDescription,
+    url: `${baseUrl}/${page.slug}`,
+    numberOfItems: recommended.length,
+    itemListElement: recommended.map((product, idx) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      item: {
+        "@type": "Product",
+        name: product.name,
+        image: product.images[0],
+        description: `Premium inspired alternative to ${product.inspiration}. Longevity: 8-12 hours tailored for Indian weather.`,
+        offers: {
+          "@type": "Offer",
+          price: product.price,
+          priceCurrency: "INR",
+          availability: product.badges?.soldOut ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
+        }
+      }
+    }))
+  };
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: baseUrl,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: page.title,
+        item: `${baseUrl}/${page.slug}`,
+      },
+    ],
+  };
+
+  const jsonLdData = [
+    collectionJsonLd,
+    faqJsonLd,
+    breadcrumbJsonLd
+  ];
+
   return (
     <main className="bg-background text-foreground min-h-screen">
-      <JsonLd data={faqJsonLd} />
+      <JsonLd data={jsonLdData} />
       <Header />
       <section className="pt-28 pb-16">
         <div className="container-custom px-4 sm:px-6 lg:px-10">
@@ -714,6 +795,28 @@ export default async function FestivalSeoPage({ params }: Props) {
       {showRecommendationsEarly && (
         <section className="pb-16">
           <div className="container-custom px-4 sm:px-6 lg:px-10">
+            {showBudgetCallout && (
+              <div className="mb-8 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-6 backdrop-blur-md">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-500">
+                      💡 Value & Quality Insight
+                    </span>
+                    <h3 className="font-serif text-lg text-foreground mt-2">Why choosing ₹799 EDP is a better investment than ₹499 synthetics</h3>
+                    <p className="text-sm text-muted-foreground max-w-3xl mt-1 leading-relaxed">
+                      While synthetic deodorants and cheap daily sprays retail under ₹500, they typically fade within 1-2 hours and require constant reapplication. HUME’s premium Eau de Parfums (EDP) are formulated at 18-20% oil concentration to last 8-12 hours in hot weather, giving you 4x the value per spray.
+                    </p>
+                  </div>
+                  <Link
+                    href="/shop"
+                    className="shrink-0 inline-flex h-10 items-center justify-center rounded-xl bg-foreground px-4 text-xs font-semibold uppercase tracking-wider text-background transition hover:bg-muted-foreground"
+                  >
+                    Try Discovery Set for ₹699
+                  </Link>
+                </div>
+              </div>
+            )}
+
             <div className="flex items-end justify-between gap-4 mb-6">
               <div>
                 <p className="text-[10px] md:text-[11px] uppercase tracking-[0.2em] md:tracking-[0.22em] text-muted-foreground">
@@ -756,7 +859,7 @@ export default async function FestivalSeoPage({ params }: Props) {
                     </p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                   {recommended.map((product, index) => (
                     <PerfumeCard
                       key={product.id}
@@ -774,6 +877,7 @@ export default async function FestivalSeoPage({ params }: Props) {
                       humeSpecial={product.badges?.humeSpecial}
                       limitedStock={product.badges?.limitedStock}
                       soldOut={product.badges?.soldOut}
+                      showAddToCartButton={true}
                     />
                   ))}
                 </div>
@@ -797,6 +901,7 @@ export default async function FestivalSeoPage({ params }: Props) {
                     humeSpecial={product.badges?.humeSpecial}
                     limitedStock={product.badges?.limitedStock}
                     soldOut={product.badges?.soldOut}
+                    showAddToCartButton={true}
                   />
                 ))}
               </div>
@@ -858,6 +963,7 @@ export default async function FestivalSeoPage({ params }: Props) {
                   humeSpecial={product.badges?.humeSpecial}
                   limitedStock={product.badges?.limitedStock}
                   soldOut={product.badges?.soldOut}
+                  showAddToCartButton={true}
                 />
               ))}
             </div>

@@ -102,7 +102,7 @@ const badgeOptions = [
   ["bestSeller", "Best seller"],
   ["humeSpecial", "HUME special"],
   ["comingSoon", "Coming soon"],
-  ["limitedStock", "Low stock"],
+  ["limitedStock", "Only 2 left"],
   ["soldOut", "Sold out"],
 ] as const;
 

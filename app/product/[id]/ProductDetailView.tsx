@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
@@ -269,8 +269,8 @@ export default function ProductDetailView({
                   </span>
                 )}
                 {perfume.badges?.limitedStock && (
-                  <span className="inline-flex items-center border border-amber-500/40 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-amber-800">
-                    Limited Stock
+                  <span className="inline-flex items-center border border-amber-600/50 bg-amber-50/50 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-amber-800 font-medium">
+                    Only 2 Left in Stock!
                   </span>
                 )}
                 {isComingSoon ? (

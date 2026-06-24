@@ -141,6 +141,11 @@ export default function ProductDetailClient({
 
   return (
     <div className="mb-1 space-y-4 pb-3 md:mb-12 md:space-y-5 md:pb-0">
+      {perfume.badges?.limitedStock && (
+        <p className="text-center text-xs font-semibold uppercase tracking-[0.15em] text-amber-600 animate-pulse mb-3">
+          ⚡ Only 2 left in stock - order soon!
+        </p>
+      )}
       <motion.button
         onClick={handleAddToCart}
         whileHover={{ scale: 1.02 }}

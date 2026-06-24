@@ -516,3 +516,20 @@ export type SessionIntelligence = typeof sessionIntelligence.$inferSelect;
 export type NewSessionIntelligence = typeof sessionIntelligence.$inferInsert;
 export type SectionAttribution = typeof sectionAttribution.$inferSelect;
 export type NewSectionAttribution = typeof sectionAttribution.$inferInsert;
+
+// B2B Corporate Gifting Leads Table
+export const corporateGiftingLeads = pgTable("corporate_gifting_leads", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  companyName: varchar("company_name", { length: 255 }).notNull(),
+  contactName: varchar("contact_name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 50 }).notNull(),
+  estimatedQuantity: integer("estimated_quantity"),
+  customizationDetails: text("customization_details"),
+  status: varchar("status", { length: 50 }).notNull().default("new"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type CorporateGiftingLead = typeof corporateGiftingLeads.$inferSelect;
+export type NewCorporateGiftingLead = typeof corporateGiftingLeads.$inferInsert;

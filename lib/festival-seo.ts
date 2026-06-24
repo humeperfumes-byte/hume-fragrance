@@ -336,6 +336,7 @@ function buildBudgetEntries(): FestivalSeoEntry[] {
 
 function buildOccasionEntries(): FestivalSeoEntry[] {
   const occasionSlugs = [
+    "perfume-for-summer",
     "perfume-for-office",
     "best-office-perfume-men",
     "perfume-for-date-night",
@@ -416,6 +417,7 @@ function buildOccasionEntries(): FestivalSeoEntry[] {
   ];
 
   const titleMap: Record<string, string> = {
+    "perfume-for-summer": "Best Perfume for Summer in India (2026 Cooling & Heat-Ready Picks)",
     "perfume-for-office": "Best Perfume for Office in India (Professional Daily Wear Guide)",
     "best-office-perfume-men": "Best Office Perfume for Men (2026 Professional Fragrance Guide)",
     "perfume-for-date-night": "Best Perfume for Date Night: Attractive and Long-Lasting Picks",
@@ -496,6 +498,8 @@ function buildOccasionEntries(): FestivalSeoEntry[] {
   };
 
   const introMap: Record<string, string> = {
+    "perfume-for-summer":
+      "Finding a perfume that survives the intense heat and humidity of an Indian summer is about choosing the right notes. This guide highlights fresh, cooling aquatic, citrus, and light woody Eau de Parfums that last all day.",
     "perfume-for-office":
       "Office fragrance should project confidence without overwhelming close spaces. This guide helps you pick clean, professional profiles that stay present through long workdays.",
     "best-office-perfume-men":

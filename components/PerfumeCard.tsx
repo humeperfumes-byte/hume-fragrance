@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -32,6 +32,7 @@ interface PerfumeCardProps {
   prioritizeImage?: boolean;
   disableEntranceAnimation?: boolean;
   compactBadges?: boolean;
+  showAddToCartButton?: boolean;
 }
 
 const PerfumeCard = ({
@@ -53,11 +54,13 @@ const PerfumeCard = ({
   prioritizeImage,
   disableEntranceAnimation = false,
   compactBadges = false,
+  showAddToCartButton = false,
 }: PerfumeCardProps) => {
   const { addItem } = useCart();
   const router = useRouter();
   const [upgradeImage, setUpgradeImage] = useState(false);
   const isDiscoverySet = isDiscoverySetProductId(id);
+
   const productPath = getProductPath({
     id,
     name,
@@ -81,7 +84,7 @@ const PerfumeCard = ({
           : humeSpecial
             ? { full: "HUME Special", compact: "HUME Special", className: "bg-emerald-100 text-emerald-800" }
             : limitedStock
-              ? { full: "Limited Stock", compact: "Low", className: "bg-amber-200/90 text-amber-900" }
+              ? { full: "Only 2 Left", compact: "2 Left", className: "bg-amber-600 text-white font-medium shadow-sm" }
               : null;
 
   useEffect(() => {
@@ -272,7 +275,24 @@ const PerfumeCard = ({
               <p className="text-[1.28rem] leading-none font-light tracking-tight text-foreground/90 sm:text-[1.35rem]">
                 {displayPrice}
               </p>
+              {limitedStock && (
+                <p className="mt-1.5 text-[10px] font-semibold text-amber-700 tracking-wider">
+                  Only 2 left!
+                </p>
+              )}
             </div>
+          )}
+          {showAddToCartButton && (
+            <button
+              onClick={handleAddToCart}
+              className={`mt-4 w-full py-2.5 text-[10px] uppercase tracking-[0.2em] font-medium transition-all duration-300 ${
+                soldOut
+                  ? "bg-zinc-200 text-zinc-400 cursor-not-allowed border border-zinc-200"
+                  : "bg-foreground text-background border border-foreground hover:bg-background hover:text-foreground hover:shadow-md"
+              }`}
+            >
+              {soldOut ? "Sold Out" : "Add to Bag"}
+            </button>
           )}
         </div>
       </div>
