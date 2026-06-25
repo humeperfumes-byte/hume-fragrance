@@ -281,7 +281,7 @@ const Header = () => {
                         <p className="font-serif text-[1.18rem]">
                           Gifts{" "}
                           <span className="inline-flex items-center rounded-full border border-[#f7d79b]/18 bg-white/8 px-1.5 py-0.5 font-sans text-[0.5em] font-medium uppercase tracking-[0.08em] text-[#f7d79b]/78 not-italic align-middle">
-                            Corporate
+                            Gifting
                           </span>
                         </p>
                         <span className="text-[1.45rem] opacity-75">→</span>
