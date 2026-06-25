@@ -110,12 +110,12 @@ const Header = () => {
               >
                 DISCOVERY SET
               </Link>
-              {/* <Link
-                href="/kit-pack"
+              <Link
+                href="/corporate-gifting"
                 className="relative text-[11px] font-semibold uppercase tracking-[0.22em] text-black/80 transition-colors hover:text-black after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-[40%] after:bg-current after:transition-all after:duration-300 hover:after:w-full"
               >
-                15 ml kit
-              </Link> */}
+                GIFTS
+              </Link>
             </nav>
             <button
               onClick={() => setIsSearchOpen(true)}
@@ -270,23 +270,23 @@ const Header = () => {
                         <span className="text-[1.45rem] opacity-75">→</span>
                       </div>
                     </button>
-                     {/* <button
+                    <button
                       onClick={() => {
                         setIsMenuOpen(false);
-                        navigateTo("/kit-pack");
+                        navigateTo("/corporate-gifting");
                       }}
                       className="w-full border border-[#2a2116] bg-[#2a2116] px-3 py-2 text-left text-[#f7d79b]"
                     >
                       <div className="flex items-center justify-between">
                         <p className="font-serif text-[1.18rem]">
-                          15 ml kit{" "}
+                          Gifts{" "}
                           <span className="inline-flex items-center rounded-full border border-[#f7d79b]/18 bg-white/8 px-1.5 py-0.5 font-sans text-[0.5em] font-medium uppercase tracking-[0.08em] text-[#f7d79b]/78 not-italic align-middle">
-                            Pack of 5
+                            Corporate
                           </span>
                         </p>
                         <span className="text-[1.45rem] opacity-75">→</span>
                       </div>
-                    </button> */}
+                    </button>
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);
