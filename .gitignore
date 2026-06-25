@@ -38,3 +38,7 @@ next-env.d.ts
 
 # drizzle
 /db/migrations
+
+# open-next
+/open-next/
+/.open-next/
