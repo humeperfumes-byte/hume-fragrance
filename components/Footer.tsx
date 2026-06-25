@@ -38,7 +38,7 @@ export default async function Footer() {
   const shopLinks = [
     { href: "/shop", label: "Shop All Perfumes" },
     { href: DISCOVERY_SET_PATH, label: "Discovery Set" },
-    { href: "/kit-pack", label: "15 ml kit" },
+    // { href: "/kit-pack", label: "15 ml kit" },
     { href: "/celebrities-favorites", label: "Celebrities' Favorites" },
   ];
 

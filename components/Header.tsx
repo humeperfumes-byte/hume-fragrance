@@ -110,12 +110,12 @@ const Header = () => {
               >
                 DISCOVERY SET
               </Link>
-              <Link
+              {/* <Link
                 href="/kit-pack"
                 className="relative text-[11px] font-semibold uppercase tracking-[0.22em] text-black/80 transition-colors hover:text-black after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-[40%] after:bg-current after:transition-all after:duration-300 hover:after:w-full"
               >
                 15 ml kit
-              </Link>
+              </Link> */}
             </nav>
             <button
               onClick={() => setIsSearchOpen(true)}
@@ -270,7 +270,7 @@ const Header = () => {
                         <span className="text-[1.45rem] opacity-75">→</span>
                       </div>
                     </button>
-                    <button
+                     {/* <button
                       onClick={() => {
                         setIsMenuOpen(false);
                         navigateTo("/kit-pack");
@@ -286,7 +286,7 @@ const Header = () => {
                         </p>
                         <span className="text-[1.45rem] opacity-75">→</span>
                       </div>
-                    </button>
+                    </button> */}
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);

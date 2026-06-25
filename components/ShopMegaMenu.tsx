@@ -45,12 +45,12 @@ const shopSections: ShopSection[] = [
         filterType: "occasion",
         href: "/scent-quiz",
       },
-      {
+      /* {
         label: "15 ml kit",
         description: "Create your own 5 x 15ml set",
         filterType: "occasion",
         href: "/kit-pack",
-      },
+      }, */
       {
         label: "Fresh Perfume Guide",
         description: "Why perfumes mature over 2-4 weeks",
