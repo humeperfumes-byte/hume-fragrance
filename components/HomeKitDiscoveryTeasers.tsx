@@ -89,7 +89,8 @@ function ImageGalleryTeaser({
 export default function HomeKitDiscoveryTeasers() {
   return (
     <section className="bg-[#f8f7f4] py-10 text-foreground min-[400px]:py-14 md:py-20">
-      <div className="mx-auto grid w-full max-w-[1180px] gap-11 px-4 min-[400px]:gap-14 min-[400px]:px-5 sm:px-8 lg:grid-cols-2 lg:gap-10 lg:px-10">
+      <div className="mx-auto flex w-full max-w-[620px] flex-col items-center px-4 min-[400px]:px-5 sm:px-8 lg:px-10">
+        {/* 15 ml kit hidden for now
         <article className="flex flex-col">
           <Link href="/kit-pack" className="group block">
             <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-[#8d6b32] min-[400px]:text-[10px] min-[400px]:tracking-[0.34em]">
@@ -127,15 +128,16 @@ export default function HomeKitDiscoveryTeasers() {
             Start building
           </Link>
         </article>
+        */}
 
-        <article className="flex flex-col">
+        <article className="flex flex-col items-center text-center">
           <Link href={DISCOVERY_SET_PATH} className="group block">
             <h2 className="font-serif text-[2.55rem] font-light leading-[0.92] tracking-tight min-[400px]:text-[3.1rem] sm:text-[4.3rem]">
               HUME Discovery Set
             </h2>
           </Link>
 
-          <div className="mt-5 min-[400px]:mt-6">
+          <div className="mt-5 min-[400px]:mt-6 w-full">
             <ImageGalleryTeaser
               images={DISCOVERY_IMAGES}
               title="HUME Discovery Set"
@@ -148,7 +150,7 @@ export default function HomeKitDiscoveryTeasers() {
             committing to a full bottle.
           </p>
 
-          <div className="mt-6 flex flex-wrap items-end gap-x-4 gap-y-3 min-[400px]:mt-7 min-[400px]:gap-x-5">
+          <div className="mt-6 flex flex-wrap items-end justify-center gap-x-4 gap-y-3 min-[400px]:mt-7 min-[400px]:gap-x-5">
             <div>
               <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-500 min-[400px]:text-[9px] min-[400px]:tracking-[0.24em]">
                 Launch price

@@ -42,6 +42,15 @@ export default async function Footer() {
     { href: "/celebrities-favorites", label: "Celebrities' Favorites" },
   ];
 
+  const giftingLinks = [
+    { href: "/corporate-gifting", label: "Corporate Gifting" },
+    { href: "/wedding-gifts", label: "Wedding Gifts" },
+    { href: "/diwali-gifts", label: "Diwali Gifts" },
+    { href: "/holi-gifts", label: "Holi Gifts" },
+    { href: "/new-years-gifts", label: "New Year's Gifts" },
+    { href: "/christmas-gifts", label: "Christmas Gifts" },
+  ];
+
   const discoverLinks = [
     { href: "/fragrance-guides", label: "Fragrance Guides Hub" },
     { href: "/blog", label: "Journal" },
@@ -67,7 +76,7 @@ export default async function Footer() {
   return (
     <footer id="contact" className="py-16 md:py-24 bg-primary text-primary-foreground">
       <div className="container-luxury">
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-10 mb-16">
+        <div className="grid grid-cols-2 md:grid-cols-7 gap-10 mb-16">
           <div className="col-span-2">
             <Link href="/" className="flex items-baseline gap-1 mb-5">
               <span className="font-serif text-2xl md:text-3xl font-light tracking-widest">HUME</span>
@@ -105,6 +114,17 @@ export default async function Footer() {
             <h4 className="text-caption mb-5">Shop</h4>
             <nav className="flex flex-col gap-2.5">
               {shopLinks.map((link) => (
+                <Link key={link.href} href={link.href} className="text-body opacity-70 hover:opacity-100 transition-opacity">
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+
+          <div>
+            <h4 className="text-caption mb-5">Gifting</h4>
+            <nav className="flex flex-col gap-2.5">
+              {giftingLinks.map((link) => (
                 <Link key={link.href} href={link.href} className="text-body opacity-70 hover:opacity-100 transition-opacity">
                   {link.label}
                 </Link>

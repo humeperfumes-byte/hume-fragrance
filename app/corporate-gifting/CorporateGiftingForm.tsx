@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 
-export default function CorporateGiftingForm() {
+export default function CorporateGiftingForm({ occasion = "corporate" }: { occasion?: string }) {
   const [formData, setFormData] = useState({
     companyName: "",
     contactName: "",
@@ -44,6 +44,7 @@ export default function CorporateGiftingForm() {
           phone: formData.phone,
           estimatedQuantity: formData.estimatedQuantity ? parseInt(formData.estimatedQuantity) : null,
           customizationDetails: formData.customizationDetails || null,
+          occasion,
         }),
       });
 
@@ -118,7 +119,7 @@ export default function CorporateGiftingForm() {
           htmlFor="companyName"
           className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-500 mb-2 transition-colors duration-300 group-focus-within:text-amber-800"
         >
-          Company Name <span className="text-amber-600 font-bold">*</span>
+          {occasion === "corporate" ? "Company Name" : "Company / Event Name"} <span className="text-amber-600 font-bold">*</span>
         </label>
         <div className="relative">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center text-stone-400 group-focus-within:text-amber-700 transition-colors duration-300 pointer-events-none">
@@ -144,7 +145,7 @@ export default function CorporateGiftingForm() {
             required
             value={formData.companyName}
             onChange={handleChange}
-            placeholder="Acme Corporation"
+            placeholder={occasion === "corporate" ? "Acme Corporation" : "e.g. Sharma Wedding or Acme Corp"}
             className="w-full h-12 pl-11 pr-4 rounded-xl border border-stone-200/90 bg-[#FAF9F5]/60 hover:bg-white hover:border-stone-300/90 focus:bg-white focus:border-amber-600 focus:ring-4 focus:ring-amber-500/10 placeholder:text-stone-400/80 placeholder:font-light text-stone-800 text-sm outline-none transition-all duration-300 shadow-[inset_0_1.5px_3px_rgba(0,0,0,0.015)] focus:shadow-[0_4px_20px_rgba(180,83,9,0.05)]"
           />
         </div>
@@ -234,7 +235,7 @@ export default function CorporateGiftingForm() {
             htmlFor="email"
             className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-500 mb-2 transition-colors duration-300 group-focus-within:text-amber-800"
           >
-            Work Email <span className="text-amber-600 font-bold">*</span>
+            {occasion === "corporate" ? "Work Email" : "Email Address"} <span className="text-amber-600 font-bold">*</span>
           </label>
           <div className="relative">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center text-stone-400 group-focus-within:text-amber-700 transition-colors duration-300 pointer-events-none">
@@ -260,7 +261,7 @@ export default function CorporateGiftingForm() {
               required
               value={formData.email}
               onChange={handleChange}
-              placeholder="corporate@acme.com"
+              placeholder={occasion === "corporate" ? "corporate@acme.com" : "e.g. name@domain.com"}
               className="w-full h-12 pl-11 pr-4 rounded-xl border border-stone-200/90 bg-[#FAF9F5]/60 hover:bg-white hover:border-stone-300/90 focus:bg-white focus:border-amber-600 focus:ring-4 focus:ring-amber-500/10 placeholder:text-stone-400/80 placeholder:font-light text-stone-800 text-sm outline-none transition-all duration-300 shadow-[inset_0_1.5px_3px_rgba(0,0,0,0.015)] focus:shadow-[0_4px_20px_rgba(180,83,9,0.05)]"
             />
           </div>

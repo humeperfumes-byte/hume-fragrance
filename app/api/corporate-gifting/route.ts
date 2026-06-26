@@ -14,6 +14,7 @@ const corporateGiftingSchema = z.object({
     return isNaN(parsed) ? null : parsed;
   }, z.number().nullable().optional()),
   customizationDetails: z.string().max(2048).nullable().optional(),
+  occasion: z.string().max(100).nullable().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -22,6 +23,10 @@ export async function POST(request: NextRequest) {
     console.log("Captured B2B Lead request body:", body);
     const data = corporateGiftingSchema.parse(body);
 
+    const occasionLabel = data.occasion ? data.occasion.toUpperCase() : "CORPORATE";
+    const occasionTag = `[Occasion: ${occasionLabel}]\n`;
+    const customizationDetailsCombined = occasionTag + (data.customizationDetails || "");
+
     // Save lead to database
     await captureCorporateGiftingLead({
       companyName: data.companyName,
@@ -29,18 +34,22 @@ export async function POST(request: NextRequest) {
       email: data.email,
       phone: data.phone,
       estimatedQuantity: data.estimatedQuantity,
-      customizationDetails: data.customizationDetails,
+      customizationDetails: customizationDetailsCombined,
     });
 
     // Send transactional notification email if configured
     if (isHumeMailConfigured()) {
       const emailHtml = `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
-          <h2 style="color: #1a1a1a; border-bottom: 2px solid #b45309; padding-bottom: 10px; font-family: Georgia, serif; font-weight: normal;">New B2B Corporate Gifting Lead</h2>
-          <p>We have received a new corporate gifting inquiry. Below are the details:</p>
+          <h2 style="color: #1a1a1a; border-bottom: 2px solid #b45309; padding-bottom: 10px; font-family: Georgia, serif; font-weight: normal;">New Gifting Inquiry (${data.occasion ? data.occasion.charAt(0).toUpperCase() + data.occasion.slice(1) : "Corporate"})</h2>
+          <p>We have received a new gifting inquiry. Below are the details:</p>
           <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
             <tr>
-              <td style="padding: 10px; font-weight: bold; border-bottom: 1px solid #f3f4f6; width: 180px; color: #555;">Company Name:</td>
+              <td style="padding: 10px; font-weight: bold; border-bottom: 1px solid #f3f4f6; width: 180px; color: #555;">Occasion Type:</td>
+              <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; color: #111; text-transform: capitalize; font-weight: bold;">${data.occasion ?? "corporate"} Gifting</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; font-weight: bold; border-bottom: 1px solid #f3f4f6; color: #555;">Company / Event Name:</td>
               <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; color: #111;">${data.companyName}</td>
             </tr>
             <tr>
@@ -73,12 +82,12 @@ export async function POST(request: NextRequest) {
       try {
         await sendHumeEmail({
           to: "humeperfumes@gmail.com",
-          subject: `💼 New B2B Lead: ${data.companyName} (${data.contactName})`,
+          subject: `🎁 New ${data.occasion ? data.occasion.charAt(0).toUpperCase() + data.occasion.slice(1) : "Corporate"} Lead: ${data.companyName} (${data.contactName})`,
           html: emailHtml,
           messageType: "admin_message",
         });
       } catch (emailError) {
-        console.error("Failed to send B2B lead notification email:", emailError);
+        console.error("Failed to send lead notification email:", emailError);
       }
     }
 

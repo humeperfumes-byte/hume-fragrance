@@ -20,6 +20,7 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isMobileGiftingOpen, setIsMobileGiftingOpen] = useState(false);
   const { totalItems, setIsCartOpen } = useCart();
   const router = useRouter();
 
@@ -31,7 +32,10 @@ const Header = () => {
   };
 
   useEffect(() => {
-    if (!isMenuOpen) return;
+    if (!isMenuOpen) {
+      setIsMobileGiftingOpen(false);
+      return;
+    }
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
@@ -110,12 +114,55 @@ const Header = () => {
               >
                 DISCOVERY SET
               </Link>
-              <Link
-                href="/corporate-gifting"
-                className="relative text-[11px] font-semibold uppercase tracking-[0.22em] text-black/80 transition-colors hover:text-black after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-[40%] after:bg-current after:transition-all after:duration-300 hover:after:w-full"
-              >
-                GIFTS
-              </Link>
+              <div className="group relative">
+                <Link
+                  href="/corporate-gifting"
+                  className="relative text-[11px] font-semibold uppercase tracking-[0.22em] text-black/80 transition-colors hover:text-black after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-[40%] after:bg-current after:transition-all after:duration-300 group-hover:after:w-full"
+                >
+                  GIFTS
+                </Link>
+                {/* Hover Dropdown */}
+                <div className="absolute left-1/2 -translate-x-1/2 top-full pt-3 w-48 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50">
+                  <div className="bg-[#fbfaf8] border border-[#e8dfd4] shadow-[0_12px_36px_rgba(24,18,14,0.08)] rounded-xl py-2 flex flex-col">
+                    <Link
+                      href="/corporate-gifting"
+                      className="px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.15em] text-[#171717] hover:bg-[#FAF9F5] hover:text-amber-800 transition-colors"
+                    >
+                      Corporate Gifting
+                    </Link>
+                    <Link
+                      href="/wedding-gifts"
+                      className="px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.15em] text-[#171717] hover:bg-[#FAF9F5] hover:text-amber-800 transition-colors"
+                    >
+                      Wedding Gifts
+                    </Link>
+                    <Link
+                      href="/diwali-gifts"
+                      className="px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.15em] text-[#171717] hover:bg-[#FAF9F5] hover:text-amber-800 transition-colors"
+                    >
+                      Diwali Gifts
+                    </Link>
+                    <Link
+                      href="/holi-gifts"
+                      className="px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.15em] text-[#171717] hover:bg-[#FAF9F5] hover:text-amber-800 transition-colors"
+                    >
+                      Holi Gifts
+                    </Link>
+                    <Link
+                      href="/new-years-gifts"
+                      className="px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.15em] text-[#171717] hover:bg-[#FAF9F5] hover:text-amber-800 transition-colors"
+                    >
+                      New Year's Gifts
+                    </Link>
+                    <Link
+                      href="/christmas-gifts"
+                      className="px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.15em] text-[#171717] hover:bg-[#FAF9F5] hover:text-amber-800 transition-colors"
+                    >
+                      Christmas Gifts
+                    </Link>
+                  </div>
+                </div>
+              </div>
             </nav>
             <button
               onClick={() => setIsSearchOpen(true)}
@@ -272,21 +319,40 @@ const Header = () => {
                     </button>
                     <button
                       onClick={() => {
-                        setIsMenuOpen(false);
-                        navigateTo("/corporate-gifting");
+                        setIsMobileGiftingOpen(!isMobileGiftingOpen);
                       }}
                       className="w-full border border-[#2a2116] bg-[#2a2116] px-3 py-2 text-left text-[#f7d79b]"
                     >
                       <div className="flex items-center justify-between">
                         <p className="font-serif text-[1.18rem]">
-                          Gifts{" "}
-                          <span className="inline-flex items-center rounded-full border border-[#f7d79b]/18 bg-white/8 px-1.5 py-0.5 font-sans text-[0.5em] font-medium uppercase tracking-[0.08em] text-[#f7d79b]/78 not-italic align-middle">
-                            Gifting
-                          </span>
+                          Gifting
                         </p>
-                        <span className="text-[1.45rem] opacity-75">→</span>
+                        <span className={`text-[1.18rem] transition-transform duration-200 ${isMobileGiftingOpen ? "rotate-90" : ""}`}>→</span>
                       </div>
                     </button>
+                    {isMobileGiftingOpen && (
+                      <div className="pl-4 py-1 space-y-2 border-l border-[#f7d79b]/25 animate-fade-in">
+                        {[
+                          { href: "/corporate-gifting", label: "Corporate Gifting" },
+                          { href: "/wedding-gifts", label: "Wedding Gifts" },
+                          { href: "/diwali-gifts", label: "Diwali Gifts" },
+                          { href: "/holi-gifts", label: "Holi Gifts" },
+                          { href: "/new-years-gifts", label: "New Year's Gifts" },
+                          { href: "/christmas-gifts", label: "Christmas Gifts" },
+                        ].map((subLink) => (
+                          <button
+                            key={subLink.href}
+                            onClick={() => {
+                              setIsMenuOpen(false);
+                              navigateTo(subLink.href);
+                            }}
+                            className="block w-full py-1.5 text-left text-[14px] text-[#f7d79b]/90 hover:text-white transition-colors"
+                          >
+                            {subLink.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);
