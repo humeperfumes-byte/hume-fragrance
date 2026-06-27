@@ -331,11 +331,19 @@ const CartDrawer = () => {
   const giftProgress = Math.min(100, (subtotal / secondGiftThreshold) * 100);
 
   const progressMessage =
-    subtotal < firstGiftThreshold
-      ? `Add ${formatINR(amountToFirstGift)} more for Gift 1`
-      : subtotal < secondGiftThreshold
-        ? `Add ${formatINR(amountToSecondGift)} more for Gift 2`
-        : "Gift 1 and Gift 2 unlocked";
+    subtotal < firstGiftThreshold ? (
+      <>
+        Add <span className="font-semibold text-[#0f3a2b]">{formatINR(amountToFirstGift)}</span> more for <span className="font-semibold text-[#0f3a2b]">Gift 1</span>
+      </>
+    ) : subtotal < secondGiftThreshold ? (
+      <>
+        Add <span className="font-semibold text-[#0f3a2b]">{formatINR(amountToSecondGift)}</span> more for <span className="font-semibold text-[#0f3a2b]">Gift 2</span>
+      </>
+    ) : (
+      <>
+        <span className="font-semibold text-[#0f3a2b]">Gift 1</span> and <span className="font-semibold text-[#0f3a2b]">Gift 2</span> unlocked
+      </>
+    );
 
   const isCouponEligible = useCallback(
     (coupon: Coupon) => isCartCouponEligible(coupon, items, subtotal),
@@ -691,25 +699,25 @@ const CartDrawer = () => {
 
   const renderSidebarCartLayout = () => (
     <>
-      <header className="shrink-0 border-b border-black/10 px-5 pb-4 pt-5">
+      <header className="shrink-0 border-b border-black/10 px-5 py-4">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-serif text-[1.7rem] leading-none tracking-tight">
-              Your Selection
+              Cart
             </h2>
-            <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.13em] text-black/45">
-              {appliedCoupon
-                ? `${appliedCoupon.code} active`
-                : `${totalItems} item${totalItems === 1 ? "" : "s"} in cart`}
-            </p>
+            <div className="mt-2 flex">
+              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-emerald-800 border border-emerald-700/35">
+                + Free Perfume Samples
+              </span>
+            </div>
           </div>
           <button
             type="button"
             onClick={() => setIsCartOpen(false)}
-            className="flex h-9 w-9 items-center justify-center text-black/45 transition hover:text-black"
+            className="mt-0.5 flex h-8 w-8 items-center justify-center bg-black/5 text-black/60 transition hover:bg-black/10 hover:text-black"
             aria-label="Close cart"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4.5 w-4.5" />
           </button>
         </div>
       </header>
@@ -772,7 +780,7 @@ const CartDrawer = () => {
 
             <section className="rounded-[4px] border border-black/10 bg-[#f4f0f5] p-3 shadow-sm">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-black/80">
+                <p className="text-sm font-normal text-black/80">
                   {progressMessage}
                 </p>
                 <Gift className="h-4 w-4 shrink-0 text-emerald-700" />

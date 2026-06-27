@@ -178,10 +178,16 @@ function RewardPreviewDrawer({ reward }: { reward: RewardPreview }) {
 
         <section className="rounded-[4px] border border-black/10 bg-[#f4f0f5] p-3 shadow-sm">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-medium text-black/80">
-              {amountToGift > 0
-                ? `Add ${formatINR(amountToGift)} more for Gift 2`
-                : "Gift 1 and Gift 2 unlocked"}
+            <p className="text-sm font-normal text-black/80">
+              {amountToGift > 0 ? (
+                <>
+                  Add <span className="font-semibold text-[#0f3a2b]">{formatINR(amountToGift)}</span> more for <span className="font-semibold text-[#0f3a2b]">Gift 2</span>
+                </>
+              ) : (
+                <>
+                  <span className="font-semibold text-[#0f3a2b]">Gift 1</span> and <span className="font-semibold text-[#0f3a2b]">Gift 2</span> unlocked
+                </>
+              )}
             </p>
             <Gift className="h-4 w-4 shrink-0 text-emerald-700" />
           </div>
