@@ -160,6 +160,9 @@ export function AdminSettingsControls() {
             className="min-h-20 border-white/10 bg-white/[0.04] text-white"
           />
         </SettingRow>
+        <SettingRow title="Enable 10-Tester Option" description="Allow storefront users to toggle the Discovery Set size variation between 10 and 15 testers. If disabled, only the default 15-tester option is available.">
+          <Switch checked={settings.enableTenTesterOption} onCheckedChange={(value) => update("enableTenTesterOption", value)} />
+        </SettingRow>
       </section>
 
       <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">

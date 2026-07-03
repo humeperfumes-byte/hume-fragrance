@@ -93,6 +93,24 @@ export default async function OrderSuccessPage({ searchParams }: OrderSuccessPag
                 Shop More
               </Link>
             </div>
+
+            {/* Feedback Invitation */}
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50/50 p-6 text-center space-y-3">
+              <div className="space-y-1">
+                <h3 className="font-serif text-lg font-medium text-zinc-900">How was your shopping experience?</h3>
+                <p className="text-xs text-zinc-500 leading-relaxed max-w-md mx-auto">
+                  Rate our website flow and let us know how you heard about us to unlock customized future rewards!
+                </p>
+              </div>
+              <div className="pt-1">
+                <Link
+                  href="/feedback"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-zinc-900 hover:bg-zinc-800 px-6 text-xs font-bold uppercase tracking-wider text-white transition-all active:scale-95 shadow-sm"
+                >
+                  Share Your Experience
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </section>

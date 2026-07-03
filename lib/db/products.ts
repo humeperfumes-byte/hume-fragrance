@@ -17,6 +17,8 @@ type ProductBadges = Partial<{
   limitedStock: boolean;
   soldOut: boolean;
   comingSoon: boolean;
+  showInDiscoverySet: boolean;
+  recommendedSample: boolean;
 }>;
 type ProductVisibility = "public" | "seo_only";
 let hasLoggedLegacyReviewsFallback = false;
@@ -142,6 +144,8 @@ function transformProduct(
       limitedStock: Boolean(badges.limitedStock),
       soldOut: Boolean(badges.soldOut),
       comingSoon: Boolean(badges.comingSoon),
+      showInDiscoverySet: Boolean(badges.showInDiscoverySet),
+      recommendedSample: Boolean(badges.recommendedSample),
     },
     notes: product.notes as PerfumeData["notes"],
     longevity: product.longevity as PerfumeData["longevity"],

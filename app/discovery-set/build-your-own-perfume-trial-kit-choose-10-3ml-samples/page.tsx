@@ -13,6 +13,30 @@ import { formatINR } from "@/lib/currency";
 import { getRequestSiteUrl } from "@/lib/request-site";
 import { getBreadcrumbSchema, getOrganizationSchema } from "@/lib/seo";
 import { siteUrlForBase } from "@/lib/site";
+import { Playfair_Display, Inter, Cormorant_Garamond } from "next/font/google";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-discovery-sans",
+  weight: ["300", "400", "500", "600", "700", "800"],
+  display: "swap",
+});
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-discovery-serif",
+  weight: ["400", "500", "600", "700", "800", "900"],
+  style: ["normal", "italic"],
+  display: "swap",
+});
+
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  variable: "--font-discovery-cormorant",
+  weight: ["300", "400", "500", "600"],
+  style: ["normal", "italic"],
+  display: "swap",
+});
 
 export const dynamic = "force-dynamic";
 
@@ -333,7 +357,7 @@ export default async function DiscoverySetCanonicalPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className={`${inter.variable} ${playfair.variable} ${cormorant.variable} min-h-screen bg-background pb-20 lg:pb-0 discovery-set-page`}>
       <JsonLd data={jsonLd} />
       <Header />
       <DiscoverySetBuilder />

@@ -38,6 +38,7 @@ import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 import { isRazorpayAllowedHost } from "@/lib/razorpay-domain";
 import { useSiteControls } from "@/hooks/use-site-controls";
 import { displayPhoneNumber, toPhoneDigits, toTenDigitPhone } from "@/lib/phone";
+import { isDiscoverySetCartItem } from "@/lib/discovery-set";
 
 const CHECKOUT_STORAGE_KEY = "hume_checkout_details_v1";
 const CHECKOUT_SESSION_KEY = "hume_checkout_session_id";
@@ -596,24 +597,31 @@ export default function CheckoutClient() {
     [appliedCoupon, items, totalPrice],
   );
   const couponDiscount = Math.min(totalPrice, couponResult.discount);
+
+  const isWelcomeRewardBlocked = useMemo(() => {
+    return items.length > 0 && items.every((item) => item.isGift || isDiscoverySetCartItem(item));
+  }, [items]);
+
+  const activeWelcomeReward = settings.welcomeBackEnabled && !isWelcomeRewardBlocked ? welcomeBackReward : null;
+
   const welcomeBackDiscount = calculateWelcomeBackDiscount(
-    settings.welcomeBackEnabled ? welcomeBackReward : null,
+    activeWelcomeReward,
     totalPrice,
     couponDiscount,
     appliedCoupon,
   );
   const effectiveWelcomeBackPercent = getEffectiveWelcomeBackPercent(
-    settings.welcomeBackEnabled ? welcomeBackReward : null,
+    activeWelcomeReward,
     appliedCoupon,
     totalPrice,
   );
   const welcomeBackLabel = getEffectiveWelcomeBackLabel(
-    settings.welcomeBackEnabled ? welcomeBackReward : null,
+    activeWelcomeReward,
     appliedCoupon,
     totalPrice,
   );
   const effectiveWelcomeBackCode = getEffectiveWelcomeBackCode(
-    settings.welcomeBackEnabled ? welcomeBackReward : null,
+    activeWelcomeReward,
     appliedCoupon,
     totalPrice,
   );
@@ -2108,7 +2116,7 @@ export default function CheckoutClient() {
                 {shippingSavings > 0 ? (
                   <div className="flex items-center justify-between">
                     <span className="text-black/45">
-                      {welcomeBackReward
+                      {activeWelcomeReward
                         ? "Welcome back free delivery"
                         : "Free delivery unlocked"}
                     </span>

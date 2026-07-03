@@ -50,6 +50,8 @@ type ProductFormState = {
   limitedStock: boolean;
   soldOut: boolean;
   comingSoon: boolean;
+  showInDiscoverySet: boolean;
+  recommendedSample: boolean;
   description: string;
   seoDescription: string;
   seoKeywordsCsv: string;
@@ -83,6 +85,8 @@ const emptyForm: ProductFormState = {
   limitedStock: false,
   soldOut: false,
   comingSoon: false,
+  showInDiscoverySet: false,
+  recommendedSample: false,
   description: "",
   seoDescription: "",
   seoKeywordsCsv: "",
@@ -104,6 +108,8 @@ const badgeOptions = [
   ["comingSoon", "Coming soon"],
   ["limitedStock", "Only 2 left"],
   ["soldOut", "Sold out"],
+  ["showInDiscoverySet", "Show in Discovery Set"],
+  ["recommendedSample", "Recommend in Discovery Set"],
 ] as const;
 
 type BadgeKey = (typeof badgeOptions)[number][0];
@@ -179,6 +185,8 @@ function createFormFromProduct(product: ProductForForm): ProductFormState {
     limitedStock: Boolean(badges.limitedStock),
     soldOut: Boolean(badges.soldOut),
     comingSoon: Boolean(badges.comingSoon),
+    showInDiscoverySet: Boolean(badges.showInDiscoverySet),
+    recommendedSample: Boolean(badges.recommendedSample),
     description: product.description ?? "",
     seoDescription: product.seoDescription ?? "",
     seoKeywordsCsv: arrayToCsv(product.seoKeywords),
@@ -367,6 +375,8 @@ export function ProductFormSheet({
         limitedStock: form.limitedStock,
         soldOut: form.soldOut,
         comingSoon: form.comingSoon,
+        showInDiscoverySet: form.showInDiscoverySet,
+        recommendedSample: form.recommendedSample,
       },
       description: form.description.trim(),
       seoDescription: form.seoDescription.trim(),

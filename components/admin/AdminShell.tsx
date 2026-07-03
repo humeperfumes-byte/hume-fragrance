@@ -14,6 +14,7 @@ import {
   Menu,
   MessagesSquare,
   MessageSquareText,
+  MessageSquare,
   Package,
   Settings,
   ShoppingBag,
@@ -38,6 +39,7 @@ const navItems = [
   { title: "Images", url: "/admin/images", icon: ImageIcon },
   { title: "Reviews", url: "/admin/reviews", icon: MessageSquareText },
   { title: "Templates", url: "/admin/templates", icon: MessagesSquare },
+  { title: "Feedback", url: "/admin/feedback", icon: MessageSquare },
   { title: "Orders", url: "/admin/orders", icon: ShoppingBag },
   { title: "Tracking", url: "/admin/tracking", icon: Truck },
   { title: "Stock Requests", url: "/admin/stock-notify", icon: Bell },
@@ -81,7 +83,7 @@ const navGroups = [
   {
     label: "People & system",
     items: navItems.filter((item) =>
-      ["Customers", "Login Activity", "Settings", "Data Export"].includes(item.title),
+      ["Customers", "Feedback", "Login Activity", "Settings", "Data Export"].includes(item.title),
     ),
   },
 ];

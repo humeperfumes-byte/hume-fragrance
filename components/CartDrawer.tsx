@@ -34,7 +34,7 @@ import {
   trackWelcomeBackVisit,
   type WelcomeBackReward,
 } from "@/lib/cart-discounts";
-import { DISCOVERY_SET_IMAGES, DISCOVERY_SET_PRICE, DISCOVERY_SET_PATH } from "@/lib/discovery-set";
+import { DISCOVERY_SET_IMAGES, DISCOVERY_SET_PRICE, DISCOVERY_SET_PATH, isDiscoverySetCartItem } from "@/lib/discovery-set";
 
 interface Coupon {
   id: string;
@@ -237,24 +237,31 @@ const CartDrawer = () => {
   );
 
   const normalizedCouponDiscount = Math.min(subtotal, couponResult.discount);
+
+  const isWelcomeRewardBlocked = useMemo(() => {
+    return items.length > 0 && items.every((item) => item.isGift || isDiscoverySetCartItem(item));
+  }, [items]);
+
+  const activeWelcomeReward = !isWelcomeRewardBlocked ? welcomeBackReward : null;
+
   const welcomeBackDiscount = calculateWelcomeBackDiscount(
-    welcomeBackReward,
+    activeWelcomeReward,
     subtotal,
     normalizedCouponDiscount,
     appliedCoupon,
   );
   const effectiveWelcomeBackPercent = getEffectiveWelcomeBackPercent(
-    welcomeBackReward,
+    activeWelcomeReward,
     appliedCoupon,
     subtotal,
   );
   const welcomeBackLabel = getEffectiveWelcomeBackLabel(
-    welcomeBackReward,
+    activeWelcomeReward,
     appliedCoupon,
     subtotal,
   );
   const effectiveWelcomeBackCode = getEffectiveWelcomeBackCode(
-    welcomeBackReward,
+    activeWelcomeReward,
     appliedCoupon,
     subtotal,
   );
@@ -728,7 +735,7 @@ const CartDrawer = () => {
         onTouchMove={(event) => event.stopPropagation()}
       >
         <>
-            {welcomeBackReward && welcomeBackLabel && rewardTimeRemaining > 0 ? (
+            {activeWelcomeReward && welcomeBackLabel && rewardTimeRemaining > 0 ? (
               <section
                 className={`mb-4 overflow-hidden border text-white shadow-[0_14px_34px_rgba(21,17,12,0.16)] ${
                   isUrgentReward
@@ -1289,7 +1296,7 @@ const CartDrawer = () => {
                     </span>
                   </div>
                 ) : null}
-                {welcomeBackReward && welcomeBackLabel && welcomeBackDiscount > 0 ? (
+                {activeWelcomeReward && welcomeBackLabel && welcomeBackDiscount > 0 ? (
                   <div className="flex justify-between">
                     <span className="text-black/55">
                       {welcomeBackLabel}
@@ -1333,7 +1340,7 @@ const CartDrawer = () => {
 
   const renderSpecialUnlockOverlay = () => (
     <AnimatePresence>
-      {rewardUnlockOpen && welcomeBackReward && (
+      {rewardUnlockOpen && activeWelcomeReward && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -1412,7 +1419,7 @@ const CartDrawer = () => {
                   isUrgentReward ? "text-red-200" : "text-emerald-200"
                 }`}
               >
-                {welcomeBackLabel ?? welcomeBackReward.label} Unlocked
+                {welcomeBackLabel ?? activeWelcomeReward.label} Unlocked
               </motion.p>
 
               <motion.div
@@ -1427,7 +1434,7 @@ const CartDrawer = () => {
               >
                 <div className="flex items-end justify-center gap-1 text-white">
                   <span className="font-sans text-[6.8rem] font-semibold leading-[0.8]">
-                    {effectiveWelcomeBackPercent || welcomeBackReward.percent}
+                    {effectiveWelcomeBackPercent || activeWelcomeReward.percent}
                   </span>
                   <div className="pb-2 text-left">
                     <span className="block font-sans text-4xl font-semibold leading-none">

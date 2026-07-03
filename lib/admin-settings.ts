@@ -12,6 +12,7 @@ export type AdminControls = {
   whatsappCheckoutEnabled: boolean;
   whatsappNumber: string;
   defaultAdminWindowHours: number;
+  enableTenTesterOption: boolean;
 };
 
 export const ADMIN_CONTROLS_KEY = "admin_controls";
@@ -30,6 +31,7 @@ export const defaultAdminControls: AdminControls = {
   whatsappCheckoutEnabled: true,
   whatsappNumber: "919559024822",
   defaultAdminWindowHours: 24,
+  enableTenTesterOption: true,
 };
 
 function numberOrDefault(value: unknown, fallback: number) {
@@ -68,5 +70,6 @@ export function normalizeAdminControls(value: unknown): AdminControls {
       raw.defaultAdminWindowHours,
       defaultAdminControls.defaultAdminWindowHours,
     ),
+    enableTenTesterOption: raw.enableTenTesterOption !== false,
   };
 }

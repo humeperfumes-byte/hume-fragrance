@@ -33,6 +33,8 @@ const productSchema = z.object({
       limitedStock: z.boolean().optional(),
       soldOut: z.boolean().optional(),
       comingSoon: z.boolean().optional(),
+      showInDiscoverySet: z.boolean().optional(),
+      recommendedSample: z.boolean().optional(),
     })
     .optional(),
   notes: z

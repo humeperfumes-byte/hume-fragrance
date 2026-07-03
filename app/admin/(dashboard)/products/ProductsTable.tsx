@@ -34,6 +34,8 @@ export function ProductsTable({
       limitedStock?: boolean;
       soldOut?: boolean;
       comingSoon?: boolean;
+      showInDiscoverySet?: boolean;
+      recommendedSample?: boolean;
     };
 
   const openCreateForm = () => {
@@ -68,7 +70,7 @@ export function ProductsTable({
 
   const handleToggleBadge = async (
     product: Product,
-    badge: "bestSeller" | "humeSpecial" | "limitedStock" | "soldOut" | "comingSoon",
+    badge: "bestSeller" | "humeSpecial" | "limitedStock" | "soldOut" | "comingSoon" | "showInDiscoverySet" | "recommendedSample",
     enabled: boolean,
   ) => {
     const nextBadges = { ...getBadges(product), [badge]: enabled };
@@ -241,6 +243,8 @@ export function ProductsTable({
                         {badges.comingSoon ? <Badge className="border-none bg-sky-500/15 text-sky-700 shadow-none">Coming soon</Badge> : null}
                         {badges.limitedStock ? <Badge className="border-none bg-amber-500/15 text-amber-700 shadow-none">Only 2 left</Badge> : null}
                         {badges.soldOut ? <Badge className="border-none bg-red-500/15 text-red-600 shadow-none">Sold out</Badge> : null}
+                        {badges.showInDiscoverySet ? <Badge className="border-none bg-pink-500/15 text-pink-700 shadow-none">Discovery</Badge> : null}
+                        {badges.recommendedSample ? <Badge className="border-none bg-indigo-500/15 text-indigo-700 shadow-none">Recommended</Badge> : null}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -294,6 +298,18 @@ export function ProductsTable({
                             onClick={() => handleToggleBadge(product, "humeSpecial", !badges.humeSpecial)}
                           >
                             {badges.humeSpecial ? "Remove HUME special" : "Mark HUME special"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => handleToggleBadge(product, "showInDiscoverySet", !badges.showInDiscoverySet)}
+                          >
+                            {badges.showInDiscoverySet ? "Remove from Discovery Set" : "Add to Discovery Set"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => handleToggleBadge(product, "recommendedSample", !badges.recommendedSample)}
+                          >
+                            {badges.recommendedSample ? "Remove from Recommended Kit" : "Add to Recommended Kit"}
                           </DropdownMenuItem>
                           <DropdownMenuItem className="text-red-600 focus:bg-red-50 focus:text-red-600 cursor-pointer" onClick={() => handleDelete(product.id)}>
                             <Trash2 className="mr-2 h-4 w-4" /> Delete

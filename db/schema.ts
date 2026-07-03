@@ -30,6 +30,8 @@ export const products = pgTable("products", {
       limitedStock?: boolean;
       soldOut?: boolean;
       comingSoon?: boolean;
+      showInDiscoverySet?: boolean;
+      recommendedSample?: boolean;
     }>()
     .notNull()
     .default({}),
@@ -533,3 +535,18 @@ export const corporateGiftingLeads = pgTable("corporate_gifting_leads", {
 
 export type CorporateGiftingLead = typeof corporateGiftingLeads.$inferSelect;
 export type NewCorporateGiftingLead = typeof corporateGiftingLeads.$inferInsert;
+
+// Customer Feedback/Experience Table
+export const customerFeedback = pgTable("customer_feedback", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  source: varchar("source", { length: 100 }).notNull(), // youtube | google | ai | other
+  sourceDetails: varchar("source_details", { length: 255 }), // details like ChatGPT, Claude, etc.
+  rating: integer("rating").notNull(), // 1 to 5 stars for flow process rating
+  feedbackText: text("feedback_text"), // detailed text response
+  contactInfo: varchar("contact_info", { length: 255 }), // optional email/phone
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type CustomerFeedback = typeof customerFeedback.$inferSelect;
+export type NewCustomerFeedback = typeof customerFeedback.$inferInsert;
