@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { products, productCategories } from "@/db/schema";
@@ -18,10 +20,22 @@ export async function GET(request: NextRequest) {
     const categoryId = searchParams.get("categoryId");
     const gender = searchParams.get("gender");
     const includeHidden = searchParams.get("includeHidden") === "1";
+    const forDiscoverySet = searchParams.get("forDiscoverySet") === "1";
     const unauthorized = includeHidden ? requireAdminToken(request) : null;
     if (unauthorized) return unauthorized;
 
-    const allProducts = includeHidden ? await getAllProducts() : await getAllPublicProducts();
+    let allProducts;
+    if (includeHidden) {
+      allProducts = await getAllProducts();
+    } else if (forDiscoverySet) {
+      const rawProducts = await getAllProducts();
+      allProducts = rawProducts.filter(
+        (product) => product.visibility === "public" || product.badges?.showInDiscoverySet === true
+      );
+    } else {
+      allProducts = await getAllPublicProducts();
+    }
+
     const filtered = allProducts.filter((product) => {
       const byCategory =
         !categoryId ||
@@ -32,7 +46,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json(filtered, {
-      headers: includeHidden
+      headers: (includeHidden || forDiscoverySet)
         ? { "Cache-Control": "private, no-store" }
         : { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=1800" },
     });
@@ -74,6 +88,8 @@ export async function POST(request: NextRequest) {
           limitedStock: z.boolean().optional(),
           soldOut: z.boolean().optional(),
           comingSoon: z.boolean().optional(),
+          showInDiscoverySet: z.boolean().optional(),
+          recommendedSample: z.boolean().optional(),
         })
         .optional()
         .default({}),

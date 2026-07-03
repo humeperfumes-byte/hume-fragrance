@@ -598,4 +598,32 @@ a, button, select, input[type="submit"], input[type="button"], [role="button"], 
   cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' fill='none'%3E%3Cpath d='M4.5 4.5 L27 12.5 L16 16 L12.5 27 Z' fill='%23171717' stroke='%23ffffff' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E") 4 4, pointer;
 }
 
+.font-satoshi {
+  font-family: 'Satoshi', sans-serif !important;
+}
+
+.font-clash {
+  font-family: 'Clash Display', sans-serif !important;
+}
+
+.discovery-set-page,
+.discovery-set-page * {
+  font-family: var(--font-discovery-sans), sans-serif !important;
+}
+
+.discovery-set-page h1,
+.discovery-set-page h2,
+.discovery-set-page h3,
+.discovery-set-page h4,
+.discovery-set-page .font-serif,
+.discovery-set-page [class*="font-serif"] {
+  font-family: var(--font-discovery-cormorant), serif !important;
+}
+
+.font-cormorant {
+  font-family: var(--font-discovery-cormorant), serif !important;
+}
+
+
+
 

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Script from "next/script";
-import { Cormorant_Garamond, Montserrat } from "next/font/google";
+import { Cormorant_Garamond, Geist } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import ClientGlobalOverlays from "@/components/ClientGlobalOverlays";
@@ -12,7 +12,7 @@ import CartAnalyticsTracker from "@/components/CartAnalyticsTracker";
 import ScrollRestoration from "@/components/ScrollRestoration";
 import { SITE_URL } from "@/lib/site";
 
-const montserrat = Montserrat({
+const geist = Geist({
   subsets: ["latin"],
   variable: "--font-sans",
   weight: ["300", "400", "500", "600", "700", "800"],
@@ -94,10 +94,12 @@ export default async function RootLayout({
       <head>
         <link rel="preconnect" href="https://res.cloudinary.com" />
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+        <link rel="preconnect" href="https://api.fontshare.com" />
+        <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@300,400,500,600,700,900&f[]=satoshi@300,400,500,700,900&display=swap" />
       </head>
       <body
         suppressHydrationWarning
-        className={`${montserrat.variable} ${cormorant.variable} antialiased`}
+        className={`${geist.variable} ${cormorant.variable} antialiased`}
       >
         <Providers>
           <BrowserRecoveryGuard />
