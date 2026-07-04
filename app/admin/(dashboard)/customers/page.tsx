@@ -5,11 +5,16 @@ import { formatINR } from "@/lib/currency";
 import { AdminDateWindowControl } from "@/components/admin/AdminDateWindowControl";
 import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-data-filters";
 import { parseAdminTimeWindow } from "@/lib/admin-time-window";
+import { parseAdminMarket, isIndiaCheckoutSignal } from "@/lib/admin-market";
 import { CustomersTable, type CustomerRecord } from "./CustomersTable";
 
 export const dynamic = "force-dynamic";
 
 type CustomerSource = Order | CheckoutDraft;
+
+type AdminPageProps = {
+  searchParams?: Promise<{ hours?: string; market?: string }> | { hours?: string; market?: string };
+};
 
 function getIdentityKeys(row: CustomerSource): string[] {
   const keys: string[] = [];
@@ -102,10 +107,6 @@ function createCustomerFromDraft(key: string, draft: CheckoutDraft): CustomerRec
   };
 }
 
-type AdminPageProps = {
-  searchParams?: Promise<{ hours?: string }> | { hours?: string };
-};
-
 export default async function CustomersPage({ searchParams }: AdminPageProps) {
   const params = await searchParams;
   const timeWindow = parseAdminTimeWindow(params?.hours);
@@ -131,6 +132,15 @@ export default async function CustomersPage({ searchParams }: AdminPageProps) {
     const excludedSessionIds = collectExcludedSessionIds(orderRows, draftRows);
     allOrders = filterExcludedAdminRows(orderRows, excludedSessionIds);
     allDrafts = filterExcludedAdminRows(draftRows, excludedSessionIds).filter(isCheckoutLead);
+
+    const market = parseAdminMarket(params?.market);
+    if (market === "india") {
+      allOrders = allOrders.filter(isIndiaCheckoutSignal);
+      allDrafts = allDrafts.filter(isIndiaCheckoutSignal);
+    } else if (market === "out_of_india") {
+      allOrders = allOrders.filter((row) => !isIndiaCheckoutSignal(row));
+      allDrafts = allDrafts.filter((row) => !isIndiaCheckoutSignal(row));
+    }
   } catch (error) {
     console.error("Customers page DB error:", error);
     dbError = true;

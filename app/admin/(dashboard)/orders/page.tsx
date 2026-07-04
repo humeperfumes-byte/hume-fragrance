@@ -5,11 +5,12 @@ import { OrdersTable } from "./OrdersTable";
 import { AdminDateWindowControl } from "@/components/admin/AdminDateWindowControl";
 import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-data-filters";
 import { parseAdminTimeWindow } from "@/lib/admin-time-window";
+import { parseAdminMarket, isIndiaCheckoutSignal } from "@/lib/admin-market";
 
 export const dynamic = "force-dynamic";
 
 type AdminPageProps = {
-  searchParams?: Promise<{ hours?: string }> | { hours?: string };
+  searchParams?: Promise<{ hours?: string; market?: string }> | { hours?: string; market?: string };
 };
 
 export default async function OrdersPage({ searchParams }: AdminPageProps) {
@@ -27,6 +28,13 @@ export default async function OrdersPage({ searchParams }: AdminPageProps) {
       .orderBy(desc(orders.createdAt))
       .limit(200);
     allOrders = filterExcludedAdminRows(allOrders, collectExcludedSessionIds(allOrders));
+
+    const market = parseAdminMarket(params?.market);
+    if (market === "india") {
+      allOrders = allOrders.filter(isIndiaCheckoutSignal);
+    } else if (market === "out_of_india") {
+      allOrders = allOrders.filter((row) => !isIndiaCheckoutSignal(row));
+    }
   } catch (error) {
     console.error("Orders table might be missing:", error);
     tableExists = false;

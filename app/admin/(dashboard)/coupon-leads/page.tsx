@@ -6,11 +6,12 @@ import { Ticket } from "lucide-react";
 import { AdminDateWindowControl } from "@/components/admin/AdminDateWindowControl";
 import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-data-filters";
 import { parseAdminTimeWindow } from "@/lib/admin-time-window";
+import { parseAdminMarket, isIndiaLeadSignal, isIndiaCheckoutSignal } from "@/lib/admin-market";
 
 export const dynamic = "force-dynamic";
 
 type AdminPageProps = {
-  searchParams?: Promise<{ hours?: string }> | { hours?: string };
+  searchParams?: Promise<{ hours?: string; market?: string }> | { hours?: string; market?: string };
 };
 
 type CouponEventRow = typeof couponCodeEvents.$inferSelect;
@@ -44,6 +45,7 @@ function dedupeCouponLeadEvents(events: CouponEventRow[]) {
 export default async function CouponLeadsPage({ searchParams }: AdminPageProps) {
   const params = await searchParams;
   const timeWindow = parseAdminTimeWindow(params?.hours);
+  const market = parseAdminMarket(params?.market);
   let events: CouponEventRow[] = [];
   let dbError = false;
 
@@ -55,6 +57,12 @@ export default async function CouponLeadsPage({ searchParams }: AdminPageProps) 
       .orderBy(desc(couponCodeEvents.createdAt))
       .limit(500);
     events = filterExcludedAdminRows(events, collectExcludedSessionIds(events));
+
+    if (market === "india") {
+      events = events.filter((row) => isIndiaLeadSignal(row));
+    } else if (market === "out_of_india") {
+      events = events.filter((row) => !isIndiaLeadSignal(row));
+    }
   } catch (error) {
     console.error("Coupon leads page DB error:", error);
     dbError = true;
@@ -126,6 +134,16 @@ export default async function CouponLeadsPage({ searchParams }: AdminPageProps) 
       relatedDrafts = filterExcludedAdminRows(relatedDrafts, excludedSessionIds);
       relatedOrders = filterExcludedAdminRows(relatedOrders, excludedSessionIds);
       relatedIntel = relatedIntel.filter((row) => !excludedSessionIds.has(row.sessionId));
+
+      if (market === "india") {
+        events = events.filter((row) => isIndiaLeadSignal(row));
+        relatedDrafts = relatedDrafts.filter(isIndiaCheckoutSignal);
+        relatedOrders = relatedOrders.filter(isIndiaCheckoutSignal);
+      } else if (market === "out_of_india") {
+        events = events.filter((row) => !isIndiaLeadSignal(row));
+        relatedDrafts = relatedDrafts.filter((row) => !isIndiaCheckoutSignal(row));
+        relatedOrders = relatedOrders.filter((row) => !isIndiaCheckoutSignal(row));
+      }
 
       for (const d of relatedDrafts) {
         draftsMap.set(d.sessionId, d);

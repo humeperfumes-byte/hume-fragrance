@@ -12,6 +12,12 @@ import {
   normalizeSavedPricingBreakdown,
   type SavedPricingBreakdown,
 } from "@/lib/saved-pricing-breakdown";
+import {
+  parseAdminMarket,
+  isIndiaOperationalCountry,
+  isIndiaLeadSignal,
+  isIndiaCheckoutSignal,
+} from "@/lib/admin-market";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +53,7 @@ function productKey(value: string | null | undefined): string {
 }
 
 type AdminPageProps = {
-  searchParams?: Promise<{ hours?: string }> | { hours?: string };
+  searchParams?: Promise<{ hours?: string; market?: string }> | { hours?: string; market?: string };
 };
 
 type RewardSignal = {
@@ -354,11 +360,24 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
     ]);
 
     const excludedSessionIds = collectExcludedSessionIds(cartRows, couponRows, draftRows, orderRows);
-    const visibleCartRows = filterExcludedAdminRows(cartRows, excludedSessionIds);
+    let visibleCartRows = filterExcludedAdminRows(cartRows, excludedSessionIds);
     couponRows = filterExcludedAdminRows(couponRows, excludedSessionIds);
     draftRows = filterExcludedAdminRows(draftRows, excludedSessionIds);
     orderRows = filterExcludedAdminRows(orderRows, excludedSessionIds);
     intelligenceRows = intelligenceRows.filter((row) => !excludedSessionIds.has(row.sessionId));
+
+    const market = parseAdminMarket(params?.market);
+    if (market === "india") {
+      visibleCartRows = visibleCartRows.filter((row) => isIndiaOperationalCountry(row.country));
+      couponRows = couponRows.filter((row) => isIndiaLeadSignal(row));
+      draftRows = draftRows.filter(isIndiaCheckoutSignal);
+      orderRows = orderRows.filter(isIndiaCheckoutSignal);
+    } else if (market === "out_of_india") {
+      visibleCartRows = visibleCartRows.filter((row) => !isIndiaOperationalCountry(row.country));
+      couponRows = couponRows.filter((row) => !isIndiaLeadSignal(row));
+      draftRows = draftRows.filter((row) => !isIndiaCheckoutSignal(row));
+      orderRows = orderRows.filter((row) => !isIndiaCheckoutSignal(row));
+    }
 
     const couponMap = new Map<string, (typeof couponRows)[number]>();
     const couponContactMap = new Map<string, (typeof couponRows)[number]>();

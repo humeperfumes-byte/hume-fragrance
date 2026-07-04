@@ -6,11 +6,12 @@ import { formatINR } from "@/lib/currency";
 import { AdminDateWindowControl } from "@/components/admin/AdminDateWindowControl";
 import { filterExcludedAdminRows, collectExcludedSessionIds } from "@/lib/admin-data-filters";
 import { parseAdminTimeWindow } from "@/lib/admin-time-window";
+import { parseAdminMarket, isIndiaCheckoutSignal } from "@/lib/admin-market";
 
 export const dynamic = "force-dynamic";
 
 type AdminPageProps = {
-  searchParams?: Promise<{ hours?: string }> | { hours?: string };
+  searchParams?: Promise<{ hours?: string; market?: string }> | { hours?: string; market?: string };
 };
 
 export default async function CheckoutsPage({ searchParams }: AdminPageProps) {
@@ -27,6 +28,13 @@ export default async function CheckoutsPage({ searchParams }: AdminPageProps) {
       .orderBy(desc(checkoutDrafts.updatedAt))
       .limit(500);
     drafts = filterExcludedAdminRows(drafts, collectExcludedSessionIds(drafts));
+
+    const market = parseAdminMarket(params?.market);
+    if (market === "india") {
+      drafts = drafts.filter(isIndiaCheckoutSignal);
+    } else if (market === "out_of_india") {
+      drafts = drafts.filter((row) => !isIndiaCheckoutSignal(row));
+    }
   } catch (error) {
     console.error("Checkouts page DB error:", error);
     dbError = true;
