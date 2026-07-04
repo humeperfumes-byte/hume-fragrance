@@ -181,7 +181,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       .filter((item) => pathname.startsWith(item.url))
       .sort((a, b) => b.url.length - a.url.length)[0] ?? navItems[0];
 
-  const updateMarket = (nextMarket: "india" | "all") => {
+  const updateMarket = (nextMarket: "india" | "out_of_india") => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("market", nextMarket);
     router.replace(`${pathname}?${params.toString()}`);
@@ -228,14 +228,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               </button>
               <button
                 type="button"
-                onClick={() => updateMarket("all")}
+                onClick={() => updateMarket("out_of_india")}
                 className={`h-8 rounded-md px-2 text-xs font-semibold transition-colors sm:px-3 ${
-                  market === "all"
+                  market === "out_of_india"
                     ? "bg-white text-black"
                     : "text-white/50 hover:bg-white/[0.06] hover:text-white"
                 }`}
               >
-                All
+                Out of India
               </button>
             </div>
             <div className="hidden items-center gap-2 rounded-lg border border-emerald-400/15 bg-emerald-400/10 px-3 py-2 md:flex">

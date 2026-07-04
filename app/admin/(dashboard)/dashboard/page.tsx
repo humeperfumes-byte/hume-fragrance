@@ -24,7 +24,7 @@ import { displayPhoneNumber } from "@/lib/phone";
 type DashboardAnalytics = {
   ok: boolean;
   windowHours: number;
-  market: "india" | "all";
+  market: "india" | "out_of_india" | "all";
   overview: {
     uniqueViewers: number;
     uniqueCartVisitors: number;
@@ -209,7 +209,12 @@ export default function DashboardPage() {
   const dailyRunList = useMemo(() => {
     const overview = analytics?.overview;
     if (!overview) return [];
-    const marketQuery = market === "all" ? "?market=all" : "?market=india";
+    const marketQuery =
+      market === "out_of_india"
+        ? "?market=out_of_india"
+        : market === "all"
+          ? "?market=all"
+          : "?market=india";
 
     return [
       {
@@ -481,7 +486,13 @@ export default function DashboardPage() {
                   analytics.recentOrders.map((order) => (
                     <Link
                       key={order.id}
-                      href={`/admin/orders${market === "all" ? "?market=all" : "?market=india"}`}
+                      href={`/admin/orders${
+                        market === "out_of_india"
+                          ? "?market=out_of_india"
+                          : market === "all"
+                            ? "?market=all"
+                            : "?market=india"
+                      }`}
                       className="block rounded-2xl border border-white/5 bg-white/[0.03] p-4 transition-colors hover:bg-white/[0.06]"
                     >
                       <div className="flex items-start justify-between gap-3">

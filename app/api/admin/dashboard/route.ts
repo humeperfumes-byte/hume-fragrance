@@ -200,12 +200,31 @@ export async function GET(request: NextRequest) {
     const visibleOrderRows = filterExcludedAdminRows(orderRows, excludedSessionIds);
 
     const indiaOnly = isIndiaMarket(market);
+    const outOfIndiaOnly = market === "out_of_india";
+
     const scopedTimelineRows = indiaOnly
       ? visibleTimelineRows.filter((row) => isIndiaTimezone(row.timezone) || isIndiaOperationalCountry(String(row.data?.country ?? "")))
-      : visibleTimelineRows;
-    const scopedCartRows = indiaOnly ? visibleCartRows.filter((row) => isIndiaOperationalCountry(row.country)) : visibleCartRows;
-    const scopedDraftRows = indiaOnly ? visibleDraftRows.filter(isIndiaCheckoutSignal) : visibleDraftRows;
-    const scopedOrderRows = indiaOnly ? visibleOrderRows.filter(isIndiaCheckoutSignal) : visibleOrderRows;
+      : outOfIndiaOnly
+        ? visibleTimelineRows.filter((row) => !isIndiaTimezone(row.timezone) && !isIndiaOperationalCountry(String(row.data?.country ?? "")))
+        : visibleTimelineRows;
+
+    const scopedCartRows = indiaOnly
+      ? visibleCartRows.filter((row) => isIndiaOperationalCountry(row.country))
+      : outOfIndiaOnly
+        ? visibleCartRows.filter((row) => !isIndiaOperationalCountry(row.country))
+        : visibleCartRows;
+
+    const scopedDraftRows = indiaOnly
+      ? visibleDraftRows.filter(isIndiaCheckoutSignal)
+      : outOfIndiaOnly
+        ? visibleDraftRows.filter((row) => !isIndiaCheckoutSignal(row))
+        : visibleDraftRows;
+
+    const scopedOrderRows = indiaOnly
+      ? visibleOrderRows.filter(isIndiaCheckoutSignal)
+      : outOfIndiaOnly
+        ? visibleOrderRows.filter((row) => !isIndiaCheckoutSignal(row))
+        : visibleOrderRows;
 
     const pageViews = scopedTimelineRows.filter((row) => row.data?.eventType === "page_view");
     const uniqueViewerSessions = new Set(pageViews.map((row) => row.sessionId));

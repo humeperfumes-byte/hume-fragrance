@@ -1,8 +1,10 @@
-export type AdminMarket = "india" | "all";
+export type AdminMarket = "india" | "out_of_india" | "all";
 
 export function parseAdminMarket(value: string | string[] | null | undefined): AdminMarket {
   const raw = Array.isArray(value) ? value[0] : value;
-  return raw === "all" ? "all" : "india";
+  if (raw === "out_of_india") return "out_of_india";
+  if (raw === "all") return "all";
+  return "india";
 }
 
 export function isIndiaCountry(value: string | null | undefined): boolean {
@@ -26,6 +28,10 @@ export function isIndiaTimezone(value: string | null | undefined): boolean {
 
 export function isIndiaMarket(market: AdminMarket): boolean {
   return market === "india";
+}
+
+export function isOutOfIndiaMarket(market: AdminMarket): boolean {
+  return market === "out_of_india";
 }
 
 export function isIndiaPhone(value: string | null | undefined): boolean {

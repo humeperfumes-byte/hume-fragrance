@@ -105,7 +105,7 @@ export function IntelligenceFeed({
   hours = 720,
 }: {
   initialSessions: EnrichedSession[];
-  market?: "india" | "all";
+  market?: "india" | "out_of_india" | "all";
   hours?: number;
 }) {
   const [sessions, setSessions] = useState(initialSessions);
