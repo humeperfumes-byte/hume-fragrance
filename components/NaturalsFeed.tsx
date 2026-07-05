@@ -143,14 +143,10 @@ const FILTERS: Array<"All" | NaturalCategory> = [
 
 export default function NaturalsFeed() {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<"All" | NaturalCategory>("All");
   const [isMuted, setIsMuted] = useState(true);
   const videoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
 
-  const visibleProducts = useMemo(() => {
-    if (activeFilter === "All") return NATURALS_PRODUCTS;
-    return NATURALS_PRODUCTS.filter((product) => product.category === activeFilter);
-  }, [activeFilter]);
+  const visibleProducts = NATURALS_PRODUCTS;
 
   const handlePlayVideo = (id: string) => {
     const video = videoRefs.current[id];
@@ -165,7 +161,7 @@ export default function NaturalsFeed() {
   return (
     <section className="bg-stone-50 py-14 sm:py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-8 border-b border-stone-200 pb-8 lg:flex-row lg:items-end lg:justify-between">
+        <div className="border-b border-stone-200 pb-8">
           <div className="max-w-xl">
             <h2 className="font-serif text-[2.15rem] font-semibold leading-none tracking-tight text-stone-950 sm:text-[2.45rem]">
               The Library
@@ -174,26 +170,6 @@ export default function NaturalsFeed() {
               Every oil is traceable to a single grower and shipped in amber glass
               to preserve its molecular integrity.
             </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2 lg:justify-end">
-            {FILTERS.map((filter) => {
-              const isActive = activeFilter === filter;
-              return (
-                <button
-                  key={filter}
-                  type="button"
-                  onClick={() => setActiveFilter(filter)}
-                  className={`h-9 rounded-lg border px-4 text-[11px] font-bold uppercase tracking-[0.16em] transition-colors ${
-                    isActive
-                      ? "border-black bg-black text-white"
-                      : "border-stone-200 bg-white text-stone-950 hover:border-stone-400"
-                  }`}
-                >
-                  {filter}
-                </button>
-              );
-            })}
           </div>
         </div>
 
