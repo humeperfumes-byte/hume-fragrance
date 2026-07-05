@@ -1,145 +1,11 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { Volume2, VolumeX, ArrowRight } from "lucide-react";
-
-type NaturalCategory = "Floral" | "Woody" | "Earthy" | "Green" | "Resinous";
-
-interface NaturalProduct {
-  id: string;
-  number: string;
-  name: string;
-  scientificName: string;
-  origin: string;
-  category: NaturalCategory;
-  price: number;
-  size: string;
-  image: string;
-  description: string;
-  videoUrl?: string;
-}
-
-const NATURALS_PRODUCTS: NaturalProduct[] = [
-  {
-    id: "rose-otto",
-    number: "Nº 01",
-    name: "Rose Otto",
-    scientificName: "Rosa damascena",
-    origin: "KANNAUJ",
-    category: "Floral",
-    price: 2400,
-    size: "5ml",
-    image: "/images/naturals/rose_otto.jpg",
-    description: "Pure damask rose steam-distilled in traditional Kannauj copper stills. Voluptuous, sweet, and deeply floral.",
-  },
-  {
-    id: "vetiver",
-    number: "Nº 02",
-    name: "Vetiver",
-    scientificName: "Chrysopogon zizanioides",
-    origin: "MYSURU",
-    category: "Earthy",
-    price: 1650,
-    size: "10ml",
-    image: "/images/naturals/vetiver.jpg",
-    description: "Damp soil, smoked wood and monsoon roots. Grounding and long-wearing on the skin.",
-  },
-  {
-    id: "chandan",
-    number: "Nº 03",
-    name: "Chandan (Sandalwood)",
-    scientificName: "Santalum album",
-    origin: "MARAYOOR",
-    category: "Woody",
-    price: 3200,
-    size: "5ml",
-    image: "/images/naturals/chandan.jpg",
-    description: "Warm, milky, meditative. From aged East Indian sandalwood heartwood.",
-  },
-  {
-    id: "bela",
-    number: "Nº 04",
-    name: "Bela (Champa)",
-    scientificName: "Michelia champaca",
-    origin: "ODISHA",
-    category: "Floral",
-    price: 1850,
-    size: "5ml",
-    image: "/images/naturals/bela.jpg",
-    description: "Lush, sweet, and exotic champa blossoms hydro-distilled in traditional Kannauj degs.",
-  },
-  {
-    id: "mehndi",
-    number: "Nº 05",
-    name: "Mehndi (Henna)",
-    scientificName: "Lawsonia inermis",
-    origin: "SOJAT",
-    category: "Green",
-    price: 1400,
-    size: "5ml",
-    image: "/images/naturals/mehndi.jpg",
-    description: "Dry hay, warm resin and crushed leaf. A rare, quietly cooling attar base.",
-  },
-  {
-    id: "mogra",
-    number: "Nº 06",
-    name: "Mogra",
-    scientificName: "Jasminum sambac",
-    origin: "MADURAI",
-    category: "Floral",
-    price: 2100,
-    size: "3ml",
-    image: "/images/naturals/mogra.jpg",
-    description: "Night-blooming, indolic, lush. Harvested before sunrise for maximum aromatic yield.",
-  },
-  {
-    id: "jasmine-grandiflorum",
-    number: "Nº 07",
-    name: "Jasmine Grandiflorum",
-    scientificName: "Jasminum grandiflorum",
-    origin: "COIMBATORE",
-    category: "Floral",
-    price: 2400,
-    size: "3ml",
-    image: "/images/naturals/jasmine_grandiflorum.jpg",
-    description: "Intensely floral, sweet, and rich absolute of night-blooming jasmine flowers.",
-  },
-  {
-    id: "kewra",
-    number: "Nº 08",
-    name: "Kewra",
-    scientificName: "Pandanus odorifer",
-    origin: "GANJAM",
-    category: "Green",
-    price: 1200,
-    size: "10ml",
-    image: "/images/naturals/kewra.jpg",
-    description: "Rose-like with a resinous edge. A cherished note in North Indian perfumery.",
-  },
-  {
-    id: "khus",
-    number: "Nº 09",
-    name: "Khus",
-    scientificName: "Vetiveria zizanioides",
-    origin: "BHARATPUR",
-    category: "Earthy",
-    price: 1750,
-    size: "10ml",
-    image: "/images/naturals/khus.jpg",
-    description: "A cooler, greener cousin of Vetiver. Wet grass, river stones, monsoon air.",
-  },
-];
-
-const FILTERS: Array<"All" | NaturalCategory> = [
-  "All",
-  "Floral",
-  "Woody",
-  "Earthy",
-  "Green",
-  "Resinous",
-];
+import { Volume2, VolumeX } from "lucide-react";
+import { NATURALS_PRODUCTS, type NaturalProduct } from "@/lib/naturals-data";
 
 export default function NaturalsFeed() {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
@@ -274,9 +140,12 @@ export default function NaturalsFeed() {
                       <span className="font-sans text-base font-semibold text-stone-900">
                         ₹{prod.price.toLocaleString("en-IN")}
                       </span>
-                      <span className="text-[11px] font-sans font-bold uppercase tracking-[0.18em] text-stone-500 hover:text-black transition-colors cursor-pointer border-b border-stone-200 pb-0.5 hover:border-black">
+                      <Link
+                        href={`/naturals/${prod.id}`}
+                        className="text-[11px] font-sans font-bold uppercase tracking-[0.18em] text-stone-500 hover:text-black transition-colors border-b border-stone-200 pb-0.5 hover:border-black"
+                      >
                         View — {prod.size}
-                      </span>
+                      </Link>
                     </div>
                   </div>
                 </div>

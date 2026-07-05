@@ -5,6 +5,7 @@ import {
   DETAIL_UPCOMING_PRODUCTS,
   getUpcomingProductAsPerfume,
 } from "@/lib/upcoming-products";
+import { NATURALS_PRODUCTS } from "@/lib/naturals-data";
 
 const availabilitySchema = z.object({
   items: z
@@ -24,6 +25,16 @@ export async function POST(request: NextRequest) {
     const products = [
       ...(await getAllProducts()),
       ...DETAIL_UPCOMING_PRODUCTS.map(getUpcomingProductAsPerfume),
+      ...NATURALS_PRODUCTS.map((n) => ({
+        id: n.id,
+        name: n.name,
+        price: n.price,
+        size: n.size,
+        categoryId: "naturals",
+        category: "Naturals",
+        images: [n.image],
+        badges: { soldOut: false },
+      })),
     ];
     const productMap = new Map(products.map((product) => [product.id, product]));
 
