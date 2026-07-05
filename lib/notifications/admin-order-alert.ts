@@ -226,8 +226,8 @@ export async function sendAdminCheckoutDraftAlert(draft: AdminCheckoutDraftAlert
   }
 
   const title = draft.type === "initiated"
-    ? "Checkout Initiated 🛒"
-    : "Checkout Lead Captured 👤";
+    ? "Checkout Initiated"
+    : "Checkout Lead Captured";
 
   const customerName = clean(draft.fullName) || "Anonymous";
   const phone = displayPhoneNumber(draft.phone) || "Not provided yet";
@@ -240,7 +240,7 @@ export async function sendAdminCheckoutDraftAlert(draft: AdminCheckoutDraftAlert
   const total = draft.grandTotal ? formatAmount(draft.grandTotal) : "Unknown";
 
   const message = [
-    `<b>${escapeHtml(title)}</b>`,
+    `<b>${escapeHtml(title)} ${draft.type === "initiated" ? "🛒" : "👤"}</b>`,
     "",
     `<b>Session:</b> ${escapeHtml(draft.sessionId.substring(0, 8))}...`,
     `<b>Value:</b> ${escapeHtml(total)}`,
