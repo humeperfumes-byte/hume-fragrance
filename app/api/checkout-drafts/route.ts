@@ -6,6 +6,7 @@ import { checkoutDrafts } from "@/db/schema";
 import { resolveIndiaAwareCountry } from "@/lib/admin-market";
 import { isAdminCapturedPath, isInternalAdminRequest } from "@/lib/admin-data-filters";
 import { displayPhoneNumber } from "@/lib/phone";
+import { sendAdminCheckoutDraftAlert } from "@/lib/notifications/admin-order-alert";
 
 const fragranceSelectionSchema = z.object({
   id: z.string().min(1).max(255),
@@ -113,7 +114,11 @@ export async function POST(request: NextRequest) {
     });
 
     const existing = await db
-      .select({ pricingBreakdown: checkoutDrafts.pricingBreakdown })
+      .select({
+        pricingBreakdown: checkoutDrafts.pricingBreakdown,
+        phone: checkoutDrafts.phone,
+        fullName: checkoutDrafts.fullName,
+      })
       .from(checkoutDrafts)
       .where(eq(checkoutDrafts.sessionId, data.sessionId))
       .limit(1);
@@ -123,6 +128,28 @@ export async function POST(request: NextRequest) {
       ...(data.pricingBreakdown ?? {}),
       ...(typeof overrideTotal === "number" ? { overrideTotal } : {}),
     };
+
+    // Trigger admin notifications for new checkouts or captured details
+    const isNewDraft = existing.length === 0;
+    const isContactFirstAdded = existing.length > 0 && !existing[0].phone && phone;
+
+    if (isNewDraft || isContactFirstAdded) {
+      if (data.cartSnapshot && data.cartSnapshot.length > 0) {
+        sendAdminCheckoutDraftAlert({
+          sessionId: data.sessionId,
+          fullName: data.details.fullName || null,
+          phone: phone || null,
+          email: data.details.email || null,
+          grandTotal: data.grandTotal ?? null,
+          cartSnapshot: data.cartSnapshot.map((item) => ({
+            name: item.name,
+            quantity: item.quantity,
+            size: item.size,
+          })),
+          type: isNewDraft ? "initiated" : "contact_added",
+        }).catch((err) => console.error("Error sending draft alert:", err));
+      }
+    }
 
     await db
       .insert(checkoutDrafts)

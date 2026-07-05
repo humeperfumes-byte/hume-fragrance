@@ -120,8 +120,9 @@ function getAlertTitle(order: AdminOrderAlertData) {
 export async function sendAdminOrderAlert(order: AdminOrderAlertData) {
   const botToken = process.env.ADMIN_TELEGRAM_BOT_TOKEN;
   const chatId = process.env.ADMIN_TELEGRAM_CHAT_ID;
+  const ntfyTopic = process.env.ADMIN_NTFY_TOPIC || process.env.NTFY_TOPIC;
 
-  if (!botToken || !chatId) {
+  if (!botToken && !chatId && !ntfyTopic) {
     return false;
   }
 
@@ -133,14 +134,6 @@ export async function sendAdminOrderAlert(order: AdminOrderAlertData) {
   const adminUrl = buildAdminOrderUrl();
   const trackingUrl = buildAdminTrackingUrl();
   const whatsappUrl = buildCustomerWhatsAppUrl(phone);
-  const keyboard = [
-    [{ text: "Open order panel", url: adminUrl }],
-    [
-      ...(whatsappUrl ? [{ text: "WhatsApp customer", url: whatsappUrl }] : []),
-      { text: "Add tracking", url: trackingUrl },
-    ],
-    [{ text: "Mark packed", url: adminUrl }],
-  ].filter((row) => row.length > 0);
 
   const message = [
     `<b>${escapeHtml(getAlertTitle(order))}</b>`,
@@ -157,30 +150,155 @@ export async function sendAdminOrderAlert(order: AdminOrderAlertData) {
     .filter(Boolean)
     .join("\n");
 
-  try {
-    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-        parse_mode: "HTML",
-        disable_web_page_preview: true,
-        reply_markup: {
-          inline_keyboard: keyboard,
-        },
-      }),
-    });
+  // 1. Send via Telegram
+  if (botToken && chatId) {
+    const keyboard = [
+      [{ text: "Open order panel", url: adminUrl }],
+      [
+        ...(whatsappUrl ? [{ text: "WhatsApp customer", url: whatsappUrl }] : []),
+        { text: "Add tracking", url: trackingUrl },
+      ],
+      [{ text: "Mark packed", url: adminUrl }],
+    ].filter((row) => row.length > 0);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Admin order Telegram alert failed:", errorText);
-      return false;
+    try {
+      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: message,
+          parse_mode: "HTML",
+          disable_web_page_preview: true,
+          reply_markup: {
+            inline_keyboard: keyboard,
+          },
+        }),
+      });
+    } catch (error) {
+      console.error("Admin order Telegram alert failed:", error);
     }
+  }
 
-    return true;
-  } catch (error) {
-    console.error("Admin order Telegram alert failed:", error);
+  // 2. Send via ntfy.sh
+  if (ntfyTopic) {
+    try {
+      const plainTextMessage = message.replace(/<[^>]*>/g, ""); // strip HTML tags
+      const headers: Record<string, string> = {
+        "Title": getAlertTitle(order),
+        "Priority": "high",
+        "Click": adminUrl,
+      };
+      await fetch(`https://ntfy.sh/${ntfyTopic}`, {
+        method: "POST",
+        headers,
+        body: plainTextMessage,
+      });
+    } catch (error) {
+      console.error("Admin order ntfy alert failed:", error);
+    }
+  }
+
+  return true;
+}
+
+export type AdminCheckoutDraftAlertData = {
+  sessionId: string;
+  fullName?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  grandTotal?: string | number | null;
+  cartSnapshot: Array<{
+    name: string;
+    quantity: number;
+    size?: string;
+  }>;
+  type: "initiated" | "contact_added";
+};
+
+export async function sendAdminCheckoutDraftAlert(draft: AdminCheckoutDraftAlertData) {
+  const botToken = process.env.ADMIN_TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.ADMIN_TELEGRAM_CHAT_ID;
+  const ntfyTopic = process.env.ADMIN_NTFY_TOPIC || process.env.NTFY_TOPIC;
+
+  if (!botToken && !chatId && !ntfyTopic) {
     return false;
   }
+
+  const title = draft.type === "initiated"
+    ? "Checkout Initiated 🛒"
+    : "Checkout Lead Captured 👤";
+
+  const customerName = clean(draft.fullName) || "Anonymous";
+  const phone = displayPhoneNumber(draft.phone) || "Not provided yet";
+  const email = clean(draft.email) || "Not provided yet";
+
+  const items = draft.cartSnapshot
+    .map((item) => `- ${item.quantity}x ${item.name}${item.size ? ` (${item.size})` : ""}`)
+    .join("\n");
+
+  const total = draft.grandTotal ? formatAmount(draft.grandTotal) : "Unknown";
+
+  const message = [
+    `<b>${escapeHtml(title)}</b>`,
+    "",
+    `<b>Session:</b> ${escapeHtml(draft.sessionId.substring(0, 8))}...`,
+    `<b>Value:</b> ${escapeHtml(total)}`,
+    `<b>Customer:</b> ${escapeHtml(customerName)}`,
+    `<b>Phone:</b> ${escapeHtml(phone)}`,
+    `<b>Email:</b> ${escapeHtml(email)}`,
+    items ? `<b>Items:</b>\n${escapeHtml(items)}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const adminUrl = buildAdminOrderUrl().replace("/orders", "/checkouts");
+  const whatsappUrl = buildCustomerWhatsAppUrl(draft.phone || null);
+
+  // Send via Telegram
+  if (botToken && chatId) {
+    const keyboard = [
+      [{ text: "Open checkout drafts", url: adminUrl }],
+      ...(whatsappUrl ? [[{ text: "WhatsApp lead", url: whatsappUrl }]] : []),
+    ];
+
+    try {
+      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: message,
+          parse_mode: "HTML",
+          disable_web_page_preview: true,
+          reply_markup: {
+            inline_keyboard: keyboard,
+          },
+        }),
+      });
+    } catch (error) {
+      console.error("Admin checkout draft Telegram alert failed:", error);
+    }
+  }
+
+  // Send via ntfy.sh
+  if (ntfyTopic) {
+    try {
+      const plainTextMessage = message.replace(/<[^>]*>/g, ""); // strip HTML tags
+      const headers: Record<string, string> = {
+        "Title": title,
+        "Priority": "default",
+        "Click": adminUrl,
+      };
+      await fetch(`https://ntfy.sh/${ntfyTopic}`, {
+        method: "POST",
+        headers,
+        body: plainTextMessage,
+      });
+    } catch (error) {
+      console.error("Admin checkout draft ntfy alert failed:", error);
+    }
+  }
+
+  return true;
 }
