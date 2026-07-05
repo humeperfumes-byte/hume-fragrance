@@ -13,7 +13,7 @@ import {
 } from "@/lib/cart-discounts";
 
 const REWARD_BANNER_DELAY_MS = 5000;
-const REWARD_BANNER_VISIBLE_MS = 10000;
+const REWARD_BANNER_VISIBLE_MS = 5000;
 
 function shouldHideRewardBanner(pathname: string | null) {
   return (

@@ -11,6 +11,7 @@ const leadUpdateSchema = z.object({
   leadNotes: z.string().max(10000).optional().nullable(),
   markContacted: z.boolean().optional(),
   nextFollowUpAt: z.string().datetime().optional().nullable(),
+  overrideTotal: z.number().optional().nullable(),
 });
 
 export async function GET(request: NextRequest) {
@@ -45,6 +46,18 @@ export async function PATCH(request: NextRequest) {
     const nextFollowUpAt = data.nextFollowUpAt ? new Date(data.nextFollowUpAt) : null;
     const shouldUpdateContactedAt = data.markContacted || data.leadStatus === "contacted";
 
+    const existing = await db
+      .select({ pricingBreakdown: checkoutDrafts.pricingBreakdown })
+      .from(checkoutDrafts)
+      .where(eq(checkoutDrafts.id, data.id))
+      .limit(1);
+
+    const pricingBreakdown = existing[0]?.pricingBreakdown || {};
+    const updatedPricingBreakdown = {
+      ...pricingBreakdown,
+      overrideTotal: data.overrideTotal,
+    };
+
     await db
       .update(checkoutDrafts)
       .set({
@@ -53,6 +66,7 @@ export async function PATCH(request: NextRequest) {
         lastContactedAt: shouldUpdateContactedAt ? new Date() : undefined,
         nextFollowUpAt:
           data.nextFollowUpAt === undefined ? undefined : nextFollowUpAt,
+        pricingBreakdown: updatedPricingBreakdown,
         updatedAt: new Date(),
       })
       .where(eq(checkoutDrafts.id, data.id));

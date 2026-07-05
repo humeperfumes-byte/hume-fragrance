@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { checkoutDrafts } from "@/db/schema";
@@ -111,6 +112,18 @@ export async function POST(request: NextRequest) {
       state: data.details.state,
     });
 
+    const existing = await db
+      .select({ pricingBreakdown: checkoutDrafts.pricingBreakdown })
+      .from(checkoutDrafts)
+      .where(eq(checkoutDrafts.sessionId, data.sessionId))
+      .limit(1);
+
+    const overrideTotal = existing[0]?.pricingBreakdown?.overrideTotal;
+    const finalPricingBreakdown = {
+      ...(data.pricingBreakdown ?? {}),
+      ...(typeof overrideTotal === "number" ? { overrideTotal } : {}),
+    };
+
     await db
       .insert(checkoutDrafts)
       .values({
@@ -140,7 +153,7 @@ export async function POST(request: NextRequest) {
         subtotal: typeof data.subtotal === "number" ? data.subtotal.toFixed(2) : null,
         shippingFee: typeof data.shippingFee === "number" ? data.shippingFee.toFixed(2) : null,
         grandTotal: typeof data.grandTotal === "number" ? data.grandTotal.toFixed(2) : null,
-        pricingBreakdown: data.pricingBreakdown ?? {},
+        pricingBreakdown: finalPricingBreakdown,
         cartSnapshot: data.cartSnapshot ?? [],
         country,
         ipAddress,
@@ -175,7 +188,7 @@ export async function POST(request: NextRequest) {
           subtotal: typeof data.subtotal === "number" ? data.subtotal.toFixed(2) : null,
           shippingFee: typeof data.shippingFee === "number" ? data.shippingFee.toFixed(2) : null,
           grandTotal: typeof data.grandTotal === "number" ? data.grandTotal.toFixed(2) : null,
-          pricingBreakdown: data.pricingBreakdown ?? {},
+          pricingBreakdown: finalPricingBreakdown,
           cartSnapshot: data.cartSnapshot ?? [],
           country,
           ipAddress,

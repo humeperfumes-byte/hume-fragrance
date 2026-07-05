@@ -586,7 +586,7 @@ function CheckoutDetailSheet({
 
 export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft[] }) {
   const [workflowById, setWorkflowById] = useState<
-    Record<string, { leadStatus: LeadStatus; leadNotes: string; nextFollowUpAt: string }>
+    Record<string, { leadStatus: LeadStatus; leadNotes: string; nextFollowUpAt: string; overrideTotal: string }>
   >({});
   const [savingDraftId, setSavingDraftId] = useState<string | null>(null);
   const [selectedDraft, setSelectedDraft] = useState<ScoredCheckoutDraft | null>(null);
@@ -610,11 +610,12 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
       leadStatus: ((draft.leadStatus as LeadStatus | null) || "new") as LeadStatus,
       leadNotes: draft.leadNotes || "",
       nextFollowUpAt: formatDateTimeLocal(draft.nextFollowUpAt),
+      overrideTotal: String(draft.pricingBreakdown?.overrideTotal ?? ""),
     };
 
   const updateWorkflow = (
     draft: CheckoutDraft,
-    patch: Partial<{ leadStatus: LeadStatus; leadNotes: string; nextFollowUpAt: string }>,
+    patch: Partial<{ leadStatus: LeadStatus; leadNotes: string; nextFollowUpAt: string; overrideTotal: string }>,
   ) => {
     setWorkflowById((prev) => ({
       ...prev,
@@ -628,6 +629,12 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
   const saveWorkflow = async (draft: CheckoutDraft, markContacted = false) => {
     const workflow = getWorkflow(draft);
     setSavingDraftId(draft.id);
+    
+    const parsedOverride = parseFloat(workflow.overrideTotal);
+    const overrideTotal = Number.isFinite(parsedOverride) && parsedOverride > 0
+      ? parsedOverride
+      : null;
+
     try {
       const response = await fetch("/api/admin/checkout-drafts", {
         method: "PATCH",
@@ -640,6 +647,7 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
           nextFollowUpAt: workflow.nextFollowUpAt
             ? new Date(workflow.nextFollowUpAt).toISOString()
             : null,
+          overrideTotal,
         }),
       });
 
@@ -869,7 +877,8 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
                 onClick={(event) => event.stopPropagation()}
                 onKeyDown={(event) => event.stopPropagation()}
               >
-                <div className="grid gap-2 sm:grid-cols-[130px_1fr]">
+
+                <div className="grid gap-2 sm:grid-cols-[130px_150px_1fr]">
                   <select
                     value={workflow.leadStatus}
                     onChange={(event) =>
@@ -883,6 +892,18 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
                       </option>
                     ))}
                   </select>
+
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Override Total (₹)"
+                      value={workflow.overrideTotal}
+                      onChange={(event) =>
+                        updateWorkflow(draft, { overrideTotal: event.target.value })
+                      }
+                      className="h-9 w-full rounded-md border border-white/10 bg-[#101010] px-3 text-xs text-white outline-none focus:border-white/30"
+                    />
+                  </div>
 
                   <div className="relative">
                     <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/25" />

@@ -29,7 +29,8 @@ export async function POST(request: NextRequest) {
 
     const issues = data.items
       .map((item) => {
-        const product = productMap.get(item.id);
+        const lookupId = item.id.startsWith("discovery-set-") ? "hume-discovery-set" : item.id;
+        const product = productMap.get(lookupId);
         if (!product) {
           return {
             id: item.id,

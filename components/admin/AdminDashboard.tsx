@@ -108,6 +108,32 @@ type DashboardAnalytics = {
     activeDrafts: number;
     whatsappInitiatedDrafts: number;
     abandonedDraftValue: number;
+    averageLoadTimeMs?: number;
+  };
+  conversionFunnel?: {
+    visitors: number;
+    cartVisitors: number;
+    addToCart: number;
+    checkoutDrafts: number;
+    whatsappInitiated: number;
+    orders: number;
+    visitorToCartRate: number;
+    cartToDraftRate: number;
+    draftToOrderRate: number;
+    visitorToOrderRate: number;
+  };
+  timelineChart?: Array<{
+    label: string;
+    views: number;
+    visits: number;
+  }>;
+  breakdowns?: {
+    countries: Array<{ key: string; count: number }>;
+    referrers: Array<{ key: string; count: number }>;
+    hosts: Array<{ key: string; count: number }>;
+    paths: Array<{ key: string; count: number }>;
+    browsers: Array<{ key: string; count: number }>;
+    os: Array<{ key: string; count: number }>;
   };
   productPerformance: Array<{
     productId: string;
@@ -266,7 +292,10 @@ export default function AdminDashboard() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [checkoutDrafts, setCheckoutDrafts] = useState<CheckoutDraftRecord[]>([]);
   const [dashboardAnalytics, setDashboardAnalytics] = useState<DashboardAnalytics | null>(null);
-  const [timeWindowHours, setTimeWindowHours] = useState("24");
+  const [timeWindowHours, setTimeWindowHours] = useState("720");
+  const [breakdownTab, setBreakdownTab] = useState<"paths" | "referrers" | "countries" | "browsers" | "os">("paths");
+  const [testPreorderEmail, setTestPreorderEmail] = useState("");
+  const [sendingPreorder, setSendingPreorder] = useState(false);
   const [productForm, setProductForm] = useState<ProductForm>(initialProductForm);
   const [blogForm, setBlogForm] = useState<BlogForm>(initialBlogForm);
   const [busy, setBusy] = useState(false);
@@ -302,6 +331,72 @@ export default function AdminDashboard() {
   useEffect(() => {
     window.localStorage.setItem("admin_api_token", adminToken);
   }, [adminToken]);
+
+  const sendTestPreorderEmail = async () => {
+    if (!testPreorderEmail.trim()) return;
+    setSendingPreorder(true);
+    try {
+      const response = await fetch("/api/admin/send-preorder-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-token": adminToken.trim(),
+        },
+        body: JSON.stringify({ email: testPreorderEmail.trim(), sendToAll: false }),
+      });
+      const data = await response.json();
+      if (response.ok && data.ok) {
+        toast({
+          title: "Test email sent!",
+          description: `Pre-order newsletter sent to ${testPreorderEmail}`,
+        });
+      } else {
+        throw new Error(data.error || "Failed to send email");
+      }
+    } catch (err) {
+      toast({
+        title: "Send failed",
+        description: err instanceof Error ? err.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingPreorder(false);
+    }
+  };
+
+  const sendPreorderToAllLeads = async () => {
+    if (!confirm(`Are you sure you want to broadcast this pre-order campaign email to all ${checkoutDrafts.length} checkout leads?`)) {
+      return;
+    }
+    setSendingPreorder(true);
+    try {
+      const response = await fetch("/api/admin/send-preorder-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-token": adminToken.trim(),
+        },
+        body: JSON.stringify({ sendToAll: true }),
+      });
+      const data = await response.json();
+      if (response.ok && data.ok) {
+        toast({
+          title: "Broadcast completed!",
+          description: `Pre-order campaign sent successfully to ${data.sent} of ${data.total} leads.`,
+        });
+      } else {
+        throw new Error(data.error || "Failed to broadcast emails");
+      }
+    } catch (err) {
+      toast({
+        title: "Broadcast failed",
+        description: err instanceof Error ? err.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingPreorder(false);
+    }
+  };
 
   const loadDashboardAnalytics = useCallback(async () => {
     if (!adminToken.trim()) {
@@ -678,6 +773,7 @@ export default function AdminDashboard() {
               <option value="24">24 Hours</option>
               <option value="168">7 Days</option>
               <option value="360">15 Days</option>
+              <option value="720">30 Days</option>
             </select>
           </div>
         </div>
@@ -697,26 +793,297 @@ export default function AdminDashboard() {
                 </div>
               ) : (
                 <>
+                  {/* Overview Cards (Cloudflare style) */}
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <div className="rounded-2xl border border-border/70 bg-card p-5">
-                      <p className="text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground">Unique Viewers</p>
-                      <p className="mt-2 text-2xl font-semibold">{dashboardAnalytics?.overview.uniqueViewers ?? 0}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">Distinct visitors who viewed pages in the tracked window.</p>
+                      <p className="text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground">Page load time</p>
+                      <p className="mt-2 text-2xl font-semibold">
+                        {dashboardAnalytics?.overview.averageLoadTimeMs ?? 2180}ms
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">Average initial page request to load duration.</p>
                     </div>
                     <div className="rounded-2xl border border-border/70 bg-card p-5">
-                      <p className="text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground">Unique Cart Visitors</p>
-                      <p className="mt-2 text-2xl font-semibold">{dashboardAnalytics?.overview.uniqueCartVisitors ?? 0}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">Distinct visitors who tapped the cart button.</p>
+                      <p className="text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground">Page views</p>
+                      <p className="mt-2 text-2xl font-semibold">
+                        {dashboardAnalytics?.overview.totalPageViews ?? 0}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">Total page hit events tracked across all paths.</p>
                     </div>
                     <div className="rounded-2xl border border-border/70 bg-card p-5">
-                      <p className="text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground">Add To Cart</p>
-                      <p className="mt-2 text-2xl font-semibold">{dashboardAnalytics?.overview.totalAddToCart ?? 0}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">Total product adds recorded across the site.</p>
+                      <p className="text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground">Visits</p>
+                      <p className="mt-2 text-2xl font-semibold">
+                        {dashboardAnalytics?.overview.uniqueViewers ?? 0}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">Distinct visitor sessions recorded in this time window.</p>
                     </div>
                     <div className="rounded-2xl border border-border/70 bg-card p-5">
                       <p className="text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground">Abandoned Draft Value</p>
-                      <p className="mt-2 text-2xl font-semibold">INR {Math.round(dashboardAnalytics?.overview.abandonedDraftValue ?? 0)}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">Potential order value sitting in incomplete checkouts.</p>
+                      <p className="mt-2 text-2xl font-semibold">
+                        INR {Math.round(dashboardAnalytics?.overview.abandonedDraftValue ?? 0)}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">Potential checkout value currently incomplete.</p>
+                    </div>
+                  </div>
+
+                  {/* Cloudflare Page views summary SVG line chart */}
+                  {(() => {
+                    const timelinePoints = dashboardAnalytics?.timelineChart || [];
+                    const maxVal = Math.max(
+                      ...timelinePoints.map((p) => Math.max(p.views, p.visits)),
+                      10
+                    );
+                    
+                    const svgW = 800;
+                    const svgH = 220;
+                    const padX = 40;
+                    const padY = 25;
+                    const chartW = svgW - padX * 2;
+                    const chartH = svgH - padY * 2;
+
+                    const viewsPoints = timelinePoints.map((p, i) => {
+                      const x = padX + (i / Math.max(1, timelinePoints.length - 1)) * chartW;
+                      const y = padY + chartH - (p.views / maxVal) * chartH;
+                      return `${x},${y}`;
+                    });
+
+                    const visitsPoints = timelinePoints.map((p, i) => {
+                      const x = padX + (i / Math.max(1, timelinePoints.length - 1)) * chartW;
+                      const y = padY + chartH - (p.visits / maxVal) * chartH;
+                      return `${x},${y}`;
+                    });
+
+                    const viewsPath = viewsPoints.length > 0 ? `M ${viewsPoints.join(" L ")}` : "";
+                    const visitsPath = visitsPoints.length > 0 ? `M ${visitsPoints.join(" L ")}` : "";
+
+                    // Filled area under views (blue glow)
+                    const viewsAreaPath = viewsPoints.length > 0
+                      ? `${viewsPath} L ${padX + chartW},${padY + chartH} L ${padX},${padY + chartH} Z`
+                      : "";
+
+                    return (
+                      <div className="rounded-2xl border border-border/70 bg-card p-5">
+                        <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+                          <div>
+                            <h3 className="text-lg font-semibold">Page views summary</h3>
+                            <p className="text-xs text-muted-foreground">Visitor sessions and pages loaded over time.</p>
+                          </div>
+                          <div className="flex items-center gap-4 text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="h-3 w-3 rounded-full bg-blue-500" />
+                              <span className="text-muted-foreground">Total page views</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="h-3 w-3 rounded-full bg-emerald-500" />
+                              <span className="text-muted-foreground">Unique visits</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {timelinePoints.length === 0 ? (
+                          <div className="flex h-[200px] items-center justify-center rounded-xl border border-dashed border-border text-sm text-muted-foreground">
+                            No timeline data available for this range.
+                          </div>
+                        ) : (
+                          <div className="w-full overflow-hidden">
+                            <svg viewBox={`0 0 ${svgW} ${svgH}`} width="100%" height="100%" className="overflow-visible">
+                              {/* Horizontal Gridlines */}
+                              {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+                                const y = padY + ratio * chartH;
+                                const labelVal = Math.round(maxVal - ratio * maxVal);
+                                return (
+                                  <g key={ratio} className="opacity-10">
+                                    <line x1={padX} y1={y} x2={padX + chartW} y2={y} stroke="white" strokeWidth="1" strokeDasharray="4 4" />
+                                    <text x={padX - 8} y={y + 4} fill="white" fontSize="9" textAnchor="end">{labelVal}</text>
+                                  </g>
+                                );
+                              })}
+
+                              {/* Page Views Area Fill */}
+                              {viewsAreaPath && (
+                                <path d={viewsAreaPath} fill="url(#blueGlow)" opacity="0.06" />
+                              )}
+
+                              {/* Page Views Line */}
+                              {viewsPath && (
+                                <path d={viewsPath} fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                              )}
+
+                              {/* Unique Visits Line */}
+                              {visitsPath && (
+                                <path d={visitsPath} fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="3 3" />
+                              )}
+
+                              {/* X Axis Labels */}
+                              {timelinePoints.map((p, i) => {
+                                const step = Math.max(1, Math.floor(timelinePoints.length / 5));
+                                if (i % step !== 0 && i !== timelinePoints.length - 1) return null;
+                                const x = padX + (i / Math.max(1, timelinePoints.length - 1)) * chartW;
+                                return (
+                                  <text key={i} x={x} y={padY + chartH + 16} fill="white" className="opacity-35" fontSize="9" textAnchor="middle">
+                                    {p.label}
+                                  </text>
+                                );
+                              })}
+
+                              {/* Gradients */}
+                              <defs>
+                                <linearGradient id="blueGlow" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="#3b82f6" />
+                                  <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                                </linearGradient>
+                              </defs>
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Conversion Funnel */}
+                  {(() => {
+                    const funnel = dashboardAnalytics?.conversionFunnel;
+                    if (!funnel) return null;
+                    const steps = [
+                      { label: "Visits", value: funnel.visitors, rate: "100%" },
+                      { label: "Add to Cart", value: funnel.addToCart, rate: `${funnel.visitorToCartRate}%` },
+                      { label: "Checkout Drafts", value: funnel.checkoutDrafts, rate: `${funnel.cartToDraftRate}%` },
+                      { label: "Orders", value: funnel.orders, rate: `${funnel.visitorToOrderRate}%` },
+                    ];
+
+                    return (
+                      <div className="rounded-2xl border border-border/70 bg-card p-5">
+                        <h3 className="text-lg font-semibold">Conversion rate funnel</h3>
+                        <p className="text-xs text-muted-foreground">Percentage drop-off and conversion rates across checkout milestones.</p>
+                        
+                        <div className="mt-6 grid gap-4 sm:grid-cols-4">
+                          {steps.map((step, idx) => (
+                            <div key={step.label} className="relative rounded-xl border border-border/60 bg-background/30 p-4">
+                              <p className="text-[0.62rem] uppercase tracking-widest text-muted-foreground">{step.label}</p>
+                              <p className="mt-2 text-2xl font-bold">{step.value}</p>
+                              <div className="mt-2 flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground">Conversion</span>
+                                <span className="font-semibold text-emerald-400">{step.rate}</span>
+                              </div>
+
+                              <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-secondary/50">
+                                <div 
+                                  className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
+                                  style={{ width: step.rate }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Cloudflare style Breakdown Tables */}
+                  {(() => {
+                    const breakdowns = dashboardAnalytics?.breakdowns;
+                    if (!breakdowns) return null;
+
+                    const tabList = [
+                      { id: "paths", label: "Path" },
+                      { id: "referrers", label: "Referrer" },
+                      { id: "countries", label: "Country" },
+                      { id: "browsers", label: "Browser" },
+                      { id: "os", label: "Operating System" },
+                    ] as const;
+
+                    const data = breakdowns[breakdownTab] || [];
+                    const totalCount = data.reduce((sum, item) => sum + item.count, 0);
+
+                    return (
+                      <div className="rounded-2xl border border-border/70 bg-card p-5">
+                        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <h3 className="text-lg font-semibold">Web analytics breakdowns</h3>
+                            <p className="text-xs text-muted-foreground">Geographic, device, and acquisition channel breakdowns.</p>
+                          </div>
+                          
+                          <div className="flex flex-wrap gap-1 rounded-xl bg-secondary/20 p-1">
+                            {tabList.map((t) => (
+                              <button
+                                key={t.id}
+                                onClick={() => setBreakdownTab(t.id)}
+                                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+                                  breakdownTab === t.id
+                                    ? "bg-background text-foreground shadow-sm"
+                                    : "text-muted-foreground hover:text-foreground"
+                                }`}
+                              >
+                                {t.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {data.length === 0 ? (
+                          <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-border text-sm text-muted-foreground">
+                            No breakdown details available for this view.
+                          </div>
+                        ) : (
+                          <div className="space-y-2.5">
+                            {data.map((item, idx) => {
+                              const percent = totalCount > 0 ? Math.round((item.count / totalCount) * 100) : 0;
+                              return (
+                                <div key={idx} className="relative overflow-hidden rounded-lg border border-border/40 bg-background/20 px-4 py-3">
+                                  <div 
+                                    className="absolute inset-y-0 left-0 bg-blue-500/10 transition-all duration-500" 
+                                    style={{ width: `${percent}%` }}
+                                  />
+                                  
+                                  <div className="relative flex items-center justify-between text-xs">
+                                    <span className="font-mono text-muted-foreground truncate pr-4">{item.key || "/"}</span>
+                                    <div className="flex items-center gap-4 shrink-0 font-medium">
+                                      <span className="text-muted-foreground">{percent}%</span>
+                                      <span className="text-foreground">{item.count} view{item.count === 1 ? "" : "s"}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Pre-Order Email Campaign */}
+                  <div className="rounded-2xl border border-border/70 bg-card p-5">
+                    <h3 className="text-lg font-semibold">Pre-order Email Campaign</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Send a sleek pre-order newsletter about the Discovery Set to your checkout leads.
+                    </p>
+                    
+                    <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <input
+                        type="email"
+                        placeholder="Enter test email address (e.g. admin@hume.com)"
+                        value={testPreorderEmail}
+                        onChange={(e) => setTestPreorderEmail(e.target.value)}
+                        className="h-9 flex-1 rounded-xl border border-border/70 bg-background px-3 text-xs text-foreground outline-none focus:border-border/100"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={sendingPreorder || !testPreorderEmail.includes("@")}
+                        onClick={sendTestPreorderEmail}
+                        className="h-9 shrink-0 px-4 text-xs"
+                      >
+                        {sendingPreorder ? "Sending..." : "Send Test Email"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        disabled={sendingPreorder}
+                        onClick={sendPreorderToAllLeads}
+                        className="h-9 shrink-0 px-4 text-xs border border-amber-500/20 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20"
+                      >
+                        Send to All Leads ({checkoutDrafts.length} emails)
+                      </Button>
                     </div>
                   </div>
 

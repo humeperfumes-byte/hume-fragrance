@@ -51,6 +51,36 @@ function getCurrentCaptureUrl(pathWithQuery: string) {
   return `${window.location.origin}${pathWithQuery}`;
 }
 
+let initialLoadTimeCached: number | null = null;
+function getInitialLoadTime() {
+  if (initialLoadTimeCached !== null) return initialLoadTimeCached;
+  if (typeof window === "undefined" || !window.performance) return null;
+  
+  try {
+    const navs = window.performance.getEntriesByType("navigation");
+    if (navs.length > 0) {
+      const nav = navs[0] as PerformanceNavigationTiming;
+      const duration = Math.round(nav.duration);
+      if (duration > 0) {
+        initialLoadTimeCached = duration;
+        return duration;
+      }
+    }
+    // Fallback to legacy timing
+    const timing = window.performance.timing;
+    if (timing) {
+      const duration = timing.loadEventEnd - timing.navigationStart;
+      if (duration > 0) {
+        initialLoadTimeCached = duration;
+        return duration;
+      }
+    }
+  } catch (e) {
+    console.error(e);
+  }
+  return null;
+}
+
 export default function ConsentTimelineTracker() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -77,6 +107,7 @@ export default function ConsentTimelineTracker() {
             ...(payload || {}),
             siteHost: window.location.hostname,
             siteOrigin: window.location.origin,
+            loadTimeMs: getInitialLoadTime() ?? undefined,
           },
         }),
       });

@@ -523,6 +523,7 @@ export default function CheckoutClient() {
   const [isCityListOpen, setIsCityListOpen] = useState(false);
   const [citySearchQuery, setCitySearchQuery] = useState("");
   const [showAlternatePhone, setShowAlternatePhone] = useState(false);
+  const [adminOverrideTotal, setAdminOverrideTotal] = useState<number | null>(null);
   const [details, setDetails] = useState<CheckoutDetails>(() => {
     if (typeof window === "undefined") return defaultDetails;
     try {
@@ -632,9 +633,10 @@ export default function CheckoutClient() {
       : 0;
   const shippingFee = hasWelcomeBackBenefit ? 0 : regularShippingFee;
   const shippingSavings = Math.max(0, regularShippingFee - shippingFee);
-  const grandTotal =
+  const rawGrandTotal =
     Math.max(0, totalPrice - couponDiscount - welcomeBackDiscount) +
     shippingFee;
+  const grandTotal = adminOverrideTotal !== null ? adminOverrideTotal : rawGrandTotal;
   const appliedOfferCodes = [appliedCouponCode, hasWelcomeBackBenefit ? effectiveWelcomeBackCode : null]
     .filter(Boolean)
     .join(" + ");
@@ -654,6 +656,7 @@ export default function CheckoutClient() {
       grandTotal,
       totalSavings: couponDiscount + welcomeBackDiscount + shippingSavings,
       appliedOfferCodes: appliedOfferCodes || null,
+      adminOverrideTotal,
     }),
     [
       appliedCoupon?.code,
@@ -671,6 +674,7 @@ export default function CheckoutClient() {
       totalPrice,
       welcomeBackDiscount,
       welcomeBackLabel,
+      adminOverrideTotal,
     ],
   );
   const giftItems = useMemo(() => items.filter((item) => item.isGift), [items]);
@@ -738,6 +742,32 @@ export default function CheckoutClient() {
     loadCoupons();
     return () => {
       active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const checkOverride = async () => {
+      const sessionId = checkoutSessionIdRef.current || getOrCreateCheckoutSessionId();
+      if (!sessionId) return;
+      try {
+        const response = await fetch(`/api/checkout-override?sessionId=${sessionId}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        if (active && typeof data.overrideTotal === "number") {
+          setAdminOverrideTotal(data.overrideTotal);
+        }
+      } catch (err) {
+        console.error("Failed to fetch checkout override:", err);
+      }
+    };
+
+    checkOverride();
+    const interval = setInterval(checkOverride, 4000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
     };
   }, []);
 
@@ -2122,6 +2152,14 @@ export default function CheckoutClient() {
                     </span>
                     <span className="text-emerald-600">
                       -{formatINR(shippingSavings)}
+                    </span>
+                  </div>
+                ) : null}
+                {adminOverrideTotal !== null && rawGrandTotal > adminOverrideTotal ? (
+                  <div className="flex items-center justify-between">
+                    <span className="text-black/45">Special Discount</span>
+                    <span className="text-emerald-600">
+                      -{formatINR(rawGrandTotal - adminOverrideTotal)}
                     </span>
                   </div>
                 ) : null}
