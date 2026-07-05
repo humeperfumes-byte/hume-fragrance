@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getAllPublicProducts } from "@/lib/db/products";
+import { getAllProducts } from "@/lib/db/products";
 import {
   DETAIL_UPCOMING_PRODUCTS,
   getUpcomingProductAsPerfume,
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const data = availabilitySchema.parse(body);
     const products = [
-      ...(await getAllPublicProducts()),
+      ...(await getAllProducts()),
       ...DETAIL_UPCOMING_PRODUCTS.map(getUpcomingProductAsPerfume),
     ];
     const productMap = new Map(products.map((product) => [product.id, product]));
