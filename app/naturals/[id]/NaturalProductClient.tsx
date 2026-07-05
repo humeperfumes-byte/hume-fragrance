@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, ShoppingBag, Check, ChevronDown, Sparkles } from "lucide-react";
+import { ArrowLeft, Check, ShoppingBag } from "lucide-react";
 import { useCart } from "@/context/CartContext";
-import { type NaturalProduct } from "@/lib/naturals-data";
+import { type NaturalProduct, type NaturalSizeOption } from "@/lib/naturals-data";
 
 interface NaturalProductClientProps {
   product: NaturalProduct;
@@ -14,54 +14,67 @@ interface NaturalProductClientProps {
 
 export default function NaturalProductClient({ product }: NaturalProductClientProps) {
   const { addItem, setIsCartOpen } = useCart();
+  
+  // Default to the first size option (e.g., 10ml)
+  const [selectedSize, setSelectedSize] = useState<NaturalSizeOption>(product.sizes[0] ?? { ml: "10ml", price: product.price });
   const [isAdded, setIsAdded] = useState(false);
-  const [activeTab, setActiveTab] = useState<"sourcing" | "olfactory" | "usage">("sourcing");
+
+  // Compute price per ML
+  const pricePerMl = useMemo(() => {
+    if (selectedSize.ml === "Custom") return null;
+    const mlValue = parseInt(selectedSize.ml);
+    if (isNaN(mlValue) || mlValue === 0) return null;
+    return Math.round(selectedSize.price / mlValue);
+  }, [selectedSize]);
 
   const handleAddToBag = () => {
+    if (selectedSize.ml === "Custom") {
+      // Bespoke inquiry via WhatsApp
+      const message = `Hello HUME, I am interested in a Custom Bespoke order for your Natural botanical oil:\n\n*${product.name}*\nOrigin: ${product.origin}\n\nPlease help me custom size this order.`;
+      const whatsappUrl = `https://wa.me/919559024822?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, "_blank");
+      return;
+    }
+
     addItem({
-      id: product.id,
-      name: product.name,
+      id: `${product.id}-${selectedSize.ml}`,
+      name: `${product.name} (${selectedSize.ml})`,
       inspiration: product.scientificName,
       category: "Naturals",
       image: product.image,
-      price: product.price,
-      size: product.size,
+      price: selectedSize.price,
+      size: selectedSize.ml,
     });
     setIsAdded(true);
     setIsCartOpen(true);
     setTimeout(() => setIsAdded(false), 2000);
   };
 
-  const handleWhatsAppCheckout = () => {
-    const message = `Hello HUME, I want to order your Natural botanical oil:\n\n*${product.name} (${product.size})* - ₹${product.price}\nOrigin: ${product.origin}\n\nPlease confirm availability and payment details.`;
-    const whatsappUrl = `https://wa.me/919559024822?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, "_blank");
-  };
+  // Get sourcing city name
+  const sourcingCity = useMemo(() => {
+    return product.origin.split(",")[0] ?? "Origin";
+  }, [product.origin]);
 
   return (
-    <div className="min-h-screen bg-[#FAF9F5] text-stone-900 selection:bg-stone-900 selection:text-white font-sans">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="bg-[#FAF9F6] text-stone-900 selection:bg-stone-900 selection:text-white font-sans min-h-screen">
+      
+      {/* 1. HERO SPLIT SECTION */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         
-        {/* Sleek Breadcrumb/Back link */}
+        {/* Back Link */}
         <Link 
           href="/naturals" 
-          className="inline-flex items-center gap-2.5 text-[11px] font-sans font-bold uppercase tracking-[0.2em] text-stone-500 hover:text-stone-900 transition-colors py-2 mb-8 group"
+          className="inline-flex items-center gap-2.5 text-[10px] font-sans font-bold uppercase tracking-[0.24em] text-stone-450 hover:text-stone-900 transition-colors mb-10 group"
         >
-          <ArrowLeft size={12} className="transition-transform group-hover:-translate-x-1" />
+          <ArrowLeft size={11} className="transition-transform group-hover:-translate-x-1" />
           The Library
         </Link>
 
-        {/* Dynamic Split Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-18 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
           
-          {/* Left Media Column - Sticky on Desktop */}
-          <div className="lg:col-span-6 lg:sticky lg:top-28">
-            <div className="relative aspect-[0.82] w-full overflow-hidden bg-stone-100 rounded-2xl border border-stone-200/50 shadow-[0_12px_40px_rgba(27,24,20,0.04)]">
-              {/* Product Number Badge */}
-              <span className="absolute left-6 top-6 z-20 bg-white/90 backdrop-blur-sm px-4 py-2 font-serif text-sm italic tracking-widest text-stone-900 shadow-sm border border-stone-200/30">
-                {product.number}
-              </span>
-
+          {/* Left Column: Image Container */}
+          <div className="lg:col-span-6 sticky top-28">
+            <div className="relative aspect-[0.98] w-full overflow-hidden bg-stone-100 rounded-lg border border-stone-200/40 shadow-sm">
               <Image
                 src={product.image}
                 alt={product.name}
@@ -72,152 +85,271 @@ export default function NaturalProductClient({ product }: NaturalProductClientPr
               />
             </div>
             
-            {/* Origin Caption */}
             <div className="mt-4 flex items-center justify-between text-[10px] font-bold tracking-[0.2em] text-stone-400 px-1">
-              <span>EXTRACTION METHOD</span>
-              <span className="text-right text-stone-600 uppercase">{product.extractionMethod}</span>
+              <span>SINGLE ORIGIN CONCENTRATE</span>
+              <span className="text-right text-stone-600 uppercase">BATCH TESTED & GC/MS PROVEN</span>
             </div>
           </div>
 
-          {/* Right Details Copy Column */}
+          {/* Right Column: Details Content */}
           <div className="lg:col-span-6 lg:pl-4 flex flex-col justify-start">
             
-            {/* Header Area */}
-            <div className="border-b border-stone-200/80 pb-6 mb-8">
-              <span className="text-[10px] font-bold uppercase tracking-[0.26em] text-stone-500 block mb-3">
-                BOTANICAL ESSENCE
-              </span>
-              <h1 className="font-serif text-4xl sm:text-5xl lg:text-[3.4rem] font-semibold leading-[1.08] text-stone-950 mb-3.5 tracking-tight">
-                {product.name}
-              </h1>
-              <p className="font-serif italic text-stone-500 text-lg sm:text-xl tracking-wide leading-none">
-                {product.scientificName}
-              </p>
-            </div>
+            {/* Tagline */}
+            <span className="text-[10px] font-sans font-bold uppercase tracking-[0.25em] text-stone-450 block mb-3.5">
+              {product.tags}
+            </span>
 
-            {/* Price & Size Info */}
-            <div className="flex items-baseline justify-between mb-8">
-              <div>
-                <span className="text-3xl font-medium tracking-tight text-stone-950 font-sans">
-                  ₹{product.price.toLocaleString("en-IN")}
-                </span>
-                <span className="text-xs text-stone-500 ml-1.5 uppercase font-sans font-semibold tracking-wider">
-                  INR
-                </span>
-              </div>
-              <span className="text-xs font-bold uppercase tracking-[0.2em] text-stone-500 bg-white/80 border border-stone-200 px-3 py-1.5 rounded-md">
-                Volume: {product.size}
-              </span>
-            </div>
+            {/* Title */}
+            <h1 className="font-serif text-5xl sm:text-6xl lg:text-[4.2rem] font-semibold leading-[1.05] text-stone-950 mb-3 tracking-tight">
+              {product.name}
+            </h1>
+
+            {/* Scientific Name */}
+            <p className="font-serif italic text-stone-500 text-lg sm:text-xl tracking-wide leading-none mb-7">
+              {product.scientificName}
+            </p>
+
+            {/* Highlighted Quote */}
+            <p className="font-serif italic text-stone-850 text-lg sm:text-xl leading-relaxed mb-6 border-l-2 border-stone-300 pl-4 py-0.5">
+              {product.tagline}
+            </p>
 
             {/* Description */}
-            <p className="text-[15px] leading-7 text-stone-700 font-light mb-8">
+            <p className="text-[14.5px] leading-7 text-stone-650 font-light mb-8 max-w-xl">
               {product.description}
             </p>
 
-            {/* CTAs */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-10">
-              <button
-                onClick={handleAddToBag}
-                className="flex-1 h-14 bg-stone-950 text-white rounded-xl font-sans text-xs font-bold uppercase tracking-[0.22em] transition-all hover:bg-black active:scale-[0.985] flex items-center justify-center gap-2 shadow-[0_12px_24px_rgba(0,0,0,0.12)]"
-              >
-                {isAdded ? (
-                  <>
-                    <Check size={14} />
-                    Added to bag
-                  </>
-                ) : (
-                  <>
-                    <ShoppingBag size={14} />
-                    Add to bag — ₹{product.price.toLocaleString("en-IN")}
-                  </>
+            {/* Origin Grid Table */}
+            <div className="h-[0.5px] bg-stone-200/80 w-full" />
+            <div className="grid grid-cols-2 gap-x-8 gap-y-6 py-7 text-sm">
+              <div>
+                <span className="block text-[9px] font-bold uppercase tracking-[0.22em] text-stone-400 mb-1">ORIGIN</span>
+                <span className="text-stone-900 font-medium">{product.origin}</span>
+              </div>
+              <div>
+                <span className="block text-[9px] font-bold uppercase tracking-[0.22em] text-stone-400 mb-1">EXTRACTION</span>
+                <span className="text-stone-900 font-medium">{product.extractionMethod}</span>
+              </div>
+              <div>
+                <span className="block text-[9px] font-bold uppercase tracking-[0.22em] text-stone-400 mb-1">FAMILY</span>
+                <span className="text-stone-900 font-medium">{product.tags.split(" · ")[0]}</span>
+              </div>
+              <div>
+                <span className="block text-[9px] font-bold uppercase tracking-[0.22em] text-stone-400 mb-1">VOLUME</span>
+                <span className="text-stone-900 font-medium">
+                  {selectedSize.ml === "Custom" ? "Bespoke Request" : `${selectedSize.ml} · Amber Glass`}
+                </span>
+              </div>
+            </div>
+            <div className="h-[0.5px] bg-stone-200/80 w-full mb-8" />
+
+            {/* Size Selector */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-stone-400">CHOOSE SIZE</span>
+                {pricePerMl && (
+                  <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-stone-500">
+                    ₹{pricePerMl}/ml at {selectedSize.ml}
+                  </span>
                 )}
-              </button>
+              </div>
               
-              <button
-                onClick={handleWhatsAppCheckout}
-                className="h-14 px-8 border border-emerald-500/35 bg-white text-emerald-800 rounded-xl font-sans text-xs font-bold uppercase tracking-[0.22em] transition-colors hover:bg-emerald-50/40 active:scale-[0.985] flex items-center justify-center gap-2"
-              >
-                Order via WhatsApp
-              </button>
+              {/* Buttons Grid */}
+              <div className="grid grid-cols-5 gap-2.5">
+                {product.sizes.map((sizeOption) => {
+                  const isSelected = selectedSize.ml === sizeOption.ml;
+                  return (
+                    <button
+                      key={sizeOption.ml}
+                      type="button"
+                      onClick={() => setSelectedSize(sizeOption)}
+                      className={`flex flex-col items-center justify-center py-3.5 border rounded-lg transition-all duration-200 active:scale-[0.97] ${
+                        isSelected
+                          ? "bg-stone-950 border-stone-950 text-white shadow-sm"
+                          : "bg-white border-stone-200 text-stone-900 hover:border-stone-400"
+                      }`}
+                    >
+                      <span className="text-xs font-bold font-sans">{sizeOption.ml}</span>
+                      <span className={`text-[9px] font-medium font-sans mt-0.5 ${isSelected ? "text-stone-300" : "text-stone-500"}`}>
+                        {sizeOption.label || `₹${sizeOption.price.toLocaleString("en-IN")}`}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Premium Accordion details */}
-            <div className="border border-stone-200 bg-white/50 rounded-2xl overflow-hidden shadow-sm">
+            {/* Checkout Footer Block */}
+            <div className="h-[0.5px] bg-stone-200/80 w-full mb-6" />
+            <div className="flex items-center justify-between gap-6 pb-6">
+              <div>
+                <span className="font-serif text-3xl font-semibold text-stone-950">
+                  {selectedSize.ml === "Custom" ? "Bespoke" : `₹${selectedSize.price.toLocaleString("en-IN")}`}
+                </span>
+                <span className="block text-[9.5px] font-bold uppercase tracking-[0.16em] text-stone-400 mt-1">
+                  {selectedSize.ml.toUpperCase()} · FREE SHIPPING ACROSS INDIA
+                </span>
+              </div>
               
-              {/* Tab Headers */}
-              <div className="grid grid-cols-3 border-b border-stone-200 bg-stone-100/40">
-                <button
-                  onClick={() => setActiveTab("sourcing")}
-                  className={`py-3.5 text-[9.5px] font-bold uppercase tracking-[0.18em] transition-colors ${
-                    activeTab === "sourcing" ? "bg-white text-stone-950 border-b border-stone-950 font-extrabold" : "text-stone-500 hover:text-stone-900"
-                  }`}
-                >
-                  Sourcing
-                </button>
-                <button
-                  onClick={() => setActiveTab("olfactory")}
-                  className={`py-3.5 text-[9.5px] font-bold uppercase tracking-[0.18em] transition-colors ${
-                    activeTab === "olfactory" ? "bg-white text-stone-950 border-b border-stone-950 font-extrabold" : "text-stone-500 hover:text-stone-900"
-                  }`}
-                >
-                  Sensory
-                </button>
-                <button
-                  onClick={() => setActiveTab("usage")}
-                  className={`py-3.5 text-[9.5px] font-bold uppercase tracking-[0.18em] transition-colors ${
-                    activeTab === "usage" ? "bg-white text-stone-950 border-b border-stone-950 font-extrabold" : "text-stone-500 hover:text-stone-900"
-                  }`}
-                >
-                  Profile
-                </button>
-              </div>
-
-              {/* Tab Contents */}
-              <div className="p-6 sm:p-8 bg-white min-h-[160px]">
-                {activeTab === "sourcing" && (
-                  <div className="space-y-4">
-                    <div>
-                      <span className="block text-[9px] font-sans font-bold uppercase tracking-[0.22em] text-stone-400 mb-1">GROWER TRACEABILITY</span>
-                      <p className="text-sm text-stone-700 font-light leading-relaxed">{product.sourcing}</p>
-                    </div>
-                    <div>
-                      <span className="block text-[9px] font-sans font-bold uppercase tracking-[0.22em] text-stone-400 mb-1">ORIGIN</span>
-                      <p className="text-sm text-stone-800 font-medium tracking-wide">{product.origin}</p>
-                    </div>
-                  </div>
-                )}
-                {activeTab === "olfactory" && (
-                  <div className="space-y-4">
-                    <div>
-                      <span className="block text-[9px] font-sans font-bold uppercase tracking-[0.22em] text-stone-400 mb-1">OLFACTORY PROFILE</span>
-                      <p className="text-sm text-stone-700 font-light leading-relaxed">{product.sensoryNotes}</p>
-                    </div>
-                    <div>
-                      <span className="block text-[9px] font-sans font-bold uppercase tracking-[0.22em] text-stone-400 mb-1">RECOMMENDED USE</span>
-                      <p className="text-sm text-stone-700 font-light leading-relaxed">Best worn neat on pulse points, or blended sparingly with carrier oils to extend longevity.</p>
-                    </div>
-                  </div>
-                )}
-                {activeTab === "usage" && (
-                  <div className="space-y-4">
-                    <div>
-                      <span className="block text-[9px] font-sans font-bold uppercase tracking-[0.22em] text-stone-400 mb-1">MOLECULAR DESIGN</span>
-                      <p className="text-sm text-stone-700 font-light leading-relaxed">{product.profile}</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-amber-800 bg-amber-50/50 border border-amber-200/40 rounded-lg p-3">
-                      <Sparkles size={13} className="shrink-0" />
-                      <span className="text-[10px] font-sans font-bold uppercase tracking-[0.12em]">100% Pure & GC/MS Batch Tested</span>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <button
+                onClick={handleAddToBag}
+                className="h-13 px-8 bg-stone-950 text-white rounded-lg font-sans text-xs font-bold uppercase tracking-[0.24em] transition-all hover:bg-black active:scale-[0.98] shadow-sm flex items-center justify-center gap-2"
+              >
+                {selectedSize.ml === "Custom" ? "Inquire on WhatsApp" : "ADD TO CART"}
+              </button>
             </div>
 
           </div>
 
         </div>
-      </div>
+
+      </section>
+
+      {/* 2. AROMA PROFILE SECTION */}
+      <section className="bg-white border-y border-stone-200/60 py-20 md:py-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="mb-14">
+            <span className="text-[10px] font-sans font-bold uppercase tracking-[0.24em] text-stone-450 block mb-3.5">
+              AROMA PROFILE
+            </span>
+            <h2 className="font-serif text-3xl sm:text-4xl lg:text-[2.65rem] font-semibold text-stone-950 leading-none">
+              How it wears on skin.
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-8 pt-6">
+            
+            {/* Top Column */}
+            <div className="flex flex-col border-t border-stone-200/85 pt-6">
+              <span className="font-serif italic text-stone-400 text-sm mb-1.5 block">Nº 01</span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-900 mb-3.5 block">
+                TOP / OPENING
+              </span>
+              <p className="font-serif text-lg sm:text-xl text-stone-900 leading-snug">
+                {product.aromaProfile.top}
+              </p>
+            </div>
+
+            {/* Heart Column */}
+            <div className="flex flex-col border-t border-stone-200/85 pt-6">
+              <span className="font-serif italic text-stone-400 text-sm mb-1.5 block">Nº 02</span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-900 mb-3.5 block">
+                HEART
+              </span>
+              <p className="font-serif text-lg sm:text-xl text-stone-900 leading-snug">
+                {product.aromaProfile.heart}
+              </p>
+            </div>
+
+            {/* Base Column */}
+            <div className="flex flex-col border-t border-stone-200/85 pt-6">
+              <span className="font-serif italic text-stone-400 text-sm mb-1.5 block">Nº 03</span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-900 mb-3.5 block">
+                BASE / DRY-DOWN
+              </span>
+              <p className="font-serif text-lg sm:text-xl text-stone-900 leading-snug">
+                {product.aromaProfile.base}
+              </p>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* 3. INGREDIENTS SECTION */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-center">
+          
+          {/* Left Content column */}
+          <div className="lg:col-span-6 flex flex-col justify-center">
+            <span className="text-[10px] font-sans font-bold uppercase tracking-[0.24em] text-stone-450 block mb-3.5">
+              INGREDIENTS
+            </span>
+            <h2 className="font-serif text-3xl sm:text-4xl lg:text-[2.85rem] font-semibold text-stone-950 leading-tight mb-4">
+              One plant. Nothing else.
+            </h2>
+            <p className="font-serif italic text-stone-600 text-lg leading-relaxed mb-8">
+              100% {product.scientificName} flower oil. Nothing else.
+            </p>
+
+            {/* Table Rows */}
+            <div className="flex flex-col w-full">
+              {product.ingredients.map((ing, idx) => (
+                <div 
+                  key={idx}
+                  className="flex items-center justify-between py-4 border-b border-stone-200 text-sm"
+                >
+                  <span className="text-stone-500 font-light">{ing.name}</span>
+                  <span className="font-serif italic text-stone-950 font-medium tracking-wide">{ing.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Image column */}
+          <div className="lg:col-span-6 relative aspect-[1.12] w-full overflow-hidden rounded-xl border border-stone-200/50 shadow-sm bg-stone-100">
+            <Image
+              src="/images/naturals/oil_pipette.png"
+              alt="Golden botanical oil drop from glass pipette"
+              fill
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              className="object-cover"
+            />
+          </div>
+
+        </div>
+      </section>
+
+      {/* 4. SOURCING & HARVEST SECTION */}
+      <section className="bg-stone-100/35 border-t border-stone-250/40 py-20 md:py-28">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-center">
+            
+            {/* Left Image column */}
+            <div className="lg:col-span-6 relative aspect-[1.15] w-full overflow-hidden rounded-xl border border-stone-200/50 shadow-sm bg-stone-100">
+              <Image
+                src="/images/naturals/kannauj_degs.png"
+                alt="Traditional Indian copper steam distillation degs"
+                fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover"
+              />
+            </div>
+
+            {/* Right Content column */}
+            <div className="lg:col-span-6 flex flex-col justify-center">
+              <span className="text-[10px] font-sans font-bold uppercase tracking-[0.24em] text-stone-450 block mb-3.5">
+                SOURCING & HARVEST
+              </span>
+              <h2 className="font-serif text-3xl sm:text-4xl lg:text-[2.85rem] font-semibold text-stone-950 leading-tight mb-8">
+                From {sourcingCity}.
+              </h2>
+
+              {/* Three steps checklist */}
+              <div className="flex flex-col gap-8">
+                {product.sourcingSteps.map((step, idx) => (
+                  <div key={idx} className="flex gap-6 border-b border-stone-200/60 pb-6 last:border-0 last:pb-0">
+                    <span className="font-serif italic text-stone-400 text-base shrink-0 mt-0.5">{step.num}</span>
+                    <div>
+                      <h4 className="font-serif italic text-stone-900 text-lg leading-none mb-2">
+                        {step.title}
+                      </h4>
+                      <p className="text-[13.5px] leading-relaxed text-stone-600 font-light">
+                        {step.desc}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      </section>
+
     </div>
   );
 }
