@@ -16,21 +16,41 @@ import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 import { DISCOVERY_SET_PATH } from "@/lib/discovery-set";
 import AnnouncementBar from "./AnnouncementBar";
+import { useSiteControls } from "@/hooks/use-site-controls";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileGiftingOpen, setIsMobileGiftingOpen] = useState(false);
+  const settings = useSiteControls();
+  const [isAnnouncementVisible, setIsAnnouncementVisible] = useState(true);
+  const [topOffset, setTopOffset] = useState(0);
   const { totalItems, setIsCartOpen } = useCart();
   const router = useRouter();
 
+  const isShown = isAnnouncementVisible && settings.announcementEnabled;
   const displayCartCount = totalItems > 99 ? "99+" : `${totalItems}`;
 
   const navigateTo = (href: string) => {
     showNavigationLoadingToast();
     router.push(href);
   };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      // 30px matches the height of the announcement bar
+      const height = isShown ? 30 : 0;
+      setTopOffset(Math.max(-window.scrollY, -height));
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [isShown]);
 
   useEffect(() => {
     if (!isMenuOpen) {
@@ -64,8 +84,17 @@ const Header = () => {
   ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm">
-      <AnnouncementBar />
+    <header 
+      className="fixed left-0 right-0 z-50 bg-background/95 backdrop-blur-sm transition-[top] duration-100 ease-out"
+      style={{ top: `${topOffset}px` }}
+    >
+      <style dangerouslySetInnerHTML={{ __html: `
+        body {
+          transition: padding-top 0.15s ease-out;
+          padding-top: ${isShown ? "30px" : "0px"};
+        }
+      `}} />
+      <AnnouncementBar isVisible={isShown} onClose={() => setIsAnnouncementVisible(false)} />
       <div className="container-luxury">
         <div className="flex items-center justify-between py-5">
           <div className="flex items-center gap-6">
