@@ -44,9 +44,8 @@ const AnnouncementBar = ({ isVisible, onClose }: AnnouncementBarProps) => {
           className="relative bg-stone-950 text-white text-center overflow-hidden border-b border-white/[0.04] announcement-bar-font"
         >
           <style>{`
-            @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700;850&display=swap');
             .announcement-bar-font, .announcement-bar-font * {
-              font-family: 'JetBrains Mono', monospace !important;
+              font-family: var(--font-mono), monospace !important;
             }
             @keyframes marquee {
               0% { transform: translate3d(0, 0, 0); }

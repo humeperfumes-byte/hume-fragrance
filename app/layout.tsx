@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Script from "next/script";
-import { Cormorant_Garamond, Geist } from "next/font/google";
+import { Cormorant_Garamond, Geist, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import ClientGlobalOverlays from "@/components/ClientGlobalOverlays";
@@ -24,6 +24,13 @@ const cormorant = Cormorant_Garamond({
   variable: "--font-serif",
   weight: ["300", "400", "500", "600"],
   style: ["normal", "italic"],
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  weight: ["300", "400", "500", "700", "800"],
   display: "swap",
 });
 
@@ -99,7 +106,7 @@ export default async function RootLayout({
       </head>
       <body
         suppressHydrationWarning
-        className={`${geist.variable} ${cormorant.variable} antialiased`}
+        className={`${geist.variable} ${cormorant.variable} ${jetbrainsMono.variable} antialiased`}
       >
         <Providers>
           <BrowserRecoveryGuard />
