@@ -15,6 +15,7 @@ import { celebrityFavorites } from "@/lib/celebrity-favorites";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 import { DISCOVERY_SET_PATH } from "@/lib/discovery-set";
+import AnnouncementBar from "./AnnouncementBar";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -64,6 +65,7 @@ const Header = () => {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm">
+      <AnnouncementBar />
       <div className="container-luxury">
         <div className="flex items-center justify-between py-5">
           <div className="flex items-center gap-6">
