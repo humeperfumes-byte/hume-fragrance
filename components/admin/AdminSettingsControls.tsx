@@ -153,6 +153,13 @@ export function AdminSettingsControls() {
             className="min-h-20 border-white/10 bg-white/[0.04] text-white"
           />
         </SettingRow>
+        <SettingRow title="Announcement Link" description="Target page path or external URL for announcement bar clicks. (e.g. /naturals or /discovery-set)">
+          <Input
+            value={settings.announcementLink}
+            onChange={(event) => update("announcementLink", event.target.value)}
+            className="border-white/10 bg-white/[0.04] text-white"
+          />
+        </SettingRow>
         <SettingRow title="Hero offer text" description="Support line below the rotating homepage offer.">
           <Textarea
             value={settings.heroOfferText}

@@ -2,6 +2,7 @@ export type AdminControls = {
   behavioralIntelligenceEnabled: boolean;
   announcementEnabled: boolean;
   announcementText: string;
+  announcementLink: string;
   heroOfferText: string;
   freeDeliveryThreshold: number;
   shippingChargeBelowThreshold: number;
@@ -21,6 +22,7 @@ export const defaultAdminControls: AdminControls = {
   behavioralIntelligenceEnabled: false,
   announcementEnabled: true,
   announcementText: "Free delivery over INR 500. Use HUME15 on your first order.",
+  announcementLink: "",
   heroOfferText: "Free delivery over INR 500. Try HUME before designer prices.",
   freeDeliveryThreshold: 500,
   shippingChargeBelowThreshold: 100,
@@ -54,6 +56,7 @@ export function normalizeAdminControls(value: unknown): AdminControls {
     behavioralIntelligenceEnabled: raw.behavioralIntelligenceEnabled === true,
     announcementEnabled: raw.announcementEnabled !== false,
     announcementText: stringOrDefault(raw.announcementText, defaultAdminControls.announcementText),
+    announcementLink: typeof raw.announcementLink === "string" ? raw.announcementLink.trim() : defaultAdminControls.announcementLink,
     heroOfferText: stringOrDefault(raw.heroOfferText, defaultAdminControls.heroOfferText),
     freeDeliveryThreshold: numberOrDefault(raw.freeDeliveryThreshold, defaultAdminControls.freeDeliveryThreshold),
     shippingChargeBelowThreshold: numberOrDefault(
