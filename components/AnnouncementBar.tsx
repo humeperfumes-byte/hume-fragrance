@@ -43,22 +43,7 @@ const AnnouncementBar = ({ isVisible, onClose }: AnnouncementBarProps) => {
           transition={{ duration: 0.3 }}
           className="relative bg-stone-950 text-white text-center overflow-hidden border-b border-white/[0.04] announcement-bar-font"
         >
-          <style>{`
-            .announcement-bar-font, .announcement-bar-font * {
-              font-family: var(--font-mono), monospace !important;
-            }
-            @keyframes marquee {
-              0% { transform: translate3d(0, 0, 0); }
-              100% { transform: translate3d(-50%, 0, 0); }
-            }
-            .animate-marquee-custom {
-              display: inline-flex;
-              animation: marquee 25s linear infinite;
-            }
-            .animate-marquee-custom:hover {
-              animation-play-state: paused;
-            }
-          `}</style>
+
 
           {settings.announcementLink ? (
             <Link 

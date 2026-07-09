@@ -624,6 +624,28 @@ a, button, select, input[type="submit"], input[type="button"], [role="button"], 
   font-family: var(--font-discovery-cormorant), serif !important;
 }
 
+/* Announcement Bar Ticker & Font Override */
+.announcement-bar-font,
+.announcement-bar-font * {
+  font-family: var(--font-mono), monospace !important;
+}
 
+@keyframes announcement-marquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
 
+.animate-marquee-custom {
+  display: inline-flex;
+  animation: announcement-marquee 25s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-custom:hover {
+  animation-play-state: paused;
+}
 
