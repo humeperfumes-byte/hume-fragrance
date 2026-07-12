@@ -1239,7 +1239,7 @@ const CartDrawer = () => {
                 <div>
                   <p className="text-sm font-semibold">Discovery Set</p>
                   <p className="mt-1 text-xs text-black/50">
-                    Build 10 testers - {formatINR(DISCOVERY_SET_PRICE)}
+                    Build 15 testers - {formatINR(DISCOVERY_SET_PRICE)}
                   </p>
                 </div>
                 <button

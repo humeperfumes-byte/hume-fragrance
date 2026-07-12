@@ -10,6 +10,7 @@ import { AI_RECOMMENDATION_PAGES } from "@/lib/ai-recommendation-pages";
 import { DISCOVERY_SET_PATH } from "@/lib/discovery-set";
 import { DETAIL_UPCOMING_PRODUCTS } from "@/lib/upcoming-products";
 import { PERFUME_MATURATION_PATH } from "@/lib/perfume-maturation";
+import { NATURALS_PRODUCTS } from "@/lib/naturals-data";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = await getRequestSiteUrl();
@@ -58,6 +59,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: new Date(),
     changeFrequency: "weekly" as const,
     priority: 0.68,
+  }));
+
+  const naturalsEntries = NATURALS_PRODUCTS.map((prod) => ({
+    url: `${baseUrl}/naturals/${prod.id}`,
+    lastModified: new Date(),
+    changeFrequency: "weekly" as const,
+    priority: 0.75,
   }));
 
   return [
@@ -170,6 +178,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     },
     {
+      url: `${baseUrl}/naturals`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
       url: `${baseUrl}${DISCOVERY_SET_PATH}`,
       lastModified: new Date(),
       changeFrequency: "weekly",
@@ -230,5 +244,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...festivalSeoEntries,
     ...recommendationEntries,
     ...upcomingProductEntries,
+    ...naturalsEntries,
   ];
 }

@@ -60,7 +60,7 @@ const discoverySetKeywords = [
   "fragrance discovery set India",
   "try before buy perfume",
   "perfume tester set",
-  "choose 10 perfume samples",
+  "choose 15 perfume samples",
   "order perfume sample set",
   "HUME discovery set",
 ];
@@ -87,7 +87,7 @@ const discoverySetFaq = [
   {
     question: "Can I order the HUME Discovery Set right now?",
     answer:
-      "Yes. Select exactly 10 testers, add the Discovery Set to your bag, and complete checkout online or through WhatsApp.",
+      "Yes. Select exactly 15 testers, add the Discovery Set to your bag, and complete checkout online or through WhatsApp.",
   },
   {
     question: "Who should buy a starter perfume kit?",
@@ -141,7 +141,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     title: {
-      absolute: "Perfume Trial Kit India | Build Your Own 10 x 3ml Discovery Set | HUME",
+      absolute: "Perfume Trial Kit India | Build Your Own 15 x 3ml Discovery Set | HUME",
     },
     description: discoverySetDescription,
     keywords: discoverySetKeywords,
@@ -159,13 +159,13 @@ export async function generateMetadata(): Promise<Metadata> {
           url: imageUrl,
           width: 1200,
           height: 630,
-          alt: "HUME Discovery Set perfume trial kit with 10 testers",
+          alt: "HUME Discovery Set perfume trial kit with 15 testers",
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      title: "Perfume Trial Kit India | Choose 10 HUME Samples",
+      title: "Perfume Trial Kit India | Choose 15 HUME Samples",
       description: discoverySetDescription,
       images: [imageUrl],
     },
@@ -333,7 +333,7 @@ export default async function DiscoverySetCanonicalPage() {
       description: `Choose ${DISCOVERY_SET_SAMPLE_COUNT} HUME fragrances, order the Discovery Set, and test each 3ml sample before buying a full bottle.`,
       step: [
         { "@type": "HowToStep", position: 1, name: "Open the builder", text: "Use the Discovery Set builder on the page." },
-        { "@type": "HowToStep", position: 2, name: "Choose 10 perfumes", text: `Select any ${DISCOVERY_SET_SAMPLE_COUNT} available HUME fragrances as 3ml testers.` },
+        { "@type": "HowToStep", position: 2, name: "Choose 15 perfumes", text: `Select any ${DISCOVERY_SET_SAMPLE_COUNT} available HUME fragrances as 3ml testers.` },
         { "@type": "HowToStep", position: 3, name: "Add to bag", text: "Add the completed Discovery Set to your bag with your selections attached." },
         { "@type": "HowToStep", position: 4, name: "Test on skin", text: "Wear each sample across different days to compare opening, dry-down, projection, and longevity." },
       ],

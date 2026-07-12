@@ -11,7 +11,8 @@ export type HumeEmailMessageType =
   | "coupon_resend"
   | "order_confirmation"
   | "account_otp"
-  | "admin_message";
+  | "admin_message"
+  | "partnership_pitch";
 
 export type HumeEmailStatus = "pending" | "sent" | "failed" | "dry_run";
 

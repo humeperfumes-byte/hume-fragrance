@@ -166,13 +166,13 @@ const EMAIL_HTML = `<!DOCTYPE html>
           <div class="price-label" style="margin-bottom: 12px;">Pre-Order Launch Comparison</div>
           <div style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;">
             <span class="price-original">Original Price: ₹900</span>
-            <span class="price-preorder">Pre-Order Price: ₹750</span>
+            <span class="price-preorder">Pre-Order Price: ₹799</span>
           </div>
         </div>
         
         <!-- CTA -->
         <div style="margin-bottom: 20px;">
-          <a href="https://www.humefragrance.com/discovery-set/build-your-own-perfume-trial-kit-choose-10-3ml-samples?utm_source=preorder_campaign&utm_medium=email&utm_campaign=discovery_set_launch" class="cta-button">Pre-Order Now</a>
+          <a href="https://www.humefragrance.com/discovery-set/build-your-own-perfume-trial-kit-choose-15-3ml-samples?utm_source=preorder_campaign&utm_medium=email&utm_campaign=discovery_set_launch" class="cta-button">Pre-Order Now</a>
         </div>
       </div>
       

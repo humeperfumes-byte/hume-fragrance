@@ -259,17 +259,16 @@ export default function DiscoverySetBuilder() {
   }, []);
 
   useEffect(() => {
-    if (controls && !controls.enableTenTesterOption) {
-      setSampleCount(15);
-      if (selected.length > 15) {
-        setSelected(selected.slice(0, 15));
-      }
+    // Strictly force 15 testers set
+    setSampleCount(15);
+    if (selected.length > 15) {
+      setSelected(selected.slice(0, 15));
     }
-  }, [controls?.enableTenTesterOption, selected]);
+  }, [selected]);
 
-  const activePrice = sampleCount === 10 ? 650 : 750;
-  const activeOriginalPrice = sampleCount === 10 ? 699 : 850;
-  const activeSizeLabel = `${sampleCount} x 3ml`;
+  const activePrice = 799;
+  const activeOriginalPrice = 900;
+  const activeSizeLabel = "15 x 3ml";
 
   const formatSlotName = (name: string) => {
     return name
@@ -561,56 +560,15 @@ export default function DiscoverySetBuilder() {
               A custom {sampleCount}-piece tester box for finding the scent that actually works on your skin before committing to a full bottle.
             </p>
 
-            <div className="mt-5 border-y border-stone-200/40 py-4 flex items-center justify-around sm:mt-6">
-              {controls?.enableTenTesterOption && (
-                <>
-                  <div className="text-center">
-                    <span className="block text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400/90 font-sans leading-none">10 Testers Set</span>
-                    <span className="block mt-2.5 text-[1.45rem] font-medium italic text-stone-850 font-sans leading-none">₹699 INR</span>
-                    <span className="block text-[12px] font-medium text-stone-500 font-sans mt-2">10 x 3ml</span>
-                  </div>
-                  <div className="h-9 w-px bg-stone-200/60" />
-                </>
-              )}
+            <div className="mt-5 border-y border-stone-200/40 py-4 flex items-center justify-center gap-6 sm:mt-6">
               <div className="text-center">
                 <span className="block text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400/90 font-sans leading-none">15 Testers Set</span>
-                <span className="block mt-2.5 text-[1.45rem] font-medium italic text-stone-850 font-sans leading-none">₹900 INR</span>
-                <span className="block text-[12px] font-medium text-stone-500 font-sans mt-2">15 x 3ml</span>
-              </div>
-            </div>
-
-            {/* Set Size Variation Selector */}
-            <div className="mt-7">
-              <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-stone-500 mb-2.5">
-                Select Set Size
-              </p>
-              <div className="flex max-w-[19rem] rounded-full bg-stone-100 p-0.5 border border-stone-200/50">
-                {controls?.enableTenTesterOption && (
-                  <button
-                    type="button"
-                    onClick={() => handleSampleCountChange(10)}
-                    className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-full transition-all duration-200 ${
-                      sampleCount === 10
-                        ? "bg-stone-900 text-white shadow-sm"
-                        : "text-stone-500 hover:text-stone-850"
-                    }`}
-                  >
-                    <span className={`text-[8.5px] tracking-wider uppercase font-sans ${sampleCount === 10 ? "text-stone-300" : "text-stone-500"}`}>10 Testers</span>
-                    <span className="text-[12.5px] font-bold font-sans mt-0.5">₹650 Pre-Order</span>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleSampleCountChange(15)}
-                  className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-full transition-all duration-200 ${
-                    sampleCount === 15
-                      ? "bg-stone-900 text-white shadow-sm"
-                      : "text-stone-500 hover:text-stone-850"
-                  }`}
-                >
-                  <span className={`text-[8.5px] tracking-wider uppercase font-sans ${sampleCount === 15 ? "text-stone-300" : "text-stone-500"}`}>15 Testers</span>
-                  <span className="text-[12.5px] font-bold font-sans mt-0.5">₹750 Pre-Order</span>
-                </button>
+                <div className="mt-2.5 flex items-center justify-center gap-3">
+                  <span className="text-[1.45rem] font-medium italic text-stone-850 font-sans leading-none">₹799 INR</span>
+                  <span className="text-xs line-through text-stone-400">₹900</span>
+                  <span className="text-[10px] font-bold text-gold uppercase tracking-wider">Save 11%</span>
+                </div>
+                <span className="block text-[12px] font-medium text-stone-500 font-sans mt-2">15 x 3ml Testers</span>
               </div>
             </div>
 
@@ -735,52 +693,16 @@ export default function DiscoverySetBuilder() {
               <p className="mt-3 text-xs leading-5 text-stone-500">
                 A curated sequence of {sampleCount} olfactory studies. Build your personal archive from the HUME fragrance library and find the scent that actually works on your skin.
               </p>
-              <div className="mt-4 border-y border-stone-200/40 py-3.5 flex items-center justify-around">
-                {controls?.enableTenTesterOption && (
-                  <>
-                    <div className="text-center">
-                      <span className="block text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400/90 font-sans leading-none">10 Testers Set</span>
-                      <span className="block mt-2.5 text-[1.45rem] font-medium italic text-stone-850 font-sans leading-none">₹699 INR</span>
-                      <span className="block text-[12px] font-medium text-stone-500 font-sans mt-2">10 x 3ml</span>
-                    </div>
-                    <div className="h-8 w-px bg-stone-200/60" />
-                  </>
-                )}
+              <div className="mt-4 border-y border-stone-200/40 py-3.5 flex items-center justify-center gap-6">
                 <div className="text-center">
                   <span className="block text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400/90 font-sans leading-none">15 Testers Set</span>
-                  <span className="block mt-2.5 text-[1.45rem] font-medium italic text-stone-850 font-sans leading-none">₹900 INR</span>
-                  <span className="block text-[12px] font-medium text-stone-500 font-sans mt-2">15 x 3ml</span>
+                  <div className="mt-2.5 flex items-center justify-center gap-3">
+                    <span className="text-[1.45rem] font-medium italic text-stone-850 font-sans leading-none">₹799 INR</span>
+                    <span className="text-xs line-through text-stone-400">₹900</span>
+                    <span className="text-[10px] font-bold text-gold uppercase tracking-wider">Save 11%</span>
+                  </div>
+                  <span className="block text-[12px] font-medium text-stone-500 font-sans mt-2">15 x 3ml Testers</span>
                 </div>
-              </div>
-
-              {/* Mobile Variation Selector */}
-              <div className="mt-4 flex rounded-full bg-stone-100 p-0.5 border border-stone-200/50">
-                {controls?.enableTenTesterOption && (
-                  <button
-                    type="button"
-                    onClick={() => handleSampleCountChange(10)}
-                    className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-full transition-all duration-200 ${
-                      sampleCount === 10
-                        ? "bg-stone-900 text-white shadow-sm"
-                        : "text-stone-500 hover:text-stone-850"
-                    }`}
-                  >
-                    <span className={`text-[8.5px] tracking-wider uppercase font-sans ${sampleCount === 10 ? "text-stone-300" : "text-stone-500"}`}>10 Samples</span>
-                    <span className="text-[12.5px] font-bold font-sans mt-0.5">₹650 Pre-Order</span>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleSampleCountChange(15)}
-                  className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-full transition-all duration-200 ${
-                    sampleCount === 15
-                      ? "bg-stone-900 text-white shadow-sm"
-                      : "text-stone-500 hover:text-stone-850"
-                  }`}
-                >
-                  <span className={`text-[8.5px] tracking-wider uppercase font-sans ${sampleCount === 15 ? "text-stone-300" : "text-stone-500"}`}>15 Samples</span>
-                  <span className="text-[12.5px] font-bold font-sans mt-0.5">₹750 Pre-Order</span>
-                </button>
               </div>
 
               {/* Main Product Image (mobile) */}

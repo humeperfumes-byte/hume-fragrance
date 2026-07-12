@@ -2,10 +2,10 @@ export const DISCOVERY_SET_PRODUCT_ID = "hume-discovery-set";
 export const DISCOVERY_SET_CART_ITEM_PREFIX = "discovery-set-";
 export const DISCOVERY_SET_LEGACY_PATH = "/discovery-set";
 export const DISCOVERY_SET_PATH =
-  "/discovery-set/build-your-own-perfume-trial-kit-choose-10-3ml-samples";
-export const DISCOVERY_SET_PRICE = 699;
-export const DISCOVERY_SET_SIZE = "10 x 3ml";
-export const DISCOVERY_SET_SAMPLE_COUNT = 10;
+  "/discovery-set/build-your-own-perfume-trial-kit-choose-15-3ml-samples";
+export const DISCOVERY_SET_PRICE = 799;
+export const DISCOVERY_SET_SIZE = "15 x 3ml";
+export const DISCOVERY_SET_SAMPLE_COUNT = 15;
 
 export const DISCOVERY_SET_IMAGES = [
   "/images/bg/tester_box1.png",

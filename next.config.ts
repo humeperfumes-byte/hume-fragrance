@@ -94,6 +94,15 @@ const nextConfig: NextConfig = {
     });
     return config;
   },
+  async redirects() {
+    return [
+      {
+        source: "/discovery-set/build-your-own-perfume-trial-kit-choose-10-3ml-samples",
+        destination: "/discovery-set/build-your-own-perfume-trial-kit-choose-15-3ml-samples",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

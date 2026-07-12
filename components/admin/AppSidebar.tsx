@@ -14,7 +14,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Bell, ImageIcon, LayoutDashboard, ShoppingBag, ShoppingCart, Package, FileText, LogOut, Truck, Sparkles } from "lucide-react";
+import { Bell, Handshake, ImageIcon, LayoutDashboard, ShoppingBag, ShoppingCart, Package, FileText, LogOut, Truck, Sparkles } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
@@ -29,6 +29,7 @@ const navItems = [
   { title: "Catalog", url: "/admin/products", icon: Package },
   { title: "Content", url: "/admin/blogs", icon: FileText },
   { title: "Images", url: "/admin/images", icon: ImageIcon },
+  { title: "Partnerships", url: "/admin/partnerships", icon: Handshake },
 ];
 
 export function AppSidebar() {
