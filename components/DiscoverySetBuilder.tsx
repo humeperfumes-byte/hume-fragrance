@@ -218,6 +218,168 @@ const DISCOVERY_SET_FACTS = [
     value: "Test projection, longevity and dry-down before choosing a full bottle",
   },
 ];
+function MagicPrice() {
+  const [step, setStep] = useState<"initial" | "slashed" | "spark" | "final">("initial");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    // 1.5s: Start drawing the laser slash
+    const tSlash = setTimeout(() => setStep("slashed"), 1500);
+    // 2.3s: Trigger sparkles and pulse explosion
+    const tSpark = setTimeout(() => setStep("spark"), 2300);
+    // 3.4s: Final reveal of ₹799 with staggered numbers spring animation
+    const tFinal = setTimeout(() => setStep("final"), 3400);
+
+    return () => {
+      clearTimeout(tSlash);
+      clearTimeout(tSpark);
+      clearTimeout(tFinal);
+    };
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="mt-2.5 flex items-center justify-center gap-3.5 h-[2.5rem]">
+        <span className="text-[1.45rem] font-semibold italic text-stone-850 font-sans">
+          ₹999 INR
+        </span>
+      </div>
+    );
+  }
+
+  // Generate physics-based sparks for the magic burst phase
+  const sparks = Array.from({ length: 10 }).map((_, i) => {
+    const angle = -Math.PI / 6 - (i * Math.PI) / 8; // upward burst direction
+    const distance = 40 + Math.random() * 35;
+    return {
+      id: i,
+      x: Math.cos(angle) * distance,
+      y: Math.sin(angle) * distance - 10,
+      size: 2 + Math.random() * 4,
+      delay: Math.random() * 0.1,
+    };
+  });
+
+  const charVariants = {
+    hidden: { y: 15, opacity: 0 },
+    visible: (i: number) => ({
+      y: 0,
+      opacity: 1,
+      transition: {
+        delay: 0.1 + i * 0.05,
+        type: "spring" as const,
+        stiffness: 120,
+        damping: 10,
+      },
+    }),
+  };
+
+  return (
+    <div className="mt-2.5 flex items-center justify-center gap-3.5 h-[2.5rem] relative select-none">
+      {step !== "final" ? (
+        <div className="relative inline-block py-1">
+          {/* Main Price Text (₹999) */}
+          <motion.span
+            animate={
+              step === "spark"
+                ? {
+                    scale: [1, 1.08, 0.95],
+                    textShadow: ["0 0 0px rgba(239, 68, 68, 0)", "0 0 15px rgba(251, 191, 36, 0.6)", "0 0 0px rgba(251, 191, 36, 0)"],
+                  }
+                : {}
+            }
+            transition={{ duration: 0.7, ease: "easeInOut" }}
+            className="text-[1.45rem] font-bold italic text-stone-900 font-sans tracking-tight"
+          >
+            ₹999 INR
+          </motion.span>
+
+          {/* Laser Slash Line */}
+          {(step === "slashed" || step === "spark") && (
+            <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[2.5px]">
+              {/* Slasher Path */}
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: "100%" }}
+                transition={{ duration: 0.8, ease: "easeInOut" }}
+                className="h-full bg-gradient-to-r from-red-500 via-red-600 to-amber-500 relative"
+              >
+                {/* Laser Glowing Spark Head */}
+                <motion.div
+                  initial={{ left: 0 }}
+                  animate={{ left: "100%" }}
+                  transition={{ duration: 0.8, ease: "easeInOut" }}
+                  className="absolute top-1/2 -translate-y-1/2 h-3 w-3 bg-white rounded-full -translate-x-1/2"
+                  style={{
+                    boxShadow: "0 0 8px #fff, 0 0 15px #f59e0b, 0 0 25px #ef4444",
+                  }}
+                />
+              </motion.div>
+            </div>
+          )}
+
+          {/* Spark Explosion */}
+          {step === "spark" && (
+            <div className="absolute inset-0 pointer-events-none">
+              {sparks.map((sp) => (
+                <motion.div
+                  key={sp.id}
+                  initial={{ x: 20, y: 0, opacity: 1, scale: 0.4 }}
+                  animate={{ x: sp.x, y: sp.y, opacity: 0, scale: 1.3 }}
+                  transition={{ duration: 0.85, delay: sp.delay, ease: "easeOut" }}
+                  className="absolute bg-gradient-to-tr from-amber-400 to-yellow-300 rounded-full"
+                  style={{
+                    width: sp.size,
+                    height: sp.size,
+                    boxShadow: "0 0 6px #fbbf24, 0 0 12px #f59e0b",
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.45, ease: "easeOut" }}
+          className="flex items-center gap-4"
+        >
+          {/* Staggered character reveal for new price */}
+          <span className="flex items-center text-[1.55rem] font-extrabold italic text-stone-900 font-sans tracking-tight">
+            {"₹799 INR".split("").map((char, index) => (
+              <motion.span
+                key={index}
+                custom={index}
+                initial="hidden"
+                animate="visible"
+                variants={charVariants}
+                style={{ display: char === " " ? "inline-block" : "inline-block" }}
+                className={char === " " ? "w-1.5" : ""}
+              >
+                {char}
+              </motion.span>
+            ))}
+          </span>
+
+          {/* Final Slashed Price */}
+          <motion.div
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4, duration: 0.4 }}
+            className="relative inline-block"
+          >
+            <span className="text-[1.15rem] text-stone-500 font-normal font-sans line-through decoration-red-600 decoration-[2px]">
+              ₹999
+            </span>
+          </motion.div>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
 export default function DiscoverySetBuilder() {
   const { addItem, setIsCartOpen } = useCart();
   const controls = useSiteControls();
@@ -234,7 +396,7 @@ export default function DiscoverySetBuilder() {
 
   useEffect(() => {
     setMounted(true);
-    const targetTime = new Date("2026-07-13T23:59:59+05:30").getTime();
+    const targetTime = new Date("2026-07-18T23:59:59+05:30").getTime();
 
     const updateTimer = () => {
       const now = Date.now();
@@ -563,11 +725,7 @@ export default function DiscoverySetBuilder() {
             <div className="mt-5 border-y border-stone-200/40 py-4 flex items-center justify-center gap-6 sm:mt-6">
               <div className="text-center">
                 <span className="block text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400/90 font-sans leading-none">15 Testers Set</span>
-                <div className="mt-2.5 flex items-center justify-center gap-3">
-                  <span className="text-[1.45rem] font-medium italic text-stone-850 font-sans leading-none">₹799 INR</span>
-                  <span className="text-xs line-through text-stone-400">₹900</span>
-                  <span className="text-[10px] font-bold text-gold uppercase tracking-wider">Save 11%</span>
-                </div>
+                <MagicPrice />
                 <span className="block text-[12px] font-medium text-stone-500 font-sans mt-2">15 x 3ml Testers</span>
               </div>
             </div>
@@ -696,11 +854,7 @@ export default function DiscoverySetBuilder() {
               <div className="mt-4 border-y border-stone-200/40 py-3.5 flex items-center justify-center gap-6">
                 <div className="text-center">
                   <span className="block text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400/90 font-sans leading-none">15 Testers Set</span>
-                  <div className="mt-2.5 flex items-center justify-center gap-3">
-                    <span className="text-[1.45rem] font-medium italic text-stone-850 font-sans leading-none">₹799 INR</span>
-                    <span className="text-xs line-through text-stone-400">₹900</span>
-                    <span className="text-[10px] font-bold text-gold uppercase tracking-wider">Save 11%</span>
-                  </div>
+                  <MagicPrice />
                   <span className="block text-[12px] font-medium text-stone-500 font-sans mt-2">15 x 3ml Testers</span>
                 </div>
               </div>
