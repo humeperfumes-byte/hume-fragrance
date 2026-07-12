@@ -221,26 +221,23 @@ const DISCOVERY_SET_FACTS = [
 function MagicPrice() {
   const [step, setStep] = useState<"initial" | "slashed" | "spark" | "final">("initial");
   const [mounted, setMounted] = useState(false);
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, amount: 0.3 });
 
   useEffect(() => {
     setMounted(true);
-    if (!isInView) return;
 
-    // 1.5s: Start drawing the laser slash
-    const tSlash = setTimeout(() => setStep("slashed"), 1500);
-    // 2.3s: Trigger sparkles and pulse explosion
-    const tSpark = setTimeout(() => setStep("spark"), 2300);
-    // 3.4s: Final reveal of ₹799 with staggered numbers spring animation
-    const tFinal = setTimeout(() => setStep("final"), 3400);
+    // 2.5s: Start drawing the laser slash (let the user see the page first)
+    const tSlash = setTimeout(() => setStep("slashed"), 2500);
+    // 3.3s: Trigger sparkles and pulse explosion
+    const tSpark = setTimeout(() => setStep("spark"), 3300);
+    // 4.4s: Final reveal of ₹799 with staggered numbers spring animation
+    const tFinal = setTimeout(() => setStep("final"), 4400);
 
     return () => {
       clearTimeout(tSlash);
       clearTimeout(tSpark);
       clearTimeout(tFinal);
     };
-  }, [isInView]);
+  }, []);
 
   if (!mounted) {
     return (
@@ -280,7 +277,7 @@ function MagicPrice() {
   };
 
   return (
-    <div ref={ref} className="mt-2.5 flex items-center justify-center gap-3.5 h-[2.5rem] relative select-none">
+    <div className="mt-2.5 flex items-center justify-center gap-3.5 h-[2.5rem] relative select-none">
       {step !== "final" ? (
         <div className="relative inline-block py-1">
           {/* Main Price Text (₹999) */}
