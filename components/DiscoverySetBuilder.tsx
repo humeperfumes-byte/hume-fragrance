@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useRef } from "react";
 import Image from "next/image";
-import { motion, AnimatePresence, useInView } from "framer-motion";
+import { motion, AnimatePresence, useInView, animate } from "framer-motion";
 import { Search, ShoppingBag, Sparkles, X, Plus } from "lucide-react";
 import type { PerfumeData } from "@/data/perfumes";
 import { useSiteControls } from "@/hooks/use-site-controls";
@@ -218,19 +218,50 @@ const DISCOVERY_SET_FACTS = [
     value: "Test projection, longevity and dry-down before choosing a full bottle",
   },
 ];
+function DigitSpinner({ value }: { value: number }) {
+  const digits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+  const digitHeight = 32;
+
+  return (
+    <span className="relative inline-block w-[0.58em] h-[32px] overflow-hidden leading-none select-none align-middle">
+      <motion.span
+        animate={{ y: -value * digitHeight }}
+        transition={{
+          type: "spring",
+          stiffness: 90,
+          damping: 13,
+        }}
+        className="absolute left-0 flex flex-col items-center w-full"
+        style={{ height: digitHeight * 10 }}
+      >
+        {digits.map((d) => (
+          <span
+            key={d}
+            className="flex h-[32px] items-center justify-center font-bold italic text-stone-900 font-sans"
+            style={{ fontSize: "1.55rem" }}
+          >
+            {d}
+          </span>
+        ))}
+      </motion.span>
+    </span>
+  );
+}
+
 function MagicPrice() {
   const [step, setStep] = useState<"initial" | "slashed" | "spark" | "final">("initial");
   const [mounted, setMounted] = useState(false);
+  const [currentVal, setCurrentVal] = useState(999);
 
   useEffect(() => {
     setMounted(true);
 
     // 2.5s: Start drawing the laser slash (let the user see the page first)
     const tSlash = setTimeout(() => setStep("slashed"), 2500);
-    // 3.3s: Trigger sparkles and pulse explosion
+    // 3.3s: Trigger sparkles and pulse explosion + start countdown
     const tSpark = setTimeout(() => setStep("spark"), 3300);
-    // 4.4s: Final reveal of ₹799 with staggered numbers spring animation
-    const tFinal = setTimeout(() => setStep("final"), 4400);
+    // 5.1s: Final reveal of ₹799 with settled layout
+    const tFinal = setTimeout(() => setStep("final"), 5100);
 
     return () => {
       clearTimeout(tSlash);
@@ -238,6 +269,17 @@ function MagicPrice() {
       clearTimeout(tFinal);
     };
   }, []);
+
+  useEffect(() => {
+    if (step === "spark") {
+      const controls = animate(999, 799, {
+        duration: 1.6,
+        ease: "easeOut",
+        onUpdate: (latest) => setCurrentVal(Math.round(latest)),
+      });
+      return () => controls.stop();
+    }
+  }, [step]);
 
   if (!mounted) {
     return (
@@ -280,21 +322,23 @@ function MagicPrice() {
     <div className="mt-2.5 flex items-center justify-center gap-3.5 h-[2.5rem] relative select-none">
       {step !== "final" ? (
         <div className="relative inline-block py-1">
-          {/* Main Price Text (₹999) */}
-          <motion.span
-            animate={
-              step === "spark"
-                ? {
-                    scale: [1, 1.08, 0.95],
-                    textShadow: ["0 0 0px rgba(239, 68, 68, 0)", "0 0 15px rgba(251, 191, 36, 0.6)", "0 0 0px rgba(251, 191, 36, 0)"],
-                  }
-                : {}
-            }
-            transition={{ duration: 0.7, ease: "easeInOut" }}
-            className="text-[1.45rem] font-bold italic text-stone-900 font-sans tracking-tight"
-          >
-            ₹999 INR
-          </motion.span>
+          {step === "spark" ? (
+            /* Live Odometer Ticking Down */
+            <span className="flex items-center text-[1.55rem] font-bold italic text-stone-900 font-sans tracking-tight leading-none">
+              <span>₹</span>
+              <DigitSpinner value={Math.floor(currentVal / 100)} />
+              <DigitSpinner value={Math.floor((currentVal % 100) / 10)} />
+              <DigitSpinner value={currentVal % 10} />
+              <span className="ml-1">INR</span>
+            </span>
+          ) : (
+            /* Main Static Price Text (₹999) */
+            <motion.span
+              className="text-[1.45rem] font-bold italic text-stone-900 font-sans tracking-tight"
+            >
+              ₹999 INR
+            </motion.span>
+          )}
 
           {/* Laser Slash Line */}
           {(step === "slashed" || step === "spark") && (
