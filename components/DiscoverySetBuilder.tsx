@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useInView } from "framer-motion";
 import { Search, ShoppingBag, Sparkles, X, Plus } from "lucide-react";
 import type { PerfumeData } from "@/data/perfumes";
 import { useSiteControls } from "@/hooks/use-site-controls";
@@ -221,9 +221,13 @@ const DISCOVERY_SET_FACTS = [
 function MagicPrice() {
   const [step, setStep] = useState<"initial" | "slashed" | "spark" | "final">("initial");
   const [mounted, setMounted] = useState(false);
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, amount: 0.3 });
 
   useEffect(() => {
     setMounted(true);
+    if (!isInView) return;
+
     // 1.5s: Start drawing the laser slash
     const tSlash = setTimeout(() => setStep("slashed"), 1500);
     // 2.3s: Trigger sparkles and pulse explosion
@@ -236,7 +240,7 @@ function MagicPrice() {
       clearTimeout(tSpark);
       clearTimeout(tFinal);
     };
-  }, []);
+  }, [isInView]);
 
   if (!mounted) {
     return (
@@ -276,7 +280,7 @@ function MagicPrice() {
   };
 
   return (
-    <div className="mt-2.5 flex items-center justify-center gap-3.5 h-[2.5rem] relative select-none">
+    <div ref={ref} className="mt-2.5 flex items-center justify-center gap-3.5 h-[2.5rem] relative select-none">
       {step !== "final" ? (
         <div className="relative inline-block py-1">
           {/* Main Price Text (₹999) */}

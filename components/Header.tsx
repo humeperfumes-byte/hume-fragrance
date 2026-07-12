@@ -331,23 +331,69 @@ const Header = () => {
                         <span>Best Sellers</span>
                       </span>
                     </button>
-                    <button
+                    <motion.button
                       onClick={() => {
                         setIsMenuOpen(false);
                         navigateTo(DISCOVERY_SET_PATH);
                       }}
-                      className="w-full border border-[#2a2116] bg-[#2a2116] px-3 py-2 text-left text-[#f7d79b]"
+                      className="w-full border border-[#2a2116] bg-[#2a2116] px-3 py-2.5 text-left text-[#f7d79b] relative overflow-hidden group"
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
                     >
-                      <div className="flex items-center justify-between">
-                        <p className="font-serif text-[1.18rem]">
-                          Discovery Set{" "}
-                          <span className="inline-flex items-center rounded-full border border-[#f7d79b]/18 bg-white/8 px-1.5 py-0.5 font-sans text-[0.5em] font-medium uppercase tracking-[0.08em] text-[#f7d79b]/78 not-italic align-middle">
-                            10 testers
+                      {/* Subtly moving golden sheen sweep across button in a loop */}
+                      <motion.div
+                        className="absolute inset-0 w-[50%] h-full bg-gradient-to-r from-transparent via-[#f7d79b]/12 to-transparent pointer-events-none skew-x-12"
+                        animate={{ x: ["-100%", "250%"] }}
+                        transition={{
+                          repeat: Infinity,
+                          duration: 2.5,
+                          ease: "easeInOut",
+                          repeatDelay: 2.0,
+                        }}
+                      />
+
+                      <div className="flex items-center justify-between relative z-10">
+                        <div className="font-serif text-[1.18rem] flex items-center gap-2">
+                          {/* Animated Sparkle Icon */}
+                          <motion.span
+                            animate={{ scale: [0.9, 1.25, 0.9], rotate: [0, 180, 360] }}
+                            transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
+                            className="inline-block text-[#f7d79b]/90 shrink-0"
+                          >
+                            <Sparkles className="h-4.5 w-4.5" />
+                          </motion.span>
+
+                          <span className="flex items-center gap-2">
+                            Discovery Set{" "}
+                            {/* Pulsing Pill Badge */}
+                            <motion.span
+                              animate={{
+                                scale: [1, 1.05, 1],
+                                borderColor: ["rgba(247, 215, 155, 0.18)", "rgba(247, 215, 155, 0.65)", "rgba(247, 215, 155, 0.18)"],
+                                boxShadow: [
+                                  "0 0 0px rgba(247, 215, 155, 0)",
+                                  "0 0 8px rgba(247, 215, 155, 0.3)",
+                                  "0 0 0px rgba(247, 215, 155, 0)"
+                                ]
+                              }}
+                              transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
+                              className="inline-flex items-center rounded-full border border-[#f7d79b]/18 bg-white/8 px-1.5 py-0.5 font-sans text-[0.5em] font-medium uppercase tracking-[0.08em] text-[#f7d79b]/90 not-italic align-middle"
+                            >
+                              15 testers
+                            </motion.span>
                           </span>
-                        </p>
-                        <span className="text-[1.45rem] opacity-75">→</span>
+                        </div>
+
+                        {/* Animated Bouncing Arrow */}
+                        <motion.span
+                          animate={{ x: [0, 5, 0] }}
+                          transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
+                          className="text-[1.45rem] opacity-85 text-[#f7d79b]"
+                        >
+                          →
+                        </motion.span>
                       </div>
-                    </button>
+                    </motion.button>
                     <button
                       onClick={() => {
                         setIsMobileGiftingOpen(!isMobileGiftingOpen);
