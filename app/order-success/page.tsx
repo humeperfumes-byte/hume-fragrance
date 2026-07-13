@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CheckCircle2, MessageCircle, PackageSearch, ShoppingBag, UserRound } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import FeedbackForm from "@/app/feedback/FeedbackForm";
 import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -42,12 +43,12 @@ export default async function OrderSuccessPage({ searchParams }: OrderSuccessPag
             <h1 className="mt-3 font-serif text-4xl font-light tracking-wide sm:text-5xl">
               We received your order
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-zinc-600">
+            <p className="hidden md:block mx-auto mt-4 max-w-xl text-sm leading-6 text-zinc-600">
               Thank you for choosing HUME Fragrance. We will pack your perfume carefully and share tracking once it is dispatched.
             </p>
           </div>
 
-          <div className="space-y-5 px-6 py-6 sm:px-10 sm:py-8">
+          <div className="space-y-5 px-4 py-6 sm:px-10 sm:py-8">
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
               <div className="grid gap-4 text-sm sm:grid-cols-2">
                 <div>
@@ -70,11 +71,11 @@ export default async function OrderSuccessPage({ searchParams }: OrderSuccessPag
                 My Account
               </Link>
               <Link
-                href="/track-order"
+                href="/account"
                 className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-100"
               >
                 <PackageSearch className="h-4 w-4" />
-                Track Order
+                View Order
               </Link>
               <a
                 href="https://wa.me/919559024822"
@@ -94,21 +95,16 @@ export default async function OrderSuccessPage({ searchParams }: OrderSuccessPag
               </Link>
             </div>
 
-            {/* Feedback Invitation */}
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50/50 p-6 text-center space-y-3">
-              <div className="space-y-1">
-                <h3 className="font-serif text-lg font-medium text-zinc-900">How was your shopping experience?</h3>
-                <p className="text-xs text-zinc-500 leading-relaxed max-w-md mx-auto">
-                  Rate our website flow and let us know how you heard about us to unlock customized future rewards!
+            {/* Embedded Feedback Form */}
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50/30 px-2.5 py-5 sm:p-8 space-y-4">
+              <div className="text-center space-y-1 border-b border-zinc-200/60 pb-4">
+                <h3 className="font-serif text-xl font-medium text-zinc-950">How was your shopping experience?</h3>
+                <p className="hidden md:block text-xs text-zinc-500 leading-relaxed max-w-md mx-auto">
+                  Rate our website flow and let us know how you heard about us to help us continuously refine HUME!
                 </p>
               </div>
-              <div className="pt-1">
-                <Link
-                  href="/feedback"
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-zinc-900 hover:bg-zinc-800 px-6 text-xs font-bold uppercase tracking-wider text-white transition-all active:scale-95 shadow-sm"
-                >
-                  Share Your Experience
-                </Link>
+              <div className="pt-2">
+                <FeedbackForm embedded />
               </div>
             </div>
           </div>

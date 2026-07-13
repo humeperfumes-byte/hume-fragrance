@@ -13,7 +13,7 @@ const SOURCES = [
   { id: "other", label: "Other Source" },
 ];
 
-export default function FeedbackForm() {
+export default function FeedbackForm({ embedded = false }: { embedded?: boolean }) {
   const [source, setSource] = useState("");
   const [sourceDetails, setSourceDetails] = useState("");
   const [rating, setRating] = useState(0);
@@ -72,52 +72,61 @@ export default function FeedbackForm() {
   };
 
   return (
-    <div className="w-full max-w-2xl bg-transparent md:bg-white/90 md:backdrop-blur-xl border-0 md:border md:border-stone-200/50 p-0 md:p-12 shadow-none md:shadow-[0_32px_96px_rgba(0,0,0,0.04)] relative overflow-hidden rounded-none md:rounded-3xl font-satoshi">
+    <div className={embedded 
+      ? "w-full bg-transparent p-0 shadow-none relative overflow-hidden font-satoshi" 
+      : "w-full max-w-2xl bg-transparent md:bg-white/90 md:backdrop-blur-xl border-0 md:border md:border-stone-200/50 p-0 md:p-12 shadow-none md:shadow-[0_32px_96px_rgba(0,0,0,0.04)] relative overflow-hidden rounded-none md:rounded-3xl font-satoshi"
+    }>
       {/* Soft tech-startup background glows */}
-      <div className="absolute -top-40 -right-40 w-96 h-96 bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-cyan-500/5 rounded-full blur-[100px] pointer-events-none" />
-
-      {/* Subtle modern layout grid */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#00000002_1px,transparent_1px),linear-gradient(to_bottom,#00000002_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
+      {!embedded && (
+        <>
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none" />
+          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-cyan-500/5 rounded-full blur-[100px] pointer-events-none" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#00000002_1px,transparent_1px),linear-gradient(to_bottom,#00000002_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
+        </>
+      )}
 
       {success ? (
-        <div className="text-center py-12 animate-fade-in relative z-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 mb-6 shadow-sm">
-            <CheckCircle2 className="w-8 h-8" />
+        <div className={embedded ? "text-center py-6 animate-fade-in relative z-10" : "text-center py-12 animate-fade-in relative z-10"}>
+          <div className={`inline-flex items-center justify-center rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 mb-6 shadow-sm ${embedded ? "w-14 h-14" : "w-16 h-16"}`}>
+            <CheckCircle2 className={embedded ? "w-7 h-7" : "w-8 h-8"} />
           </div>
-          <h1 className="font-clash text-2xl md:text-3xl font-bold text-stone-900 tracking-tight">
+          <h2 className={`font-serif font-semibold text-stone-900 tracking-tight ${embedded ? "text-xl" : "font-clash text-2xl md:text-3xl"}`}>
             Feedback Received
-          </h1>
-          <p className="mt-4 text-stone-500 max-w-md mx-auto text-xs md:text-sm leading-relaxed">
+          </h2>
+          <p className={`text-stone-500 max-w-md mx-auto leading-relaxed ${embedded ? "mt-2 text-xs" : "mt-4 text-xs md:text-sm"}`}>
             Thank you for sharing your experience! We have logged your responses and will use them to continuously refine HUME.
           </p>
 
-          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link
-              href="/shop"
-              className="inline-flex items-center justify-center px-6 h-12 bg-stone-900 text-white text-xs font-bold tracking-wider uppercase transition-all duration-150 hover:bg-stone-850 active:scale-95 shadow-sm rounded-full"
-            >
-              Back to Shop <ArrowRight className="w-4 h-4 ml-2" />
-            </Link>
-            <button
-              onClick={handleShareOnWhatsApp}
-              className="inline-flex items-center justify-center px-6 h-12 border border-stone-200 text-stone-700 bg-white text-xs font-bold tracking-wider uppercase transition-all duration-150 hover:bg-stone-50 active:scale-95 rounded-full"
-            >
-              <Share2 className="w-4 h-4 mr-2" /> Share Form
-            </button>
-          </div>
+          {!embedded && (
+            <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+              <Link
+                href="/shop"
+                className="inline-flex items-center justify-center px-6 h-12 bg-stone-900 text-white text-xs font-bold tracking-wider uppercase transition-all duration-150 hover:bg-stone-850 active:scale-95 shadow-sm rounded-full"
+              >
+                Back to Shop <ArrowRight className="w-4 h-4 ml-2" />
+              </Link>
+              <button
+                onClick={handleShareOnWhatsApp}
+                className="inline-flex items-center justify-center px-6 h-12 border border-stone-200 text-stone-700 bg-white text-xs font-bold tracking-wider uppercase transition-all duration-150 hover:bg-stone-50 active:scale-95 rounded-full"
+              >
+                <Share2 className="w-4 h-4 mr-2" /> Share Form
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8 relative z-10">
           {/* Header */}
-          <div className="text-center space-y-3">
-            <h1 className="text-3xl md:text-4xl font-extrabold text-stone-900 tracking-tight font-clash">
-              Feedback
-            </h1>
-            <p className="hidden md:block text-stone-500 text-xs md:text-sm max-w-lg mx-auto leading-relaxed">
-              We process experience logs to optimize performance. Select source values and navigation rating below.
-            </p>
-          </div>
+          {!embedded && (
+            <div className="text-center space-y-3">
+              <h1 className="text-3xl md:text-4xl font-extrabold text-stone-900 tracking-tight font-clash">
+                Feedback
+              </h1>
+              <p className="hidden md:block text-stone-500 text-xs md:text-sm max-w-lg mx-auto leading-relaxed">
+                We process experience logs to optimize performance. Select source values and navigation rating below.
+              </p>
+            </div>
+          )}
 
           {error && (
             <div className="p-4 bg-red-50 border border-red-200/50 text-red-700 text-xs rounded-2xl leading-relaxed flex items-start gap-2">
