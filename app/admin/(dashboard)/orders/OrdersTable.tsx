@@ -227,7 +227,7 @@ export function OrdersTable({
       case "shipped":
         return <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Shipped</Badge>;
       case "processing":
-        return <Badge className="bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Processing</Badge>;
+        return <Badge className="bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Confirmed</Badge>;
       case "payment_pending":
         return <Badge className="bg-sky-500/10 text-sky-600 hover:bg-sky-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Payment Pending</Badge>;
       case "payment_authorized":

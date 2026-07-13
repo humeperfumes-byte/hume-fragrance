@@ -124,6 +124,7 @@ function formatDate(value?: string | null) {
 }
 
 function titleStatus(status: string) {
+  if (status === "processing") return "Order Confirmed";
   return status
     .replace(/[_-]+/g, " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
