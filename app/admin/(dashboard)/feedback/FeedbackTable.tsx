@@ -124,87 +124,70 @@ export function FeedbackTable({ feedback }: { feedback: FeedbackRow[] }) {
         </span>
       </div>
 
-      {/* Table grid */}
-      <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.02]">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-white/15 bg-white/[0.02] text-xs font-semibold uppercase tracking-wider text-white/40">
-              <th className="px-6 py-4">Submission Date</th>
-              <th className="px-6 py-4">Source</th>
-              <th className="px-6 py-4">Keywords / Details</th>
-              <th className="px-6 py-4">Rating</th>
-              <th className="px-6 py-4">Feedback / Comments</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/10 text-sm text-white/80">
-            {filteredFeedback.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-white/40">
-                  No feedback matching active filters.
-                </td>
-              </tr>
-            ) : (
-              filteredFeedback.map((item) => (
-                <tr key={item.id} className="hover:bg-white/[0.01] transition-colors">
-                  {/* Submission date */}
-                  <td className="whitespace-nowrap px-6 py-4 text-xs font-mono text-white/40">
-                    {formatDate(item.createdAt)}
-                  </td>
+      {/* Cards Grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {filteredFeedback.length === 0 ? (
+          <div className="col-span-full py-16 text-center rounded-2xl border border-dashed border-white/10 bg-white/[0.01]">
+            <p className="text-white/40 text-sm">No feedback matching active filters.</p>
+          </div>
+        ) : (
+          filteredFeedback.map((item) => (
+            <div 
+              key={item.id} 
+              className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] p-5 shadow-[0_8px_32px_rgba(0,0,0,0.2)] hover:border-white/20 hover:bg-white/[0.03] transition-all duration-300 group"
+            >
+              {/* Card Header: Rating & Date */}
+              <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                <div className="flex items-center gap-0.5">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={`h-4 w-4 ${
+                        star <= item.rating
+                          ? "fill-amber-400 text-amber-400"
+                          : "text-white/10"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span className="text-[10px] font-mono text-white/30">
+                  {formatDate(item.createdAt)}
+                </span>
+              </div>
 
-                  {/* Source Badge */}
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                      item.source === "ai" ? "bg-cyan-500/10 text-cyan-300" :
-                      item.source === "google" ? "bg-blue-500/10 text-blue-300" :
-                      item.source === "social" ? "bg-purple-500/10 text-purple-300" :
-                      item.source === "friend" ? "bg-amber-500/10 text-amber-300" :
-                      item.source === "youtube" ? "bg-red-500/10 text-red-300" :
-                      "bg-white/5 text-white/40"
-                    }`}>
-                      {getSourceLabel(item.source)}
+              {/* Card Body: Source & Details */}
+              <div className="mt-4 space-y-3 flex-grow">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                    item.source === "ai" ? "bg-cyan-500/10 text-cyan-300" :
+                    item.source === "google" ? "bg-blue-500/10 text-blue-300" :
+                    item.source === "social" ? "bg-purple-500/10 text-purple-300" :
+                    item.source === "friend" ? "bg-amber-500/10 text-amber-300" :
+                    item.source === "youtube" ? "bg-red-500/10 text-red-300" :
+                    "bg-white/5 text-white/40"
+                  }`}>
+                    {getSourceLabel(item.source)}
+                  </span>
+                  
+                  {item.sourceDetails && (
+                    <span className="text-[11px] font-mono text-white/50 border border-white/5 bg-white/[0.02] px-2 py-0.5 rounded max-w-full break-words">
+                      {item.sourceDetails}
                     </span>
-                  </td>
+                  )}
+                </div>
 
-                  {/* Keywords/Details */}
-                  <td className="px-6 py-4 font-mono text-xs max-w-[200px] truncate" title={item.sourceDetails || ""}>
-                    {item.sourceDetails ? (
-                      <span className="text-white">{item.sourceDetails}</span>
-                    ) : (
-                      <span className="text-white/20">—</span>
-                    )}
-                  </td>
-
-                  {/* Rating Stars */}
-                  <td className="whitespace-nowrap px-6 py-4">
-                    <div className="flex items-center gap-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star
-                          key={star}
-                          className={`h-3.5 w-3.5 ${
-                            star <= item.rating
-                              ? "fill-amber-400 text-amber-400"
-                              : "text-white/10"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </td>
-
-                  {/* Feedback text */}
-                  <td className="px-6 py-4 max-w-[320px]">
-                    {item.feedbackText ? (
-                      <div className="text-white/70 line-clamp-2 text-xs leading-relaxed" title={item.feedbackText}>
-                        {item.feedbackText}
-                      </div>
-                    ) : (
-                      <span className="text-white/20 text-xs italic">No comments provided</span>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                {/* Feedback Comment */}
+                <div className="pt-2 text-sm leading-relaxed text-white/80 whitespace-pre-wrap break-words">
+                  {item.feedbackText ? (
+                    item.feedbackText
+                  ) : (
+                    <span className="text-white/20 italic text-xs">No comments provided</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
