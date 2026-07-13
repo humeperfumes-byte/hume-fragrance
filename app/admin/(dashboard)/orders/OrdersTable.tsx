@@ -1192,41 +1192,65 @@ export function OrdersTable({
 
                 <div className="rounded-xl border border-border/50 bg-secondary/10 p-5 space-y-4">
                   <h4 className="font-semibold text-sm uppercase tracking-widest text-muted-foreground">Order Management</h4>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {selectedOrder.status !== "shipped" && selectedOrder.status !== "delivered" && selectedOrder.status !== "cancelled" && (
-                      <Button 
-                        onClick={() => handleUpdateStatus(selectedOrder.id, "shipped")} 
-                        disabled={isUpdating}
-                        className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] tracking-widest uppercase h-10 shadow-md"
-                      >
-                        MARK SHIPPED
-                      </Button>
-                    )}
-                    {selectedOrder.status !== "delivered" && selectedOrder.status !== "cancelled" && (
-                      <Button 
-                        onClick={() => handleUpdateStatus(selectedOrder.id, "delivered")} 
-                        disabled={isUpdating}
-                        className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] tracking-widest uppercase h-10 shadow-md"
-                      >
-                        FULFILL ORDER
-                      </Button>
-                    )}
-                    {selectedOrder.status !== "cancelled" && (
-                      <Button 
-                        onClick={() => handleUpdateStatus(selectedOrder.id, "cancelled")} 
-                        disabled={isUpdating}
-                        variant="outline"
-                        className="rounded-xl border-red-500/30 text-red-600 hover:bg-red-500/10 font-bold text-[10px] tracking-widest uppercase h-10 col-span-2 mt-2"
-                      >
-                        CANCEL ORDER
-                      </Button>
-                    )}
+                  <div className="grid gap-2.5 sm:grid-cols-2">
+                    {/* Confirm Order / Processing */}
+                    <Button 
+                      onClick={() => handleUpdateStatus(selectedOrder.id, "processing")} 
+                      disabled={isUpdating || selectedOrder.status === "processing"}
+                      className={`rounded-xl font-bold text-[10px] tracking-widest uppercase h-10 shadow-md ${
+                        selectedOrder.status === "processing"
+                          ? "bg-indigo-600/30 text-indigo-300 border border-indigo-500/20 cursor-default"
+                          : "bg-indigo-650 hover:bg-indigo-700 text-white"
+                      }`}
+                    >
+                      {selectedOrder.status === "processing" ? "Confirmed" : "CONFIRM ORDER"}
+                    </Button>
+
+                    {/* Mark Shipped */}
+                    <Button 
+                      onClick={() => handleUpdateStatus(selectedOrder.id, "shipped")} 
+                      disabled={isUpdating || selectedOrder.status === "shipped"}
+                      className={`rounded-xl font-bold text-[10px] tracking-widest uppercase h-10 shadow-md ${
+                        selectedOrder.status === "shipped"
+                          ? "bg-blue-600/30 text-blue-300 border border-blue-500/20 cursor-default"
+                          : "bg-blue-600 hover:bg-blue-700 text-white"
+                      }`}
+                    >
+                      {selectedOrder.status === "shipped" ? "Shipped" : "MARK SHIPPED"}
+                    </Button>
+
+                    {/* Fulfill Order / Delivered */}
+                    <Button 
+                      onClick={() => handleUpdateStatus(selectedOrder.id, "delivered")} 
+                      disabled={isUpdating || selectedOrder.status === "delivered"}
+                      className={`rounded-xl font-bold text-[10px] tracking-widest uppercase h-10 shadow-md ${
+                        selectedOrder.status === "delivered"
+                          ? "bg-emerald-600/30 text-emerald-300 border border-emerald-500/20 cursor-default"
+                          : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                      }`}
+                    >
+                      {selectedOrder.status === "delivered" ? "Delivered" : "FULFILL ORDER"}
+                    </Button>
+
+                    {/* Cancel Order */}
+                    <Button 
+                      onClick={() => handleUpdateStatus(selectedOrder.id, "cancelled")} 
+                      disabled={isUpdating || selectedOrder.status === "cancelled"}
+                      className={`rounded-xl font-bold text-[10px] tracking-widest uppercase h-10 shadow-md ${
+                        selectedOrder.status === "cancelled"
+                          ? "bg-red-950/30 text-red-400 border border-red-900/30 cursor-default"
+                          : "bg-red-650 hover:bg-red-700 text-white"
+                      }`}
+                    >
+                      {selectedOrder.status === "cancelled" ? "Cancelled" : "CANCEL ORDER"}
+                    </Button>
+
                     <Button
                       type="button"
                       onClick={handleRemoveOrder}
                       disabled={isUpdating}
                       variant="outline"
-                      className="col-span-2 rounded-xl border-red-500/40 bg-red-500/[0.04] text-red-300 hover:bg-red-500/10 font-bold text-[10px] tracking-widest uppercase h-10"
+                      className="col-span-2 rounded-xl border-red-500/40 bg-red-500/[0.04] text-red-300 hover:bg-red-500/10 font-bold text-[10px] tracking-widest uppercase h-10 mt-2"
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       REMOVE TEST ORDER
