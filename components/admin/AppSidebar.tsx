@@ -23,6 +23,7 @@ const navItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
   { title: "AI Visibility", url: "/admin/ai-visibility", icon: Sparkles },
   { title: "Orders", url: "/admin/orders", icon: ShoppingBag },
+  { title: "Invoice Engine", url: "/bill", icon: FileText },
   { title: "Tracking", url: "/admin/tracking", icon: Truck },
   { title: "Stock Requests", url: "/admin/stock-notify", icon: Bell },
   { title: "Checkouts", url: "/admin/checkouts", icon: ShoppingCart },

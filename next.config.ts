@@ -103,6 +103,45 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    const slugs = [
+      "best-perfume-trial-kit-india",
+      "all-perfumes-discovery-set",
+      "best-trial-kit",
+      "discovery-set-under-1000",
+      "discovery-set-under-500",
+      "perfume-tester-pack-india",
+      "buy-perfume-testers-online",
+      "mens-perfume-trial-set",
+      "womens-perfume-tester-kit",
+      "try-before-buy-perfume",
+      "unisex-fragrance-discovery-set",
+      "affordable-luxury-perfume-samples",
+      "build-your-own-perfume-kit",
+      "fragrance-tester-gift-box",
+      "premium-perfume-testers-3ml",
+      "best-perfume-decants-india",
+      "long-lasting-perfume-trial-pack",
+      "daily-wear-perfume-tester-set",
+      "niche-perfume-samples-india",
+      "best-fragrance-sample-box",
+      "miniature-perfume-set-for-travel",
+      "top-rated-perfume-discovery-box",
+      "luxury-fragrance-starter-kit",
+      "byo-fragrance-discovery-set",
+    ];
+    const seoRewrites = slugs.map((slug) => ({
+      source: `/${slug}`,
+      destination: `/discovery-set/${slug}`,
+    }));
+    return [
+      ...seoRewrites,
+      {
+        source: "/bill",
+        destination: "/invoice",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -11,9 +11,11 @@ import {
   User,
   Settings,
   Coins,
-  Scale
+  Copy,
+  Check
 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "@/hooks/use-toast";
 
 interface InvoiceItem {
   id: string;
@@ -24,9 +26,12 @@ interface InvoiceItem {
 }
 
 export default function InvoicePage() {
+  const [copying, setCopying] = useState(false);
+  const [copied, setCopied] = useState(false);
+
   // 1. Seller Information (preset with HUME details)
   const [sellerName, setSellerName] = useState("HUME FRAGRANCE");
-  const [sellerAddress, setSellerAddress] = useState("Mohalla Qanoongoan, Kannauj, Uttar Pradesh - 209725");
+  const [sellerAddress, setSellerAddress] = useState("house no 8, Pansarian Area, Kannauj, Uttar Pradesh - 209725");
   const [sellerEmail, setSellerEmail] = useState("support@humefragrance.com");
   const [sellerPhone, setSellerPhone] = useState("+91 95590 24822");
   const [sellerGstin, setSellerGstin] = useState("09AABCH1234F1Z5"); // Placeholder GSTIN
@@ -41,7 +46,6 @@ export default function InvoicePage() {
   // 3. Invoice Metadata
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState("");
-  const [dueDate, setDueDate] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("Unpaid");
 
   // 4. Line Items
@@ -63,10 +67,6 @@ export default function InvoicePage() {
     const localToday = new Date(today.getTime() - offset * 60 * 1000);
     const formattedToday = localToday.toISOString().split("T")[0];
     setInvoiceDate(formattedToday);
-    
-    const nextWeek = new Date(today.getTime() - offset * 60 * 1000);
-    nextWeek.setDate(nextWeek.getDate() + 7);
-    setDueDate(nextWeek.toISOString().split("T")[0]);
 
     // Generate random invoice number: HF-YYYY-XXXX
     const randomNum = Math.floor(100000 + Math.random() * 900000);
@@ -148,6 +148,72 @@ export default function InvoicePage() {
     window.print();
   };
 
+  const handleCopyImage = async () => {
+    const container = document.querySelector(".print-container");
+    if (!container) return;
+
+    setCopying(true);
+
+    // Find and temporarily disable cross-origin stylesheets to prevent html-to-image CORS/SecurityErrors
+    const crossOriginLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"]')).filter(link => {
+      try {
+        const href = (link as HTMLLinkElement).href;
+        return href && !href.startsWith(window.location.origin);
+      } catch {
+        return false;
+      }
+    }) as HTMLLinkElement[];
+
+    crossOriginLinks.forEach(link => {
+      link.disabled = true;
+    });
+
+    try {
+      const { toBlob } = await import("html-to-image");
+      const blob = await toBlob(container as HTMLElement, {
+        pixelRatio: 2.5, // Crisp high resolution
+        backgroundColor: "#ffffff",
+        skipFonts: true, // Skip processing web fonts to prevent CORS/SecurityErrors
+        style: {
+          transform: "none",
+          transformOrigin: "top center",
+          margin: "0",
+          width: "800px",
+          height: "1130px",
+          boxShadow: "none",
+        }
+      });
+
+      if (blob) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            [blob.type]: blob,
+          }),
+        ]);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+        
+        toast({
+          title: "Copied!",
+          description: "Invoice image copied to clipboard. You can paste it directly into WhatsApp!",
+        });
+      }
+    } catch (error) {
+      console.error("Error copying invoice image:", error);
+      toast({
+        title: "Error",
+        description: "Failed to copy image. Please try downloading the PDF instead.",
+        variant: "destructive",
+      });
+    } finally {
+      // Re-enable all cross-origin stylesheets
+      crossOriginLinks.forEach(link => {
+        link.disabled = false;
+      });
+      setCopying(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-white/90 print:bg-white print:text-black">
       {/* Top Header - Hidden during print */}
@@ -162,13 +228,38 @@ export default function InvoicePage() {
           </div>
         </div>
 
-        <button
-          onClick={handlePrint}
-          className="flex items-center gap-2 bg-white px-4 py-2 text-xs font-semibold tracking-[0.05em] text-black transition hover:bg-white/90 rounded-none shadow-sm"
-        >
-          <Download className="h-4 w-4" />
-          DOWNLOAD PDF
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleCopyImage}
+            disabled={copying}
+            className="flex items-center gap-2 bg-white px-4 py-2 text-xs font-semibold tracking-[0.05em] text-black transition hover:bg-white/90 rounded-none shadow-sm disabled:opacity-50"
+          >
+            {copying ? (
+              <>
+                <span className="animate-spin h-3.5 w-3.5 border-2 border-black border-t-transparent rounded-full" />
+                COPYING...
+              </>
+            ) : copied ? (
+              <>
+                <Check className="h-4 w-4 text-emerald-600" />
+                COPIED!
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4" />
+                COPY IMAGE
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={handlePrint}
+            className="flex items-center gap-2 border border-white/20 bg-white/[0.04] px-4 py-2 text-xs font-semibold tracking-[0.05em] text-white transition hover:bg-white/[0.08] rounded-none shadow-sm"
+          >
+            <Download className="h-4 w-4" />
+            DOWNLOAD PDF
+          </button>
+        </div>
       </header>
 
       {/* Editor & Preview Workspace */}
@@ -206,25 +297,14 @@ export default function InvoicePage() {
                 </select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-white/50">Invoice Date</label>
-                <input
-                  type="date"
-                  value={invoiceDate}
-                  onChange={(e) => setInvoiceDate(e.target.value)}
-                  className="w-full bg-white/[0.04] border border-white/10 p-2 text-sm text-white focus:outline-none focus:border-white/30"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-white/50">Due Date</label>
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full bg-white/[0.04] border border-white/10 p-2 text-sm text-white focus:outline-none focus:border-white/30"
-                />
-              </div>
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-white/50">Invoice Date</label>
+              <input
+                type="date"
+                value={invoiceDate}
+                onChange={(e) => setInvoiceDate(e.target.value)}
+                className="w-full bg-white/[0.04] border border-white/10 p-2 text-sm text-white focus:outline-none focus:border-white/30"
+              />
             </div>
           </section>
 
@@ -453,97 +533,58 @@ export default function InvoicePage() {
             </div>
           </section>
 
-          {/* Footer Details */}
-          <section className="space-y-4">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-white/35 border-b border-white/5 pb-2">
-              <Scale className="h-4 w-4" />
-              Bank & Terms
-            </div>
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-white/50">Bank Account Details</label>
-                <input
-                  type="text"
-                  value={bankDetails}
-                  onChange={(e) => setBankDetails(e.target.value)}
-                  className="w-full bg-white/[0.04] border border-white/10 p-2 text-sm text-white focus:outline-none focus:border-white/30"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-white/50">Terms & Conditions</label>
-                <textarea
-                  value={terms}
-                  onChange={(e) => setTerms(e.target.value)}
-                  rows={3}
-                  className="w-full bg-white/[0.04] border border-white/10 p-2 text-sm text-white focus:outline-none focus:border-white/30 resize-none"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-white/50">Notes</label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={2}
-                  className="w-full bg-white/[0.04] border border-white/10 p-2 text-sm text-white focus:outline-none focus:border-white/30 resize-none"
-                />
-              </div>
-            </div>
-          </section>
         </aside>
 
-        {/* Right Side: Live A4 Preview Page */}
-        <section className="flex justify-center bg-[#181818] p-8 min-h-[calc(100vh-69px)] overflow-y-auto print:p-0 print:bg-white print:h-auto print:overflow-visible">
+        <section className="flex justify-center bg-[#181818] p-8 min-h-[calc(100vh-69px)] overflow-y-auto overflow-x-hidden w-full print:p-0 print:bg-white print:h-auto print:overflow-visible">
           
           {/* Printable Invoice Page Container */}
-          <div className="print-container w-[800px] min-h-[1130px] bg-white text-black p-10 font-sans shadow-2xl relative flex flex-col justify-between print:shadow-none print:w-full print:min-h-0 print:h-auto">
+          <div className="print-container w-[800px] min-h-[1130px] flex-shrink-0 bg-white text-black p-12 font-sans shadow-2xl relative flex flex-col justify-between print:shadow-none print:w-full print:min-h-0 print:h-auto" style={{ fontFamily: 'var(--font-sans), sans-serif' }}>
             
             <div>
               {/* Invoice Header */}
               <div className="flex justify-between items-start border-b border-black/10 pb-8">
                 <div>
-                  <img src="/images/logo/brown cursive hf png.png" alt="HUME Logo" className="h-12 w-auto object-contain" />
-                  <p className="text-[11px] font-bold tracking-[0.12em] text-black uppercase mt-1">HUME FRAGRANCE</p>
-                  <div className="text-[11px] leading-relaxed text-black/75 mt-4 max-w-[280px]">
-                    <p className="font-semibold">{sellerName}</p>
+                  <img src="/images/logo/brown cursive hf png.png" alt="HUME Logo" className="h-16 w-auto object-contain" />
+                  <p className="text-sm font-bold tracking-[0.15em] text-black uppercase mt-2">HUME FRAGRANCE</p>
+                  <div className="text-xs md:text-sm leading-relaxed text-black/75 mt-4 max-w-[320px]">
+                    <p className="font-semibold text-black">{sellerName}</p>
                     <p className="mt-0.5">{sellerAddress}</p>
                     <p className="mt-1">Email: {sellerEmail}</p>
                     <p>Phone: {sellerPhone}</p>
-                    {sellerGstin && <p className="mt-1 font-semibold">GSTIN: {sellerGstin}</p>}
+                    {sellerGstin && <p className="mt-1 font-semibold text-black">GSTIN: {sellerGstin}</p>}
                   </div>
                 </div>
 
                 <div className="text-right">
-                  <span className="inline-block bg-black px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-white">
+                  <span className="inline-block bg-black px-4 py-1.5 text-xs font-bold uppercase tracking-[0.15em] text-white">
                     Tax Invoice
                   </span>
-                  <div className="mt-4 space-y-1 text-xs">
-                    <p className="text-black/50">Invoice No</p>
-                    <p className="font-semibold text-sm">{invoiceNumber || "—"}</p>
-                    <p className="text-black/50 mt-2">Date</p>
-                    <p className="font-semibold">{invoiceDate ? new Date(invoiceDate).toLocaleDateString("en-IN") : "—"}</p>
-                    <p className="text-black/50 mt-2">Due Date</p>
-                    <p className="font-semibold">{dueDate ? new Date(dueDate).toLocaleDateString("en-IN") : "—"}</p>
+                  <div className="mt-4 space-y-1.5 text-xs md:text-sm">
+                    <p className="text-black/50 text-[11px] uppercase tracking-wider font-semibold">Invoice No</p>
+                    <p className="font-bold text-base text-black">{invoiceNumber || "—"}</p>
+                    <p className="text-black/50 text-[11px] uppercase tracking-wider font-semibold mt-2">Date</p>
+                    <p className="font-bold text-black">{invoiceDate ? new Date(invoiceDate).toLocaleDateString("en-IN") : "—"}</p>
                   </div>
                 </div>
               </div>
 
               {/* Billing Info */}
               <div className="grid grid-cols-2 gap-8 py-8 border-b border-black/10">
-                <div className="text-xs">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-black/40">Billed To</p>
-                  <div className="mt-2 space-y-1 text-black/85">
-                    <p className="font-semibold text-sm text-black">{buyerName || "—"}</p>
+                <div className="text-xs md:text-sm">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-black/45">Billed To</p>
+                  <div className="mt-2.5 space-y-1 text-black/85">
+                    <p className="font-bold text-base text-black">{buyerName || "—"}</p>
                     {buyerAddress && <p className="leading-relaxed whitespace-pre-line">{buyerAddress}</p>}
                     {buyerEmail && <p>Email: {buyerEmail}</p>}
                     {buyerPhone && <p>Phone: {buyerPhone}</p>}
-                    {buyerGstin && <p className="font-semibold mt-1">GSTIN: {buyerGstin}</p>}
+                    {buyerGstin && <p className="font-semibold mt-1 text-black">GSTIN: {buyerGstin}</p>}
                   </div>
                 </div>
 
-                <div className="text-right text-xs">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-black/40">Payment Details</p>
-                  <div className="mt-2 space-y-1 text-black/85">
-                    <p>Status: <span className={`font-bold text-xs uppercase tracking-wider ml-1 ${
+                <div className="text-right text-xs md:text-sm">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-black/45">Payment Details</p>
+                  <div className="mt-2.5 space-y-1 text-black/85">
+                    <p className="font-semibold">Status: <span className={`font-bold text-xs md:text-sm uppercase tracking-wider ml-1 ${
                       paymentStatus === "Paid" 
                         ? "text-emerald-600 print:text-emerald-700" 
                         : paymentStatus === "Unpaid"
@@ -552,8 +593,8 @@ export default function InvoicePage() {
                     }`}>{paymentStatus}</span></p>
                     {bankDetails.trim() && (
                       <>
-                        <p className="text-black/40 mt-2">Bank Details</p>
-                        <p className="leading-relaxed">{bankDetails}</p>
+                        <p className="text-black/45 font-semibold text-[11px] uppercase tracking-wider mt-3">Bank Details</p>
+                        <p className="leading-relaxed font-medium">{bankDetails}</p>
                       </>
                     )}
                   </div>
@@ -562,15 +603,15 @@ export default function InvoicePage() {
 
               {/* Line Items Table */}
               <div className="py-8">
-                <table className="w-full text-left text-xs border-collapse">
+                <table className="w-full text-left text-xs md:text-sm border-collapse">
                   <thead>
-                    <tr className="border-b border-black/15 text-[10px] font-semibold uppercase tracking-[0.12em] text-black/45">
-                      <th className="py-2.5 w-8">#</th>
-                      <th className="py-2.5">Item Description</th>
-                      <th className="py-2.5 text-right w-16">Price</th>
-                      <th className="py-2.5 text-center w-12">Qty</th>
-                      <th className="py-2.5 text-center w-12">GST %</th>
-                      <th className="py-2.5 text-right w-24">Amount</th>
+                    <tr className="border-b border-black/15 text-[11px] font-bold uppercase tracking-[0.12em] text-black/45">
+                      <th className="py-3 w-8">#</th>
+                      <th className="py-3">Item Description</th>
+                      <th className="py-3 text-right w-20">Price</th>
+                      <th className="py-3 text-center w-14">Qty</th>
+                      <th className="py-3 text-center w-14">GST %</th>
+                      <th className="py-3 text-right w-28">Amount</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -578,12 +619,12 @@ export default function InvoicePage() {
                       const itemTotal = item.quantity * item.price;
                       return (
                         <tr key={item.id} className="border-b border-black/5">
-                          <td className="py-3 text-black/40">{index + 1}</td>
-                          <td className="py-3 font-medium text-black">{item.name || "Untitled Item"}</td>
-                          <td className="py-3 text-right">₹{item.price.toFixed(2)}</td>
-                          <td className="py-3 text-center">{item.quantity}</td>
-                          <td className="py-3 text-center text-black/60">{item.gstPercent}%</td>
-                          <td className="py-3 text-right font-semibold">₹{itemTotal.toFixed(2)}</td>
+                          <td className="py-4 text-black/40 font-medium">{index + 1}</td>
+                          <td className="py-4 font-medium text-[15px] text-black">{item.name || "Untitled Item"}</td>
+                          <td className="py-4 text-right font-medium">₹{item.price.toFixed(2)}</td>
+                          <td className="py-4 text-center font-medium">{item.quantity}</td>
+                          <td className="py-4 text-center font-medium text-black/60">{item.gstPercent}%</td>
+                          <td className="py-4 text-right font-bold">₹{itemTotal.toFixed(2)}</td>
                         </tr>
                       );
                     })}
@@ -592,46 +633,46 @@ export default function InvoicePage() {
               </div>
 
               {/* Summary / Calculation Totals */}
-              <div className="grid grid-cols-[1fr_260px] gap-8 py-4 border-t border-black/10">
-                <div className="text-xs space-y-4">
+              <div className="grid grid-cols-[1fr_280px] gap-8 py-4 border-t border-black/10">
+                <div className="text-xs md:text-sm space-y-4">
                   {notes && (
                     <div>
-                      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-black/40">Notes</p>
-                      <p className="mt-1 text-black/70 leading-relaxed">{notes}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-black/45">Notes</p>
+                      <p className="mt-1 text-black/75 leading-relaxed">{notes}</p>
                     </div>
                   )}
                   {terms && (
                     <div>
-                      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-black/40">Terms & Conditions</p>
-                      <p className="mt-1 text-[10px] text-black/55 leading-relaxed whitespace-pre-line">{terms}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-black/45">Terms & Conditions</p>
+                      <p className="mt-1 text-xs text-black/60 leading-relaxed whitespace-pre-line">{terms}</p>
                     </div>
                   )}
                 </div>
 
-                <div className="text-xs space-y-2.5">
+                <div className="text-xs md:text-sm space-y-2.5">
                   <div className="flex justify-between text-black/60">
                     <span>Subtotal (Excl. Tax)</span>
-                    <span>₹{totals.subtotal.toFixed(2)}</span>
+                    <span className="font-semibold">₹{totals.subtotal.toFixed(2)}</span>
                   </div>
                   {totals.totalGst > 0 && (
                     <div className="flex justify-between text-black/60">
                       <span>Total GST (Included)</span>
-                      <span>₹{totals.totalGst.toFixed(2)}</span>
+                      <span className="font-semibold">₹{totals.totalGst.toFixed(2)}</span>
                     </div>
                   )}
                   {shippingFee > 0 && (
                     <div className="flex justify-between text-black/60">
                       <span>Shipping Fee</span>
-                      <span>₹{shippingFee.toFixed(2)}</span>
+                      <span className="font-semibold">₹{shippingFee.toFixed(2)}</span>
                     </div>
                   )}
                   {totals.discountAmount > 0 && (
-                    <div className="flex justify-between text-emerald-700 font-medium">
+                    <div className="flex justify-between text-emerald-700 font-bold">
                       <span>Discount ({totals.discountPercent.toFixed(2).replace(/\.00$/, "")}%)</span>
                       <span>-₹{totals.discountAmount.toFixed(2)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm font-semibold border-t border-black/10 pt-2.5 text-black">
+                  <div className="flex justify-between text-base font-bold border-t border-black/10 pt-3 text-black">
                     <span>Grand Total</span>
                     <span>₹{totals.grandTotal.toFixed(2)}</span>
                   </div>
@@ -640,14 +681,14 @@ export default function InvoicePage() {
             </div>
 
             {/* Signature Area */}
-            <div className="flex justify-between items-end border-t border-black/5 pt-8 mt-12 text-xs">
-              <div className="text-[10px] text-black/40">
+            <div className="flex justify-between items-end border-t border-black/5 pt-10 mt-16 text-xs md:text-[13px]">
+              <div className="text-xs text-black/50">
                 <p>This is a computer-generated invoice and does not require a physical signature.</p>
                 <p className="mt-0.5">Thank you for choosing HUME Fragrance.</p>
               </div>
-              <div className="text-right w-48 border-t border-black/25 pt-2">
-                <p className="font-semibold text-black/75">Authorized Signatory</p>
-                <p className="text-[10px] text-black/45 mt-0.5">{sellerName}</p>
+              <div className="text-right w-56 border-t border-black/25 pt-2">
+                <p className="font-bold text-sm text-black">Authorized Signatory</p>
+                <p className="text-xs text-black/50 mt-0.5">{sellerName}</p>
               </div>
             </div>
 
@@ -657,6 +698,16 @@ export default function InvoicePage() {
       </div>
 
       <style jsx global>{`
+        @media screen and (max-width: 840px) {
+          .print-container {
+            transform: scale(calc((100vw - 32px) / 800)) !important;
+            transform-origin: top center !important;
+            margin-bottom: calc(-1130px * (1 - (100vw - 32px) / 800)) !important;
+            width: 800px !important;
+            min-height: 1130px !important;
+            box-shadow: none !important;
+          }
+        }
         @media print {
           @page {
             size: A4 portrait;
@@ -683,6 +734,7 @@ export default function InvoicePage() {
             min-height: auto !important;
           }
           .print-container {
+            font-family: var(--font-sans), sans-serif !important;
             padding: 20mm !important;
             width: 210mm !important;
             height: 297mm !important;

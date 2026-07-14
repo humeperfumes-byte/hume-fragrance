@@ -43,6 +43,7 @@ const navItems = [
   { title: "Partnerships", url: "/admin/partnerships", icon: Handshake },
   { title: "Feedback", url: "/admin/feedback", icon: MessageSquare },
   { title: "Orders", url: "/admin/orders", icon: ShoppingBag },
+  { title: "Invoice Engine", url: "/bill", icon: FileText },
   { title: "Tracking", url: "/admin/tracking", icon: Truck },
   { title: "Stock Requests", url: "/admin/stock-notify", icon: Bell },
   { title: "Checkouts", url: "/admin/checkouts", icon: ShoppingCart },
@@ -75,6 +76,7 @@ const navGroups = [
     items: navItems.filter((item) =>
       [
         "Orders",
+        "Invoice Engine",
         "Tracking",
         "Stock Requests",
         "Checkouts",

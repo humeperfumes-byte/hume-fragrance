@@ -425,7 +425,7 @@ function MagicPrice() {
   );
 }
 
-export default function DiscoverySetBuilder() {
+export default function DiscoverySetBuilder({ customH1 }: { customH1?: string }) {
   const { addItem, setIsCartOpen } = useCart();
   const controls = useSiteControls();
   const [allPerfumes, setAllPerfumes] = useState<PerfumeData[]>([]);
@@ -710,7 +710,7 @@ export default function DiscoverySetBuilder() {
               Discovery Collection
             </p>
             <h1 className="mt-3 font-serif text-[2.65rem] font-light leading-[0.92] tracking-tight sm:mt-4 sm:text-[4.7rem] lg:text-[5.3rem]">
-              Discovery Set
+              {customH1 || "Discovery Set"}
             </h1>
 
             <div className="mt-4 lg:hidden">
@@ -891,7 +891,7 @@ export default function DiscoverySetBuilder() {
               </div>
 
               <h1 className="mt-1 font-serif text-[2.6rem] font-light leading-none tracking-tight text-stone-900">
-                Discovery Set
+                {customH1 || "Discovery Set"}
               </h1>
               <p className="mt-3 text-xs leading-5 text-stone-500">
                 A curated sequence of {sampleCount} olfactory studies. Build your personal archive from the HUME fragrance library and find the scent that actually works on your skin.

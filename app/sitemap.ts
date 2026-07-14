@@ -11,6 +11,7 @@ import { DISCOVERY_SET_PATH } from "@/lib/discovery-set";
 import { DETAIL_UPCOMING_PRODUCTS } from "@/lib/upcoming-products";
 import { PERFUME_MATURATION_PATH } from "@/lib/perfume-maturation";
 import { NATURALS_PRODUCTS } from "@/lib/naturals-data";
+import { getDiscoverySetSeoSlugs } from "@/lib/discovery-set-seo";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = await getRequestSiteUrl();
@@ -63,6 +64,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const naturalsEntries = NATURALS_PRODUCTS.map((prod) => ({
     url: `${baseUrl}/naturals/${prod.id}`,
+    lastModified: new Date(),
+    changeFrequency: "weekly" as const,
+    priority: 0.75,
+  }));
+
+  const discoverySetSeoEntries = getDiscoverySetSeoSlugs().map((slug) => ({
+    url: `${baseUrl}/${slug}`,
     lastModified: new Date(),
     changeFrequency: "weekly" as const,
     priority: 0.75,
@@ -245,5 +253,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...recommendationEntries,
     ...upcomingProductEntries,
     ...naturalsEntries,
+    ...discoverySetSeoEntries,
   ];
 }
