@@ -554,6 +554,7 @@ export type NewCustomerFeedback = typeof customerFeedback.$inferInsert;
 // Flyer Campaign Events Table (QR Scans, Funnel Ratios & Analytics)
 export const flyerCampaignEvents = pgTable("flyer_campaign_events", {
   id: varchar("id", { length: 255 }).primaryKey(),
+  qrId: varchar("qr_id", { length: 255 }),
   city: varchar("city", { length: 100 }).notNull(), // ahmedabad | mumbai | delhi etc.
   targetPage: varchar("target_page", { length: 100 }).notNull(), // perfumes | discovery-set
   eventType: varchar("event_type", { length: 50 }).notNull(), // qr_scan | coupon_copy | add_to_cart | checkout_start | order_complete
@@ -566,3 +567,22 @@ export const flyerCampaignEvents = pgTable("flyer_campaign_events", {
 
 export type FlyerCampaignEvent = typeof flyerCampaignEvents.$inferSelect;
 export type NewFlyerCampaignEvent = typeof flyerCampaignEvents.$inferInsert;
+
+// Registered Saved QR Campaigns Table
+export const qrCampaigns = pgTable("qr_campaigns", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  city: varchar("city", { length: 100 }).notNull(),
+  targetPage: varchar("target_page", { length: 100 }).notNull(),
+  targetUrl: varchar("target_url", { length: 2048 }).notNull(),
+  bodyType: varchar("body_type", { length: 50 }).notNull().default("stars"),
+  eyeStyle: varchar("eye_style", { length: 50 }).notNull().default("rounded"),
+  logoType: varchar("logo_type", { length: 50 }).notNull().default("hf-cursive"),
+  qrCodeSvg: text("qr_code_svg"),
+  scanCount: integer("scan_count").notNull().default(0),
+  lastScannedAt: timestamp("last_scanned_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type QRCampaign = typeof qrCampaigns.$inferSelect;
+export type NewQRCampaign = typeof qrCampaigns.$inferInsert;

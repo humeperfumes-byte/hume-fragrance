@@ -3,8 +3,32 @@ import { db } from "@/db";
 import { flyerCampaignEvents } from "@/db/schema";
 import { sql, desc } from "drizzle-orm";
 
+async function ensureFlyerEventsTable() {
+  try {
+    await db.execute(sql`
+      create table if not exists flyer_campaign_events (
+        id varchar(255) primary key,
+        qr_id varchar(255),
+        city varchar(100) not null,
+        target_page varchar(100) not null,
+        event_type varchar(50) not null,
+        coupon_code varchar(50),
+        session_id varchar(255),
+        order_id varchar(255),
+        revenue numeric(10, 2),
+        created_at timestamp default now() not null
+      );
+
+      alter table flyer_campaign_events add column if not exists qr_id varchar(255);
+    `);
+  } catch (err) {
+    console.error("Error ensuring flyer_campaign_events table:", err);
+  }
+}
+
 export async function GET(req: Request) {
   try {
+    await ensureFlyerEventsTable();
     const { searchParams } = new URL(req.url);
     const selectedCity = searchParams.get("city") || "all";
 
@@ -34,103 +58,82 @@ export async function GET(req: Request) {
     const conversionRate = totalScans > 0 ? (totalOrders / totalScans) * 100 : 0;
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-    // Full Funnel Ratio Stages
+    // 5-Stage Visual Funnel Calculations
     const funnelStages = [
       {
-        stage: "QR Scans / Visits",
+        stage: "1. Flyer QR Scanned",
         count: totalScans,
         percentage: 100,
         color: "bg-blue-500",
       },
       {
-        stage: "Coupon Copies",
+        stage: "2. Coupon Code Copied",
         count: couponCopies,
-        percentage: totalScans > 0 ? Math.min(100, (couponCopies / totalScans) * 100) : 0,
+        percentage: totalScans > 0 ? (couponCopies / totalScans) * 100 : 0,
         color: "bg-amber-500",
       },
       {
-        stage: "Cart Additions",
+        stage: "3. Added to Cart",
         count: cartAdds,
-        percentage: totalScans > 0 ? Math.min(100, (cartAdds / totalScans) * 100) : 0,
+        percentage: totalScans > 0 ? (cartAdds / totalScans) * 100 : 0,
         color: "bg-purple-500",
       },
       {
-        stage: "Checkout Initiated",
+        stage: "4. Checkout Initiated",
         count: checkouts,
-        percentage: totalScans > 0 ? Math.min(100, (checkouts / totalScans) * 100) : 0,
+        percentage: totalScans > 0 ? (checkouts / totalScans) * 100 : 0,
         color: "bg-indigo-500",
       },
       {
-        stage: "Paid Orders",
+        stage: "5. Paid Order Completed",
         count: totalOrders,
-        percentage: totalScans > 0 ? Math.min(100, (totalOrders / totalScans) * 100) : 0,
+        percentage: totalScans > 0 ? (totalOrders / totalScans) * 100 : 0,
         color: "bg-emerald-500",
       },
     ];
 
-    // City Breakdown Metrics
-    const citiesMap = new Map<string, {
-      city: string;
-      scans: number;
-      copies: number;
-      cartAdds: number;
-      checkouts: number;
-      orders: number;
-      revenue: number;
-    }>();
+    // City Comparison Rankings
+    const citiesList = ["ahmedabad", "mumbai", "delhi", "bengaluru", "surat", "vadodara", "jaipur"];
+    const cityBreakdown = citiesList.map((city) => {
+      const cityEvents = events.filter((e) => e.city.toLowerCase() === city);
+      const cScans = cityEvents.filter((e) => e.eventType === "qr_scan").length;
+      const cCopies = cityEvents.filter((e) => e.eventType === "coupon_copy").length;
+      const cCartAdds = cityEvents.filter((e) => e.eventType === "add_to_cart").length;
+      const cCheckouts = cityEvents.filter((e) => e.eventType === "checkout_start").length;
+      const cOrdersList = cityEvents.filter((e) => e.eventType === "order_complete");
+      const cOrders = cOrdersList.length;
+      const cRevenue = cOrdersList.reduce((sum, e) => sum + (parseFloat(e.revenue || "0") || 0), 0);
+      const cConv = cScans > 0 ? (cOrders / cScans) * 100 : 0;
 
-    events.forEach((e) => {
-      const cityName = e.city.toLowerCase();
-      const existing = citiesMap.get(cityName) || {
-        city: cityName,
-        scans: 0,
-        copies: 0,
-        cartAdds: 0,
-        checkouts: 0,
-        orders: 0,
-        revenue: 0,
-      };
-
-      if (e.eventType === "qr_scan") existing.scans += 1;
-      if (e.eventType === "coupon_copy") existing.copies += 1;
-      if (e.eventType === "add_to_cart") existing.cartAdds += 1;
-      if (e.eventType === "checkout_start") existing.checkouts += 1;
-      if (e.eventType === "order_complete") {
-        existing.orders += 1;
-        const val = parseFloat(e.revenue || "0");
-        existing.revenue += isNaN(val) ? 0 : val;
-      }
-
-      citiesMap.set(cityName, existing);
-    });
-
-    const cityBreakdown = Array.from(citiesMap.values()).map((item) => {
-      const conv = item.scans > 0 ? (item.orders / item.scans) * 100 : 0;
       return {
-        ...item,
-        conversionRate: parseFloat(conv.toFixed(2)),
+        city,
+        scans: cScans,
+        copies: cCopies,
+        cartAdds: cCartAdds,
+        checkouts: cCheckouts,
+        orders: cOrders,
+        conversionRate: parseFloat(cConv.toFixed(1)),
+        revenue: cRevenue,
       };
-    });
+    }).sort((a, b) => b.revenue - a.revenue || b.scans - a.scans);
 
     return NextResponse.json({
       success: true,
-      selectedCity,
       totals: {
         totalScans,
         couponCopies,
         cartAdds,
         checkouts,
         totalOrders,
-        totalRevenue: parseFloat(totalRevenue.toFixed(2)),
-        conversionRate: parseFloat(conversionRate.toFixed(2)),
+        totalRevenue,
+        conversionRate: parseFloat(conversionRate.toFixed(1)),
         averageOrderValue: parseFloat(averageOrderValue.toFixed(2)),
       },
       funnelStages,
       cityBreakdown,
-      recentEvents: filteredEvents.slice(0, 15),
     });
   } catch (error) {
     console.error("Error fetching flyer campaign analytics:", error);
-    return NextResponse.json({ error: "Failed to fetch analytics" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch flyer analytics" }, { status: 500 });
   }
 }

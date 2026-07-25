@@ -22,6 +22,7 @@ import { toast } from "@/hooks/use-toast";
 const navItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
   { title: "QR Campaigns", url: "/admin/flyer-campaigns", icon: QrCode },
+  { title: "QR Studio", url: "/admin/qr-generator", icon: QrCode },
   { title: "AI Visibility", url: "/admin/ai-visibility", icon: Sparkles },
   { title: "Orders", url: "/admin/orders", icon: ShoppingBag },
   { title: "Invoice Engine", url: "/bill", icon: FileText },

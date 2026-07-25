@@ -36,6 +36,7 @@ import { parseAdminMarket } from "@/lib/admin-market";
 const navItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
   { title: "QR Campaigns", url: "/admin/flyer-campaigns", icon: QrCode },
+  { title: "QR Studio", url: "/admin/qr-generator", icon: QrCode },
   { title: "AI Visibility", url: "/admin/ai-visibility", icon: Sparkles },
   { title: "Catalog", url: "/admin/products", icon: Package },
   { title: "Content", url: "/admin/blogs", icon: FileText },
@@ -64,6 +65,7 @@ const navGroups = [
       [
         "Dashboard",
         "QR Campaigns",
+        "QR Studio",
         "AI Visibility",
         "Catalog",
         "Content",

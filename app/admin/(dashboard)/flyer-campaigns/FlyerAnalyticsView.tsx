@@ -15,10 +15,18 @@ import {
   RefreshCw,
   ExternalLink,
   Check,
-  Link as LinkIcon
+  Link as LinkIcon,
+  QrCode,
+  X,
+  Download,
+  Calendar,
+  Layers,
+  Trash2,
+  Pencil
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/currency";
+import CustomStarQRCode from "@/components/CustomStarQRCode";
 
 interface FunnelStage {
   stage: string;
@@ -49,6 +57,21 @@ interface CampaignTotals {
   averageOrderValue: number;
 }
 
+interface RegisteredQRCampaign {
+  id: string;
+  name: string;
+  city: string;
+  targetPage: string;
+  targetUrl: string;
+  bodyType: string;
+  eyeStyle: string;
+  logoType: string;
+  qrCodeSvg?: string;
+  scanCount: number;
+  lastScannedAt?: string;
+  createdAt: string;
+}
+
 const CITIES = [
   { slug: "all", name: "All Cities" },
   { slug: "ahmedabad", name: "Ahmedabad" },
@@ -69,9 +92,16 @@ export default function FlyerAnalyticsView() {
   const [funnelStages, setFunnelStages] = useState<FunnelStage[]>([]);
   const [cityBreakdown, setCityBreakdown] = useState<CityBreakdown[]>([]);
   
+  // Registered QR Campaigns State
+  const [registeredCampaigns, setRegisteredCampaigns] = useState<RegisteredQRCampaign[]>([]);
+  const [selectedCampaign, setSelectedCampaign] = useState<RegisteredQRCampaign | null>(null);
+  const [campaignEvents, setCampaignEvents] = useState<any[]>([]);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
   // Link Copy Helper State
   const [copiedPerfumesLink, setCopiedPerfumesLink] = useState(false);
   const [copiedDiscoveryLink, setCopiedDiscoveryLink] = useState(false);
+  const [copiedModalUrl, setCopiedModalUrl] = useState(false);
 
   const activeCitySlug = selectedCity === "all" ? "ahmedabad" : selectedCity;
   const perfumesProductionUrl = `${BASE_PRODUCTION_DOMAIN}/flyers/${activeCitySlug}/perfumes`;
@@ -87,6 +117,13 @@ export default function FlyerAnalyticsView() {
         setFunnelStages(data.funnelStages || []);
         setCityBreakdown(data.cityBreakdown || []);
       }
+
+      // Fetch registered QR campaigns
+      const qrRes = await fetch("/api/admin/qr-campaigns");
+      const qrData = await qrRes.json();
+      if (qrData.success) {
+        setRegisteredCampaigns(qrData.campaigns || []);
+      }
     } catch (err) {
       console.error("Failed to load flyer analytics:", err);
     } finally {
@@ -98,19 +135,103 @@ export default function FlyerAnalyticsView() {
     fetchAnalytics(selectedCity);
   }, [selectedCity]);
 
-  const handleCopyLink = async (url: string, type: "perfumes" | "discovery") => {
+  const handleRenameCampaign = async (id: string, currentName: string) => {
+    const newName = prompt("Enter new campaign name:", currentName);
+    if (!newName || newName.trim() === "" || newName.trim() === currentName) return;
+
+    try {
+      const res = await fetch("/api/admin/qr-campaigns", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, name: newName.trim() }),
+      });
+
+      if (res.ok) {
+        if (selectedCampaign && selectedCampaign.id === id) {
+          setSelectedCampaign({ ...selectedCampaign, name: newName.trim() });
+        }
+        fetchAnalytics(selectedCity);
+      }
+    } catch (err) {
+      console.error("Failed to rename campaign:", err);
+    }
+  };
+
+  const handleDeleteCampaign = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete "${name}" and clear all associated scan/funnel events from the database?`)) return;
+    try {
+      const res = await fetch(`/api/admin/qr-campaigns?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setSelectedCampaign(null);
+        fetchAnalytics(selectedCity);
+      }
+    } catch (err) {
+      console.error("Failed to delete campaign:", err);
+    }
+  };
+  const handleOpenCampaignDetails = async (campaign: RegisteredQRCampaign) => {
+    setSelectedCampaign(campaign);
+    setLoadingDetails(true);
+    try {
+      const res = await fetch(`/api/admin/qr-campaigns?id=${campaign.id}`);
+      const data = await res.json();
+      if (data.success) {
+        if (data.campaign) {
+          setSelectedCampaign(data.campaign);
+        }
+        setCampaignEvents(data.events || []);
+      }
+    } catch (err) {
+      console.error("Failed to load campaign events:", err);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+  const handleCopyLink = async (url: string, type: "perfumes" | "discovery" | "modal") => {
     try {
       await navigator.clipboard.writeText(url);
       if (type === "perfumes") {
         setCopiedPerfumesLink(true);
         setTimeout(() => setCopiedPerfumesLink(false), 2000);
-      } else {
+      } else if (type === "discovery") {
         setCopiedDiscoveryLink(true);
         setTimeout(() => setCopiedDiscoveryLink(false), 2000);
+      } else {
+        setCopiedModalUrl(true);
+        setTimeout(() => setCopiedModalUrl(false), 2000);
       }
-    } catch {
-      // Fallback
-    }
+    } catch {}
+  };
+
+  const handleDownloadSavedPng = (campaign: RegisteredQRCampaign) => {
+    if (!campaign.qrCodeSvg) return;
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+
+    canvas.width = 1200;
+    canvas.height = 1200;
+
+    const svgBlob = new Blob([campaign.qrCodeSvg], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+
+    img.onload = () => {
+      if (ctx) {
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const pngUrl = canvas.toDataURL("image/png");
+        const downloadLink = document.createElement("a");
+        downloadLink.href = pngUrl;
+        downloadLink.download = `${campaign.name.replace(/\s+/g, "-")}-QR.png`;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+      }
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
   };
 
   return (
@@ -158,7 +279,7 @@ export default function FlyerAnalyticsView() {
         </div>
       </div>
 
-      {/* Production Flyer Links Bar (For Custom QR Code Mapping) */}
+      {/* Production Flyer Links Bar */}
       <div className="rounded-2xl border border-stone-800 bg-stone-900/90 p-4 backdrop-blur-xl">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-400">
@@ -227,6 +348,74 @@ export default function FlyerAnalyticsView() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Registered Saved QR Campaigns Gallery */}
+      <div className="rounded-2xl border border-stone-800 bg-stone-900/80 p-6 backdrop-blur-xl space-y-4">
+        <div className="flex items-center justify-between border-b border-stone-800 pb-4">
+          <div>
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <QrCode className="h-5 w-5 text-amber-400" />
+              <span>Registered Active QR Campaigns (Click any campaign to inspect detailed analytics)</span>
+            </h2>
+            <p className="text-xs text-stone-400 mt-0.5">
+              Click on any campaign card to view its saved QR vector image, scan timeline, and conversion ratio.
+            </p>
+          </div>
+        </div>
+
+        {registeredCampaigns.length === 0 ? (
+          <div className="p-8 text-center border border-dashed border-stone-800 rounded-xl">
+            <QrCode className="h-8 w-8 text-stone-600 mx-auto mb-2" />
+            <p className="text-sm font-semibold text-stone-300">No registered QR codes saved yet.</p>
+            <p className="text-xs text-stone-500 mt-1">Design and save QR codes in the QR Studio to see saved QR codes here.</p>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {registeredCampaigns.map((camp) => (
+              <div
+                key={camp.id}
+                onClick={() => handleOpenCampaignDetails(camp)}
+                className="group relative cursor-pointer rounded-xl border border-stone-800 bg-stone-950 p-4 transition-all hover:border-amber-500/50 hover:bg-stone-900/90 shadow-lg"
+              >
+                {/* Saved QR Code Graphic Thumbnail */}
+                <div className="flex justify-center p-3 bg-white rounded-lg mb-3">
+                  {camp.qrCodeSvg ? (
+                    <div
+                      className="h-28 w-28 text-black"
+                      dangerouslySetInnerHTML={{ __html: camp.qrCodeSvg }}
+                    />
+                  ) : (
+                    <CustomStarQRCode value={camp.targetUrl} size={110} />
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                      {camp.city}
+                    </span>
+                    <span className="text-[10px] font-mono text-stone-400">{camp.targetPage}</span>
+                  </div>
+
+                  <h3 className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors line-clamp-1">
+                    {camp.name}
+                  </h3>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-stone-800/80">
+                    <span className="text-xs font-extrabold text-emerald-400 flex items-center gap-1">
+                      <Eye className="h-3.5 w-3.5" />
+                      <span>{camp.scanCount} Scans</span>
+                    </span>
+                    <span className="text-[10px] text-stone-500 font-mono">
+                      {new Date(camp.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* KPI Overview Cards */}
@@ -395,6 +584,143 @@ export default function FlyerAnalyticsView() {
           </table>
         </div>
       </div>
+
+      {/* DEDICATED SINGLE CAMPAIGN DRILL-DOWN INSPECTOR MODAL */}
+      {selectedCampaign && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-stone-950 border border-stone-800 rounded-2xl p-6 shadow-2xl space-y-6 text-white">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-stone-800 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full">
+                    {selectedCampaign.city.toUpperCase()}
+                  </span>
+                  <span className="text-xs font-mono text-stone-400">{selectedCampaign.targetPage}</span>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <h2 className="text-xl font-bold text-white font-serif">{selectedCampaign.name}</h2>
+                  <button
+                    type="button"
+                    onClick={() => handleRenameCampaign(selectedCampaign.id, selectedCampaign.name)}
+                    className="p-1.5 rounded-lg bg-stone-900 border border-stone-800 text-amber-400 hover:text-amber-300 hover:bg-stone-800"
+                    title="Rename Campaign"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <span className="text-[11px] font-mono text-stone-400 mt-0.5 inline-block bg-stone-900 border border-stone-800 px-2 py-0.5 rounded">
+                  Tracking Code: {selectedCampaign.id.replace(/^qr-[^-]+-[^-]+-/, "")}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedCampaign(null)}
+                className="rounded-lg p-2 text-stone-400 hover:bg-stone-900 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Content Grid: Saved QR Code & Specific Campaign Metrics */}
+            <div className="grid gap-6 md:grid-cols-12">
+              {/* Saved QR Code Display (5 cols) */}
+              <div className="md:col-span-5 rounded-xl border border-stone-800 bg-stone-900/90 p-5 flex flex-col items-center justify-center space-y-4">
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                  Exact Saved Vector QR Code
+                </span>
+
+                <div className="p-4 bg-white rounded-xl shadow-xl border border-stone-800 flex items-center justify-center">
+                  {selectedCampaign.qrCodeSvg ? (
+                    <div
+                      className="h-48 w-48 text-black"
+                      dangerouslySetInnerHTML={{ __html: selectedCampaign.qrCodeSvg }}
+                    />
+                  ) : (
+                    <CustomStarQRCode value={selectedCampaign.targetUrl} size={180} />
+                  )}
+                </div>
+
+                <div className="w-full space-y-2">
+                  <Button
+                    onClick={() => handleDownloadSavedPng(selectedCampaign)}
+                    className="w-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold gap-2 text-xs py-2"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    <span>Download PNG Image</span>
+                  </Button>
+
+                  <Button
+                    onClick={() => handleCopyLink(selectedCampaign.targetUrl, "modal")}
+                    variant="outline"
+                    className="w-full border-stone-800 bg-stone-950 text-white hover:bg-stone-800 font-semibold gap-2 text-xs py-2"
+                  >
+                    {copiedModalUrl ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                    <span>{copiedModalUrl ? "Tracking Link Copied!" : "Copy Campaign Link"}</span>
+                  </Button>
+
+                  <Button
+                    onClick={() => handleDeleteCampaign(selectedCampaign.id, selectedCampaign.name)}
+                    variant="outline"
+                    className="w-full border-red-900/50 bg-red-950/40 text-red-400 hover:bg-red-900 hover:text-white font-semibold gap-2 text-xs py-2"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Delete Campaign & Clear Scan Data</span>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Single Campaign Metrics & Scans (7 cols) */}
+              <div className="md:col-span-7 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-stone-800 bg-stone-900 p-3.5">
+                    <span className="text-[11px] text-stone-400 font-medium">Real-Time QR Scans</span>
+                    <p className="text-2xl font-extrabold text-emerald-400 mt-1">{selectedCampaign.scanCount}</p>
+                    <span className="text-[10px] text-stone-500">Physical Pamphlet Hits</span>
+                  </div>
+
+                  <div className="rounded-xl border border-stone-800 bg-stone-900 p-3.5">
+                    <span className="text-[11px] text-stone-400 font-medium">Last Scanned Date</span>
+                    <p className="text-xs font-mono font-bold text-white mt-2">
+                      {selectedCampaign.lastScannedAt ? new Date(selectedCampaign.lastScannedAt).toLocaleString() : "Not scanned yet"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Target URL */}
+                <div className="rounded-xl border border-stone-800 bg-stone-900 p-3.5 space-y-1">
+                  <span className="text-[11px] text-stone-400 font-semibold uppercase">Destination URL</span>
+                  <p className="text-xs font-mono text-amber-300 break-all select-all">{selectedCampaign.targetUrl}</p>
+                </div>
+
+                {/* Specific Scan Timeline */}
+                <div className="rounded-xl border border-stone-800 bg-stone-900 p-4 space-y-2">
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5 text-amber-400" />
+                    <span>Recent Activity Log for this QR</span>
+                  </h4>
+
+                  {loadingDetails ? (
+                    <p className="text-xs text-stone-400 py-4 text-center">Loading scan activity...</p>
+                  ) : campaignEvents.length === 0 ? (
+                    <p className="text-xs text-stone-400 py-4 text-center">No specific scans logged for this campaign ID yet.</p>
+                  ) : (
+                    <div className="max-h-40 overflow-y-auto space-y-1.5">
+                      {campaignEvents.map((ev, i) => (
+                        <div key={i} className="flex items-center justify-between text-[11px] bg-stone-950 p-2 rounded-lg border border-stone-800">
+                          <span className="font-semibold text-emerald-400 capitalize">{ev.eventType}</span>
+                          <span className="font-mono text-stone-400">{new Date(ev.createdAt).toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -8,6 +8,7 @@ async function ensureFlyerEventsTable() {
     await db.execute(sql`
       create table if not exists flyer_campaign_events (
         id varchar(255) primary key,
+        qr_id varchar(255),
         city varchar(100) not null,
         target_page varchar(100) not null,
         event_type varchar(50) not null,
@@ -17,6 +18,8 @@ async function ensureFlyerEventsTable() {
         revenue numeric(10, 2),
         created_at timestamp default now() not null
       );
+
+      alter table flyer_campaign_events add column if not exists qr_id varchar(255);
     `);
   } catch (err) {
     console.error("Error ensuring flyer_campaign_events table:", err);
@@ -34,6 +37,7 @@ export async function POST(req: Request) {
     const couponCode = body.couponCode ? String(body.couponCode).trim() : null;
     const sessionId = body.sessionId ? String(body.sessionId).trim() : null;
     const orderId = body.orderId ? String(body.orderId).trim() : null;
+    const qrId = body.qrId ? String(body.qrId).trim() : null;
     const revenue = typeof body.revenue === "number" ? body.revenue.toFixed(2) : null;
 
     if (!city) {
@@ -44,6 +48,7 @@ export async function POST(req: Request) {
 
     await db.insert(flyerCampaignEvents).values({
       id: eventId,
+      qrId,
       city,
       targetPage,
       eventType,
@@ -52,6 +57,19 @@ export async function POST(req: Request) {
       orderId,
       revenue,
     });
+
+    // If a specific registered QR ID was scanned, increment its scan count and last scanned date
+    if (qrId && eventType === "qr_scan") {
+      try {
+        await db.execute(sql`
+          update qr_campaigns 
+          set scan_count = scan_count + 1, last_scanned_at = now()
+          where id = ${qrId}
+        `);
+      } catch (err) {
+        console.error("Error updating qr_campaigns scan count:", err);
+      }
+    }
 
     return NextResponse.json({ success: true, eventId });
   } catch (error) {

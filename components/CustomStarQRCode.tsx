@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import qrcode from "qrcode-generator";
+import { HUME_HF_LOGO_BASE64 } from "@/lib/hume-logo-base64";
 
 interface CustomStarQRCodeProps {
   value: string;
@@ -159,25 +160,15 @@ export default function CustomStarQRCode({
         {/* Center White Circle Mask for Emblem */}
         <circle cx={centerCx} cy={centerCy} r={centerRadius} fill="#FFFFFF" />
 
-        {/* Elegant Handwritten Cursive "hf" Signature Logo in Center */}
-        <g transform={`translate(${centerCx}, ${centerCy})`}>
-          <text
-            x="0"
-            y="4"
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fill="#000000"
-            style={{
-              fontFamily: "'Playfair Display', 'Cormorant Garamond', 'Great Vibes', 'Brush Script MT', cursive, serif",
-              fontSize: `${centerRadius * 1.0}px`,
-              fontStyle: "italic",
-              fontWeight: "400",
-              letterSpacing: "-0.05em",
-            }}
-          >
-            hf
-          </text>
-        </g>
+        {/* Pixel-Perfect Signature "hf" Logo Image Overlay */}
+        <image
+          href={HUME_HF_LOGO_BASE64}
+          x={centerCx - centerRadius * 0.88}
+          y={centerCy - centerRadius * 0.88}
+          width={centerRadius * 1.76}
+          height={centerRadius * 1.76}
+          preserveAspectRatio="xMidYMid meet"
+        />
       </svg>
     </div>
   );
