@@ -76,6 +76,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.75,
   }));
 
+  const flyerCampaignCities = ["ahmedabad", "mumbai", "delhi", "bengaluru", "surat", "vadodara", "jaipur"];
+  const flyerCampaignEntries = flyerCampaignCities.flatMap((city) => [
+    {
+      url: `${baseUrl}/flyers/${city}/perfumes`,
+      lastModified: new Date(),
+      changeFrequency: "daily" as const,
+      priority: 0.85,
+    },
+    {
+      url: `${baseUrl}/flyers/${city}/discovery-set`,
+      lastModified: new Date(),
+      changeFrequency: "daily" as const,
+      priority: 0.85,
+    },
+  ]);
+
   return [
     {
       url: baseUrl,
@@ -254,5 +270,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...upcomingProductEntries,
     ...naturalsEntries,
     ...discoverySetSeoEntries,
+    ...flyerCampaignEntries,
   ];
 }
