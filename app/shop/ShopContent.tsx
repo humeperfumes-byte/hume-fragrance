@@ -75,13 +75,14 @@ function filterPerfumes(
       }
       return allPerfumes;
     case "occasion":
-      return allPerfumes.filter((p) =>
-        p.longevity.occasion.some(
-          (o) => o.toLowerCase().includes(filterValue.toLowerCase())
-        ) ||
-        p.longevity.season.some(
-          (s) => s.toLowerCase().includes(filterValue.toLowerCase())
-        )
+      return allPerfumes.filter(
+        (p) =>
+          p.longevity.occasion.some((o) =>
+            o.toLowerCase().includes(filterValue.toLowerCase())
+          ) ||
+          p.longevity.season.some((s) =>
+            s.toLowerCase().includes(filterValue.toLowerCase())
+          )
       );
     case "celebrity": {
       const ids = celebrityMap[filterValue] || [];
@@ -92,7 +93,13 @@ function filterPerfumes(
   }
 }
 
-export default function ShopContent({ perfumes }: { perfumes: PerfumeData[] }) {
+export default function ShopContent({ 
+  perfumes,
+  disableTopPadding = false,
+}: { 
+  perfumes: PerfumeData[];
+  disableTopPadding?: boolean;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);

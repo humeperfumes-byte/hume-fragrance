@@ -24,7 +24,7 @@ export default function FlyerHeroBanner({ config, mode }: FlyerHeroBannerProps) 
   };
 
   return (
-    <section className="relative overflow-hidden border-b border-border/60 bg-gradient-to-b from-stone-900 via-zinc-950 to-background py-10 md:py-16">
+    <section className="relative overflow-hidden border-b border-border/60 bg-gradient-to-b from-stone-900 via-zinc-950 to-background pt-28 md:pt-36 pb-12 md:pb-16">
       {/* Background glow overlay */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-500/10 via-transparent to-transparent opacity-80" />
 

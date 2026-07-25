@@ -63,7 +63,7 @@ export default async function FlyerPerfumesPage({
           </div>
         }
       >
-        <ShopContent perfumes={perfumes} />
+        <ShopContent perfumes={perfumes} disableTopPadding={true} />
       </Suspense>
 
       <Footer />
