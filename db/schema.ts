@@ -550,3 +550,19 @@ export const customerFeedback = pgTable("customer_feedback", {
 
 export type CustomerFeedback = typeof customerFeedback.$inferSelect;
 export type NewCustomerFeedback = typeof customerFeedback.$inferInsert;
+
+// Flyer Campaign Events Table (QR Scans, Funnel Ratios & Analytics)
+export const flyerCampaignEvents = pgTable("flyer_campaign_events", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  city: varchar("city", { length: 100 }).notNull(), // ahmedabad | mumbai | delhi etc.
+  targetPage: varchar("target_page", { length: 100 }).notNull(), // perfumes | discovery-set
+  eventType: varchar("event_type", { length: 50 }).notNull(), // qr_scan | coupon_copy | add_to_cart | checkout_start | order_complete
+  couponCode: varchar("coupon_code", { length: 50 }),
+  sessionId: varchar("session_id", { length: 255 }),
+  orderId: varchar("order_id", { length: 255 }),
+  revenue: decimal("revenue", { precision: 10, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type FlyerCampaignEvent = typeof flyerCampaignEvents.$inferSelect;
+export type NewFlyerCampaignEvent = typeof flyerCampaignEvents.$inferInsert;

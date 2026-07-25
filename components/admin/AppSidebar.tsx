@@ -14,13 +14,14 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Bell, Handshake, ImageIcon, LayoutDashboard, ShoppingBag, ShoppingCart, Package, FileText, LogOut, Truck, Sparkles } from "lucide-react";
+import { Bell, Handshake, ImageIcon, LayoutDashboard, ShoppingBag, ShoppingCart, Package, FileText, LogOut, Truck, Sparkles, QrCode } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 
 const navItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
+  { title: "QR Campaigns", url: "/admin/flyer-campaigns", icon: QrCode },
   { title: "AI Visibility", url: "/admin/ai-visibility", icon: Sparkles },
   { title: "Orders", url: "/admin/orders", icon: ShoppingBag },
   { title: "Invoice Engine", url: "/bill", icon: FileText },

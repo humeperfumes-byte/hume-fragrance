@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Sparkles, Copy, Check, ShoppingBag, Truck } from "lucide-react";
 import type { CityFlyerConfig } from "@/lib/flyer-cities";
@@ -13,11 +13,54 @@ interface FlyerHeroBannerProps {
 export default function FlyerHeroBanner({ config, mode }: FlyerHeroBannerProps) {
   const [copied, setCopied] = useState(false);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    // Store city attribution in sessionStorage for funnel tracking
+    sessionStorage.setItem("hume_flyer_city", config.slug);
+    sessionStorage.setItem("hume_flyer_target", mode);
+    sessionStorage.setItem("hume_flyer_coupon", config.couponCode);
+
+    let sessionId = sessionStorage.getItem("hume_session_id");
+    if (!sessionId) {
+      sessionId = `sess-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      sessionStorage.setItem("hume_session_id", sessionId);
+    }
+
+    // Log QR scan event to backend API
+    fetch("/api/analytics/flyers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        city: config.slug,
+        targetPage: mode,
+        eventType: "qr_scan",
+        couponCode: config.couponCode,
+        sessionId,
+      }),
+    }).catch(() => {});
+  }, [config.slug, config.couponCode, mode]);
+
   const handleCopyCode = async () => {
     try {
       await navigator.clipboard.writeText(config.couponCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
+
+      const sessionId = typeof window !== "undefined" ? sessionStorage.getItem("hume_session_id") : null;
+
+      // Log coupon copy event to backend API
+      fetch("/api/analytics/flyers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          city: config.slug,
+          targetPage: mode,
+          eventType: "coupon_copy",
+          couponCode: config.couponCode,
+          sessionId,
+        }),
+      }).catch(() => {});
     } catch {
       // Fallback
     }

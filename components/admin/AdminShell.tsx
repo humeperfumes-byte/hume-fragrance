@@ -25,6 +25,7 @@ import {
   Ticket,
   Truck,
   Users,
+  QrCode,
 } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ import { parseAdminMarket } from "@/lib/admin-market";
 
 const navItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
+  { title: "QR Campaigns", url: "/admin/flyer-campaigns", icon: QrCode },
   { title: "AI Visibility", url: "/admin/ai-visibility", icon: Sparkles },
   { title: "Catalog", url: "/admin/products", icon: Package },
   { title: "Content", url: "/admin/blogs", icon: FileText },
@@ -61,6 +63,7 @@ const navGroups = [
     items: navItems.filter((item) =>
       [
         "Dashboard",
+        "QR Campaigns",
         "AI Visibility",
         "Catalog",
         "Content",
