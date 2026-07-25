@@ -10,12 +10,12 @@ import {
   CheckCircle2, 
   TrendingUp, 
   DollarSign, 
-  Download, 
-  QrCode, 
   Sparkles,
   MapPin,
   RefreshCw,
-  ArrowRight
+  ExternalLink,
+  Check,
+  Link as LinkIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/currency";
@@ -60,16 +60,22 @@ const CITIES = [
   { slug: "jaipur", name: "Jaipur" },
 ];
 
+const BASE_PRODUCTION_DOMAIN = "https://www.humefragrance.com";
+
 export default function FlyerAnalyticsView() {
   const [selectedCity, setSelectedCity] = useState("all");
   const [loading, setLoading] = useState(true);
   const [totals, setTotals] = useState<CampaignTotals | null>(null);
   const [funnelStages, setFunnelStages] = useState<FunnelStage[]>([]);
   const [cityBreakdown, setCityBreakdown] = useState<CityBreakdown[]>([]);
+  
+  // Link Copy Helper State
+  const [copiedPerfumesLink, setCopiedPerfumesLink] = useState(false);
+  const [copiedDiscoveryLink, setCopiedDiscoveryLink] = useState(false);
 
-  // Generator State
-  const [qrCity, setQrCity] = useState("ahmedabad");
-  const [qrTarget, setQrTarget] = useState<"perfumes" | "discovery-set">("perfumes");
+  const activeCitySlug = selectedCity === "all" ? "ahmedabad" : selectedCity;
+  const perfumesProductionUrl = `${BASE_PRODUCTION_DOMAIN}/flyers/${activeCitySlug}/perfumes`;
+  const discoveryProductionUrl = `${BASE_PRODUCTION_DOMAIN}/flyers/${activeCitySlug}/discovery-set`;
 
   const fetchAnalytics = async (city: string) => {
     setLoading(true);
@@ -92,26 +98,18 @@ export default function FlyerAnalyticsView() {
     fetchAnalytics(selectedCity);
   }, [selectedCity]);
 
-  const targetUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/flyers/${qrCity}/${qrTarget}`
-    : `https://www.humefragrance.com/flyers/${qrCity}/${qrTarget}`;
-
-  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(targetUrl)}&margin=15`;
-
-  const handleDownloadQr = async () => {
+  const handleCopyLink = async (url: string, type: "perfumes" | "discovery") => {
     try {
-      const response = await fetch(qrImageUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `HUME-QR-${qrCity.toUpperCase()}-${qrTarget.toUpperCase()}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      await navigator.clipboard.writeText(url);
+      if (type === "perfumes") {
+        setCopiedPerfumesLink(true);
+        setTimeout(() => setCopiedPerfumesLink(false), 2000);
+      } else {
+        setCopiedDiscoveryLink(true);
+        setTimeout(() => setCopiedDiscoveryLink(false), 2000);
+      }
     } catch {
-      window.open(qrImageUrl, "_blank");
+      // Fallback
     }
   };
 
@@ -157,6 +155,77 @@ export default function FlyerAnalyticsView() {
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
+        </div>
+      </div>
+
+      {/* Production Flyer Links Bar (For Custom QR Code Mapping) */}
+      <div className="rounded-2xl border border-stone-800 bg-stone-900/90 p-4 backdrop-blur-xl">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-400">
+            <LinkIcon className="h-4 w-4" />
+            <span>Production Campaign Links (Map to Custom QR Codes)</span>
+          </div>
+          <span className="text-[11px] text-stone-400 font-mono">Domain: www.humefragrance.com</span>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          {/* Perfumes Catalog Link */}
+          <div className="flex items-center justify-between gap-3 bg-stone-950 border border-stone-800 rounded-xl p-3">
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-semibold uppercase text-stone-400 block">
+                Perfumes Catalog ({activeCitySlug.toUpperCase()})
+              </span>
+              <p className="text-xs font-mono text-stone-200 truncate">{perfumesProductionUrl}</p>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleCopyLink(perfumesProductionUrl, "perfumes")}
+                className="inline-flex items-center gap-1 text-xs font-semibold bg-stone-800 hover:bg-stone-700 text-white px-3 py-1.5 rounded-lg transition-colors"
+              >
+                {copiedPerfumesLink ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                <span>{copiedPerfumesLink ? "Copied" : "Copy"}</span>
+              </button>
+              <a
+                href={perfumesProductionUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="p-1.5 text-stone-400 hover:text-white transition-colors"
+                title="Open link"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
+          </div>
+
+          {/* Discovery Set Link */}
+          <div className="flex items-center justify-between gap-3 bg-stone-950 border border-stone-800 rounded-xl p-3">
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-semibold uppercase text-stone-400 block">
+                Discovery Set Builder ({activeCitySlug.toUpperCase()})
+              </span>
+              <p className="text-xs font-mono text-stone-200 truncate">{discoveryProductionUrl}</p>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleCopyLink(discoveryProductionUrl, "discovery")}
+                className="inline-flex items-center gap-1 text-xs font-semibold bg-stone-800 hover:bg-stone-700 text-white px-3 py-1.5 rounded-lg transition-colors"
+              >
+                {copiedDiscoveryLink ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                <span>{copiedDiscoveryLink ? "Copied" : "Copy"}</span>
+              </button>
+              <a
+                href={discoveryProductionUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="p-1.5 text-stone-400 hover:text-white transition-colors"
+                title="Open link"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -241,7 +310,7 @@ export default function FlyerAnalyticsView() {
           <div>
             <h2 className="text-lg font-bold text-white">Full-Funnel Conversion Ratio Flow</h2>
             <p className="text-xs text-stone-400 mt-0.5">
-              Step-by-step percentage drop-off analysis from QR Scan to Paid Order.
+              Step-by-step percentage drop-off analysis from custom QR Scan to Paid Order.
             </p>
           </div>
           <span className="text-xs font-semibold px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300">
@@ -277,116 +346,53 @@ export default function FlyerAnalyticsView() {
         </div>
       </div>
 
-      {/* Grid: City Performance Table & Admin QR Code Generator */}
-      <div className="grid gap-8 lg:grid-cols-12">
-        {/* City Breakdown Comparison Table (8 cols) */}
-        <div className="lg:col-span-8 rounded-2xl border border-white/10 bg-stone-900/80 p-6 backdrop-blur-xl">
-          <h2 className="text-lg font-bold text-white mb-4">City Performance Ranking</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-stone-800 text-stone-400 font-semibold uppercase tracking-wider">
-                  <th className="pb-3">City</th>
-                  <th className="pb-3 text-right">Scans</th>
-                  <th className="pb-3 text-right">Copies</th>
-                  <th className="pb-3 text-right">Cart Adds</th>
-                  <th className="pb-3 text-right">Checkouts</th>
-                  <th className="pb-3 text-right">Orders</th>
-                  <th className="pb-3 text-right">Conv. %</th>
-                  <th className="pb-3 text-right">Revenue</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-800/60">
-                {cityBreakdown.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="py-6 text-center text-stone-400">
-                      No city flyer scan events logged yet. Scan a QR code on a flyer page to see live events.
-                    </td>
-                  </tr>
-                ) : (
-                  cityBreakdown.map((row) => (
-                    <tr key={row.city} className="hover:bg-stone-800/40">
-                      <td className="py-3 font-bold text-white capitalize">{row.city}</td>
-                      <td className="py-3 text-right font-mono text-stone-300">{row.scans}</td>
-                      <td className="py-3 text-right font-mono text-stone-300">{row.copies}</td>
-                      <td className="py-3 text-right font-mono text-stone-300">{row.cartAdds}</td>
-                      <td className="py-3 text-right font-mono text-stone-300">{row.checkouts}</td>
-                      <td className="py-3 text-right font-mono text-emerald-400 font-bold">{row.orders}</td>
-                      <td className="py-3 text-right font-mono text-amber-400 font-bold">{row.conversionRate}%</td>
-                      <td className="py-3 text-right font-mono text-white font-bold">{formatINR(row.revenue)}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+      {/* Full-Width City Performance Ranking Table */}
+      <div className="rounded-2xl border border-white/10 bg-stone-900/80 p-6 backdrop-blur-xl">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-bold text-white">City Performance Ranking</h2>
+            <p className="text-xs text-stone-400">Compare conversion performance and total sales across flyer distribution cities.</p>
           </div>
+          <span className="text-xs font-semibold text-stone-400">Sorted by Total Revenue</span>
         </div>
 
-        {/* Built-in Admin QR Generator (4 cols) */}
-        <div className="lg:col-span-4 rounded-2xl border border-white/10 bg-stone-900/80 p-6 backdrop-blur-xl space-y-4">
-          <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
-            <QrCode className="h-4 w-4" />
-            <span>Flyer QR Code Generator</span>
-          </div>
-
-          <p className="text-xs text-stone-400">
-            Generate printable campaign URLs and high-resolution QR codes for flyer printing.
-          </p>
-
-          <div className="space-y-3 pt-2">
-            <div>
-              <label className="text-xs font-semibold text-stone-300 block mb-1">Select City</label>
-              <select
-                value={qrCity}
-                onChange={(e) => setQrCity(e.target.value)}
-                className="w-full bg-stone-950 border border-stone-800 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none"
-              >
-                {CITIES.filter((c) => c.slug !== "all").map((c) => (
-                  <option key={c.slug} value={c.slug}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-stone-300 block mb-1">Select Target Page</label>
-              <select
-                value={qrTarget}
-                onChange={(e) => setQrTarget(e.target.value as "perfumes" | "discovery-set")}
-                className="w-full bg-stone-950 border border-stone-800 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none"
-              >
-                <option value="perfumes">Perfumes Catalog (/perfumes)</option>
-                <option value="discovery-set">Discovery Set Builder (/discovery-set)</option>
-              </select>
-            </div>
-
-            {/* Target URL Preview */}
-            <div>
-              <label className="text-[11px] text-stone-400 block mb-1">Generated URL</label>
-              <div className="bg-stone-950 border border-stone-800 rounded-xl p-2.5 text-[11px] font-mono text-stone-300 break-all select-all">
-                {targetUrl}
-              </div>
-            </div>
-
-            {/* QR Code Display & Download */}
-            <div className="flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-stone-800">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={qrImageUrl}
-                alt="Flyer Campaign QR Code"
-                className="h-44 w-44 object-contain"
-              />
-            </div>
-
-            <Button
-              onClick={handleDownloadQr}
-              className="w-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold gap-2"
-            >
-              <Download className="h-4 w-4" />
-              <span>Download High-Res QR (PNG)</span>
-            </Button>
-          </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-stone-800 text-stone-400 font-semibold uppercase tracking-wider">
+                <th className="pb-3">City</th>
+                <th className="pb-3 text-right">QR Scans</th>
+                <th className="pb-3 text-right">Copies</th>
+                <th className="pb-3 text-right">Cart Adds</th>
+                <th className="pb-3 text-right">Checkouts</th>
+                <th className="pb-3 text-right">Paid Orders</th>
+                <th className="pb-3 text-right">Conv. %</th>
+                <th className="pb-3 text-right">Total Revenue</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stone-800/60">
+              {cityBreakdown.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-stone-400">
+                    No flyer scan events logged yet. Once your custom QR code flyers are scanned in Ahmedabad, stats will appear here live.
+                  </td>
+                </tr>
+              ) : (
+                cityBreakdown.map((row) => (
+                  <tr key={row.city} className="hover:bg-stone-800/40">
+                    <td className="py-3 font-bold text-white capitalize">{row.city}</td>
+                    <td className="py-3 text-right font-mono text-stone-300">{row.scans}</td>
+                    <td className="py-3 text-right font-mono text-stone-300">{row.copies}</td>
+                    <td className="py-3 text-right font-mono text-stone-300">{row.cartAdds}</td>
+                    <td className="py-3 text-right font-mono text-stone-300">{row.checkouts}</td>
+                    <td className="py-3 text-right font-mono text-emerald-400 font-bold">{row.orders}</td>
+                    <td className="py-3 text-right font-mono text-amber-400 font-bold">{row.conversionRate}%</td>
+                    <td className="py-3 text-right font-mono text-white font-bold">{formatINR(row.revenue)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
