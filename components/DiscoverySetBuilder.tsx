@@ -441,7 +441,16 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
 
   useEffect(() => {
     setMounted(true);
-    const targetTime = new Date("2026-07-18T23:59:59+05:30").getTime();
+    const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
+    let storedTarget = typeof window !== "undefined" ? localStorage.getItem("hume_discovery_set_target_time") : null;
+    let targetTime = storedTarget ? parseInt(storedTarget, 10) : 0;
+
+    if (!targetTime || isNaN(targetTime) || targetTime <= Date.now()) {
+      targetTime = Date.now() + TEN_DAYS_MS;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("hume_discovery_set_target_time", targetTime.toString());
+      }
+    }
 
     const updateTimer = () => {
       const now = Date.now();
