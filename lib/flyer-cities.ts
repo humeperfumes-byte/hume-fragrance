@@ -2,7 +2,7 @@ export interface CityFlyerConfig {
   slug: string;
   cityName: string;
   greeting: string;
-  tagline: string;
+  tagline?: string;
   couponCode: string;
   discountText: string;
 }
@@ -12,7 +12,7 @@ const CITY_CONFIGS: Record<string, CityFlyerConfig> = {
     slug: "ahmedabad",
     cityName: "Ahmedabad",
     greeting: "Kem Cho Ahmedabad! 🌾✨",
-    tagline: "Handcrafted Luxury Perfumes from Kannauj",
+    tagline: "",
     couponCode: "AHMEDABAD100",
     discountText: "Get Flat ₹100 OFF on your first order",
   },
@@ -20,7 +20,7 @@ const CITY_CONFIGS: Record<string, CityFlyerConfig> = {
     slug: "mumbai",
     cityName: "Mumbai",
     greeting: "Kasa Kay Mumbai! 🌊✨",
-    tagline: "Premium Long-Lasting EDP Perfumes",
+    tagline: "",
     couponCode: "MUMBAI100",
     discountText: "Get Flat ₹100 OFF on your first order",
   },
@@ -28,7 +28,7 @@ const CITY_CONFIGS: Record<string, CityFlyerConfig> = {
     slug: "delhi",
     cityName: "Delhi NCR",
     greeting: "Dilli Dilwalon Ki! 🏛️✨",
-    tagline: "Luxury Inspired Fragrances from Kannauj",
+    tagline: "",
     couponCode: "DELHI100",
     discountText: "Get Flat ₹100 OFF on your first order",
   },
@@ -36,7 +36,7 @@ const CITY_CONFIGS: Record<string, CityFlyerConfig> = {
     slug: "bengaluru",
     cityName: "Bengaluru",
     greeting: "Namma Bengaluru! 🌿✨",
-    tagline: "Fresh & Long-Lasting EDP Perfumes",
+    tagline: "",
     couponCode: "BLR100",
     discountText: "Get Flat ₹100 OFF on your first order",
   },
@@ -44,7 +44,7 @@ const CITY_CONFIGS: Record<string, CityFlyerConfig> = {
     slug: "surat",
     cityName: "Surat",
     greeting: "Kem Cho Surat! 💎✨",
-    tagline: "Handcrafted Luxury Perfumes from Kannauj",
+    tagline: "",
     couponCode: "SURAT100",
     discountText: "Get Flat ₹100 OFF on your first order",
   },
@@ -52,7 +52,7 @@ const CITY_CONFIGS: Record<string, CityFlyerConfig> = {
     slug: "vadodara",
     cityName: "Vadodara",
     greeting: "Kem Cho Vadodara! 🎨✨",
-    tagline: "Handcrafted Luxury Perfumes from Kannauj",
+    tagline: "",
     couponCode: "VADODARA100",
     discountText: "Get Flat ₹100 OFF on your first order",
   },
@@ -60,7 +60,7 @@ const CITY_CONFIGS: Record<string, CityFlyerConfig> = {
     slug: "jaipur",
     cityName: "Jaipur",
     greeting: "Khamma Ghani Jaipur! 🏰✨",
-    tagline: "Royal Inspired Fragrances from Kannauj",
+    tagline: "",
     couponCode: "JAIPUR100",
     discountText: "Get Flat ₹100 OFF on your first order",
   },
@@ -81,7 +81,7 @@ export function getCityFlyerConfig(citySlug: string): CityFlyerConfig {
     slug: normalized,
     cityName: formattedName,
     greeting: `Welcome ${formattedName}! ✨`,
-    tagline: "Handcrafted Luxury Perfumes from Kannauj",
+    tagline: "",
     couponCode: "FLYER100",
     discountText: "Get Flat ₹100 OFF on your first order",
   };

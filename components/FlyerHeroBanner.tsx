@@ -43,9 +43,11 @@ export default function FlyerHeroBanner({ config, mode }: FlyerHeroBannerProps) 
           </h1>
 
           {/* Subheading */}
-          <p className="text-base text-stone-300 md:text-lg max-w-2xl mx-auto leading-relaxed font-sans">
-            {config.tagline}
-          </p>
+          {Boolean(config.tagline?.trim()) && (
+            <p className="text-base text-stone-300 md:text-lg max-w-2xl mx-auto leading-relaxed font-sans">
+              {config.tagline}
+            </p>
+          )}
 
           {/* Coupon Code Offer Box - Dark Metallic Card */}
           <div className="pt-2">
