@@ -42,6 +42,8 @@ function transformCoupon(row: CouponRow): CouponData {
   };
 }
 
+import { coupons as couponsData } from "@/data/coupons";
+
 export async function getActiveCoupons(options?: { cartOnly?: boolean }): Promise<CouponData[]> {
   const cartOnly = options?.cartOnly ?? false;
   try {
@@ -50,24 +52,35 @@ export async function getActiveCoupons(options?: { cartOnly?: boolean }): Promis
       : eq(coupons.active, true);
 
     const rows = await db.select().from(coupons).where(whereClause);
-    return withHiddenSpecialCoupon(rows.map(transformCoupon), cartOnly);
+    const dbCoupons = rows.map(transformCoupon);
+    // Combine with static flyer coupons if not in DB yet
+    const missingStatic = couponsData.filter(
+      (sc) => !dbCoupons.some((dbc) => dbc.code.toUpperCase() === sc.code.toUpperCase())
+    );
+    const combined = [...dbCoupons, ...missingStatic];
+    return withHiddenSpecialCoupon(combined.filter((c) => !cartOnly || c.displayInCart), cartOnly);
   } catch (error) {
     console.error("Error loading coupons from DB:", error);
-    return withHiddenSpecialCoupon([], cartOnly);
+    return withHiddenSpecialCoupon(couponsData.filter((c) => !cartOnly || c.displayInCart), cartOnly);
   }
 }
 
 export async function getCouponByCode(code: string): Promise<CouponData | null> {
+  const normalized = code.trim().toUpperCase();
   try {
     const [row] = await db
       .select()
       .from(coupons)
-      .where(and(eq(coupons.code, code.toUpperCase()), eq(coupons.active, true)))
+      .where(and(eq(coupons.code, normalized), eq(coupons.active, true)))
       .limit(1);
-    if (!row) return null;
-    return transformCoupon(row);
+    if (row) return transformCoupon(row);
   } catch (error) {
     console.error(`Error loading coupon ${code} from DB:`, error);
-    return null;
   }
+
+  // Fallback to static coupons configuration array
+  const fallback = couponsData.find((c) => c.code.toUpperCase() === normalized && c.active);
+  if (fallback) return fallback;
+
+  return null;
 }
