@@ -100,27 +100,10 @@ export default function FlyerAnalyticsView() {
   const [loadingDetails, setLoadingDetails] = useState(false);
 
   // Link Copy Helper State
-  const [copiedPerfumesLink, setCopiedPerfumesLink] = useState(false);
-  const [copiedDiscoveryLink, setCopiedDiscoveryLink] = useState(false);
+  const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const [copiedModalUrl, setCopiedModalUrl] = useState(false);
 
   const activeCitySlug = selectedCity === "all" ? "ahmedabad" : selectedCity;
-
-  const perfumesCampaign = registeredCampaigns.find(
-    (c) => c.city.toLowerCase() === activeCitySlug.toLowerCase() && c.targetPage === "perfumes"
-  );
-  const discoveryCampaign = registeredCampaigns.find(
-    (c) =>
-      c.city.toLowerCase() === activeCitySlug.toLowerCase() &&
-      (c.targetPage === "discovery-set" || c.name.toLowerCase().includes("discove"))
-  );
-
-  const perfumesProductionUrl = perfumesCampaign
-    ? perfumesCampaign.targetUrl
-    : `${BASE_PRODUCTION_DOMAIN}/flyers/${activeCitySlug}/perfumes`;
-  const discoveryProductionUrl = discoveryCampaign
-    ? discoveryCampaign.targetUrl
-    : `${BASE_PRODUCTION_DOMAIN}/flyers/${activeCitySlug}/discovery-set`;
 
   const fetchAnalytics = async (city: string, campaignId: string = "all") => {
     setLoading(true);
@@ -162,10 +145,7 @@ export default function FlyerAnalyticsView() {
       });
 
       if (res.ok) {
-        if (selectedCampaign && selectedCampaign.id === id) {
-          setSelectedCampaign({ ...selectedCampaign, name: newName.trim() });
-        }
-        fetchAnalytics(selectedCity);
+        fetchAnalytics(selectedCity, selectedCampaignId);
       }
     } catch (err) {
       console.error("Failed to rename campaign:", err);
@@ -173,17 +153,24 @@ export default function FlyerAnalyticsView() {
   };
 
   const handleDeleteCampaign = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}" and clear all associated scan/funnel events from the database?`)) return;
+    if (!confirm(`Are you sure you want to delete "${name}" and all associated scan/funnel data from database?`)) return;
+
     try {
-      const res = await fetch(`/api/admin/qr-campaigns?id=${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/qr-campaigns?id=${id}`, {
+        method: "DELETE",
+      });
+
       if (res.ok) {
-        setSelectedCampaign(null);
-        fetchAnalytics(selectedCity);
+        if (selectedCampaign?.id === id) {
+          setSelectedCampaign(null);
+        }
+        fetchAnalytics(selectedCity, selectedCampaignId);
       }
     } catch (err) {
       console.error("Failed to delete campaign:", err);
     }
   };
+
   const handleOpenCampaignDetails = async (campaign: RegisteredQRCampaign) => {
     setSelectedCampaign(campaign);
     setLoadingDetails(true);
@@ -203,18 +190,15 @@ export default function FlyerAnalyticsView() {
     }
   };
 
-  const handleCopyLink = async (url: string, type: "perfumes" | "discovery" | "modal") => {
+  const handleCopyLink = async (url: string, id: string) => {
     try {
       await navigator.clipboard.writeText(url);
-      if (type === "perfumes") {
-        setCopiedPerfumesLink(true);
-        setTimeout(() => setCopiedPerfumesLink(false), 2000);
-      } else if (type === "discovery") {
-        setCopiedDiscoveryLink(true);
-        setTimeout(() => setCopiedDiscoveryLink(false), 2000);
-      } else {
+      if (id === "modal") {
         setCopiedModalUrl(true);
         setTimeout(() => setCopiedModalUrl(false), 2000);
+      } else {
+        setCopiedLinkId(id);
+        setTimeout(() => setCopiedLinkId(null), 2000);
       }
     } catch {}
   };
@@ -314,75 +298,56 @@ export default function FlyerAnalyticsView() {
         </div>
       </div>
 
-      {/* Production Flyer Links Bar */}
-      <div className="rounded-2xl border border-stone-800 bg-stone-900/90 p-4 backdrop-blur-xl">
-        <div className="flex items-center justify-between mb-3">
+      {/* Dynamic Active Registered Campaign Tracking Links */}
+      <div className="rounded-2xl border border-stone-800 bg-stone-900/90 p-4 backdrop-blur-xl space-y-3">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-400">
             <LinkIcon className="h-4 w-4" />
-            <span>Production Campaign Links (Map to Custom QR Codes)</span>
+            <span>Active Registered Campaign Links (Includes Unique ?qr_id= Tracking Parameter)</span>
           </div>
           <span className="text-[11px] text-stone-400 font-mono">Domain: www.humefragrance.com</span>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2">
-          {/* Perfumes Catalog Link */}
-          <div className="flex items-center justify-between gap-3 bg-stone-950 border border-stone-800 rounded-xl p-3">
-            <div className="min-w-0 flex-1">
-              <span className="text-[10px] font-semibold uppercase text-stone-400 block">
-                Perfumes Catalog ({activeCitySlug.toUpperCase()})
-              </span>
-              <p className="text-xs font-mono text-stone-200 truncate">{perfumesProductionUrl}</p>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => handleCopyLink(perfumesProductionUrl, "perfumes")}
-                className="inline-flex items-center gap-1 text-xs font-semibold bg-stone-800 hover:bg-stone-700 text-white px-3 py-1.5 rounded-lg transition-colors"
-              >
-                {copiedPerfumesLink ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                <span>{copiedPerfumesLink ? "Copied" : "Copy"}</span>
-              </button>
-              <a
-                href={perfumesProductionUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="p-1.5 text-stone-400 hover:text-white transition-colors"
-                title="Open link"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            </div>
+        {registeredCampaigns.length === 0 ? (
+          <p className="text-xs text-stone-400 py-2">No registered QR campaigns yet. Create one in the QR Studio.</p>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {registeredCampaigns
+              .filter((c) => selectedCity === "all" || c.city.toLowerCase() === selectedCity.toLowerCase())
+              .map((camp) => (
+                <div key={camp.id} className="flex items-center justify-between gap-3 bg-stone-950 border border-stone-800 rounded-xl p-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                        {camp.city}
+                      </span>
+                      <span className="text-xs font-bold text-white truncate">{camp.name}</span>
+                    </div>
+                    <p className="text-xs font-mono text-stone-400 truncate mt-1">{camp.targetUrl}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleCopyLink(camp.targetUrl, camp.id)}
+                      className="inline-flex items-center gap-1 text-xs font-semibold bg-stone-800 hover:bg-stone-700 text-white px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      {copiedLinkId === camp.id ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                      <span>{copiedLinkId === camp.id ? "Copied" : "Copy"}</span>
+                    </button>
+                    <a
+                      href={camp.targetUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-1.5 text-stone-400 hover:text-white transition-colors"
+                      title="Open link"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </div>
+                </div>
+              ))}
           </div>
-
-          {/* Discovery Set Link */}
-          <div className="flex items-center justify-between gap-3 bg-stone-950 border border-stone-800 rounded-xl p-3">
-            <div className="min-w-0 flex-1">
-              <span className="text-[10px] font-semibold uppercase text-stone-400 block">
-                Discovery Set Builder ({activeCitySlug.toUpperCase()})
-              </span>
-              <p className="text-xs font-mono text-stone-200 truncate">{discoveryProductionUrl}</p>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => handleCopyLink(discoveryProductionUrl, "discovery")}
-                className="inline-flex items-center gap-1 text-xs font-semibold bg-stone-800 hover:bg-stone-700 text-white px-3 py-1.5 rounded-lg transition-colors"
-              >
-                {copiedDiscoveryLink ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                <span>{copiedDiscoveryLink ? "Copied" : "Copy"}</span>
-              </button>
-              <a
-                href={discoveryProductionUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="p-1.5 text-stone-400 hover:text-white transition-colors"
-                title="Open link"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Registered Saved QR Campaigns Gallery */}
