@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { flyerCampaignEvents } from "@/db/schema";
-import { sql, desc } from "drizzle-orm";
+import { flyerCampaignEvents, qrCampaigns } from "@/db/schema";
+import { sql, desc, eq } from "drizzle-orm";
 
 async function ensureFlyerEventsTable() {
   try {
