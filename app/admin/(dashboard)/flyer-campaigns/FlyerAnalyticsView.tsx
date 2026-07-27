@@ -395,7 +395,6 @@ export default function FlyerAnalyticsView() {
                     <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
                       {camp.city}
                     </span>
-                    <span className="text-[10px] font-mono text-stone-400">{camp.targetPage}</span>
                   </div>
 
                   <h3 className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors line-clamp-1">
@@ -596,7 +595,6 @@ export default function FlyerAnalyticsView() {
                   <span className="text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full">
                     {selectedCampaign.city.toUpperCase()}
                   </span>
-                  <span className="text-xs font-mono text-stone-400">{selectedCampaign.targetPage}</span>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <h2 className="text-xl font-bold text-white font-serif">{selectedCampaign.name}</h2>

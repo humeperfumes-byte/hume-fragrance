@@ -442,29 +442,15 @@ export default function QRGeneratorStudio() {
               </div>
 
               <div>
-                <label className="text-xs font-medium text-stone-300 block mb-1">Select Target Page</label>
-                <select
-                  value={targetType}
-                  onChange={(e) => setTargetType(e.target.value as "perfumes" | "discovery-set")}
-                  className="w-full bg-stone-950 border border-stone-800 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none"
-                >
-                  <option value="perfumes">Perfumes Catalog (/perfumes)</option>
-                  <option value="discovery-set">Discovery Set Builder (/discovery-set)</option>
-                </select>
+                <label className="text-xs font-medium text-stone-300 block mb-1">Destination Page Path or Custom URL</label>
+                <input
+                  type="text"
+                  value={customUrl}
+                  onChange={(e) => setCustomUrl(e.target.value)}
+                  placeholder="e.g. /diwali-gifts, /offers/50-off, /perfumes, /discovery-set"
+                  className="w-full bg-stone-950 border border-stone-800 rounded-xl px-3 py-2 text-xs font-mono text-white placeholder-stone-600 focus:outline-none focus:border-amber-500"
+                />
               </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-medium text-stone-400 block mb-1">
-                Custom URL Override (Optional)
-              </label>
-              <input
-                type="text"
-                value={customUrl}
-                onChange={(e) => setCustomUrl(e.target.value)}
-                placeholder="https://www.humefragrance.com/..."
-                className="w-full bg-stone-950 border border-stone-800 rounded-xl px-3 py-2 text-xs font-mono text-white placeholder-stone-600 focus:outline-none"
-              />
             </div>
 
             {/* Active URL Copy Box */}
@@ -868,7 +854,6 @@ export default function QRGeneratorStudio() {
               <tr className="border-b border-stone-800 text-stone-400 font-semibold uppercase tracking-wider">
                 <th className="pb-3">Campaign Name</th>
                 <th className="pb-3">City</th>
-                <th className="pb-3">Target</th>
                 <th className="pb-3 text-right">Real-Time Scans</th>
                 <th className="pb-3 text-right">Last Scanned</th>
                 <th className="pb-3 text-right">Created Date</th>
@@ -878,11 +863,11 @@ export default function QRGeneratorStudio() {
             <tbody className="divide-y divide-stone-800/60">
               {loadingCampaigns ? (
                 <tr>
-                  <td colSpan={7} className="py-6 text-center text-stone-400">Loading registered QR campaigns...</td>
+                  <td colSpan={6} className="py-6 text-center text-stone-400">Loading registered QR campaigns...</td>
                 </tr>
               ) : savedCampaigns.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-6 text-center text-stone-400">
+                  <td colSpan={6} className="py-6 text-center text-stone-400">
                     No registered QR codes yet. Design a QR code above and click &quot;Save & Register QR Campaign&quot;.
                   </td>
                 </tr>
@@ -899,7 +884,6 @@ export default function QRGeneratorStudio() {
                       </div>
                     </td>
                     <td className="py-3 font-semibold text-amber-400 capitalize" onClick={() => setSelectedCampaignDetails(c)}>{c.city}</td>
-                    <td className="py-3 text-stone-300 capitalize" onClick={() => setSelectedCampaignDetails(c)}>{c.targetPage}</td>
                     <td className="py-3 text-right font-mono font-extrabold text-emerald-400 text-sm" onClick={() => setSelectedCampaignDetails(c)}>
                       <div className="inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
                         <Eye className="h-3 w-3 text-emerald-400" />
@@ -969,7 +953,6 @@ export default function QRGeneratorStudio() {
                   <span className="text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full">
                     {selectedCampaignDetails.city.toUpperCase()}
                   </span>
-                  <span className="text-xs font-mono text-stone-400 capitalize">{selectedCampaignDetails.targetPage}</span>
                 </div>
 
                 <div className="flex items-center gap-2 mt-1.5">
