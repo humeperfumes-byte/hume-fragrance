@@ -66,8 +66,21 @@ export async function POST(req: Request) {
           set scan_count = scan_count + 1, last_scanned_at = now()
           where id = ${qrId}
         `);
+
+        // Safeguard: If campaign was accidentally deleted from DB, auto-resurrect it to prevent missing analytics
+        const check = await db.execute(sql`select count(*) as cnt from qr_campaigns where id = ${qrId}`);
+        const cnt = Number((check as any)?.[0]?.cnt || (check as any)?.rows?.[0]?.cnt || 0);
+        if (cnt === 0) {
+          const autoName = `${city.toUpperCase()} Printed Pamphlet (Auto-Recovered)`;
+          const autoUrl = `https://www.humefragrance.com/flyers/${city}/${targetPage}?qr_id=${qrId}`;
+          await db.execute(sql`
+            insert into qr_campaigns (id, name, city, target_page, target_url, body_type, eye_style, logo_type, scan_count, last_scanned_at, created_at)
+            values (${qrId}, ${autoName}, ${city}, ${targetPage}, ${autoUrl}, 'stars', 'rounded', 'hf-cursive', 1, now(), now())
+            on conflict (id) do update set scan_count = qr_campaigns.scan_count + 1, last_scanned_at = now();
+          `);
+        }
       } catch (err) {
-        console.error("Error updating qr_campaigns scan count:", err);
+        console.error("Error updating or auto-recovering qr_campaigns scan count:", err);
       }
     }
 

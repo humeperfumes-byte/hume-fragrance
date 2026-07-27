@@ -247,21 +247,26 @@ export async function PATCH(req: Request) {
     const body = await req.json();
 
     const id = String(body.id || "").trim();
-    const name = String(body.name || "").trim();
+    const name = body.name ? String(body.name).trim() : undefined;
+    const targetUrl = body.targetUrl ? String(body.targetUrl).trim() : undefined;
 
-    if (!id || !name) {
-      return NextResponse.json({ error: "ID and Name are required for updating campaign" }, { status: 400 });
+    if (!id || (!name && !targetUrl)) {
+      return NextResponse.json({ error: "ID and at least name or targetUrl are required for updating campaign" }, { status: 400 });
     }
+
+    const updates: any = {};
+    if (name) updates.name = name;
+    if (targetUrl) updates.targetUrl = targetUrl;
 
     await db
       .update(qrCampaigns)
-      .set({ name })
+      .set(updates)
       .where(eq(qrCampaigns.id, id));
 
-    return NextResponse.json({ success: true, id, name });
+    return NextResponse.json({ success: true, id, ...updates });
   } catch (error) {
-    console.error("Error updating campaign name:", error);
-    return NextResponse.json({ error: "Failed to update campaign name" }, { status: 500 });
+    console.error("Error updating campaign:", error);
+    return NextResponse.json({ error: "Failed to update campaign" }, { status: 500 });
   }
 }
 
