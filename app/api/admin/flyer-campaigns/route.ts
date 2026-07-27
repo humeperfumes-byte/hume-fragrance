@@ -33,6 +33,14 @@ export async function GET(req: Request) {
     const selectedCity = searchParams.get("city") || "all";
     const selectedCampaignId = searchParams.get("campaignId") || searchParams.get("qr_id") || "all";
 
+    let targetCampaignObj: any = null;
+    if (selectedCampaignId !== "all") {
+      try {
+        const [c] = await db.select().from(qrCampaigns).where(eq(qrCampaigns.id, selectedCampaignId)).limit(1);
+        if (c) targetCampaignObj = c;
+      } catch {}
+    }
+
     // Query all flyer events from database
     const events = await db
       .select()
@@ -42,7 +50,21 @@ export async function GET(req: Request) {
     // Filter by city and specific campaign if selected
     const filteredEvents = events.filter((e) => {
       const matchCity = selectedCity === "all" || e.city.toLowerCase() === selectedCity.toLowerCase();
-      const matchCampaign = selectedCampaignId === "all" || e.qrId === selectedCampaignId;
+      let matchCampaign = true;
+      if (selectedCampaignId !== "all") {
+        if (e.qrId) {
+          matchCampaign = e.qrId === selectedCampaignId;
+        } else if (targetCampaignObj) {
+          const eTarget = e.targetPage.toLowerCase();
+          const cTarget = targetCampaignObj.targetPage.toLowerCase();
+          const cName = targetCampaignObj.name.toLowerCase();
+          matchCampaign = (
+            eTarget === cTarget ||
+            ((eTarget === "discovery-set" || eTarget === "discovery") && (cName.includes("discovery") || cName.includes("discovey"))) ||
+            ((eTarget === "perfumes" || eTarget === "catalog") && (cName.includes("50ml") || cName.includes("perfume")))
+          );
+        }
+      }
       return matchCity && matchCampaign;
     });
 

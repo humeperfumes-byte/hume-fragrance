@@ -37,10 +37,44 @@ async function ensureQRCampaignsTable() {
       );
 
       alter table flyer_campaign_events add column if not exists qr_id varchar(255);
+
+      -- Auto-repair legacy campaign target_page mismatches based on campaign title
+      update qr_campaigns 
+      set target_page = 'discovery-set' 
+      where (lower(name) like '%discovery%' or lower(name) like '%discovey%') 
+        and target_page != 'discovery-set';
     `);
   } catch (err) {
     console.error("Error ensuring qr_campaigns table:", err);
   }
+}
+
+function isMatchingEvent(
+  e: { qrId?: string | null; city: string; targetPage: string },
+  c: { id: string; city: string; targetPage: string; name: string }
+) {
+  if (e.qrId) {
+    return e.qrId === c.id;
+  }
+  if (e.city.toLowerCase() !== c.city.toLowerCase()) return false;
+  if (e.targetPage.toLowerCase() === c.targetPage.toLowerCase()) return true;
+
+  const cName = c.name.toLowerCase();
+  const eTarget = e.targetPage.toLowerCase();
+
+  if (
+    (eTarget === "discovery-set" || eTarget === "discovery") &&
+    (c.targetPage === "discovery-set" || cName.includes("discovery") || cName.includes("discovey"))
+  ) {
+    return true;
+  }
+  if (
+    (eTarget === "perfumes" || eTarget === "catalog") &&
+    (c.targetPage === "perfumes" || cName.includes("50ml") || cName.includes("perfume"))
+  ) {
+    return true;
+  }
+  return false;
 }
 
 export async function GET(req: Request) {
@@ -61,15 +95,15 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
       }
 
-      // Fetch specific events linked strictly to this QR ID, or fallback to city & target page if qr_id is missing
-      const events = await db
+      // Fetch all events for city and filter using intelligent matcher
+      const allCityEvents = await db
         .select()
         .from(flyerCampaignEvents)
-        .where(
-          sql`qr_id = ${id} or (qr_id is null and city = ${campaign.city} and target_page = ${campaign.targetPage})`
-        )
+        .where(sql`city = ${campaign.city} or qr_id = ${id}`)
         .orderBy(desc(flyerCampaignEvents.createdAt))
-        .limit(100);
+        .limit(200);
+
+      const events = allCityEvents.filter((e) => isMatchingEvent(e, campaign));
 
       // Compute exact campaign-specific funnel metrics
       const totalScans = events.filter((e) => e.eventType === "qr_scan").length;
@@ -116,19 +150,14 @@ export async function GET(req: Request) {
       .from(qrCampaigns)
       .orderBy(desc(qrCampaigns.createdAt));
 
-    // Fetch total scans grouped by qr_id or fallback to city & target_page if qr_id is null
+    // Fetch total scan events
     const scanEvents = await db
       .select()
       .from(flyerCampaignEvents)
       .where(eq(flyerCampaignEvents.eventType, "qr_scan"));
 
     const enrichedCampaigns = campaigns.map((c) => {
-      const matchingScans = scanEvents.filter((e) => {
-        if (e.qrId) {
-          return e.qrId === c.id;
-        }
-        return e.city.toLowerCase() === c.city.toLowerCase() && e.targetPage === c.targetPage;
-      });
+      const matchingScans = scanEvents.filter((e) => isMatchingEvent(e, c));
       const totalScans = matchingScans.length;
       const lastScan = matchingScans.sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()

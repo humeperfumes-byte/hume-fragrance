@@ -48,9 +48,6 @@ export default function FlyerHeroBanner({ config, mode }: FlyerHeroBannerProps) 
     sessionStorage.setItem("hume_flyer_city", config.slug);
     sessionStorage.setItem("hume_flyer_target", mode);
     sessionStorage.setItem("hume_flyer_coupon", config.couponCode);
-    if (qrId) {
-      sessionStorage.setItem("hume_flyer_qr_id", qrId);
-    }
 
     let sessionId = sessionStorage.getItem("hume_session_id");
     if (!sessionId) {
@@ -58,19 +55,46 @@ export default function FlyerHeroBanner({ config, mode }: FlyerHeroBannerProps) 
       sessionStorage.setItem("hume_session_id", sessionId);
     }
 
-    // Log QR scan event to backend API
-    fetch("/api/analytics/flyers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        city: config.slug,
-        targetPage: mode,
-        eventType: "qr_scan",
-        couponCode: config.couponCode,
-        sessionId,
-        qrId: qrId || undefined,
-      }),
-    }).catch(() => {});
+    const logScanEvent = (effectiveQrId?: string) => {
+      if (effectiveQrId) {
+        sessionStorage.setItem("hume_flyer_qr_id", effectiveQrId);
+      }
+      fetch("/api/analytics/flyers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          city: config.slug,
+          targetPage: mode,
+          eventType: "qr_scan",
+          couponCode: config.couponCode,
+          sessionId,
+          qrId: effectiveQrId || undefined,
+        }),
+      }).catch(() => {});
+    };
+
+    if (qrId) {
+      logScanEvent(qrId);
+    } else {
+      // Auto-resolve campaign ID if scanned from bare URL
+      fetch("/api/admin/qr-campaigns")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.campaigns)) {
+            const matched = data.campaigns.find(
+              (c: any) =>
+                c.city.toLowerCase() === config.slug.toLowerCase() &&
+                (c.targetPage === mode ||
+                  (mode === "discovery-set" && (c.name.toLowerCase().includes("discovery") || c.name.toLowerCase().includes("discovey"))))
+            );
+            const resolvedId = matched?.id;
+            logScanEvent(resolvedId);
+          } else {
+            logScanEvent();
+          }
+        })
+        .catch(() => logScanEvent());
+    }
   }, [config.slug, config.couponCode, mode]);
 
   // MASSIVE Antigravity Spectrum Rainbow Confetti Explosion 🎉 (125+ Particles)

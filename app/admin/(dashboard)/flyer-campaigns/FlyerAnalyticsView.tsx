@@ -105,8 +105,22 @@ export default function FlyerAnalyticsView() {
   const [copiedModalUrl, setCopiedModalUrl] = useState(false);
 
   const activeCitySlug = selectedCity === "all" ? "ahmedabad" : selectedCity;
-  const perfumesProductionUrl = `${BASE_PRODUCTION_DOMAIN}/flyers/${activeCitySlug}/perfumes`;
-  const discoveryProductionUrl = `${BASE_PRODUCTION_DOMAIN}/flyers/${activeCitySlug}/discovery-set`;
+
+  const perfumesCampaign = registeredCampaigns.find(
+    (c) => c.city.toLowerCase() === activeCitySlug.toLowerCase() && c.targetPage === "perfumes"
+  );
+  const discoveryCampaign = registeredCampaigns.find(
+    (c) =>
+      c.city.toLowerCase() === activeCitySlug.toLowerCase() &&
+      (c.targetPage === "discovery-set" || c.name.toLowerCase().includes("discove"))
+  );
+
+  const perfumesProductionUrl = perfumesCampaign
+    ? perfumesCampaign.targetUrl
+    : `${BASE_PRODUCTION_DOMAIN}/flyers/${activeCitySlug}/perfumes`;
+  const discoveryProductionUrl = discoveryCampaign
+    ? discoveryCampaign.targetUrl
+    : `${BASE_PRODUCTION_DOMAIN}/flyers/${activeCitySlug}/discovery-set`;
 
   const fetchAnalytics = async (city: string, campaignId: string = "all") => {
     setLoading(true);
