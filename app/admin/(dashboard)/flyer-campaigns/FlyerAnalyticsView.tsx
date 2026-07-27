@@ -87,6 +87,7 @@ const BASE_PRODUCTION_DOMAIN = "https://www.humefragrance.com";
 
 export default function FlyerAnalyticsView() {
   const [selectedCity, setSelectedCity] = useState("all");
+  const [selectedCampaignId, setSelectedCampaignId] = useState("all");
   const [loading, setLoading] = useState(true);
   const [totals, setTotals] = useState<CampaignTotals | null>(null);
   const [funnelStages, setFunnelStages] = useState<FunnelStage[]>([]);
@@ -94,7 +95,7 @@ export default function FlyerAnalyticsView() {
   
   // Registered QR Campaigns State
   const [registeredCampaigns, setRegisteredCampaigns] = useState<RegisteredQRCampaign[]>([]);
-  const [selectedCampaign, setSelectedCampaign] = useState<RegisteredQRCampaign | null>(null);
+  const [selectedCampaign, setSelectedCampaign] = useState<any | null>(null);
   const [campaignEvents, setCampaignEvents] = useState<any[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
@@ -107,10 +108,10 @@ export default function FlyerAnalyticsView() {
   const perfumesProductionUrl = `${BASE_PRODUCTION_DOMAIN}/flyers/${activeCitySlug}/perfumes`;
   const discoveryProductionUrl = `${BASE_PRODUCTION_DOMAIN}/flyers/${activeCitySlug}/discovery-set`;
 
-  const fetchAnalytics = async (city: string) => {
+  const fetchAnalytics = async (city: string, campaignId: string = "all") => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/flyer-campaigns?city=${city}`);
+      const res = await fetch(`/api/admin/flyer-campaigns?city=${city}&campaignId=${campaignId}`);
       const data = await res.json();
       if (data.success) {
         setTotals(data.totals);
@@ -132,8 +133,8 @@ export default function FlyerAnalyticsView() {
   };
 
   useEffect(() => {
-    fetchAnalytics(selectedCity);
-  }, [selectedCity]);
+    fetchAnalytics(selectedCity, selectedCampaignId);
+  }, [selectedCity, selectedCampaignId]);
 
   const handleRenameCampaign = async (id: string, currentName: string) => {
     const newName = prompt("Enter new campaign name:", currentName);
@@ -251,9 +252,10 @@ export default function FlyerAnalyticsView() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* City Filter Selector */}
           <div className="flex items-center gap-2 bg-stone-900 border border-stone-800 rounded-xl px-3 py-2">
-            <MapPin className="h-4 w-4 text-amber-400" />
+            <MapPin className="h-4 w-4 text-amber-400 shrink-0" />
             <select
               value={selectedCity}
               onChange={(e) => setSelectedCity(e.target.value)}
@@ -267,10 +269,29 @@ export default function FlyerAnalyticsView() {
             </select>
           </div>
 
+          {/* Specific Campaign Filter Selector */}
+          <div className="flex items-center gap-2 bg-stone-900 border border-stone-800 rounded-xl px-3 py-2">
+            <Layers className="h-4 w-4 text-amber-400 shrink-0" />
+            <select
+              value={selectedCampaignId}
+              onChange={(e) => setSelectedCampaignId(e.target.value)}
+              className="bg-transparent text-sm font-semibold text-white focus:outline-none cursor-pointer max-w-[200px] truncate"
+            >
+              <option value="all" className="bg-stone-900 text-white">
+                All QR Campaigns
+              </option>
+              {registeredCampaigns.map((camp) => (
+                <option key={camp.id} value={camp.id} className="bg-stone-900 text-white">
+                  {camp.name} ({camp.city})
+                </option>
+              ))}
+            </select>
+          </div>
+
           <Button
             variant="outline"
             size="sm"
-            onClick={() => fetchAnalytics(selectedCity)}
+            onClick={() => fetchAnalytics(selectedCity, selectedCampaignId)}
             disabled={loading}
             className="border-stone-800 bg-stone-900 text-stone-300 hover:bg-stone-800 hover:text-white"
           >
@@ -673,20 +694,58 @@ export default function FlyerAnalyticsView() {
 
               {/* Single Campaign Metrics & Scans (7 cols) */}
               <div className="md:col-span-7 space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-stone-800 bg-stone-900 p-3.5">
-                    <span className="text-[11px] text-stone-400 font-medium">Real-Time QR Scans</span>
-                    <p className="text-2xl font-extrabold text-emerald-400 mt-1">{selectedCampaign.scanCount}</p>
-                    <span className="text-[10px] text-stone-500">Physical Pamphlet Hits</span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div className="rounded-xl border border-stone-800 bg-stone-900 p-3">
+                    <span className="text-[10px] text-stone-400 font-medium block">Scans</span>
+                    <p className="text-xl font-extrabold text-blue-400 mt-0.5">{selectedCampaign.metrics?.totalScans ?? selectedCampaign.scanCount}</p>
                   </div>
 
-                  <div className="rounded-xl border border-stone-800 bg-stone-900 p-3.5">
-                    <span className="text-[11px] text-stone-400 font-medium">Last Scanned Date</span>
-                    <p className="text-xs font-mono font-bold text-white mt-2">
-                      {selectedCampaign.lastScannedAt ? new Date(selectedCampaign.lastScannedAt).toLocaleString() : "Not scanned yet"}
+                  <div className="rounded-xl border border-stone-800 bg-stone-900 p-3">
+                    <span className="text-[10px] text-stone-400 font-medium block">Copies</span>
+                    <p className="text-xl font-extrabold text-amber-400 mt-0.5">{selectedCampaign.metrics?.couponCopies ?? 0}</p>
+                  </div>
+
+                  <div className="rounded-xl border border-stone-800 bg-stone-900 p-3">
+                    <span className="text-[10px] text-stone-400 font-medium block">Cart Adds</span>
+                    <p className="text-xl font-extrabold text-purple-400 mt-0.5">{selectedCampaign.metrics?.cartAdds ?? 0}</p>
+                  </div>
+
+                  <div className="rounded-xl border border-stone-800 bg-stone-900 p-3">
+                    <span className="text-[10px] text-stone-400 font-medium block">Orders / Rev</span>
+                    <p className="text-sm font-extrabold text-emerald-400 mt-0.5">
+                      {selectedCampaign.metrics?.totalOrders ?? 0} ({formatINR(selectedCampaign.metrics?.totalRevenue ?? 0)})
                     </p>
                   </div>
                 </div>
+
+                {/* Campaign-Specific 5-Stage Visual Funnel */}
+                {selectedCampaign.funnelStages && selectedCampaign.funnelStages.length > 0 && (
+                  <div className="rounded-xl border border-stone-800 bg-stone-900 p-4 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                        <TrendingUp className="h-3.5 w-3.5 text-amber-400" />
+                        <span>Campaign Conversion Funnel</span>
+                      </h4>
+                      <span className="text-[10px] font-mono text-emerald-400 font-bold">
+                        {selectedCampaign.metrics?.conversionRate ?? 0}% Conversion
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {selectedCampaign.funnelStages.map((stage: any, idx: number) => (
+                        <div key={idx} className="space-y-1">
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-stone-300 font-medium">{stage.stage}</span>
+                            <span className="font-mono text-stone-400">{stage.count} events ({stage.percentage.toFixed(1)}%)</span>
+                          </div>
+                          <div className="w-full bg-stone-950 rounded-full h-2 overflow-hidden border border-stone-800">
+                            <div className={`${stage.color} h-full rounded-full transition-all duration-500`} style={{ width: `${Math.max(stage.percentage, 2)}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Target URL */}
                 <div className="rounded-xl border border-stone-800 bg-stone-900 p-3.5 space-y-1">
@@ -704,9 +763,9 @@ export default function FlyerAnalyticsView() {
                   {loadingDetails ? (
                     <p className="text-xs text-stone-400 py-4 text-center">Loading scan activity...</p>
                   ) : campaignEvents.length === 0 ? (
-                    <p className="text-xs text-stone-400 py-4 text-center">No specific scans logged for this campaign ID yet.</p>
+                    <p className="text-xs text-stone-400 py-4 text-center">No specific events logged for this campaign ID yet.</p>
                   ) : (
-                    <div className="max-h-40 overflow-y-auto space-y-1.5">
+                    <div className="max-h-36 overflow-y-auto space-y-1.5">
                       {campaignEvents.map((ev, i) => (
                         <div key={i} className="flex items-center justify-between text-[11px] bg-stone-950 p-2 rounded-lg border border-stone-800">
                           <span className="font-semibold text-emerald-400 capitalize">{ev.eventType}</span>

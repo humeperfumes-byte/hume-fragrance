@@ -1475,6 +1475,30 @@ export default function CheckoutClient() {
               orderMessage: paymentMessage,
             });
 
+            // Log order completion for Flyer QR Campaign Funnel
+            if (typeof window !== "undefined") {
+              const flyerCity = sessionStorage.getItem("hume_flyer_city");
+              const flyerQrId = sessionStorage.getItem("hume_flyer_qr_id");
+              const flyerTarget = sessionStorage.getItem("hume_flyer_target") || "perfumes";
+              const flyerCoupon = sessionStorage.getItem("hume_flyer_coupon");
+              if (flyerCity || flyerQrId) {
+                fetch("/api/analytics/flyers", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    city: flyerCity || "ahmedabad",
+                    targetPage: flyerTarget,
+                    eventType: "order_complete",
+                    couponCode: flyerCoupon,
+                    sessionId,
+                    orderId: identity.orderNumber,
+                    revenue: amount,
+                    qrId: flyerQrId || undefined,
+                  }),
+                }).catch(() => {});
+              }
+            }
+
             await persistDraft(undefined, "complete", true);
 
             toast({

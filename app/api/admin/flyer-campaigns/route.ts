@@ -31,6 +31,7 @@ export async function GET(req: Request) {
     await ensureFlyerEventsTable();
     const { searchParams } = new URL(req.url);
     const selectedCity = searchParams.get("city") || "all";
+    const selectedCampaignId = searchParams.get("campaignId") || searchParams.get("qr_id") || "all";
 
     // Query all flyer events from database
     const events = await db
@@ -38,10 +39,12 @@ export async function GET(req: Request) {
       .from(flyerCampaignEvents)
       .orderBy(desc(flyerCampaignEvents.createdAt));
 
-    // Filter by city if selected
-    const filteredEvents = selectedCity === "all"
-      ? events
-      : events.filter((e) => e.city.toLowerCase() === selectedCity.toLowerCase());
+    // Filter by city and specific campaign if selected
+    const filteredEvents = events.filter((e) => {
+      const matchCity = selectedCity === "all" || e.city.toLowerCase() === selectedCity.toLowerCase();
+      const matchCampaign = selectedCampaignId === "all" || e.qrId === selectedCampaignId;
+      return matchCity && matchCampaign;
+    });
 
     const totalScans = filteredEvents.filter((e) => e.eventType === "qr_scan").length;
     const couponCopies = filteredEvents.filter((e) => e.eventType === "coupon_copy").length;

@@ -109,6 +109,28 @@ export default function CartAnalyticsTracker() {
       if (eventType === "cart_open" && Number(payload.itemCount || 0) <= 0) return;
       const welcomeBackReward = getActiveWelcomeBackReward();
 
+      // If user came from a Flyer QR campaign, log add_to_cart for campaign funnel tracking
+      if (eventType === "add_to_cart" && typeof window !== "undefined") {
+        const flyerCity = sessionStorage.getItem("hume_flyer_city");
+        const flyerQrId = sessionStorage.getItem("hume_flyer_qr_id");
+        const flyerTarget = sessionStorage.getItem("hume_flyer_target") || "perfumes";
+        const flyerCoupon = sessionStorage.getItem("hume_flyer_coupon");
+        if (flyerCity || flyerQrId) {
+          fetch("/api/analytics/flyers", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              city: flyerCity || "ahmedabad",
+              targetPage: flyerTarget,
+              eventType: "add_to_cart",
+              couponCode: flyerCoupon,
+              sessionId,
+              qrId: flyerQrId || undefined,
+            }),
+          }).catch(() => {});
+        }
+      }
+
       sendCartEvent({
         sessionId,
         eventType,
@@ -130,6 +152,31 @@ export default function CartAnalyticsTracker() {
     window.addEventListener("hume:tracking", handler as EventListener);
     return () => window.removeEventListener("hume:tracking", handler as EventListener);
   }, [pathname, searchParams]);
+
+  // Track checkout initiation for Flyer QR Campaign Funnel
+  useEffect(() => {
+    if (pathname === "/checkout" && typeof window !== "undefined") {
+      const flyerCity = sessionStorage.getItem("hume_flyer_city");
+      const flyerQrId = sessionStorage.getItem("hume_flyer_qr_id");
+      const flyerTarget = sessionStorage.getItem("hume_flyer_target") || "perfumes";
+      const flyerCoupon = sessionStorage.getItem("hume_flyer_coupon");
+      const sessionId = getSessionId();
+      if (flyerCity || flyerQrId) {
+        fetch("/api/analytics/flyers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            city: flyerCity || "ahmedabad",
+            targetPage: flyerTarget,
+            eventType: "checkout_start",
+            couponCode: flyerCoupon,
+            sessionId,
+            qrId: flyerQrId || undefined,
+          }),
+        }).catch(() => {});
+      }
+    }
+  }, [pathname]);
 
   return null;
 }

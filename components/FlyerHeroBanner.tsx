@@ -191,6 +191,7 @@ export default function FlyerHeroBanner({ config, mode }: FlyerHeroBannerProps) 
       setTimeout(() => setCopied(false), 2500);
 
       const sessionId = typeof window !== "undefined" ? sessionStorage.getItem("hume_session_id") : null;
+      const qrId = typeof window !== "undefined" ? sessionStorage.getItem("hume_flyer_qr_id") : null;
 
       // Log coupon copy event to backend API
       fetch("/api/analytics/flyers", {
@@ -202,6 +203,7 @@ export default function FlyerHeroBanner({ config, mode }: FlyerHeroBannerProps) 
           eventType: "coupon_copy",
           couponCode: config.couponCode,
           sessionId,
+          qrId: qrId || undefined,
         }),
       }).catch(() => {});
     } catch {
