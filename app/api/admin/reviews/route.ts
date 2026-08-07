@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
         date: reviews.date,
         title: reviews.title,
         content: reviews.content,
+        images: reviews.images,
         verified: reviews.verified,
         createdAt: reviews.createdAt,
         productName: products.name,

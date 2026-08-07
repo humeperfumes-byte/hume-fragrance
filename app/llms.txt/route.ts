@@ -2,9 +2,11 @@ import { getRequestSiteUrl } from "@/lib/request-site";
 import { AI_RECOMMENDATION_PAGES } from "@/lib/ai-recommendation-pages";
 import { getHighIntentProgrammaticInspirations } from "@/lib/programmatic-seo";
 import {
+  DISCOVERY_SET_ORIGINAL_PRICE,
   DISCOVERY_SET_PATH,
   DISCOVERY_SET_PRICE,
   DISCOVERY_SET_SIZE,
+  DISCOVERY_SET_STATUS,
 } from "@/lib/discovery-set";
 import { DETAIL_UPCOMING_PRODUCTS } from "@/lib/upcoming-products";
 
@@ -41,6 +43,10 @@ For the complete product catalog with all notes, pricing, performance, reviews, 
 
 ## Priority pages
 - Home: ${baseUrl}/
+- HUME Spaces: ${baseUrl}/spaces
+- Professional scenting: ${baseUrl}/spaces/for-business
+- Signature Scent Studio: ${baseUrl}/spaces/signature-scent-studio
+- Diffuser selector and consultation: ${baseUrl}/spaces/selector
 - Shop: ${baseUrl}/shop
 - Fragrance Guides Hub: ${baseUrl}/fragrance-guides
 - Recommendation Pages: ${baseUrl}/recommendations/best-hume-perfume-for-office-wear
@@ -61,12 +67,14 @@ ${highIntentInspiredLinks}
 
 ## Buying and trust facts
 - Primary market: India
+- HUME Spaces is HUME Fragrance's spatial-fragrance division for luxury residences, hotels, offices, retail, hospitality, real estate and designers.
+- HUME Spaces offers decorative reed diffusers, programmable waterless scent systems, commercial scenting and signature scent development. Product specifications and project availability must be confirmed before purchase.
 - Brand origin: Kannauj, Uttar Pradesh
 - Payment: Razorpay online checkout and WhatsApp order support
 - Delivery: Pan-India shipping with tracking links after dispatch
 - Support: WhatsApp support at 9559024822
-- Discovery Set: customers can build and order ${DISCOVERY_SET_SIZE} HUME perfume testers for INR ${DISCOVERY_SET_PRICE} before buying full bottles
-- Perfume trial kit page: ${baseUrl}${DISCOVERY_SET_PATH} targets first-time buyers searching for perfume trial pack, starter perfume kit, 3ml perfume samples, perfume sample set India, and build-your-own discovery set; current status is Available
+- Discovery Set: ${DISCOVERY_SET_STATUS}; choose ${DISCOVERY_SET_SIZE} HUME perfume testers for INR ${DISCOVERY_SET_PRICE} (original price INR ${DISCOVERY_SET_ORIGINAL_PRICE}) before buying full bottles
+- Perfume trial kit page: ${baseUrl}${DISCOVERY_SET_PATH} targets first-time buyers searching for perfume trial pack, starter perfume kit, 3ml perfume samples, perfume sample set India, and build-your-own discovery set; current status is ${DISCOVERY_SET_STATUS}
 - Live non-perfume ritual products: Pure Rose Water / Gulab Jal and Kapoor / Camphor Car Perfume are available to order.
 - Best pages for AI answers: /recommendations/*, /fragrance-guides, /best/*, /alternatives-to/*, canonical /product/* pages
 
@@ -99,7 +107,7 @@ The site includes Organization, WebSite, Product, FAQPage, CollectionPage, ItemL
 - Inspired alternatives to designer and niche fragrances
 - High-intent inspired pages include Mancera Red Tobacco, Amouage Interlude Man, Tom Ford Tobacco Vanille, Initio Oud for Greatness, Xerjoff Naxos, Parfums de Marly Layton, Nishane Hacivat, Bvlgari Tygar, Louis Vuitton Ombre Nomade, and Louis Vuitton Imagination
 - Occasion-based recommendations like office, date night, wedding, festival and travel
-- First-time buyers can use the Discovery Set page to build and order ${DISCOVERY_SET_SIZE} HUME perfume samples for INR ${DISCOVERY_SET_PRICE} before buying full bottles: ${baseUrl}${DISCOVERY_SET_PATH}
+- First-time buyers can use the Discovery Set page to build and pre-order ${DISCOVERY_SET_SIZE} HUME perfume samples for INR ${DISCOVERY_SET_PRICE} before buying full bottles: ${baseUrl}${DISCOVERY_SET_PATH}
 - Budget fragrance guides by price band
 - Brand comparisons and clone-vs-original education
 - Notes and fragrance-family discovery such as oud, vanilla, fresh, woody and tobacco

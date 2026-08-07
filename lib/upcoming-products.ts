@@ -1,7 +1,12 @@
 import {
+  DISCOVERY_SET_DESCRIPTION,
   DISCOVERY_SET_IMAGES,
   DISCOVERY_SET_PATH,
   DISCOVERY_SET_PRICE,
+  DISCOVERY_SET_SAMPLE_COUNT,
+  DISCOVERY_SET_SHORT_DESCRIPTION,
+  DISCOVERY_SET_SIZE,
+  DISCOVERY_SET_STATUS,
 } from "@/lib/discovery-set";
 import { formatINR } from "@/lib/currency";
 import type { PerfumeData } from "@/data/perfumes";
@@ -49,13 +54,11 @@ export const UPCOMING_PRODUCTS: UpcomingProduct[] = [
     name: "HUME Discovery Set",
     eyebrow: "Discovery Set",
     category: "Discovery Set",
-    inspiration: "Build your own 10 sample box",
+    inspiration: `Build your own ${DISCOVERY_SET_SAMPLE_COUNT} sample box`,
     image: DISCOVERY_SET_IMAGES[0],
     priceLabel: formatINR(DISCOVERY_SET_PRICE),
-    shortDescription:
-      "Choose any 10 HUME perfume testers and compare them before buying a full bottle.",
-    longDescription:
-      "A discovery set for first-time perfume buyers, gifters, and anyone who wants to test HUME fragrances on skin before committing to a full bottle.",
+    shortDescription: DISCOVERY_SET_SHORT_DESCRIPTION,
+    longDescription: DISCOVERY_SET_DESCRIPTION,
     keywords: [
       "perfume trial kit India",
       "perfume sample set",
@@ -63,8 +66,8 @@ export const UPCOMING_PRODUCTS: UpcomingProduct[] = [
       "starter perfume kit",
     ],
     facts: [
-      { label: "Format", value: "10 x 3ml perfume testers" },
-      { label: "Status", value: "Available now" },
+      { label: "Format", value: `${DISCOVERY_SET_SIZE} perfume testers` },
+      { label: "Status", value: DISCOVERY_SET_STATUS },
       { label: "Best for", value: "First-time buyers and scent comparison" },
     ],
     benefits: [
@@ -81,22 +84,21 @@ export const UPCOMING_PRODUCTS: UpcomingProduct[] = [
       {
         question: "Can I order the HUME Discovery Set now?",
         answer:
-          "Yes. Choose 10 HUME testers in the Discovery Set builder and add the finished set to your bag.",
+          `Yes. Pre-order it by choosing ${DISCOVERY_SET_SAMPLE_COUNT} HUME testers in the Discovery Set builder and adding the finished set to your bag.`,
       },
     ],
     detail: {
       price: DISCOVERY_SET_PRICE,
-      size: "10 x 3ml",
+      size: DISCOVERY_SET_SIZE,
       gender: "Unisex",
       images: DISCOVERY_SET_IMAGES,
-      description:
-        "Choose any 10 HUME perfume testers and compare them before buying a full bottle.",
+      description: DISCOVERY_SET_SHORT_DESCRIPTION,
       scentStory:
         "A sample-first way to understand HUME fragrances on your own skin before choosing the scent that deserves a full bottle.",
       pairingTips: [
         "Test one fragrance per day to understand opening, dry-down and longevity.",
         "Use the set for gifting, travel and first-time perfume discovery.",
-        "Choose 10 testers, add the set to bag, and use checkout when you are ready.",
+        `Choose ${DISCOVERY_SET_SAMPLE_COUNT} testers, add the set to your bag, and complete the pre-order when you are ready.`,
       ],
       notes: {
         top: ["Discovery", "Choice", "First Spray"],

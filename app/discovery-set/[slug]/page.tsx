@@ -6,10 +6,13 @@ import { JsonLd } from "@/components/JsonLd";
 import DiscoverySetBuilder from "@/components/DiscoverySetBuilder";
 import { getDiscoverySetSeoPageBySlug, getDiscoverySetSeoSlugs } from "@/lib/discovery-set-seo";
 import {
-  DISCOVERY_SET_PATH,
+  DISCOVERY_SET_IMAGES,
+  DISCOVERY_SET_ORIGINAL_PRICE,
   DISCOVERY_SET_PRICE,
   DISCOVERY_SET_SAMPLE_COUNT,
+  DISCOVERY_SET_SCHEMA_AVAILABILITY,
   DISCOVERY_SET_SIZE,
+  DISCOVERY_SET_STATUS,
 } from "@/lib/discovery-set";
 import { formatINR } from "@/lib/currency";
 import { getRequestSiteUrl } from "@/lib/request-site";
@@ -40,15 +43,6 @@ const cormorant = Cormorant_Garamond({
   display: "swap",
 });
 
-const discoverySetImages = [
-  "/images/bg/tester_box1.png",
-  "/images/bg/tester_box.png",
-  "/images/bg/tester1.png",
-  "/images/bg/tester2.png",
-  "/images/bg/tester3.png",
-  "/images/bg/tester4.png",
-];
-
 const discoverySetBenefits = [
   {
     title: "Try before a full bottle",
@@ -77,6 +71,10 @@ const discoverySetUseCases = [
   "Comparing inspired fragrance directions",
 ];
 
+function getPreorderDescription(description: string) {
+  return `${description} Current status: ${DISCOVERY_SET_STATUS}. Original price: INR ${DISCOVERY_SET_ORIGINAL_PRICE}.`;
+}
+
 const discoverySetFaq = [
   {
     question: "What is a perfume trial pack?",
@@ -96,7 +94,7 @@ const discoverySetFaq = [
   {
     question: "Can I order the HUME Discovery Set right now?",
     answer:
-      "Yes. Select exactly 15 testers, add the Discovery Set to your bag, and complete checkout online or through WhatsApp.",
+      `Yes. The ${DISCOVERY_SET_SIZE} Discovery Set is open for pre-order at ${formatINR(DISCOVERY_SET_PRICE)} (original price ${formatINR(DISCOVERY_SET_ORIGINAL_PRICE)}). Choose exactly ${DISCOVERY_SET_SAMPLE_COUNT} testers, add the set to your bag, and complete checkout online or through WhatsApp.`,
   },
   {
     question: "Who should buy a starter perfume kit?",
@@ -121,20 +119,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const baseUrl = await getRequestSiteUrl();
   const canonicalUrl = siteUrlForBase(baseUrl, `/discovery-set/${slug}`);
-  const imageUrl = siteUrlForBase(baseUrl, discoverySetImages[0]);
+  const imageUrl = siteUrlForBase(baseUrl, DISCOVERY_SET_IMAGES[0]);
+  const description = getPreorderDescription(page.description);
 
   return {
     title: {
       absolute: page.title,
     },
-    description: page.description,
+    description,
     keywords: page.keywords,
     alternates: {
       canonical: canonicalUrl,
     },
     openGraph: {
       title: page.title,
-      description: page.description,
+      description,
       url: canonicalUrl,
       type: "website",
       siteName: "HUME Fragrance",
@@ -150,7 +149,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     twitter: {
       card: "summary_large_image",
       title: page.title,
-      description: page.description,
+      description,
       images: [imageUrl],
     },
   };
@@ -163,7 +162,8 @@ export default async function DiscoverySetSeoPage({ params }: Props) {
 
   const baseUrl = await getRequestSiteUrl();
   const canonicalUrl = siteUrlForBase(baseUrl, `/discovery-set/${slug}`);
-  const imageUrls = discoverySetImages.map((image) => siteUrlForBase(baseUrl, image));
+  const imageUrls = DISCOVERY_SET_IMAGES.map((image) => siteUrlForBase(baseUrl, image));
+  const description = getPreorderDescription(page.description);
   const jsonLd = [
     getOrganizationSchema(baseUrl),
     {
@@ -172,7 +172,7 @@ export default async function DiscoverySetSeoPage({ params }: Props) {
       "@id": `${canonicalUrl}#webpage`,
       name: page.title,
       url: canonicalUrl,
-      description: page.description,
+      description,
       keywords: page.keywords.join(", "),
       isPartOf: {
         "@type": "WebSite",
@@ -199,19 +199,37 @@ export default async function DiscoverySetSeoPage({ params }: Props) {
         "Starter Perfume Kit",
       ],
       image: imageUrls,
-      description: page.description,
+      description,
       sku: "HUME-DISCOVERY-SET",
       mpn: "HUME-DISCOVERY-SET",
       brand: { "@type": "Brand", name: "HUME Fragrance" },
+      additionalProperty: [
+        { "@type": "PropertyValue", name: "Tester count", value: `${DISCOVERY_SET_SAMPLE_COUNT} testers` },
+        { "@type": "PropertyValue", name: "Tester size", value: "3ml each" },
+        { "@type": "PropertyValue", name: "Availability", value: DISCOVERY_SET_STATUS },
+        { "@type": "PropertyValue", name: "Original price", value: `INR ${DISCOVERY_SET_ORIGINAL_PRICE}` },
+      ],
       offers: {
         "@type": "Offer",
         price: DISCOVERY_SET_PRICE,
         priceCurrency: "INR",
-        availability: "https://schema.org/InStock",
+        availability: DISCOVERY_SET_SCHEMA_AVAILABILITY,
         url: canonicalUrl,
         itemCondition: "https://schema.org/NewCondition",
         seller: { "@type": "Organization", name: "HUME Fragrance" },
       },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: discoverySetFaq.map((item) => ({
+        "@type": "Question",
+        name: item.question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: item.answer,
+        },
+      })),
     },
     getBreadcrumbSchema([
       { name: "Home", url: baseUrl },
@@ -238,9 +256,10 @@ export default async function DiscoverySetSeoPage({ params }: Props) {
               </h2>
               <p className="mt-5 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
                 The HUME Discovery Set is built for customers who want to test perfume
-                on skin before buying a full bottle. Build your own {DISCOVERY_SET_SIZE}
-                fragrance sample set, compare performance through the day, and checkout
-                with your chosen testers attached to the order.
+                on skin before buying a full bottle. It is currently open for pre-order at{" "}
+                {formatINR(DISCOVERY_SET_PRICE)} (original price{" "}
+                {formatINR(DISCOVERY_SET_ORIGINAL_PRICE)}). Build your own {DISCOVERY_SET_SIZE}{" "}
+                fragrance sample set and compare performance through the day.
               </p>
             </div>
 

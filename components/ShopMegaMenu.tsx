@@ -9,7 +9,7 @@ import { celebrityFavorites } from "@/lib/celebrity-favorites";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getClientCachedProducts } from "@/lib/client-products-cache";
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
-import { DISCOVERY_SET_PATH } from "@/lib/discovery-set";
+import { DISCOVERY_SET_PATH, DISCOVERY_SET_SIZE } from "@/lib/discovery-set";
 import { PERFUME_MATURATION_PATH } from "@/lib/perfume-maturation";
 
 type FilterType = "nature" | "gender" | "occasion" | "celebrity";
@@ -35,7 +35,7 @@ const shopSections: ShopSection[] = [
     items: [
       {
         label: "Discovery Set",
-        description: "Build your own 10 x 3ml sample set",
+        description: `Build your own ${DISCOVERY_SET_SIZE} sample set`,
         filterType: "occasion",
         href: DISCOVERY_SET_PATH,
       },

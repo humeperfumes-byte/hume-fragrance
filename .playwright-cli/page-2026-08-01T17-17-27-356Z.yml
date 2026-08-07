@@ -1,0 +1,213 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e6]:
+          - generic [ref=e7]:
+            - generic [ref=e8]: PRE ORDER
+            - generic [ref=e10]: Free delivery over INR 500. Use HUME15 on your first order.
+          - generic [ref=e11]:
+            - generic [ref=e12]: PRE ORDER
+            - generic [ref=e14]: Free delivery over INR 500. Use HUME15 on your first order.
+          - generic [ref=e15]:
+            - generic [ref=e16]: PRE ORDER
+            - generic [ref=e18]: Free delivery over INR 500. Use HUME15 on your first order.
+          - generic [ref=e19]:
+            - generic [ref=e20]: PRE ORDER
+            - generic [ref=e22]: Free delivery over INR 500. Use HUME15 on your first order.
+        - button "Dismiss announcement" [ref=e23]
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - button "Shop" [ref=e32]
+          - navigation [ref=e35]:
+            - link "Hume Special" [ref=e36]:
+              - /url: /hume-special
+            - link "Best Seller" [ref=e37]:
+              - /url: /bestseller
+        - link "HUME Fragrance" [ref=e38]:
+          - /url: /
+          - generic [ref=e39]: HUME
+          - generic [ref=e40]: Fragrance
+        - generic [ref=e41]:
+          - navigation [ref=e42]:
+            - link "HUME Spaces" [ref=e43]:
+              - /url: /spaces
+            - link "DISCOVERY SET" [ref=e44]:
+              - /url: /discovery-set/build-your-own-perfume-trial-kit-choose-15-3ml-samples
+            - generic [ref=e45]:
+              - link "GIFTS" [ref=e46]:
+                - /url: /corporate-gifting
+              - generic:
+                - generic:
+                  - link "Corporate Gifting":
+                    - /url: /corporate-gifting
+                  - link "Wedding Gifts":
+                    - /url: /wedding-gifts
+                  - link "Diwali Gifts":
+                    - /url: /diwali-gifts
+                  - link "Holi Gifts":
+                    - /url: /holi-gifts
+                  - link "New Year's Gifts":
+                    - /url: /new-years-gifts
+                  - link "Christmas Gifts":
+                    - /url: /christmas-gifts
+          - button "Search" [ref=e47]
+          - button "Open account" [ref=e51]
+          - button "Open cart" [ref=e55]
+    - generic [ref=e60]:
+      - generic [ref=e61]:
+        - paragraph [ref=e62]: Scenting system selector
+        - heading [level=1] [ref=e63]:
+          - text: Begin with volume,
+          - emphasis [ref=e64]: not guesswork.
+        - paragraph [ref=e65]: Share the property, airflow and desired arrangement. You’ll receive a preliminary direction before HUME confirms the specification.
+      - generic [ref=e67]:
+        - generic [ref=e73]:
+          - paragraph [ref=e74]: 01 · Property
+          - heading "What are we scenting?" [level=2] [ref=e75]
+          - generic [ref=e76]:
+            - button "Luxury home" [ref=e77]
+            - button "Hotel" [ref=e78]
+            - button "Corporate office" [ref=e79]
+            - button "Retail / showroom" [ref=e80]
+            - button "Restaurant / club" [ref=e81]
+            - button "Spa / salon" [ref=e82]
+            - button "Real estate" [ref=e83]
+            - button "Event venue" [ref=e84]
+            - button "Other" [ref=e85]
+        - button "Continue" [disabled] [ref=e87]
+    - generic [ref=e91]:
+      - generic [ref=e92]:
+        - generic [ref=e93]:
+          - link "HUME FRAGRANCE" [ref=e94]:
+            - /url: /
+            - generic [ref=e95]: HUME
+            - generic [ref=e96]: FRAGRANCE
+          - paragraph [ref=e97]: Premium inspired perfumes crafted for modern luxury, long wear, and signature presence.
+          - generic [ref=e98]:
+            - paragraph [ref=e99]: hello@humefragrance.com
+            - paragraph [ref=e100]: "WhatsApp: 9559024822"
+            - paragraph [ref=e101]: Kannauj, India's City of Scent
+          - generic [ref=e102]:
+            - link "Queries on WhatsApp" [ref=e103]:
+              - /url: https://wa.me/919559024822
+            - link "Follow on Instagram" [ref=e104]:
+              - /url: https://www.instagram.com/hume.perfume/
+        - generic [ref=e105]:
+          - heading "Shop" [level=4] [ref=e106]
+          - navigation [ref=e107]:
+            - link "Shop All Perfumes" [ref=e108]:
+              - /url: /shop
+            - link "Discovery Set" [ref=e109]:
+              - /url: /discovery-set/build-your-own-perfume-trial-kit-choose-15-3ml-samples
+            - link "Celebrities' Favorites" [ref=e110]:
+              - /url: /celebrities-favorites
+        - generic [ref=e111]:
+          - heading "Gifting" [level=4] [ref=e112]
+          - navigation [ref=e113]:
+            - link "Corporate Gifting" [ref=e114]:
+              - /url: /corporate-gifting
+            - link "Wedding Gifts" [ref=e115]:
+              - /url: /wedding-gifts
+            - link "Diwali Gifts" [ref=e116]:
+              - /url: /diwali-gifts
+            - link "Holi Gifts" [ref=e117]:
+              - /url: /holi-gifts
+            - link "New Year's Gifts" [ref=e118]:
+              - /url: /new-years-gifts
+            - link "Christmas Gifts" [ref=e119]:
+              - /url: /christmas-gifts
+        - generic [ref=e120]:
+          - heading "Spaces" [level=4] [ref=e121]
+          - navigation [ref=e122]:
+            - link "HUME Spaces" [ref=e123]:
+              - /url: /spaces
+            - link "For the Home" [ref=e124]:
+              - /url: /spaces/home
+            - link "For Business" [ref=e125]:
+              - /url: /spaces/for-business
+            - link "Scent Machines" [ref=e126]:
+              - /url: /spaces/scent-machines
+            - link "Reed Diffusers" [ref=e127]:
+              - /url: /spaces/reed-diffusers
+            - link "Signature Scent Studio" [ref=e128]:
+              - /url: /spaces/signature-scent-studio
+            - link "Plan My Space" [ref=e129]:
+              - /url: /spaces/selector
+        - generic [ref=e130]:
+          - heading "Categories" [level=4] [ref=e131]
+          - navigation [ref=e132]:
+            - link "Amber Fragrances" [ref=e133]:
+              - /url: /shop?filter=nature&value=Amber
+            - link "animalic Fragrances" [ref=e134]:
+              - /url: /shop?filter=nature&value=animalic
+            - link "Aquatic Fragrances" [ref=e135]:
+              - /url: /shop?filter=nature&value=Aquatic
+            - link "Citrus Fragrances" [ref=e136]:
+              - /url: /shop?filter=nature&value=Citrus
+            - link "Coffee Fragrances" [ref=e137]:
+              - /url: /shop?filter=nature&value=Coffee
+            - link "Floral Fragrances" [ref=e138]:
+              - /url: /shop?filter=nature&value=Floral
+            - link "Fresh Fragrances" [ref=e139]:
+              - /url: /shop?filter=nature&value=Fresh
+            - link "Fresh Spicy Fragrances" [ref=e140]:
+              - /url: /shop?filter=nature&value=Fresh%20Spicy
+        - generic [ref=e141]:
+          - heading "Discover" [level=4] [ref=e142]
+          - navigation [ref=e143]:
+            - link "Fragrance Guides Hub" [ref=e144]:
+              - /url: /fragrance-guides
+            - link "Journal" [ref=e145]:
+              - /url: /blog
+            - link "Scent Quiz" [ref=e146]:
+              - /url: /scent-quiz
+            - link "Perfume Alternatives" [ref=e147]:
+              - /url: /alternatives/creed-aventus
+            - link "Oud Alternatives" [ref=e148]:
+              - /url: /alternatives/ombre-nomade
+        - generic [ref=e149]:
+          - heading "Company" [level=4] [ref=e150]
+          - navigation [ref=e151]:
+            - link "About HUME" [ref=e152]:
+              - /url: /#about
+            - link "Our Craft" [ref=e153]:
+              - /url: /#craft
+            - link "Best Sellers" [ref=e154]:
+              - /url: /#collection
+            - link "My Account" [ref=e155]:
+              - /url: /account
+            - link "Track Order" [ref=e156]:
+              - /url: /track-order
+            - link "Shipping Policy" [ref=e157]:
+              - /url: /shipping-policy
+            - link "Returns & Refunds" [ref=e158]:
+              - /url: /return-refund-policy
+            - link "Privacy Policy" [ref=e159]:
+              - /url: /privacy-policy
+            - link "Terms" [ref=e160]:
+              - /url: /terms
+            - link "Contact" [ref=e161]:
+              - /url: /contact
+            - link "Sitemap" [ref=e162]:
+              - /url: /sitemap.xml
+      - generic [ref=e163]:
+        - paragraph [ref=e164]: © 2026 HUME Fragrance. All rights reserved.
+        - generic [ref=e165]:
+          - link "Shop" [ref=e166]:
+            - /url: /shop
+          - link "Blog" [ref=e167]:
+            - /url: /blog
+          - link "Track Order" [ref=e168]:
+            - /url: /track-order
+          - link "Account" [ref=e169]:
+            - /url: /account
+          - link "Shipping" [ref=e170]:
+            - /url: /shipping-policy
+          - link "Returns" [ref=e171]:
+            - /url: /return-refund-policy
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e177] [cursor=pointer]
+  - alert [ref=e181]

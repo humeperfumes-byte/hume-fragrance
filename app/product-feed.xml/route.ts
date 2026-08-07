@@ -1,4 +1,5 @@
 import { getAllPublicProducts } from "@/lib/db/products";
+import { isDiscoverySetProductId } from "@/lib/discovery-set";
 import { getProductPath } from "@/lib/product-route";
 import { SITE_URL, siteUrlForBase } from "@/lib/site";
 
@@ -27,6 +28,8 @@ export async function GET() {
   const products = await getAllPublicProducts();
 
   const items = products
+    // Google requires an availability date for preorder feed items. Re-add after launch timing is confirmed.
+    .filter((product) => !isDiscoverySetProductId(product.id))
     .map((product) => {
       const link = siteUrlForBase(SITE_URL, getProductPath(product));
       const image = absoluteUrl(product.images[0]);

@@ -2,10 +2,6 @@ import Image from "next/image";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CorporateGiftingForm from "./CorporateGiftingForm";
-import { formatINR } from "@/lib/currency";
-
-// Define pricing structure matching schema
-const DISCOVERY_SET_PRICE = 999;
 
 interface GiftingPageContentProps {
   occasion: "corporate" | "wedding" | "diwali" | "holi" | "new-year" | "christmas";

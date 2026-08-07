@@ -1,3 +1,11 @@
+import {
+  DISCOVERY_SET_ORIGINAL_PRICE,
+  DISCOVERY_SET_PATH,
+  DISCOVERY_SET_PRICE,
+  DISCOVERY_SET_SIZE,
+} from "@/lib/discovery-set";
+import { formatINR } from "@/lib/currency";
+
 export type AdminControls = {
   behavioralIntelligenceEnabled: boolean;
   announcementEnabled: boolean;
@@ -49,12 +57,27 @@ export function normalizeAdminControls(value: unknown): AdminControls {
     value && typeof value === "object" && !Array.isArray(value)
       ? (value as Partial<AdminControls>)
       : {};
+  const rawAnnouncementText = stringOrDefault(
+    raw.announcementText,
+    defaultAdminControls.announcementText,
+  );
+  const rawAnnouncementLink =
+    typeof raw.announcementLink === "string"
+      ? raw.announcementLink.trim()
+      : defaultAdminControls.announcementLink;
+  const isDiscoverySetAnnouncement =
+    rawAnnouncementLink.toLowerCase().includes("/discovery-set") ||
+    rawAnnouncementText.toLowerCase().includes("discovery set");
 
   return {
     behavioralIntelligenceEnabled: raw.behavioralIntelligenceEnabled === true,
     announcementEnabled: raw.announcementEnabled !== false,
-    announcementText: stringOrDefault(raw.announcementText, defaultAdminControls.announcementText),
-    announcementLink: typeof raw.announcementLink === "string" ? raw.announcementLink.trim() : defaultAdminControls.announcementLink,
+    announcementText: isDiscoverySetAnnouncement
+      ? `Pre-order the HUME Discovery Set: ${DISCOVERY_SET_SIZE} testers for ${formatINR(DISCOVERY_SET_PRICE)} (original ${formatINR(DISCOVERY_SET_ORIGINAL_PRICE)})`
+      : rawAnnouncementText,
+    announcementLink: isDiscoverySetAnnouncement
+      ? DISCOVERY_SET_PATH
+      : rawAnnouncementLink,
     heroOfferText: stringOrDefault(raw.heroOfferText, defaultAdminControls.heroOfferText),
     freeDeliveryThreshold: numberOrDefault(raw.freeDeliveryThreshold, defaultAdminControls.freeDeliveryThreshold),
     shippingChargeBelowThreshold: numberOrDefault(

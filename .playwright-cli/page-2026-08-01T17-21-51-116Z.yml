@@ -1,0 +1,299 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - link "PRE ORDER PRE-ORDER our Discovery Set (15 ✕ Samples) at just ₹750 PRE ORDER PRE-ORDER our Discovery Set (15 ✕ Samples) at just ₹750 PRE ORDER PRE-ORDER our Discovery Set (15 ✕ Samples) at just ₹750 PRE ORDER PRE-ORDER our Discovery Set (15 ✕ Samples) at just ₹750" [ref=e322]:
+          - /url: /discovery-set/build-your-own-perfume-trial-kit-choose-10-3ml-samples
+          - generic [ref=e324]:
+            - generic [ref=e325]:
+              - generic [ref=e326]: PRE ORDER
+              - generic [ref=e328]: PRE-ORDER our Discovery Set (15 ✕ Samples) at just ₹750
+            - generic [ref=e329]:
+              - generic [ref=e330]: PRE ORDER
+              - generic [ref=e332]: PRE-ORDER our Discovery Set (15 ✕ Samples) at just ₹750
+            - generic [ref=e333]:
+              - generic [ref=e334]: PRE ORDER
+              - generic [ref=e336]: PRE-ORDER our Discovery Set (15 ✕ Samples) at just ₹750
+            - generic [ref=e337]:
+              - generic [ref=e338]: PRE ORDER
+              - generic [ref=e340]: PRE-ORDER our Discovery Set (15 ✕ Samples) at just ₹750
+        - button "Dismiss announcement" [ref=e23]
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - button "Shop" [ref=e32]
+          - navigation [ref=e35]:
+            - link "Hume Special" [ref=e36]:
+              - /url: /hume-special
+            - link "Best Seller" [ref=e37]:
+              - /url: /bestseller
+        - link "HUME Fragrance" [ref=e38]:
+          - /url: /
+          - generic [ref=e39]: HUME
+          - generic [ref=e40]: Fragrance
+        - generic [ref=e41]:
+          - navigation [ref=e42]:
+            - link "HUME Spaces" [ref=e43]:
+              - /url: /spaces
+            - link "DISCOVERY SET" [ref=e44]:
+              - /url: /discovery-set/build-your-own-perfume-trial-kit-choose-15-3ml-samples
+            - generic [ref=e45]:
+              - link "GIFTS" [ref=e46]:
+                - /url: /corporate-gifting
+              - generic:
+                - generic:
+                  - link "Corporate Gifting":
+                    - /url: /corporate-gifting
+                  - link "Wedding Gifts":
+                    - /url: /wedding-gifts
+                  - link "Diwali Gifts":
+                    - /url: /diwali-gifts
+                  - link "Holi Gifts":
+                    - /url: /holi-gifts
+                  - link "New Year's Gifts":
+                    - /url: /new-years-gifts
+                  - link "Christmas Gifts":
+                    - /url: /christmas-gifts
+          - button "Search" [ref=e47]
+          - button "Open account" [ref=e51]
+          - button "Open cart" [ref=e55]
+    - generic [ref=e59]:
+      - img "Luxury residence with a discreet ambient scent diffuser" [ref=e60]
+      - generic [ref=e62]:
+        - paragraph [ref=e63]: HUME Spaces · Spatial fragrance
+        - heading [level=1] [ref=e64]:
+          - text: The invisible layer
+          - emphasis [ref=e65]: of a beautiful space.
+        - generic [ref=e66]:
+          - paragraph [ref=e67]: Scent identities, diffusion systems and continuing care for distinguished homes, hospitality, workplaces and retail environments.
+          - link "Explore the collection" [ref=e68]:
+            - /url: "#begin"
+    - generic [ref=e72]:
+      - paragraph [ref=e73]: A new division of HUME
+      - generic [ref=e74]:
+        - heading "Not an air freshener. An atmosphere, designed." [level=2] [ref=e75]: Not an air freshener.An atmosphere, designed.
+        - paragraph [ref=e76]: HUME Spaces selects fragrance, equipment, placement and intensity as one system. Reed diffusers belong in intimate rooms. Programmable waterless and HVAC-compatible systems serve larger, connected or high-traffic properties.
+    - generic [ref=e77]:
+      - link "01 For the residence Reed diffusers and controlled systems for considered homes. Discover" [ref=e78]:
+        - /url: /spaces/home
+        - generic [ref=e79]: "01"
+        - generic [ref=e84]:
+          - heading "For the residence" [level=3] [ref=e85]
+          - paragraph [ref=e86]: Reed diffusers and controlled systems for considered homes.
+          - generic [ref=e87]: Discover
+      - link "02 For business Managed scenting for hospitality, workplaces and retail. Discover" [ref=e91]:
+        - /url: /spaces/for-business
+        - generic [ref=e92]: "02"
+        - generic [ref=e98]:
+          - heading "For business" [level=3] [ref=e99]
+          - paragraph [ref=e100]: Managed scenting for hospitality, workplaces and retail.
+          - generic [ref=e101]: Discover
+      - link "03 Signature studio A bespoke olfactive identity, developed around your property. Discover" [ref=e105]:
+        - /url: /spaces/signature-scent-studio
+        - generic [ref=e106]: "03"
+        - generic [ref=e112]:
+          - heading "Signature studio" [level=3] [ref=e113]
+          - paragraph [ref=e114]: A bespoke olfactive identity, developed around your property.
+          - generic [ref=e115]: Discover
+    - generic [ref=e120]:
+      - paragraph [ref=e121]: The first spatial collection
+      - heading "Six moods. One architectural language." [level=2] [ref=e122]
+      - generic [ref=e123]:
+        - generic [ref=e124]:
+          - generic [ref=e125]: "01"
+          - heading "Ivory Lobby" [level=3] [ref=e126]
+          - paragraph [ref=e127]: Citrus · tea · woods
+          - paragraph [ref=e128]: Bergamot, white tea, cedar
+          - paragraph [ref=e129]: Polished and welcoming
+        - generic [ref=e130]:
+          - generic [ref=e131]: "02"
+          - heading "Santal Residence" [level=3] [ref=e132]
+          - paragraph [ref=e133]: Soft woods · amber
+          - paragraph [ref=e134]: Sandalwood, iris, amber
+          - paragraph [ref=e135]: Quiet, residential luxury
+        - generic [ref=e136]:
+          - generic [ref=e137]: "03"
+          - heading "Verdant Courtyard" [level=3] [ref=e138]
+          - paragraph [ref=e139]: Green · aromatic
+          - paragraph [ref=e140]: Neroli, fig leaf, vetiver
+          - paragraph [ref=e141]: Airy and architectural
+        - generic [ref=e142]:
+          - generic [ref=e143]: "04"
+          - heading "Midnight Suite" [level=3] [ref=e144]
+          - paragraph [ref=e145]: Floral · woody
+          - paragraph [ref=e146]: Saffron, rosewood, soft oud
+          - paragraph [ref=e147]: Intimate and distinctive
+        - generic [ref=e148]:
+          - generic [ref=e149]: "05"
+          - heading "Coastal Gallery" [level=3] [ref=e150]
+          - paragraph [ref=e151]: Mineral · fresh woods
+          - paragraph [ref=e152]: Mineral air, sage, pale woods
+          - paragraph [ref=e153]: Clean, modern clarity
+        - generic [ref=e154]:
+          - generic [ref=e155]: "06"
+          - heading "Quiet Library" [level=3] [ref=e156]
+          - paragraph [ref=e157]: Tea · leather · woods
+          - paragraph [ref=e158]: Black tea, suede, cedar
+          - paragraph [ref=e159]: Cultivated and composed
+      - paragraph [ref=e160]: Collection names and formulas are launch concepts. Final specifications, safety documentation and availability will be confirmed before sale.
+    - generic [ref=e161]:
+      - paragraph [ref=e162]: Designed for the property
+      - generic [ref=e163]:
+        - link "luxury homes" [ref=e164]:
+          - /url: /spaces/luxury-homes
+        - link "hotels" [ref=e168]:
+          - /url: /spaces/hotels
+        - link "corporate offices" [ref=e172]:
+          - /url: /spaces/corporate-offices
+        - link "retail stores" [ref=e176]:
+          - /url: /spaces/retail-stores
+        - link "restaurants" [ref=e180]:
+          - /url: /spaces/restaurants
+        - link "spas and salons" [ref=e184]:
+          - /url: /spaces/spas-and-salons
+        - link "real estate" [ref=e188]:
+          - /url: /spaces/real-estate
+        - link "events" [ref=e192]:
+          - /url: /spaces/events
+        - link "interior designers" [ref=e196]:
+          - /url: /spaces/interior-designers
+    - generic [ref=e201]:
+      - paragraph [ref=e202]: Begin with the space
+      - generic [ref=e203]:
+        - heading "Tell us what the room should feel like." [level=2] [ref=e204]
+        - link "Plan my space" [ref=e205]:
+          - /url: /spaces/selector
+    - generic [ref=e210]:
+      - generic [ref=e211]:
+        - generic [ref=e212]:
+          - link "HUME FRAGRANCE" [ref=e213]:
+            - /url: /
+            - generic [ref=e214]: HUME
+            - generic [ref=e215]: FRAGRANCE
+          - paragraph [ref=e216]: Premium inspired perfumes crafted for modern luxury, long wear, and signature presence.
+          - generic [ref=e217]:
+            - paragraph [ref=e218]: hello@humefragrance.com
+            - paragraph [ref=e219]: "WhatsApp: 9559024822"
+            - paragraph [ref=e220]: Kannauj, India's City of Scent
+          - generic [ref=e221]:
+            - link "Queries on WhatsApp" [ref=e222]:
+              - /url: https://wa.me/919559024822
+            - link "Follow on Instagram" [ref=e223]:
+              - /url: https://www.instagram.com/hume.perfume/
+        - generic [ref=e224]:
+          - heading "Shop" [level=4] [ref=e225]
+          - navigation [ref=e226]:
+            - link "Shop All Perfumes" [ref=e227]:
+              - /url: /shop
+            - link "Discovery Set" [ref=e228]:
+              - /url: /discovery-set/build-your-own-perfume-trial-kit-choose-15-3ml-samples
+            - link "Celebrities' Favorites" [ref=e229]:
+              - /url: /celebrities-favorites
+        - generic [ref=e230]:
+          - heading "Gifting" [level=4] [ref=e231]
+          - navigation [ref=e232]:
+            - link "Corporate Gifting" [ref=e233]:
+              - /url: /corporate-gifting
+            - link "Wedding Gifts" [ref=e234]:
+              - /url: /wedding-gifts
+            - link "Diwali Gifts" [ref=e235]:
+              - /url: /diwali-gifts
+            - link "Holi Gifts" [ref=e236]:
+              - /url: /holi-gifts
+            - link "New Year's Gifts" [ref=e237]:
+              - /url: /new-years-gifts
+            - link "Christmas Gifts" [ref=e238]:
+              - /url: /christmas-gifts
+        - generic [ref=e239]:
+          - heading "Spaces" [level=4] [ref=e240]
+          - navigation [ref=e241]:
+            - link "HUME Spaces" [ref=e242]:
+              - /url: /spaces
+            - link "For the Home" [ref=e243]:
+              - /url: /spaces/home
+            - link "For Business" [ref=e244]:
+              - /url: /spaces/for-business
+            - link "Scent Machines" [ref=e245]:
+              - /url: /spaces/scent-machines
+            - link "Reed Diffusers" [ref=e246]:
+              - /url: /spaces/reed-diffusers
+            - link "Signature Scent Studio" [ref=e247]:
+              - /url: /spaces/signature-scent-studio
+            - link "Plan My Space" [ref=e248]:
+              - /url: /spaces/selector
+        - generic [ref=e249]:
+          - heading "Categories" [level=4] [ref=e250]
+          - navigation [ref=e251]:
+            - link "Amber Fragrances" [ref=e252]:
+              - /url: /shop?filter=nature&value=Amber
+            - link "animalic Fragrances" [ref=e253]:
+              - /url: /shop?filter=nature&value=animalic
+            - link "Aquatic Fragrances" [ref=e254]:
+              - /url: /shop?filter=nature&value=Aquatic
+            - link "Citrus Fragrances" [ref=e255]:
+              - /url: /shop?filter=nature&value=Citrus
+            - link "Coffee Fragrances" [ref=e256]:
+              - /url: /shop?filter=nature&value=Coffee
+            - link "Floral Fragrances" [ref=e257]:
+              - /url: /shop?filter=nature&value=Floral
+            - link "Fresh Fragrances" [ref=e258]:
+              - /url: /shop?filter=nature&value=Fresh
+            - link "Fresh Spicy Fragrances" [ref=e259]:
+              - /url: /shop?filter=nature&value=Fresh%20Spicy
+        - generic [ref=e260]:
+          - heading "Discover" [level=4] [ref=e261]
+          - navigation [ref=e262]:
+            - link "Fragrance Guides Hub" [ref=e263]:
+              - /url: /fragrance-guides
+            - link "Journal" [ref=e264]:
+              - /url: /blog
+            - link "Scent Quiz" [ref=e265]:
+              - /url: /scent-quiz
+            - link "Perfume Alternatives" [ref=e266]:
+              - /url: /alternatives/creed-aventus
+            - link "Oud Alternatives" [ref=e267]:
+              - /url: /alternatives/ombre-nomade
+        - generic [ref=e268]:
+          - heading "Company" [level=4] [ref=e269]
+          - navigation [ref=e270]:
+            - link "About HUME" [ref=e271]:
+              - /url: /#about
+            - link "Our Craft" [ref=e272]:
+              - /url: /#craft
+            - link "Best Sellers" [ref=e273]:
+              - /url: /#collection
+            - link "My Account" [ref=e274]:
+              - /url: /account
+            - link "Track Order" [ref=e275]:
+              - /url: /track-order
+            - link "Shipping Policy" [ref=e276]:
+              - /url: /shipping-policy
+            - link "Returns & Refunds" [ref=e277]:
+              - /url: /return-refund-policy
+            - link "Privacy Policy" [ref=e278]:
+              - /url: /privacy-policy
+            - link "Terms" [ref=e279]:
+              - /url: /terms
+            - link "Contact" [ref=e280]:
+              - /url: /contact
+            - link "Sitemap" [ref=e281]:
+              - /url: /sitemap.xml
+      - generic [ref=e282]:
+        - paragraph [ref=e283]: © 2026 HUME Fragrance. All rights reserved.
+        - generic [ref=e284]:
+          - link "Shop" [ref=e285]:
+            - /url: /shop
+          - link "Blog" [ref=e286]:
+            - /url: /blog
+          - link "Track Order" [ref=e287]:
+            - /url: /track-order
+          - link "Account" [ref=e288]:
+            - /url: /account
+          - link "Shipping" [ref=e289]:
+            - /url: /shipping-policy
+          - link "Returns" [ref=e290]:
+            - /url: /return-refund-policy
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e304] [cursor=pointer]
+  - alert [ref=e341]

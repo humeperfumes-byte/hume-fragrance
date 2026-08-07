@@ -2,8 +2,8 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { useMemo, useState, type FormEvent } from "react";
-import { ChevronRight, HelpCircle, PenLine, Send, Star, User } from "lucide-react";
+import { useMemo, useState, type FormEvent, type ChangeEvent } from "react";
+import { Camera, ChevronRight, HelpCircle, PenLine, Send, Star, User, X, ZoomIn } from "lucide-react";
 import { Review, getAverageRating } from "@/data/perfumes";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 
@@ -73,6 +73,9 @@ const ProductReviews = ({ productId, reviews, productName, inspiration }: Produc
   const [city, setCity] = useState("");
   const [rating, setRating] = useState(5);
   const [content, setContent] = useState("");
+  const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
 
@@ -101,13 +104,36 @@ const ProductReviews = ({ productId, reviews, productName, inspiration }: Produc
       "November",
       "December",
     ];
-    const [yearRaw, monthRaw] = dateString.split("-");
-    const monthIndex = Number(monthRaw) - 1;
-    const year = Number(yearRaw);
-    if (!Number.isFinite(year) || monthIndex < 0 || monthIndex > 11) {
-      return dateString;
-    }
+
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+
+    const monthIndex = date.getMonth();
+    const year = date.getFullYear();
+
     return `${months[monthIndex]} ${year}`;
+  };
+
+  const handlePhotoSelect = (e: ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const filesArray = Array.from(e.target.files);
+    const availableSlots = 4 - selectedPhotos.length;
+    const validFiles = filesArray.slice(0, availableSlots);
+
+    if (validFiles.length === 0) return;
+
+    setSelectedPhotos((prev) => [...prev, ...validFiles]);
+    const newPreviews = validFiles.map((file) => URL.createObjectURL(file));
+    setPhotoPreviews((prev) => [...prev, ...newPreviews]);
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    setSelectedPhotos((prev) => prev.filter((_, i) => i !== index));
+    setPhotoPreviews((prev) => {
+      const urlToRemove = prev[index];
+      if (urlToRemove) URL.revokeObjectURL(urlToRemove);
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -116,6 +142,27 @@ const ProductReviews = ({ productId, reviews, productName, inspiration }: Produc
     setMessage("");
 
     try {
+      let uploadedPhotoUrls: string[] = [];
+
+      // If user selected photos, upload them first
+      if (selectedPhotos.length > 0) {
+        const formData = new FormData();
+        selectedPhotos.forEach((file) => formData.append("file", file));
+
+        const uploadRes = await fetch("/api/reviews/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) {
+          throw new Error(uploadData?.error || "Failed to upload review photos.");
+        }
+        if (Array.isArray(uploadData.urls)) {
+          uploadedPhotoUrls = uploadData.urls;
+        }
+      }
+
       const response = await fetch(`/api/products/${encodeURIComponent(productId)}/reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -125,6 +172,7 @@ const ProductReviews = ({ productId, reviews, productName, inspiration }: Produc
           rating: formMode === "review" ? rating : 5,
           reviewerLanguage: formMode,
           content,
+          images: uploadedPhotoUrls,
         }),
       });
 
@@ -138,11 +186,13 @@ const ProductReviews = ({ productId, reviews, productName, inspiration }: Produc
       setCity("");
       setRating(5);
       setContent("");
+      setSelectedPhotos([]);
+      setPhotoPreviews([]);
       setStatus("success");
       setMessage(
         formMode === "question"
           ? "Thank you. Your question has been posted."
-          : "Thank you. Your review has been posted.",
+          : "Thank you. Your review has been posted with your photos!",
       );
       setIsFormOpen(false);
     } catch (error) {
@@ -313,11 +363,48 @@ const ProductReviews = ({ productId, reviews, productName, inspiration }: Produc
                   />
                 </label>
 
+                {/* PHOTO ATTACHMENT SECTION */}
+                <div className="mt-4">
+                  <label className="block text-sm text-foreground font-medium mb-1.5">
+                    Attach Photos <span className="text-xs text-muted-foreground font-normal">(optional, up to 4 photos)</span>
+                  </label>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    {photoPreviews.map((url, idx) => (
+                      <div key={idx} className="relative h-16 w-16 overflow-hidden rounded-xl border border-border bg-muted shadow-sm group">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt={`Preview ${idx + 1}`} className="h-full w-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePhoto(idx)}
+                          className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-white transition-transform hover:scale-110"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+
+                    {selectedPhotos.length < 4 ? (
+                      <label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-border bg-background/50 transition-colors hover:border-[#9b7a4a] hover:bg-[#f8f4ed]">
+                        <Camera size={18} className="text-muted-foreground" />
+                        <span className="mt-1 text-[9px] font-semibold uppercase text-muted-foreground">Add</span>
+                        <input
+                          type="file"
+                          accept="image/png, image/jpeg, image/webp, image/gif"
+                          multiple
+                          onChange={handlePhotoSelect}
+                          className="hidden"
+                        />
+                      </label>
+                    ) : null}
+                  </div>
+                </div>
+
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-xs text-muted-foreground">
                     {formMode === "question"
                       ? "Questions appear in the same customer section with a Question badge."
-                      : "Reviews appear as customer reviews. Verified buyer labels are reserved for confirmed orders."}
+                      : "Reviews appear as customer reviews with your attached photos."}
                   </p>
                   <button
                     type="submit"
@@ -398,9 +485,33 @@ const ProductReviews = ({ productId, reviews, productName, inspiration }: Produc
                       )}
                     </div>
 
-                    <p className="text-body mb-5 leading-relaxed text-muted-foreground" itemProp="reviewBody">
+                    <p className="text-body mb-4 leading-relaxed text-muted-foreground" itemProp="reviewBody">
                       &ldquo;{review.content}&rdquo;
                     </p>
+
+                    {/* REVIEW PHOTOS THUMBNAIL GALLERY */}
+                    {Array.isArray(review.images) && review.images.length > 0 ? (
+                      <div className="mb-4 flex flex-wrap gap-2">
+                        {review.images.map((photoUrl, pIdx) => (
+                          <button
+                            key={pIdx}
+                            type="button"
+                            onClick={() => setLightboxPhoto(photoUrl)}
+                            className="group/photo relative h-16 w-16 overflow-hidden rounded-xl border border-border/80 bg-black/5 transition-transform hover:scale-105"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={withCloudinaryTransforms(photoUrl, { width: 300 })}
+                              alt={`Customer photo ${pIdx + 1}`}
+                              className="h-full w-full object-cover transition-opacity group-hover/photo:opacity-90"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover/photo:opacity-100">
+                              <ZoomIn size={14} className="text-white drop-shadow" />
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
 
                     {isQuestion ? (
                       <div className="mb-2">
@@ -449,83 +560,59 @@ const ProductReviews = ({ productId, reviews, productName, inspiration }: Produc
                             key={response.id}
                             className="rounded-2xl border border-sky-100 bg-sky-50/60 p-3"
                           >
-                            <div className="mb-2 flex items-center justify-between gap-3">
-                              <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-white px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-sky-700">
-                                <PenLine size={12} />
-                                Response
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-white px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-sky-700">
+                                <User size={10} />
+                                {response.author}
                               </span>
-                              <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                              <span className="text-[10px] text-muted-foreground">
                                 {formatDate(response.date)}
                               </span>
                             </div>
-                            <p className="text-sm leading-relaxed text-muted-foreground">
-                              &ldquo;{response.content}&rdquo;
-                            </p>
-                            <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-foreground">
-                              {response.author}
+                            <p className="mt-2 text-xs leading-relaxed text-slate-700">
+                              {response.content}
                             </p>
                           </div>
                         ))}
                       </div>
                     ) : null}
 
-                    <div className="mt-6 border-t border-border/60 pt-4">
-                      <div className="text-caption flex items-center justify-between gap-4 text-muted-foreground">
-                        <div className="flex min-w-0 items-center gap-3">
-                          {review.avatarUrl ? (
-                            <div className="relative h-9 w-9 overflow-hidden rounded-full ring-1 ring-border/70">
-                              <Image
-                                src={withCloudinaryTransforms(review.avatarUrl, { width: 96 })}
-                                alt={`${review.author} profile`}
-                                fill
-                                sizes="36px"
-                                unoptimized
-                                className="object-cover"
-                              />
-                            </div>
-                          ) : (
-                            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-border/70 bg-secondary/70 text-muted-foreground">
-                              <User size={14} />
-                            </div>
-                          )}
-                          <div className="min-w-0">
-                            <p className="truncate text-base text-foreground">{review.author}</p>
-                            <p className="truncate text-[10px] font-light uppercase tracking-[0.14em] text-muted-foreground/80">
-                              {review.reviewerCity
-                                ? `${formatDate(review.date)} - ${review.reviewerCity}`
-                                : formatDate(review.date)}
-                            </p>
-                          </div>
-                        </div>
-                        <time className="sr-only" dateTime={review.date} itemProp="datePublished">
-                          {formatDate(review.date)}
-                        </time>
-                      </div>
-
-                      <div className="mt-4 rounded-2xl bg-background/80 p-3 ring-1 ring-border/50">
-                        <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
-                          {isQuestion ? "Asked about" : isResponse ? "Response for" : "Reviewed"}
-                        </p>
-                        <p className="mt-1 font-serif text-2xl font-light">{productName}</p>
-                        {inspiration ? (
-                          <p className="mt-1 text-sm italic text-muted-foreground">{inspiration}</p>
-                        ) : null}
-                      </div>
+                    <div className="flex items-center justify-between pt-3 text-xs text-muted-foreground border-t border-border/40">
+                      <span className="font-medium text-foreground">
+                        {review.author}
+                        {review.reviewerCity ? `, ${review.reviewerCity}` : ""}
+                      </span>
+                      <span>{formatDate(review.date)}</span>
                     </div>
                   </motion.article>
                 );
               })}
             </div>
-          ) : (
-            <div className="rounded-[1.25rem] border border-dashed border-[#d9c8ad] bg-background p-8 text-center">
-              <p className="font-serif text-2xl font-light">No reviews yet</p>
-              <p className="text-body mt-2 text-muted-foreground">
-                Be the first customer to share feedback for {productName}.
-              </p>
-            </div>
-          )}
+          ) : null}
         </motion.div>
       </div>
+
+      {/* FULLSCREEN PHOTO LIGHTBOX MODAL */}
+      {lightboxPhoto ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md">
+          <div className="relative max-h-[90vh] max-w-[90vw] overflow-hidden rounded-2xl bg-black shadow-2xl border border-white/10">
+            <button
+              type="button"
+              onClick={() => setLightboxPhoto(null)}
+              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md transition-transform hover:scale-110"
+              aria-label="Close photo"
+            >
+              <X size={18} />
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={lightboxPhoto}
+              alt="Review full size photo"
+              className="max-h-[85vh] max-w-[85vw] object-contain"
+            />
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 };

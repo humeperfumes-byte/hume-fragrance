@@ -16,6 +16,7 @@ export interface Review {
   date: string;
   title: string;
   content: string;
+  images?: string[];
   verified: boolean;
 }
 

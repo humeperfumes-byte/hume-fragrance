@@ -4,10 +4,15 @@ import Footer from "@/components/Footer";
 import { JsonLd } from "@/components/JsonLd";
 import DiscoverySetBuilder from "@/components/DiscoverySetBuilder";
 import {
+  DISCOVERY_SET_DESCRIPTION,
+  DISCOVERY_SET_IMAGES,
+  DISCOVERY_SET_ORIGINAL_PRICE,
   DISCOVERY_SET_PATH,
   DISCOVERY_SET_PRICE,
   DISCOVERY_SET_SAMPLE_COUNT,
+  DISCOVERY_SET_SCHEMA_AVAILABILITY,
   DISCOVERY_SET_SIZE,
+  DISCOVERY_SET_STATUS,
 } from "@/lib/discovery-set";
 import { formatINR } from "@/lib/currency";
 import { getRequestSiteUrl } from "@/lib/request-site";
@@ -40,15 +45,6 @@ const cormorant = Cormorant_Garamond({
 
 export const dynamic = "force-dynamic";
 
-const discoverySetImages = [
-  "/images/bg/tester_box1.png",
-  "/images/bg/tester_box.png",
-  "/images/bg/tester1.png",
-  "/images/bg/tester2.png",
-  "/images/bg/tester3.png",
-  "/images/bg/tester4.png",
-];
-
 const discoverySetKeywords = [
   "perfume trial pack",
   "perfume trial kit India",
@@ -65,8 +61,7 @@ const discoverySetKeywords = [
   "HUME discovery set",
 ];
 
-const discoverySetDescription =
-  `Build your own HUME perfume trial kit with ${DISCOVERY_SET_SIZE} testers for ${formatINR(DISCOVERY_SET_PRICE)}. Choose any ${DISCOVERY_SET_SAMPLE_COUNT} available HUME fragrances, test them on skin, compare dry-down, and find your signature scent before buying a full bottle.`;
+const discoverySetDescription = DISCOVERY_SET_DESCRIPTION;
 
 const discoverySetFaq = [
   {
@@ -87,7 +82,7 @@ const discoverySetFaq = [
   {
     question: "Can I order the HUME Discovery Set right now?",
     answer:
-      "Yes. Select exactly 15 testers, add the Discovery Set to your bag, and complete checkout online or through WhatsApp.",
+      `Yes. The ${DISCOVERY_SET_SIZE} Discovery Set is open for pre-order at ${formatINR(DISCOVERY_SET_PRICE)} (original price ${formatINR(DISCOVERY_SET_ORIGINAL_PRICE)}). Choose exactly ${DISCOVERY_SET_SAMPLE_COUNT} testers, add the set to your bag, and complete checkout online or through WhatsApp.`,
   },
   {
     question: "Who should buy a starter perfume kit?",
@@ -137,7 +132,7 @@ const discoverySetUseCases = [
 export async function generateMetadata(): Promise<Metadata> {
   const baseUrl = await getRequestSiteUrl();
   const canonicalUrl = siteUrlForBase(baseUrl, DISCOVERY_SET_PATH);
-  const imageUrl = siteUrlForBase(baseUrl, discoverySetImages[0]);
+  const imageUrl = siteUrlForBase(baseUrl, DISCOVERY_SET_IMAGES[0]);
 
   return {
     title: {
@@ -186,9 +181,10 @@ function DiscoverySetSeoContent() {
             </h2>
             <p className="mt-5 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
               The HUME Discovery Set is built for customers who want to test perfume
-              on skin before buying a full bottle. Build your own {DISCOVERY_SET_SIZE}
-              fragrance sample set, compare performance through the day, and checkout
-              with your chosen testers attached to the order.
+              on skin before buying a full bottle. It is currently open for pre-order at{" "}
+              {formatINR(DISCOVERY_SET_PRICE)} (original price{" "}
+              {formatINR(DISCOVERY_SET_ORIGINAL_PRICE)}). Build your own {DISCOVERY_SET_SIZE}{" "}
+              fragrance sample set and compare performance through the day.
             </p>
           </div>
 
@@ -236,7 +232,7 @@ function DiscoverySetSeoContent() {
 export default async function DiscoverySetCanonicalPage() {
   const baseUrl = await getRequestSiteUrl();
   const canonicalUrl = siteUrlForBase(baseUrl, DISCOVERY_SET_PATH);
-  const imageUrls = discoverySetImages.map((image) => siteUrlForBase(baseUrl, image));
+  const imageUrls = DISCOVERY_SET_IMAGES.map((image) => siteUrlForBase(baseUrl, image));
   const jsonLd = [
     getOrganizationSchema(baseUrl),
     {
@@ -292,13 +288,14 @@ export default async function DiscoverySetCanonicalPage() {
         { "@type": "PropertyValue", name: "Best for", value: "First-time buyers, gifting, scent comparison, signature scent discovery, travel testing" },
         { "@type": "PropertyValue", name: "Market", value: "India" },
         { "@type": "PropertyValue", name: "Product type", value: "Build your own perfume sample kit" },
-        { "@type": "PropertyValue", name: "Availability", value: "Available" },
+        { "@type": "PropertyValue", name: "Availability", value: DISCOVERY_SET_STATUS },
+        { "@type": "PropertyValue", name: "Original price", value: `INR ${DISCOVERY_SET_ORIGINAL_PRICE}` },
       ],
       offers: {
         "@type": "Offer",
         price: DISCOVERY_SET_PRICE.toFixed(2),
         priceCurrency: "INR",
-        availability: "https://schema.org/InStock",
+        availability: DISCOVERY_SET_SCHEMA_AVAILABILITY,
         url: canonicalUrl,
         itemCondition: "https://schema.org/NewCondition",
         seller: { "@type": "Organization", name: "HUME Fragrance" },
@@ -334,7 +331,7 @@ export default async function DiscoverySetCanonicalPage() {
       step: [
         { "@type": "HowToStep", position: 1, name: "Open the builder", text: "Use the Discovery Set builder on the page." },
         { "@type": "HowToStep", position: 2, name: "Choose 15 perfumes", text: `Select any ${DISCOVERY_SET_SAMPLE_COUNT} available HUME fragrances as 3ml testers.` },
-        { "@type": "HowToStep", position: 3, name: "Add to bag", text: "Add the completed Discovery Set to your bag with your selections attached." },
+        { "@type": "HowToStep", position: 3, name: "Pre-order the set", text: "Add the completed Discovery Set to your bag with your selections attached and complete the pre-order." },
         { "@type": "HowToStep", position: 4, name: "Test on skin", text: "Wear each sample across different days to compare opening, dry-down, projection, and longevity." },
       ],
     },

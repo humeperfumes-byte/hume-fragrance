@@ -67,6 +67,7 @@ export const reviews = pgTable("reviews", {
   date: varchar("date", { length: 50 }).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   content: text("content").notNull(),
+  images: jsonb("images").$type<string[]>().notNull().default([]),
   verified: boolean("verified").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

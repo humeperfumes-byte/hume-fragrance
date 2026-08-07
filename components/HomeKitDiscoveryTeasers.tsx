@@ -3,25 +3,15 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { DISCOVERY_SET_PATH, DISCOVERY_SET_PRICE } from "@/lib/discovery-set";
+import {
+  DISCOVERY_SET_IMAGES,
+  DISCOVERY_SET_ORIGINAL_PRICE,
+  DISCOVERY_SET_PATH,
+  DISCOVERY_SET_PRICE,
+  DISCOVERY_SET_SAMPLE_COUNT,
+  DISCOVERY_SET_SIZE,
+} from "@/lib/discovery-set";
 import { formatINR } from "@/lib/currency";
-
-const KIT_IMAGES = [
-  "/images/15ml/image2.png",
-  "/images/15ml/image1.png",
-  "/images/15ml/image3.png",
-  "/images/15ml/image4.png",
-  "/images/15ml/image5.png",
-];
-
-const DISCOVERY_IMAGES = [
-  "/images/bg/tester2.png",
-  "/images/bg/tester_box1.png",
-  "/images/bg/tester_box.png",
-  "/images/bg/tester3.png",
-  "/images/bg/tester4.png",
-  "/images/bg/tester1.png",
-];
 
 function ImageGalleryTeaser({
   images,
@@ -139,30 +129,37 @@ export default function HomeKitDiscoveryTeasers() {
 
           <div className="mt-5 min-[400px]:mt-6 w-full">
             <ImageGalleryTeaser
-              images={DISCOVERY_IMAGES}
+              images={DISCOVERY_SET_IMAGES}
               title="HUME Discovery Set"
               href={DISCOVERY_SET_PATH}
             />
           </div>
 
           <p className="mt-6 max-w-[36rem] text-sm leading-6 text-zinc-600 min-[400px]:mt-7 min-[400px]:text-base min-[400px]:leading-7 sm:text-lg">
-            A 10-piece tester box for finding the scent that actually works on your skin before
+            A {DISCOVERY_SET_SAMPLE_COUNT}-piece tester box for finding the scent that actually works on your skin before
             committing to a full bottle.
           </p>
 
           <div className="mt-6 flex flex-wrap items-end justify-center gap-x-4 gap-y-3 min-[400px]:mt-7 min-[400px]:gap-x-5">
             <div>
               <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-500 min-[400px]:text-[9px] min-[400px]:tracking-[0.24em]">
-                Launch price
+                Pre-order price
               </p>
-              <p className="mt-1 text-2xl font-semibold min-[400px]:text-3xl">{formatINR(DISCOVERY_SET_PRICE)}</p>
+              <p className="mt-1 flex items-baseline gap-2">
+                <span className="text-2xl font-semibold min-[400px]:text-3xl">
+                  {formatINR(DISCOVERY_SET_PRICE)}
+                </span>
+                <span className="text-sm text-zinc-400 line-through">
+                  {formatINR(DISCOVERY_SET_ORIGINAL_PRICE)}
+                </span>
+              </p>
             </div>
             <div className="h-9 w-px bg-zinc-300 min-[400px]:h-10" aria-hidden="true" />
             <div>
               <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-500 min-[400px]:text-[9px] min-[400px]:tracking-[0.24em]">
                 Includes
               </p>
-              <p className="mt-1 text-base font-semibold min-[400px]:text-lg">10 x 3ml</p>
+              <p className="mt-1 text-base font-semibold min-[400px]:text-lg">{DISCOVERY_SET_SIZE}</p>
             </div>
           </div>
 

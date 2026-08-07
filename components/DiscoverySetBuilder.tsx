@@ -1,159 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { motion, AnimatePresence, useInView, animate } from "framer-motion";
-import { Search, ShoppingBag, Sparkles, X, Plus } from "lucide-react";
-import type { PerfumeData } from "@/data/perfumes";
-import { useSiteControls } from "@/hooks/use-site-controls";
+import { motion } from "framer-motion";
+import { ShoppingBag, Sparkles, X, Plus } from "lucide-react";
+import { perfumes as localPerfumes, type PerfumeData } from "@/data/perfumes";
 import { toast } from "@/hooks/use-toast";
 import { formatINR } from "@/lib/currency";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import {
+  DISCOVERY_SET_IMAGES,
+  DISCOVERY_SET_ORIGINAL_PRICE,
   DISCOVERY_SET_PRICE,
+  DISCOVERY_SET_SAMPLE_COUNT,
+  DISCOVERY_SET_SAMPLE_SIZE_ML,
   DISCOVERY_SET_SIZE,
+  DISCOVERY_SET_STATUS,
   isDiscoverySetProductId,
 } from "@/lib/discovery-set";
 import { useCart } from "@/context/CartContext";
-
-const DOTS: Record<string, number[][]> = {
-  "0": [
-    [0,1,1,1,0],
-    [1,0,0,0,1],
-    [1,0,0,0,1],
-    [1,0,0,0,1],
-    [1,0,0,0,1],
-    [1,0,0,0,1],
-    [0,1,1,1,0]
-  ],
-  "1": [
-    [0,0,1,0,0],
-    [0,1,1,0,0],
-    [1,0,1,0,0],
-    [0,0,1,0,0],
-    [0,0,1,0,0],
-    [0,0,1,0,0],
-    [0,1,1,1,0]
-  ],
-  "2": [
-    [0,1,1,1,0],
-    [1,0,0,0,1],
-    [0,0,0,0,1],
-    [0,0,1,1,0],
-    [0,1,0,0,0],
-    [1,0,0,0,0],
-    [1,1,1,1,1]
-  ],
-  "3": [
-    [0,1,1,1,0],
-    [1,0,0,0,1],
-    [0,0,0,0,1],
-    [0,0,1,1,0],
-    [0,0,0,0,1],
-    [1,0,0,0,1],
-    [0,1,1,1,0]
-  ],
-  "4": [
-    [0,0,0,1,0],
-    [0,0,1,1,0],
-    [0,1,0,1,0],
-    [1,0,0,1,0],
-    [1,1,1,1,1],
-    [0,0,0,1,0],
-    [0,0,0,1,0]
-  ],
-  "5": [
-    [1,1,1,1,1],
-    [1,0,0,0,0],
-    [1,1,1,1,0],
-    [0,0,0,0,1],
-    [0,0,0,0,1],
-    [1,0,0,0,1],
-    [0,1,1,1,0]
-  ],
-  "6": [
-    [0,1,1,1,0],
-    [1,0,0,0,0],
-    [1,0,0,0,0],
-    [1,1,1,1,0],
-    [1,0,0,0,1],
-    [1,0,0,0,1],
-    [0,1,1,1,0]
-  ],
-  "7": [
-    [1,1,1,1,1],
-    [0,0,0,0,1],
-    [0,0,0,1,0],
-    [0,0,1,0,0],
-    [0,1,0,0,0],
-    [0,1,0,0,0],
-    [0,1,0,0,0]
-  ],
-  "8": [
-    [0,1,1,1,0],
-    [1,0,0,0,1],
-    [1,0,0,0,1],
-    [0,1,1,1,0],
-    [1,0,0,0,1],
-    [1,0,0,0,1],
-    [0,1,1,1,0]
-  ],
-  "9": [
-    [0,1,1,1,0],
-    [1,0,0,0,1],
-    [1,0,0,0,1],
-    [0,1,1,1,1],
-    [0,0,0,0,1],
-    [0,0,0,0,1],
-    [0,1,1,1,0]
-  ],
-  ":": [
-    [0,0,0,0,0],
-    [0,0,1,0,0],
-    [0,0,0,0,0],
-    [0,0,0,0,0],
-    [0,0,0,0,0],
-    [0,0,1,0,0],
-    [0,0,0,0,0]
-  ],
-  " ": [
-    [0,0,0,0,0],
-    [0,0,0,0,0],
-    [0,0,0,0,0],
-    [0,0,0,0,0],
-    [0,0,0,0,0],
-    [0,0,0,0,0],
-    [0,0,0,0,0]
-  ]
-};
-
-function DotMatrixChar({ char }: { char: string }) {
-  const matrix = DOTS[char] || DOTS[" "];
-  return (
-    <div className="grid grid-cols-5 gap-[1px] bg-[#141414] p-[2.5px] rounded-[3px]">
-      {matrix.map((row, rIdx) =>
-        row.map((val, cIdx) => (
-          <span
-            key={`${rIdx}-${cIdx}`}
-            className={`h-[3px] w-[3px] rounded-[0.8px] transition-colors duration-200 ${
-              val === 1 ? "bg-white shadow-[0_0_4px_rgba(255,255,255,0.95)]" : "bg-[#242424]"
-            }`}
-          />
-        ))
-      )}
-    </div>
-  );
-}
-
-function DotMatrixString({ text }: { text: string }) {
-  return (
-    <div className="flex gap-[3.5px] items-center">
-      {text.split("").map((char, index) => (
-        <DotMatrixChar key={index} char={char} />
-      ))}
-    </div>
-  );
-}
 
 function isEligibleSamplePerfume(perfume: PerfumeData) {
   const blockedCategories = new Set(["kit", "gift", "accessory", "discovery-set"]);
@@ -166,325 +31,40 @@ function isEligibleSamplePerfume(perfume: PerfumeData) {
   );
 }
 
-const SAMPLE_COUNT = 10;
-const DISCOVERY_SET_HERO_IMAGE = "/images/bg/tester_box1.png";
-const DISCOVERY_SET_HERO_GALLERY = [
-  {
-    src: DISCOVERY_SET_HERO_IMAGE,
-    alt: "HUME Discovery Set tester box",
-    priority: true,
-  },
-  {
-    src: "/images/bg/tester_box.png",
-    alt: "HUME Discovery Set tester box preview",
-    priority: true,
-  },
-  {
-    src: "/images/bg/tester1.png",
-    alt: "HUME Discovery Set tester preview 1",
-    priority: false,
-  },
-  {
-    src: "/images/bg/tester2.png",
-    alt: "HUME Discovery Set tester preview 2",
-    priority: false,
-  },
-  {
-    src: "/images/bg/tester3.png",
-    alt: "HUME Discovery Set tester preview 3",
-    priority: false,
-  },
-  {
-    src: "/images/bg/tester4.png",
-    alt: "HUME Discovery Set tester preview 4",
-    priority: false,
-  },
-];
-const DISCOVERY_SET_FACTS = [
-  {
-    label: "What you get",
-    value: "10 perfume testers of 3ml each",
-  },
-  {
-    label: "Best for",
-    value: "First-time buyers, gifting, travel and scent comparison",
-  },
-  {
-    label: "How it works",
-    value: "Choose any 10 available HUME fragrances, then add the box to your bag",
-  },
-  {
-    label: "Why it helps",
-    value: "Test projection, longevity and dry-down before choosing a full bottle",
-  },
-];
-function DigitSpinner({ value }: { value: number }) {
-  const digits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-  const digitHeight = 32;
-
-  return (
-    <span className="relative inline-block w-[0.58em] h-[32px] overflow-hidden leading-none select-none align-middle">
-      <motion.span
-        animate={{ y: -value * digitHeight }}
-        transition={{
-          type: "spring",
-          stiffness: 90,
-          damping: 13,
-        }}
-        className="absolute left-0 flex flex-col items-center w-full"
-        style={{ height: digitHeight * 10 }}
-      >
-        {digits.map((d) => (
-          <span
-            key={d}
-            className="flex h-[32px] items-center justify-center font-bold italic text-stone-900 font-sans"
-            style={{ fontSize: "1.55rem" }}
-          >
-            {d}
-          </span>
-        ))}
-      </motion.span>
-    </span>
-  );
-}
+const DISCOVERY_SET_HERO_GALLERY = DISCOVERY_SET_IMAGES.map((src, index) => ({
+  src,
+  alt: "HUME Discovery Set with 15 3ml perfume testers",
+  priority: index === 0,
+}));
 
 function MagicPrice() {
-  const [step, setStep] = useState<"initial" | "slashed" | "spark" | "final">("initial");
-  const [mounted, setMounted] = useState(false);
-  const [currentVal, setCurrentVal] = useState(999);
-
-  useEffect(() => {
-    setMounted(true);
-
-    // 2.5s: Start drawing the laser slash (let the user see the page first)
-    const tSlash = setTimeout(() => setStep("slashed"), 2500);
-    // 3.3s: Trigger sparkles and pulse explosion + start countdown
-    const tSpark = setTimeout(() => setStep("spark"), 3300);
-    // 5.1s: Final reveal of ₹799 with settled layout
-    const tFinal = setTimeout(() => setStep("final"), 5100);
-
-    return () => {
-      clearTimeout(tSlash);
-      clearTimeout(tSpark);
-      clearTimeout(tFinal);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (step === "spark") {
-      const controls = animate(999, 799, {
-        duration: 1.6,
-        ease: "easeOut",
-        onUpdate: (latest) => setCurrentVal(Math.round(latest)),
-      });
-      return () => controls.stop();
-    }
-  }, [step]);
-
-  if (!mounted) {
-    return (
-      <div className="mt-2.5 flex items-center justify-center gap-3.5 h-[2.5rem]">
-        <span className="text-[1.45rem] font-semibold italic text-stone-850 font-sans">
-          ₹999 INR
-        </span>
-      </div>
-    );
-  }
-
-  // Generate physics-based sparks for the magic burst phase
-  const sparks = Array.from({ length: 10 }).map((_, i) => {
-    const angle = -Math.PI / 6 - (i * Math.PI) / 8; // upward burst direction
-    const distance = 40 + Math.random() * 35;
-    return {
-      id: i,
-      x: Math.cos(angle) * distance,
-      y: Math.sin(angle) * distance - 10,
-      size: 2 + Math.random() * 4,
-      delay: Math.random() * 0.1,
-    };
-  });
-
-  const charVariants = {
-    hidden: { y: 15, opacity: 0 },
-    visible: (i: number) => ({
-      y: 0,
-      opacity: 1,
-      transition: {
-        delay: 0.1 + i * 0.05,
-        type: "spring" as const,
-        stiffness: 120,
-        damping: 10,
-      },
-    }),
-  };
-
   return (
-    <div className="mt-2.5 flex items-center justify-center gap-3.5 h-[2.5rem] relative select-none">
-      {step !== "final" ? (
-        <div className="relative inline-block py-1">
-          {step === "spark" ? (
-            /* Live Odometer Ticking Down */
-            <span className="flex items-center text-[1.55rem] font-bold italic text-stone-900 font-sans tracking-tight leading-none">
-              <span>₹</span>
-              <DigitSpinner value={Math.floor(currentVal / 100)} />
-              <DigitSpinner value={Math.floor((currentVal % 100) / 10)} />
-              <DigitSpinner value={currentVal % 10} />
-              <span className="ml-1">INR</span>
-            </span>
-          ) : (
-            /* Main Static Price Text (₹999) */
-            <motion.span
-              className="text-[1.45rem] font-bold italic text-stone-900 font-sans tracking-tight"
-            >
-              ₹999 INR
-            </motion.span>
-          )}
-
-          {/* Laser Slash Line */}
-          {(step === "slashed" || step === "spark") && (
-            <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[2.5px]">
-              {/* Slasher Path */}
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: "100%" }}
-                transition={{ duration: 0.8, ease: "easeInOut" }}
-                className="h-full bg-gradient-to-r from-red-500 via-red-600 to-amber-500 relative"
-              >
-                {/* Laser Glowing Spark Head */}
-                <motion.div
-                  initial={{ left: 0 }}
-                  animate={{ left: "100%" }}
-                  transition={{ duration: 0.8, ease: "easeInOut" }}
-                  className="absolute top-1/2 -translate-y-1/2 h-3 w-3 bg-white rounded-full -translate-x-1/2"
-                  style={{
-                    boxShadow: "0 0 8px #fff, 0 0 15px #f59e0b, 0 0 25px #ef4444",
-                  }}
-                />
-              </motion.div>
-            </div>
-          )}
-
-          {/* Spark Explosion */}
-          {step === "spark" && (
-            <div className="absolute inset-0 pointer-events-none">
-              {sparks.map((sp) => (
-                <motion.div
-                  key={sp.id}
-                  initial={{ x: 20, y: 0, opacity: 1, scale: 0.4 }}
-                  animate={{ x: sp.x, y: sp.y, opacity: 0, scale: 1.3 }}
-                  transition={{ duration: 0.85, delay: sp.delay, ease: "easeOut" }}
-                  className="absolute bg-gradient-to-tr from-amber-400 to-yellow-300 rounded-full"
-                  style={{
-                    width: sp.size,
-                    height: sp.size,
-                    boxShadow: "0 0 6px #fbbf24, 0 0 12px #f59e0b",
-                  }}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.45, ease: "easeOut" }}
-          className="flex items-center gap-4"
-        >
-          {/* Staggered character reveal for new price */}
-          <span className="flex items-center text-[1.55rem] font-extrabold italic text-stone-900 font-sans tracking-tight">
-            {"₹799 INR".split("").map((char, index) => (
-              <motion.span
-                key={index}
-                custom={index}
-                initial="hidden"
-                animate="visible"
-                variants={charVariants}
-                style={{ display: char === " " ? "inline-block" : "inline-block" }}
-                className={char === " " ? "w-1.5" : ""}
-              >
-                {char}
-              </motion.span>
-            ))}
-          </span>
-
-          {/* Final Slashed Price */}
-          <motion.div
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4, duration: 0.4 }}
-            className="relative inline-block"
-          >
-            <span className="text-[1.15rem] text-stone-500 font-normal font-sans line-through decoration-red-600 decoration-[2px]">
-              ₹999
-            </span>
-          </motion.div>
-        </motion.div>
-      )}
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="mt-2.5 flex h-[2.5rem] select-none items-center justify-center gap-3.5"
+    >
+      <span className="text-[1.55rem] font-extrabold italic tracking-tight text-stone-900">
+        {formatINR(DISCOVERY_SET_PRICE)}
+      </span>
+      <span className="text-[1.15rem] font-normal text-stone-500 line-through decoration-red-600 decoration-2">
+        {formatINR(DISCOVERY_SET_ORIGINAL_PRICE)}
+      </span>
+    </motion.div>
   );
 }
 
 export default function DiscoverySetBuilder({ customH1 }: { customH1?: string }) {
   const { addItem, setIsCartOpen } = useCart();
-  const controls = useSiteControls();
   const [allPerfumes, setAllPerfumes] = useState<PerfumeData[]>([]);
   const [loadingPerfumes, setLoadingPerfumes] = useState(true);
   const [selected, setSelected] = useState<PerfumeData[]>([]);
-  const [query, setQuery] = useState("");
   const [activeHeroIndex, setActiveHeroIndex] = useState(0);
   const [showComingSoon, setShowComingSoon] = useState(false);
-  const [sampleCount, setSampleCount] = useState<10 | 15>(15);
-
-  const [mounted, setMounted] = useState(false);
-  const [timeLeft, setTimeLeft] = useState({ days: 10, hours: 0, minutes: 0, seconds: 0 });
-
-  useEffect(() => {
-    setMounted(true);
-    const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
-    let storedTarget = typeof window !== "undefined" ? localStorage.getItem("hume_discovery_set_target_time") : null;
-    let targetTime = storedTarget ? parseInt(storedTarget, 10) : 0;
-
-    if (!targetTime || isNaN(targetTime) || targetTime <= Date.now()) {
-      targetTime = Date.now() + TEN_DAYS_MS;
-      if (typeof window !== "undefined") {
-        localStorage.setItem("hume_discovery_set_target_time", targetTime.toString());
-      }
-    }
-
-    const updateTimer = () => {
-      const now = Date.now();
-      const difference = targetTime - now;
-
-      if (difference <= 0) {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-        return;
-      }
-
-      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-
-      setTimeLeft({ days, hours, minutes, seconds });
-    };
-
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    // Strictly force 15 testers set
-    setSampleCount(15);
-    if (selected.length > 15) {
-      setSelected(selected.slice(0, 15));
-    }
-  }, [selected]);
-
-  const activePrice = 799;
-  const activeOriginalPrice = 900;
-  const activeSizeLabel = "15 x 3ml";
+  const sampleCount = DISCOVERY_SET_SAMPLE_COUNT;
+  const activePrice = DISCOVERY_SET_PRICE;
+  const activeSizeLabel = DISCOVERY_SET_SIZE;
 
   const formatSlotName = (name: string) => {
     return name
@@ -497,7 +77,7 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
   const activeFacts = useMemo(() => [
     {
       label: "What you get",
-      value: `${sampleCount} perfume testers of 3ml each`,
+      value: `${sampleCount} perfume testers of ${DISCOVERY_SET_SAMPLE_SIZE_ML}ml each`,
     },
     {
       label: "Best for",
@@ -512,13 +92,6 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
       value: "Test projection, longevity and dry-down before choosing a full bottle",
     },
   ], [sampleCount]);
-
-  const handleSampleCountChange = (count: 10 | 15) => {
-    setSampleCount(count);
-    if (selected.length > count) {
-      setSelected(selected.slice(0, count));
-    }
-  };
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -560,16 +133,7 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
     [allPerfumes],
   );
 
-  const filteredPerfumes = useMemo(() => {
-    const search = query.trim().toLowerCase();
-    if (!search) return eligiblePerfumes;
-
-    return eligiblePerfumes.filter((perfume) =>
-      [perfume.name, perfume.inspiration, perfume.inspirationBrand, perfume.category]
-        .filter((value): value is string => Boolean(value))
-        .some((value) => value.toLowerCase().includes(search)),
-    );
-  }, [eligiblePerfumes, query]);
+  const filteredPerfumes = eligiblePerfumes;
 
   const selectedIds = useMemo(() => new Set(selected.map((perfume) => perfume.id)), [selected]);
   const previewSlots = useMemo(
@@ -598,11 +162,10 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
     let recommended = eligiblePerfumes.filter((p) => p.badges?.recommendedSample === true);
 
     if (recommended.length === 0) {
-      const { perfumes: localPerfumes } = require("@/data/perfumes");
       const localRecIds = new Set(
         localPerfumes
-          .filter((p: any) => p.badges?.recommendedSample === true)
-          .map((p: any) => p.id)
+          .filter((p) => p.badges?.recommendedSample === true)
+          .map((p) => p.id)
       );
       recommended = eligiblePerfumes.filter((p) => localRecIds.has(p.id));
     }
@@ -661,7 +224,7 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
       name: `Discovery Set (${sampleCount} Samples - Pre-Order)`,
       inspiration: `Choose ${sampleCount} Samples`,
       category: "discovery-set",
-      image: "/images/bg/tester_box1.png",
+      image: DISCOVERY_SET_IMAGES[0],
       price: activePrice,
       size: activeSizeLabel,
       sampleSelections: selected.map((perfume) => ({
@@ -685,7 +248,7 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
 
   return (
     <>
-      <section className="hidden lg:block relative overflow-hidden bg-background pt-16 text-foreground md:min-h-screen md:pt-24">
+      <section className="relative overflow-hidden bg-background pt-16 text-foreground md:min-h-screen md:pt-24">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_32%,hsl(42_35%_55%_/_0.14),transparent_34%),linear-gradient(120deg,hsl(30_10%_98%)_0%,hsl(0_0%_100%)_46%,hsl(30_5%_96%)_100%)]" />
 
         <div className="relative mx-auto grid w-full max-w-[1280px] items-center gap-7 px-4 py-6 sm:px-6 md:min-h-[calc(100vh-5rem)] md:gap-10 md:py-10 lg:grid-cols-[0.72fr_1.28fr] lg:px-8 lg:py-8">
@@ -706,12 +269,14 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
                   <span>pre order</span>
                 </div>
                 <span className="text-xs font-semibold text-stone-350 font-sans tracking-tight">
-                  {mounted ? timeLeft.days : 10} days left
+                  {DISCOVERY_SET_SIZE}
                 </span>
               </div>
 
               <div className="mt-3.5 flex h-14 w-full items-center justify-center rounded-[1.1rem] bg-[#161618] px-4 shadow-inner">
-                <DotMatrixString text={mounted ? `${timeLeft.days.toString().padStart(2, "0")}:${timeLeft.hours.toString().padStart(2, "0")}:${timeLeft.minutes.toString().padStart(2, "0")}:${timeLeft.seconds.toString().padStart(2, "0")}` : "00:00:00:00"} />
+                <span className="text-sm font-semibold uppercase tracking-[0.22em] text-white">
+                  Pre-order open
+                </span>
               </div>
             </div>
 
@@ -778,9 +343,9 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
 
             <div className="mt-5 border-y border-stone-200/40 py-4 flex items-center justify-center gap-6 sm:mt-6">
               <div className="text-center">
-                <span className="block text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400/90 font-sans leading-none">15 Testers Set</span>
+                <span className="block text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400/90 font-sans leading-none">{DISCOVERY_SET_STATUS}</span>
                 <MagicPrice />
-                <span className="block text-[12px] font-medium text-stone-500 font-sans mt-2">15 x 3ml Testers</span>
+                <span className="block text-[12px] font-medium text-stone-500 font-sans mt-2">{DISCOVERY_SET_SIZE} Testers</span>
               </div>
             </div>
 
@@ -850,7 +415,7 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
                   </p>
                 </div>
                 <div className="hidden grid-cols-5 gap-1.5 sm:grid">
-                  {Array.from({ length: 10 }).map((_, index) => (
+                  {Array.from({ length: DISCOVERY_SET_SAMPLE_COUNT }).map((_, index) => (
                     <span
                       key={`hero-sample-${index}`}
                       className="h-7 w-5 border border-border bg-foreground/85"
@@ -878,7 +443,7 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
             className="lg:sticky lg:top-24 lg:self-start lg:pr-1 w-full"
           >
             {/* Mobile Layout (lg:hidden) */}
-            <div className="block lg:hidden w-full space-y-4">
+            <div className="hidden">
               {/* Nothing OS Style Pre-order Widget (Dark) */}
               <div className="w-full bg-[#0c0c0d] border border-stone-850 p-3.5 rounded-[1.8rem] shadow-[0_12px_40px_rgba(0,0,0,0.15)] mb-4 text-white">
                 <div className="flex items-center justify-between">
@@ -890,26 +455,28 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
                     <span>pre order</span>
                   </div>
                   <span className="text-xs font-semibold text-stone-355 font-sans tracking-tight">
-                    {mounted ? timeLeft.days : 10} days left
+                    {DISCOVERY_SET_SIZE}
                   </span>
                 </div>
 
                 <div className="mt-3.5 flex h-14 w-full items-center justify-center rounded-[1.1rem] bg-[#161618] px-4 shadow-inner">
-                  <DotMatrixString text={mounted ? `${timeLeft.days.toString().padStart(2, "0")}:${timeLeft.hours.toString().padStart(2, "0")}:${timeLeft.minutes.toString().padStart(2, "0")}:${timeLeft.seconds.toString().padStart(2, "0")}` : "00:00:00:00"} />
+                  <span className="text-sm font-semibold uppercase tracking-[0.22em] text-white">
+                    Pre-order open
+                  </span>
                 </div>
               </div>
 
-              <h1 className="mt-1 font-serif text-[2.6rem] font-light leading-none tracking-tight text-stone-900">
+              <h2 className="mt-1 font-serif text-[2.6rem] font-light leading-none tracking-tight text-stone-900">
                 {customH1 || "Discovery Set"}
-              </h1>
+              </h2>
               <p className="mt-3 text-xs leading-5 text-stone-500">
                 A curated sequence of {sampleCount} olfactory studies. Build your personal archive from the HUME fragrance library and find the scent that actually works on your skin.
               </p>
               <div className="mt-4 border-y border-stone-200/40 py-3.5 flex items-center justify-center gap-6">
                 <div className="text-center">
-                  <span className="block text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400/90 font-sans leading-none">15 Testers Set</span>
+                  <span className="block text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400/90 font-sans leading-none">{DISCOVERY_SET_STATUS}</span>
                   <MagicPrice />
-                  <span className="block text-[12px] font-medium text-stone-500 font-sans mt-2">15 x 3ml Testers</span>
+                  <span className="block text-[12px] font-medium text-stone-500 font-sans mt-2">{DISCOVERY_SET_SIZE} Testers</span>
                 </div>
               </div>
 
@@ -965,11 +532,11 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
 
             {/* Desktop Layout (hidden lg:block) */}
             <div className="hidden lg:block">
-              <h1 className="mt-2 max-w-[31rem] font-serif text-[2.15rem] font-light leading-[0.92] tracking-tight sm:mt-3 sm:text-[4.1rem] lg:text-[4.25rem] xl:text-[4.55rem]">
+              <h2 className="mt-2 max-w-[31rem] font-serif text-[2.15rem] font-light leading-[0.92] tracking-tight sm:mt-3 sm:text-[4.1rem] lg:text-[4.25rem] xl:text-[4.55rem]">
                 Build your {sampleCount} sample box
-              </h1>
+              </h2>
               <p className="mt-4 max-w-[28rem] text-[0.95rem] leading-6 text-muted-foreground">
-                Pick any {sampleCount} available HUME fragrances as 3ml testers. Explore on skin
+                Pick any {sampleCount} available HUME fragrances as {DISCOVERY_SET_SAMPLE_SIZE_ML}ml testers. Explore on skin
                 before choosing your full bottle.
               </p>
 

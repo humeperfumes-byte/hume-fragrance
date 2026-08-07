@@ -1,0 +1,40 @@
+
+> nextjs@0.1.0 dev
+> next dev --hostname 127.0.0.1 --port 3010
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://127.0.0.1:3010
+- Network:       http://127.0.0.1:3010
+- Environments: .env.local, .env
+✓ Ready in 8.0s
+○ Compiling middleware ...
+- Experiments (use with caution):
+  · optimizePackageImports
+
+○ Compiling /spaces ...
+ GET /spaces 200 in 1965ms (next.js: 201ms, proxy.ts: 176ms, application-code: 1588ms)
+○ Compiling /api/settings ...
+ GET /api/products 200 in 33.2s (next.js: 32.4s, application-code: 802ms)
+ GET /api/settings 200 in 36.1s (next.js: 31.9s, application-code: 4.2s)
+ POST /api/consent-capture 200 in 36.0s (next.js: 31.1s, application-code: 4.9s)
+ GET /api/coupons?includeHidden=1 200 in 36.3s (next.js: 24.2s, application-code: 12.1s)
+ GET /api/coupons 200 in 36.8s (next.js: 22.3s, application-code: 14.5s)
+ GET /api/coupons 200 in 5.0s (next.js: 285ms, application-code: 4.7s)
+ GET /api/coupons?includeHidden=1 200 in 4.9s (next.js: 290ms, application-code: 4.6s)
+○ Compiling /spaces/selector ...
+ GET /spaces/selector 200 in 27.8s (next.js: 18.2s, proxy.ts: 815ms, application-code: 8.8s)
+ POST /api/consent-capture 200 in 2.7s (next.js: 34ms, application-code: 2.6s)
+ GET /api/settings 200 in 3.2s (next.js: 91ms, application-code: 3.1s)
+ GET /api/products 200 in 3.8s (next.js: 240ms, application-code: 3.6s)
+ GET /api/coupons 200 in 4.7s (next.js: 78ms, application-code: 4.6s)
+ GET /api/coupons?includeHidden=1 200 in 5.0s (next.js: 209ms, application-code: 4.8s)
+ GET /api/coupons 200 in 2.7s (next.js: 45ms, application-code: 2.7s)
+ GET /api/coupons?includeHidden=1 200 in 2.6s (next.js: 34ms, application-code: 2.6s)
+ GET /spaces 200 in 8.1s (next.js: 584ms, proxy.ts: 980ms, application-code: 6.6s)
+ GET /api/products 200 in 635ms (next.js: 77ms, application-code: 558ms)
+ GET /api/settings 200 in 3.0s (next.js: 709ms, application-code: 2.3s)
+ POST /api/consent-capture 200 in 2.2s (next.js: 68ms, application-code: 2.2s)
+ GET /api/coupons?includeHidden=1 200 in 4.7s (next.js: 168ms, application-code: 4.6s)
+ GET /api/coupons 200 in 4.9s (next.js: 63ms, application-code: 4.8s)
+ GET /api/coupons?includeHidden=1 200 in 3.1s (next.js: 172ms, application-code: 2.9s)
+ GET /api/coupons 200 in 2.7s (next.js: 78ms, application-code: 2.6s)

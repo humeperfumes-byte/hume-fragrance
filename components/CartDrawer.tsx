@@ -34,7 +34,13 @@ import {
   trackWelcomeBackVisit,
   type WelcomeBackReward,
 } from "@/lib/cart-discounts";
-import { DISCOVERY_SET_IMAGES, DISCOVERY_SET_PRICE, DISCOVERY_SET_PATH, isDiscoverySetCartItem } from "@/lib/discovery-set";
+import {
+  DISCOVERY_SET_IMAGES,
+  DISCOVERY_SET_PATH,
+  DISCOVERY_SET_PRICE,
+  DISCOVERY_SET_SAMPLE_COUNT,
+  isDiscoverySetCartItem,
+} from "@/lib/discovery-set";
 
 interface Coupon {
   id: string;
@@ -1239,7 +1245,7 @@ const CartDrawer = () => {
                 <div>
                   <p className="text-sm font-semibold">Discovery Set</p>
                   <p className="mt-1 text-xs text-black/50">
-                    Build 15 testers - {formatINR(DISCOVERY_SET_PRICE)}
+                    Build {DISCOVERY_SET_SAMPLE_COUNT} testers - {formatINR(DISCOVERY_SET_PRICE)}
                   </p>
                 </div>
                 <button

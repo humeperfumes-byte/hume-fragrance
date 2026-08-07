@@ -17,30 +17,43 @@ function readExecuteRows<T>(result: unknown): T[] {
   return [];
 }
 
+// Ensure reviews table has images column in DB
+async function ensureReviewsTableImagesColumn() {
+  try {
+    await db.execute(sql`
+      alter table reviews add column if not exists images jsonb default '[]'::jsonb;
+    `);
+  } catch (err) {
+    console.error("Error ensuring reviews images column:", err);
+  }
+}
+
 // GET all reviews for a product
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await ensureReviewsTableImagesColumn();
     const { id } = await params;
     let productReviews: Array<typeof reviews.$inferSelect> = [];
     try {
       productReviews = await db.select().from(reviews).where(eq(reviews.productId, id));
     } catch (error) {
-      console.warn("Falling back to legacy product reviews API query.", error);
+      console.warn("Falling back to raw SQL product reviews query.", error);
       const result = await db.execute(sql`
         select
           id,
           product_id as "productId",
           author,
-          null::varchar as "avatarUrl",
-          null::varchar as "reviewerCity",
-          null::varchar as "reviewerLanguage",
+          avatar_url as "avatarUrl",
+          reviewer_city as "reviewerCity",
+          reviewer_language as "reviewerLanguage",
           rating,
           date,
           title,
           content,
+          coalesce(images, '[]'::jsonb) as images,
           verified,
           created_at as "createdAt"
         from reviews
@@ -52,7 +65,8 @@ export async function GET(
     return NextResponse.json(
       productReviews.map((r) => ({
         ...r,
-        rating: parseFloat(r.rating),
+        rating: parseFloat(String(r.rating || 5)),
+        images: Array.isArray(r.images) ? r.images : [],
       }))
     );
   } catch (error) {
@@ -64,12 +78,13 @@ export async function GET(
   }
 }
 
-// POST create new review
+// POST create new review with optional images
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await ensureReviewsTableImagesColumn();
     const { id } = await params;
     const body = await request.json();
 
@@ -83,6 +98,7 @@ export async function POST(
       date: z.string().optional(),
       title: z.string().trim().min(3).max(120).optional(),
       content: z.string().trim().min(5).max(1200),
+      images: z.array(z.string()).optional().default([]),
       replyTo: z.string().trim().min(1).max(200).optional(),
       verified: z.boolean().optional(),
     });
@@ -142,20 +158,22 @@ export async function POST(
       [newReview] = await db
         .insert(reviews)
         .values({
-          ...validatedData,
           id: reviewId,
           productId: id,
+          author: validatedData.author,
           avatarUrl: validatedData.avatarUrl ?? null,
           reviewerCity: validatedData.reviewerCity?.trim() || null,
           reviewerLanguage: reviewKind,
           rating: validatedData.rating.toString(),
           date: reviewDate,
           title: reviewTitle,
+          content: validatedData.content,
+          images: validatedData.images ?? [],
           verified: Boolean(validatedData.verified),
         })
         .returning();
     } catch (error) {
-      console.warn("Falling back to legacy review insert (without profile fields).", error);
+      console.warn("Falling back to legacy review insert.", error);
       [newReview] = await db
         .insert(reviews)
         .values({
@@ -166,6 +184,7 @@ export async function POST(
           date: reviewDate,
           title: reviewTitle,
           content: validatedData.content,
+          images: validatedData.images ?? [],
           verified: Boolean(validatedData.verified),
         })
         .returning();
@@ -177,7 +196,8 @@ export async function POST(
     return NextResponse.json(
       {
         ...newReview,
-        rating: parseFloat(newReview.rating),
+        rating: parseFloat(String(newReview.rating)),
+        images: Array.isArray(newReview.images) ? newReview.images : [],
       },
       { status: 201 }
     );

@@ -9,6 +9,8 @@ import { JsonLd } from "@/components/JsonLd";
 import SeoEmailCapture from "@/components/SeoEmailCapture";
 import { getAllProducts } from "@/lib/db/products";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
+import { DISCOVERY_SET_PATH, DISCOVERY_SET_PRICE } from "@/lib/discovery-set";
+import { formatINR } from "@/lib/currency";
 import { getRequestSiteUrl } from "@/lib/request-site";
 import {
   FESTIVAL_SEO_PAGES,
@@ -808,10 +810,10 @@ export default async function FestivalSeoPage({ params }: Props) {
                     </p>
                   </div>
                   <Link
-                    href="/shop"
+                    href={DISCOVERY_SET_PATH}
                     className="shrink-0 inline-flex h-10 items-center justify-center rounded-xl bg-foreground px-4 text-xs font-semibold uppercase tracking-wider text-background transition hover:bg-muted-foreground"
                   >
-                    Try Discovery Set for ₹699
+                    Pre-order Discovery Set for {formatINR(DISCOVERY_SET_PRICE)}
                   </Link>
                 </div>
               </div>

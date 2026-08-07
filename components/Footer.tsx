@@ -51,6 +51,16 @@ export default async function Footer() {
     { href: "/christmas-gifts", label: "Christmas Gifts" },
   ];
 
+  const spacesLinks = [
+    { href: "/spaces", label: "HUME Spaces" },
+    { href: "/spaces/home", label: "For the Home" },
+    { href: "/spaces/for-business", label: "For Business" },
+    { href: "/spaces/scent-machines", label: "Scent Machines" },
+    { href: "/spaces/reed-diffusers", label: "Reed Diffusers" },
+    { href: "/spaces/signature-scent-studio", label: "Signature Scent Studio" },
+    { href: "/spaces/selector", label: "Plan My Space" },
+  ];
+
   const discoverLinks = [
     { href: "/fragrance-guides", label: "Fragrance Guides Hub" },
     { href: "/blog", label: "Journal" },
@@ -76,7 +86,7 @@ export default async function Footer() {
   return (
     <footer id="contact" className="py-16 md:py-24 bg-primary text-primary-foreground">
       <div className="container-luxury">
-        <div className="grid grid-cols-2 md:grid-cols-7 gap-10 mb-16">
+        <div className="grid grid-cols-2 md:grid-cols-8 gap-10 mb-16">
           <div className="col-span-2">
             <Link href="/" className="flex items-baseline gap-1 mb-5">
               <span className="font-serif text-2xl md:text-3xl font-light tracking-widest">HUME</span>
@@ -125,6 +135,17 @@ export default async function Footer() {
             <h4 className="text-caption mb-5">Gifting</h4>
             <nav className="flex flex-col gap-2.5">
               {giftingLinks.map((link) => (
+                <Link key={link.href} href={link.href} className="text-body opacity-70 hover:opacity-100 transition-opacity">
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+
+          <div>
+            <h4 className="text-caption mb-5">Spaces</h4>
+            <nav className="flex flex-col gap-2.5">
+              {spacesLinks.map((link) => (
                 <Link key={link.href} href={link.href} className="text-body opacity-70 hover:opacity-100 transition-opacity">
                   {link.label}
                 </Link>

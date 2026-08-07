@@ -3,6 +3,13 @@ import { requireAdminToken } from "@/lib/admin-auth";
 import { db } from "@/db";
 import { checkoutDrafts, orders } from "@/db/schema";
 import { sendHumeEmail } from "@/lib/email/hume-mail-service";
+import {
+  DISCOVERY_SET_ORIGINAL_PRICE,
+  DISCOVERY_SET_PRICE,
+  DISCOVERY_SET_SIZE,
+} from "@/lib/discovery-set";
+
+const EMAIL_SUBJECT = "Pre-Order Now: Build Your 15-Sample HUME Discovery Set";
 
 const EMAIL_HTML = `<!DOCTYPE html>
 <html lang="en">
@@ -155,18 +162,18 @@ const EMAIL_HTML = `<!DOCTYPE html>
       
       <!-- Content Body -->
       <div class="content">
-        <span class="badge">Arriving in 10 Days</span>
+        <span class="badge">Pre-Order Open</span>
         <h1 class="title">The Discovery Set</h1>
         <p class="description" style="font-size: 20px; font-weight: 500; color: #FFFFFF; letter-spacing: 1px; margin-bottom: 25px;">
-          15 x Tester
+          ${DISCOVERY_SET_SIZE} Testers
         </p>
         
         <!-- Pricing Block -->
         <div class="pricing-box" style="margin-bottom: 35px;">
           <div class="price-label" style="margin-bottom: 12px;">Pre-Order Launch Comparison</div>
           <div style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;">
-            <span class="price-original">Original Price: ₹900</span>
-            <span class="price-preorder">Pre-Order Price: ₹799</span>
+            <span class="price-original">Original Price: INR ${DISCOVERY_SET_ORIGINAL_PRICE}</span>
+            <span class="price-preorder">Pre-Order Price: INR ${DISCOVERY_SET_PRICE}</span>
           </div>
         </div>
         
@@ -208,7 +215,7 @@ export async function POST(request: NextRequest) {
 
       const result = await sendHumeEmail({
         to: email,
-        subject: "Pre-Order Now: The Discovery Set is Coming in 10 Days!",
+        subject: EMAIL_SUBJECT,
         html: EMAIL_HTML,
         messageType: "admin_message",
       });
@@ -243,7 +250,7 @@ export async function POST(request: NextRequest) {
       try {
         const result = await sendHumeEmail({
           to: toEmail,
-          subject: "Pre-Order Now: The Discovery Set is Coming in 10 Days!",
+          subject: EMAIL_SUBJECT,
           html: EMAIL_HTML,
           messageType: "admin_message",
         });

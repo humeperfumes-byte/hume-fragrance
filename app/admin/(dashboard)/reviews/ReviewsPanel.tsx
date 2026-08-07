@@ -28,6 +28,7 @@ export type AdminReviewRow = {
   date: string;
   title: string;
   content: string;
+  images?: string[] | null;
   verified: boolean;
   createdAt: string;
   productName: string | null;
@@ -140,6 +141,16 @@ function ReviewCard({
             </p>
           </div>
           <p className="max-w-3xl whitespace-pre-wrap text-sm leading-6 text-white/70">{row.content}</p>
+          {Array.isArray(row.images) && row.images.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {row.images.map((imgUrl, i) => (
+                <a key={i} href={imgUrl} target="_blank" rel="noreferrer" className="group relative block overflow-hidden rounded-xl border border-white/15 bg-black/40">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={imgUrl} alt={`Review photo ${i + 1}`} className="h-16 w-16 object-cover transition-transform group-hover:scale-105" />
+                </a>
+              ))}
+            </div>
+          ) : null}
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <Button asChild variant="outline" size="sm" className="border-white/10 bg-white/[0.03] text-white hover:bg-white/10">

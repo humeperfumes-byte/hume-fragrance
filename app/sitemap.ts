@@ -7,11 +7,12 @@ import { getProductPath } from "@/lib/product-route";
 import { getFestivalSeoSlugs } from "@/lib/festival-seo";
 import { getRequestSiteUrl } from "@/lib/request-site";
 import { AI_RECOMMENDATION_PAGES } from "@/lib/ai-recommendation-pages";
-import { DISCOVERY_SET_PATH } from "@/lib/discovery-set";
+import { DISCOVERY_SET_PATH, isDiscoverySetProductId } from "@/lib/discovery-set";
 import { DETAIL_UPCOMING_PRODUCTS } from "@/lib/upcoming-products";
 import { PERFUME_MATURATION_PATH } from "@/lib/perfume-maturation";
 import { NATURALS_PRODUCTS } from "@/lib/naturals-data";
 import { getDiscoverySetSeoSlugs } from "@/lib/discovery-set-seo";
+import { SPACE_PAGES } from "@/lib/spaces";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = await getRequestSiteUrl();
@@ -21,12 +22,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     getAllAccessories(),
   ]);
 
-  const productEntries = products.map((product) => ({
-    url: `${baseUrl}${getProductPath(product)}`,
-    lastModified: new Date(),
-    changeFrequency: "weekly" as const,
-    priority: 0.8,
-  }));
+  const productEntries = products
+    .filter((product) => !isDiscoverySetProductId(product.id))
+    .map((product) => ({
+      url: `${baseUrl}${getProductPath(product)}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    }));
 
   const blogEntries = blogPosts.map((post) => ({
     url: `${baseUrl}/blog/${post.slug}`,
@@ -70,10 +73,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   const discoverySetSeoEntries = getDiscoverySetSeoSlugs().map((slug) => ({
-    url: `${baseUrl}/${slug}`,
+    url: `${baseUrl}/discovery-set/${slug}`,
     lastModified: new Date(),
     changeFrequency: "weekly" as const,
     priority: 0.75,
+  }));
+  const spacesEntries = ["", "selector", ...SPACE_PAGES.map((page) => page.slug)].map((slug) => ({
+    url: `${baseUrl}/spaces${slug ? `/${slug}` : ""}`,
+    lastModified: new Date(),
+    changeFrequency: "monthly" as const,
+    priority: slug ? 0.78 : 0.9,
   }));
 
   const flyerCampaignCities = ["ahmedabad", "mumbai", "delhi", "bengaluru", "surat", "vadodara", "jaipur"];
@@ -270,6 +279,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...upcomingProductEntries,
     ...naturalsEntries,
     ...discoverySetSeoEntries,
+    ...spacesEntries,
     ...flyerCampaignEntries,
   ];
 }

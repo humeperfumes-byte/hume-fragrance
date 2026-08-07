@@ -12,6 +12,7 @@ import HomeVideoCarouselSection from "@/components/HomeVideoCarouselSection";
 import HomeFaqSection from "@/components/HomeFaqSection";
 import HomeReviewsSection from "@/components/HomeReviewsSection";
 import LatestJournal from "@/components/LatestJournal";
+import HomeSpacesTeaser from "@/components/HomeSpacesTeaser";
 import Footer from "@/components/Footer";
 import nextDynamic from "next/dynamic";
 import { JsonLd } from "@/components/JsonLd";
@@ -140,6 +141,9 @@ export default async function Home() {
       </div>
       <div data-analytics-section="reviews">
         <HomeReviewsSection perfumes={homepagePerfumes} />
+      </div>
+      <div data-analytics-section="hume_spaces">
+        <HomeSpacesTeaser />
       </div>
       <div data-analytics-section="faq">
         <HomeFaqSection />

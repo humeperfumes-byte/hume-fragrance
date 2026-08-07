@@ -1,0 +1,17 @@
+Error loading products from DB: Error: Failed query: select "id", "name", "inspiration", "inspiration_brand", "wore_by", "wore_by_image_url", "category", "category_id", "gender", "images", "price", "price_currency", "description", "seo_description", "seo_keywords", "badges", "notes", "longevity", "size", "primary_blog_slug", "visibility", "created_at", "updated_at" from "products"
+params: 
+    at aD.queryWithCache (C:\Users\athen\OneDrive\Desktop\hume fragrance\.next\server\chunks\ssr\_0mbhphh._.js:28:40619)
+    at async (C:\Users\athen\OneDrive\Desktop\hume fragrance\.next\server\chunks\ssr\_0mbhphh._.js:28:43281)
+    at async p (C:\Users\athen\OneDrive\Desktop\hume fragrance\.next\server\chunks\ssr\_0i619~z._.js:24:1846)
+    at async s.revalidate (C:\Users\athen\OneDrive\Desktop\hume fragrance\.next\server\chunks\ssr\_0i619~z._.js:24:2734) {
+  query: 'select "id", "name", "inspiration", "inspiration_brand", "wore_by", "wore_by_image_url", "category", "category_id", "gender", "images", "price", "price_currency", "description", "seo_description", "seo_keywords", "badges", "notes", "longevity", "size", "primary_blog_slug", "visibility", "created_at", "updated_at" from "products"',
+  params: [],
+  [cause]: Error: write CONNECT_TIMEOUT undefined:undefined
+      at <unknown> (C:\Users\athen\OneDrive\Desktop\hume fragrance\.next\server\chunks\ssr\_0mbhphh._.js:1:9383)
+      at Timeout.d [as _onTimeout] (C:\Users\athen\OneDrive\Desktop\hume fragrance\.next\server\chunks\ssr\_0mbhphh._.js:11:2377) {
+    code: 'CONNECT_TIMEOUT',
+    errno: 'CONNECT_TIMEOUT',
+    address: undefined,
+    port: undefined
+  }
+}

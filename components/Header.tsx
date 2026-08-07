@@ -54,6 +54,8 @@ const Header = () => {
 
   useEffect(() => {
     if (!isMenuOpen) {
+      // Reset the nested mobile menu when the drawer closes.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsMobileGiftingOpen(false);
       return;
     }
@@ -140,6 +142,12 @@ const Header = () => {
           <div className="flex items-center gap-5">
             <nav className="hidden md:flex items-center gap-5">
               <Link
+                href="/spaces"
+                className="relative text-[11px] font-semibold uppercase tracking-[0.22em] text-[#365044] transition-colors hover:text-black after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-[40%] after:bg-current after:transition-all after:duration-300 hover:after:w-full"
+              >
+                HUME Spaces
+              </Link>
+              <Link
                 href={DISCOVERY_SET_PATH}
                 className="relative text-[11px] font-semibold uppercase tracking-[0.22em] text-black/80 transition-colors hover:text-black after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-[40%] after:bg-current after:transition-all after:duration-300 hover:after:w-full"
               >
@@ -183,7 +191,7 @@ const Header = () => {
                       href="/new-years-gifts"
                       className="px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.15em] text-[#171717] hover:bg-[#FAF9F5] hover:text-amber-800 transition-colors"
                     >
-                      New Year's Gifts
+                      New Year&apos;s Gifts
                     </Link>
                     <Link
                       href="/christmas-gifts"
@@ -298,6 +306,17 @@ const Header = () => {
               <div className="px-4 py-5 space-y-6">
                 <section>
                   <div className="space-y-3">
+                    <button
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        navigateTo("/spaces");
+                      }}
+                      className="w-full border border-[#365044] bg-[#edf0eb] px-3 py-2.5 text-left text-[#22352c]"
+                    >
+                      <span className="inline-flex w-full items-center justify-between font-serif text-[1.45rem] italic leading-none">
+                        <span>HUME Spaces</span><span>→</span>
+                      </span>
+                    </button>
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);

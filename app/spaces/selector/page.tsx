@@ -1,0 +1,5 @@
+import type { Metadata } from "next";
+import { SpacesShell } from "@/components/spaces/SpacesShell";
+import SpaceSelector from "@/components/spaces/SpaceSelector";
+export const metadata: Metadata = { title: "Diffuser Selector & Scenting Consultation | HUME Spaces", description: "Tell HUME Spaces about your property, area and airflow to receive a preliminary diffuser recommendation and request a scenting consultation." };
+export default function SelectorPage(){ return <SpacesShell><section className="px-5 pb-24 pt-40 md:px-10 md:pt-48"><div className="mx-auto grid max-w-7xl gap-14 md:grid-cols-[.65fr_1.35fr]"><div><p className="text-[10px] uppercase tracking-[.35em] text-black/45">Scenting system selector</p><h1 className="mt-6 font-serif text-5xl font-light leading-[.95] md:text-7xl">Begin with volume,<br/><em>not guesswork.</em></h1><p className="mt-7 max-w-sm text-sm leading-7 text-black/60">Share the property, airflow and desired arrangement. You’ll receive a preliminary direction before HUME confirms the specification.</p></div><div className="bg-[#e5dfd4] p-6 md:p-12"><SpaceSelector/></div></div></section></SpacesShell> }

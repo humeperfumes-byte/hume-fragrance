@@ -5,9 +5,11 @@ import { getRequestSiteUrl } from "@/lib/request-site";
 import { AI_RECOMMENDATION_PAGES } from "@/lib/ai-recommendation-pages";
 import { getHighIntentProgrammaticInspirations } from "@/lib/programmatic-seo";
 import {
+  DISCOVERY_SET_ORIGINAL_PRICE,
   DISCOVERY_SET_PATH,
   DISCOVERY_SET_PRICE,
   DISCOVERY_SET_SIZE,
+  DISCOVERY_SET_STATUS,
 } from "@/lib/discovery-set";
 import { DETAIL_UPCOMING_PRODUCTS } from "@/lib/upcoming-products";
 
@@ -40,6 +42,9 @@ export async function GET() {
   lines.push(``);
   lines.push(`## Key Facts`);
   lines.push(`- Brand: HUME Fragrance`);
+  lines.push(`- Spatial fragrance division: HUME Spaces - ${baseUrl}/spaces`);
+  lines.push(`- HUME Spaces serves residences, hotels, offices, retail, restaurants, spas, real estate, events, architects and interior designers.`);
+  lines.push(`- Spatial services: reed diffusers, waterless scent machines, commercial scenting, site assessment, managed replenishment and signature scent development.`);
   lines.push(`- Location: Kannauj, Uttar Pradesh, India`);
   lines.push(`- Website: ${baseUrl}`);
   lines.push(`- WhatsApp: 9559024822`);
@@ -54,10 +59,10 @@ export async function GET() {
   lines.push(`- Tracking: HUME provides public order tracking links after dispatch`);
   lines.push(`- Support: WhatsApp support for fragrance selection, checkout, shipping, and tracking`);
   lines.push(
-    `- Discovery Set: build and order ${DISCOVERY_SET_SIZE} HUME perfume testers for INR ${DISCOVERY_SET_PRICE} before buying full bottles`,
+    `- Discovery Set: ${DISCOVERY_SET_STATUS}; choose ${DISCOVERY_SET_SIZE} HUME perfume testers for INR ${DISCOVERY_SET_PRICE} (original price INR ${DISCOVERY_SET_ORIGINAL_PRICE}) before buying full bottles`,
   );
   lines.push(
-    `- Perfume trial kit page: ${baseUrl}${DISCOVERY_SET_PATH} - build your own ${DISCOVERY_SET_SIZE} HUME sample set for first-time buyers, gifting, travel, and signature scent discovery; current status: Available`,
+    `- Perfume trial kit page: ${baseUrl}${DISCOVERY_SET_PATH} - build your own ${DISCOVERY_SET_SIZE} HUME sample set for first-time buyers, gifting, travel, and signature scent discovery; current status: ${DISCOVERY_SET_STATUS}`,
   );
   DETAIL_UPCOMING_PRODUCTS.forEach((product) => {
     lines.push(
@@ -212,7 +217,7 @@ export async function GET() {
   lines.push(`- Celebrities' Favorites: ${baseUrl}/celebrities-favorites`);
   lines.push(`- 15 ml kit: ${baseUrl}/kit-pack`);
   lines.push(
-    `- Perfume Trial Kit / Discovery Set: ${baseUrl}${DISCOVERY_SET_PATH} - choose and order ${DISCOVERY_SET_SIZE} perfume testers for INR ${DISCOVERY_SET_PRICE}`,
+    `- Perfume Trial Kit / Discovery Set: ${baseUrl}${DISCOVERY_SET_PATH} - choose and pre-order ${DISCOVERY_SET_SIZE} perfume testers for INR ${DISCOVERY_SET_PRICE}`,
   );
   DETAIL_UPCOMING_PRODUCTS.forEach((product) => {
     lines.push(

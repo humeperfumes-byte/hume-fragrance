@@ -1,19 +1,25 @@
 export const DISCOVERY_SET_PRODUCT_ID = "hume-discovery-set";
 export const DISCOVERY_SET_CART_ITEM_PREFIX = "discovery-set-";
 export const DISCOVERY_SET_LEGACY_PATH = "/discovery-set";
+export const DISCOVERY_SET_LEGACY_TEN_PATH =
+  "/discovery-set/build-your-own-perfume-trial-kit-choose-10-3ml-samples";
 export const DISCOVERY_SET_PATH =
   "/discovery-set/build-your-own-perfume-trial-kit-choose-15-3ml-samples";
-export const DISCOVERY_SET_PRICE = 799;
-export const DISCOVERY_SET_SIZE = "15 x 3ml";
 export const DISCOVERY_SET_SAMPLE_COUNT = 15;
+export const DISCOVERY_SET_SAMPLE_SIZE_ML = 3;
+export const DISCOVERY_SET_PRICE = 799;
+export const DISCOVERY_SET_ORIGINAL_PRICE = 1000;
+export const DISCOVERY_SET_STATUS = "Pre-Order";
+export const DISCOVERY_SET_SCHEMA_AVAILABILITY = "https://schema.org/PreOrder";
+export const DISCOVERY_SET_SIZE =
+  `${DISCOVERY_SET_SAMPLE_COUNT} x ${DISCOVERY_SET_SAMPLE_SIZE_ML}ml`;
+export const DISCOVERY_SET_SHORT_DESCRIPTION =
+  `Choose any ${DISCOVERY_SET_SAMPLE_COUNT} HUME perfume testers of ${DISCOVERY_SET_SAMPLE_SIZE_ML}ml each and compare them before buying a full bottle.`;
+export const DISCOVERY_SET_DESCRIPTION =
+  `Pre-order the HUME Discovery Set with ${DISCOVERY_SET_SIZE} testers for INR ${DISCOVERY_SET_PRICE} (original price INR ${DISCOVERY_SET_ORIGINAL_PRICE}). Choose your fragrances and test them on skin before buying a full bottle.`;
 
 export const DISCOVERY_SET_IMAGES = [
-  "/images/bg/tester_box1.png",
-  "/images/bg/tester_box.png",
-  "/images/bg/tester1.png",
-  "/images/bg/tester2.png",
-  "/images/bg/tester3.png",
-  "/images/bg/tester4.png",
+  "/images/bg/discovery-set-15x3ml.png",
 ];
 
 export type FragranceSelection = {

@@ -4,7 +4,15 @@ import { eq, inArray, sql } from "drizzle-orm";
 import { type PerfumeData } from "@/data/perfumes";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getProductSeoSlug } from "@/lib/product-route";
-import { DISCOVERY_SET_PRICE, DISCOVERY_SET_SIZE, isDiscoverySetProductId } from "@/lib/discovery-set";
+import {
+  DISCOVERY_SET_DESCRIPTION,
+  DISCOVERY_SET_IMAGES,
+  DISCOVERY_SET_PRICE,
+  DISCOVERY_SET_SAMPLE_COUNT,
+  DISCOVERY_SET_SHORT_DESCRIPTION,
+  DISCOVERY_SET_SIZE,
+  isDiscoverySetProductId,
+} from "@/lib/discovery-set";
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
 
@@ -86,6 +94,7 @@ function transformProduct(
 ): PerfumeData {
   const defaultCelebImage = "https://placehold.co/600x600?text=Celeb";
   const badges = (product.badges ?? {}) as ProductBadges;
+  const isDiscoverySet = isDiscoverySetProductId(product.id);
   const imageUrls = getStringArray(product.images);
   const seoKeywords = getStringArray(product.seoKeywords);
 
@@ -105,7 +114,9 @@ function transformProduct(
   return {
     id: product.id,
     name: product.name,
-    inspiration: product.inspiration,
+    inspiration: isDiscoverySet
+      ? `Build your own ${DISCOVERY_SET_SAMPLE_COUNT} sample box`
+      : product.inspiration,
     inspirationBrand: product.inspirationBrand,
     visibility: (product.visibility ?? "public") as ProductVisibility,
     woreBy: product.woreBy ?? undefined,
@@ -132,11 +143,13 @@ function transformProduct(
         : [{ id: product.categoryId, label: product.category }],
     dbCategoryTags: mappedCategories.map((c) => ({ id: c.id, label: c.label || c.id })),
     gender: product.gender,
-    images: imageUrls.map((url) => withCloudinaryTransforms(url)),
-    price: isDiscoverySetProductId(product.id) ? DISCOVERY_SET_PRICE : parseFloat(product.price),
+    images: isDiscoverySet
+      ? DISCOVERY_SET_IMAGES
+      : imageUrls.map((url) => withCloudinaryTransforms(url)),
+    price: isDiscoverySet ? DISCOVERY_SET_PRICE : parseFloat(product.price),
     priceCurrency: "INR",
-    description: product.description,
-    seoDescription: product.seoDescription,
+    description: isDiscoverySet ? DISCOVERY_SET_SHORT_DESCRIPTION : product.description,
+    seoDescription: isDiscoverySet ? DISCOVERY_SET_DESCRIPTION : product.seoDescription,
     seoKeywords,
     badges: {
       bestSeller: Boolean(badges.bestSeller),
