@@ -606,17 +606,17 @@ a, button, select, input[type="submit"], input[type="button"], [role="button"], 
   font-family: 'Clash Display', sans-serif !important;
 }
 
-.discovery-set-page,
-.discovery-set-page * {
+.discovery-set-page > section,
+.discovery-set-page > section * {
   font-family: var(--font-discovery-sans), sans-serif !important;
 }
 
-.discovery-set-page h1,
-.discovery-set-page h2,
-.discovery-set-page h3,
-.discovery-set-page h4,
-.discovery-set-page .font-serif,
-.discovery-set-page [class*="font-serif"] {
+.discovery-set-page > section h1,
+.discovery-set-page > section h2,
+.discovery-set-page > section h3,
+.discovery-set-page > section h4,
+.discovery-set-page > section .font-serif,
+.discovery-set-page > section [class*="font-serif"] {
   font-family: var(--font-discovery-cormorant), serif !important;
 }
 
@@ -714,4 +714,3 @@ a, button, select, input[type="submit"], input[type="button"], [role="button"], 
 .animate-button-breathe {
   animation: button-breathe 2s infinite ease-in-out;
 }
-

@@ -1,6 +1,30 @@
 # Discovery Set AI SEO / AEO Context
 
-Last updated: 2026-05-27
+Last updated: 2026-08-10
+
+> Current implementation note: the live canonical offer is now a build-your-own
+> set of 15 x 3ml testers at the INR 999 pre-order sale price, reduced from the
+> regular INR 1,500 price. Older 10-sample and
+> waitlist-only notes below are historical and must not override the current
+> constants in `lib/discovery-set.ts`.
+
+## 2026-08-10 AEO and Reviews Addition
+
+- The builder and its first two visual sections remain unchanged.
+- All keyword landing pages render shared, crawlable buyer guidance below the
+  builder through `components/DiscoverySetAeoContent.tsx`.
+- The shared content includes a direct answer, query context, product facts,
+  Discovery Set vs full-bottle comparison, a four-step wear-test method, buyer
+  questions, internal links, and the existing real review/submission system.
+- Reviews use the single `hume-discovery-set` product identity across every
+  landing page. Do not create separate review pools per keyword URL.
+- New focused routes cover:
+  - `/discovery-set/best-perfume-testers-india`
+  - `/discovery-set/perfume-samples-india`
+  - `/discovery-set/best-perfume-trials-india`
+- Keyword routes are generated from `data/discovery-set-seo.json` and are added
+  to the sitemap automatically. Keep each route focused on its own search intent
+  and avoid fabricated review copy or unsupported performance claims.
 
 ## Strategic Goal
 

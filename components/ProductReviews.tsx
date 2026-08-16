@@ -1,9 +1,9 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useMemo, useState, type FormEvent, type ChangeEvent } from "react";
-import { Camera, ChevronRight, HelpCircle, PenLine, Send, Star, User, X, ZoomIn } from "lucide-react";
+import { Camera, Check, ChevronRight, HelpCircle, PenLine, Send, ShieldCheck, Star, User, X, ZoomIn } from "lucide-react";
 import { Review, getAverageRating } from "@/data/perfumes";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 
@@ -18,17 +18,23 @@ const StarRating = ({
   rating,
   interactive = false,
   onChange,
+  size = 14,
 }: {
   rating: number;
   interactive?: boolean;
   onChange?: (rating: number) => void;
+  size?: number;
 }) => (
-  <div className="flex gap-0.5">
+  <div className="flex gap-1">
     {[1, 2, 3, 4, 5].map((star) => {
       const icon = (
         <Star
-          size={interactive ? 20 : 14}
-          className={star <= rating ? "fill-primary text-primary" : "fill-muted text-muted"}
+          size={interactive ? 24 : size}
+          className={
+            star <= rating
+              ? "fill-amber-400 text-amber-400"
+              : "fill-zinc-200 text-zinc-300"
+          }
         />
       );
 
@@ -42,7 +48,7 @@ const StarRating = ({
           type="button"
           onClick={() => onChange?.(star)}
           aria-label={`Rate ${star} star${star === 1 ? "" : "s"}`}
-          className="rounded-sm p-0.5 transition-transform hover:scale-110"
+          className="rounded-lg p-1 transition-all hover:scale-125 focus:outline-none"
         >
           {icon}
         </button>
@@ -88,6 +94,16 @@ const ProductReviews = ({ productId, reviews, productName, inspiration }: Produc
   );
   const averageRating = useMemo(() => getAverageRating(ratingReviews), [ratingReviews]);
   const totalReviews = ratingReviews.length;
+
+  // Rating count breakdown (5 stars to 1 star)
+  const ratingCounts = useMemo(() => {
+    const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    ratingReviews.forEach((r) => {
+      const rounded = Math.min(5, Math.max(1, Math.round(r.rating)));
+      counts[rounded as keyof typeof counts] = (counts[rounded as keyof typeof counts] || 0) + 1;
+    });
+    return counts;
+  }, [ratingReviews]);
 
   const formatDate = (dateString: string) => {
     const months = [
@@ -144,7 +160,6 @@ const ProductReviews = ({ productId, reviews, productName, inspiration }: Produc
     try {
       let uploadedPhotoUrls: string[] = [];
 
-      // If user selected photos, upload them first
       if (selectedPhotos.length > 0) {
         const formData = new FormData();
         selectedPhotos.forEach((file) => formData.append("file", file));
@@ -241,7 +256,7 @@ const ProductReviews = ({ productId, reviews, productName, inspiration }: Produc
   };
 
   return (
-    <section className="border-t border-border py-16 md:py-24">
+    <section className="border-t border-zinc-200 py-16 md:py-24 bg-gradient-to-b from-white via-zinc-50/50 to-white">
       <div className="container-luxury">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -249,360 +264,493 @@ const ProductReviews = ({ productId, reviews, productName, inspiration }: Produc
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
+          {/* SECTION TITLE */}
           <div className="mb-10 text-center">
-            <p className="text-caption mb-4 text-muted-foreground">Customer Reviews</p>
-            <h2 className="text-headline mb-3">Real Buyers, Real Feedback</h2>
-            <p className="text-body text-muted-foreground">
+            <p className="text-caption mb-3 text-zinc-500 uppercase tracking-[0.2em] font-semibold text-xs">
+              Customer Reviews
+            </p>
+            <h2 className="text-headline mb-3 text-3xl font-serif font-light sm:text-4xl text-zinc-900">
+              Real Buyers, Real Feedback
+            </h2>
+            <p className="text-body text-zinc-500 text-sm max-w-md mx-auto">
               {totalReviews > 0
-                ? `${averageRating} / 5 (${totalReviews} reviews)`
-                : "Be the first to review this product"}
+                ? `${averageRating} / 5 Rating based on ${totalReviews} verified customer review${totalReviews === 1 ? "" : "s"}`
+                : "Be the first fragrance lover to review this scent"}
             </p>
           </div>
 
-          <div className="mx-auto mb-8 max-w-md overflow-hidden rounded-lg border border-[#e8dfd4] bg-background shadow-[0_18px_48px_rgba(24,18,14,0.08)]">
-            <div className="relative p-5">
-              <button
-                type="button"
-                onClick={() => {
-                  setFormMode("review");
-                  setIsFormOpen((open) => !open);
-                }}
-                className="absolute right-4 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-[#f8f4ed] hover:text-foreground"
-                aria-label="Open review form"
-              >
-                <ChevronRight size={18} />
-              </button>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                Overall Rating
-              </p>
-              <p className="mt-2 font-serif text-5xl font-light leading-none">
-                {totalReviews > 0 ? averageRating : "0.0"}
-              </p>
-              <div className="mt-3">
-                <StarRating rating={Math.round(averageRating)} />
+          {/* REDESIGNED LUXURY NEUTRAL REVIEW CARD & HERO */}
+          <div className="mx-auto mb-12 max-w-3xl overflow-hidden rounded-3xl border border-zinc-200/80 bg-gradient-to-b from-white via-[#FAF9F6] to-[#F4F3EF] p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.04)] backdrop-blur-sm transition-all duration-300">
+            
+            {/* RATING OVERVIEW & SUMMARY GRID */}
+            <div className="grid gap-6 sm:grid-cols-12 sm:items-center">
+              
+              {/* Left Column: Rating & Stars */}
+              <div className="sm:col-span-6 flex flex-col items-center text-center sm:items-start sm:text-left sm:border-r sm:border-zinc-200/80 sm:pr-8">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                  Overall Rating
+                </span>
+
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="font-serif text-5xl font-light leading-none text-zinc-900">
+                    {totalReviews > 0 ? averageRating : "5.0"}
+                  </span>
+                  <span className="text-sm text-zinc-400 font-serif">/ 5</span>
+                </div>
+
+                <div className="mt-3">
+                  <StarRating rating={totalReviews > 0 ? Math.round(averageRating) : 5} size={18} />
+                </div>
+
+                <div className="mt-3 flex items-center gap-1.5 text-xs text-zinc-600 font-medium">
+                  <ShieldCheck size={14} className="text-emerald-600" />
+                  <span>
+                    {totalReviews > 0
+                      ? `Based on ${totalReviews} review${totalReviews === 1 ? "" : "s"}`
+                      : "Verified Buyer Guarantee"}
+                  </span>
+                </div>
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Based on {totalReviews} review{totalReviews === 1 ? "" : "s"}
-              </p>
+
+              {/* Right Column: Rating Breakdown Bars / Hidden Prompt on Mobile */}
+              <div className="sm:col-span-6 flex flex-col justify-center space-y-2">
+                {totalReviews > 0 ? (
+                  ([5, 4, 3, 2, 1] as const).map((num) => {
+                    const count = ratingCounts[num];
+                    const percent = Math.round((count / totalReviews) * 100);
+                    return (
+                      <div key={num} className="flex items-center gap-3 text-xs text-zinc-600">
+                        <span className="w-8 font-mono text-[11px] text-right font-medium">{num} ★</span>
+                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-zinc-200">
+                          <div
+                            className="h-full rounded-full bg-amber-400 transition-all duration-500"
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                        <span className="w-8 font-mono text-[10px] text-zinc-400">{count}</span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  /* PROMPT BOX - HIDE ON MOBILE (hidden sm:block) */
+                  <div className="hidden sm:block rounded-2xl border border-zinc-200/80 bg-white/80 p-4 text-left shadow-sm">
+                    <p className="text-xs font-semibold text-zinc-900">
+                      Have you experienced this fragrance?
+                    </p>
+                    <p className="mt-1 text-[11px] text-zinc-500 leading-relaxed">
+                      Share your thoughts on longevity, sillage, and notes to inspire fragrance lovers!
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="border-t border-[#e8dfd4] p-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setFormMode("review");
-                  setIsFormOpen((open) => (formMode === "review" ? !open : true));
-                }}
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-sm bg-[#15120f] px-5 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#fffaf2] transition-colors hover:bg-[#2a211a]"
-              >
-                <PenLine size={14} />
-                {isFormOpen ? "Close Review Form" : "Write A Review"}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setFormMode("question");
-                  setIsFormOpen((open) => (formMode === "question" ? !open : true));
-                }}
-                className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-sm border border-[#e8dfd4] bg-background px-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground transition-colors hover:bg-[#f8f4ed]"
-              >
-                <HelpCircle size={14} />
-                {isFormOpen && formMode === "question" ? "Close Question Form" : "Ask A Question"}
-              </button>
+            {/* SEPARATE LOOKING ACTION BUTTONS */}
+            <div className="mt-8 border-t border-zinc-200/80 pt-6">
+              <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+                
+                {/* STANDALONE SEPARATE BUTTONS */}
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormMode("review");
+                      setIsFormOpen((open) => (formMode === "review" ? !open : true));
+                    }}
+                    className={`inline-flex items-center justify-center gap-2.5 rounded-2xl px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-200 shadow-sm ${
+                      isFormOpen && formMode === "review"
+                        ? "bg-zinc-900 text-white ring-2 ring-zinc-900 ring-offset-2"
+                        : "bg-zinc-900 text-white hover:bg-black"
+                    }`}
+                  >
+                    <PenLine size={15} className="text-amber-400" />
+                    <span>{isFormOpen && formMode === "review" ? "Close Review Form" : "Write A Review"}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormMode("question");
+                      setIsFormOpen((open) => (formMode === "question" ? !open : true));
+                    }}
+                    className={`inline-flex items-center justify-center gap-2.5 rounded-2xl border px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-200 shadow-sm ${
+                      isFormOpen && formMode === "question"
+                        ? "border-zinc-900 bg-zinc-100 text-zinc-900 ring-2 ring-zinc-900 ring-offset-2"
+                        : "border-zinc-300 bg-white text-zinc-800 hover:bg-zinc-50 hover:border-zinc-400"
+                    }`}
+                  >
+                    <HelpCircle size={15} className="text-zinc-600" />
+                    <span>{isFormOpen && formMode === "question" ? "Close Question" : "Ask A Question"}</span>
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-zinc-400 hidden sm:block italic font-serif">
+                  {formMode === "question" ? "Fast response from HUME team" : "Takes under 1 minute"}
+                </p>
+              </div>
             </div>
 
-            {isFormOpen ? (
-              <form onSubmit={handleSubmit} className="border-t border-[#e8dfd4] p-4 sm:p-5">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="text-sm text-foreground">
-                    Name
-                    <input
-                      value={author}
-                      onChange={(event) => setAuthor(event.target.value)}
+            {/* EXPANDABLE FORM WITH REORDERED FIELDS */}
+            <AnimatePresence>
+              {isFormOpen && (
+                <motion.form
+                  initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                  animate={{ opacity: 1, height: "auto", marginTop: 24 }}
+                  exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                  transition={{ duration: 0.35, ease: "easeInOut" }}
+                  onSubmit={handleSubmit}
+                  className="overflow-hidden border-t border-zinc-200/80 pt-6 space-y-5"
+                >
+                  {/* ROW 1: NAME & RATING SCORE */}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-700 mb-1.5">
+                        Your Name <span className="text-amber-600">*</span>
+                      </label>
+                      <input
+                        value={author}
+                        onChange={(event) => setAuthor(event.target.value)}
+                        required
+                        minLength={2}
+                        maxLength={80}
+                        className="h-11 w-full rounded-xl border border-zinc-300 bg-white px-3.5 text-sm text-zinc-900 placeholder-zinc-400 outline-none transition-colors focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 shadow-sm"
+                        placeholder="e.g. Priyanshu Mehta"
+                      />
+                    </div>
+
+                    {formMode === "review" ? (
+                      <div className="rounded-xl border border-zinc-200 bg-white p-3 flex flex-col justify-center shadow-sm">
+                        <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-700 mb-1">
+                          Rating Score
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <StarRating rating={rating} interactive onChange={setRating} size={20} />
+                          <span className="font-serif text-base font-medium text-zinc-900">{rating}.0</span>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {/* ROW 2: PHOTO ATTACHMENT DROPZONE (MOVED ABOVE TEXTAREA) */}
+                  <div className="rounded-2xl border border-dashed border-zinc-300 bg-white/90 p-4 transition-colors hover:border-zinc-400">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-100 text-zinc-800">
+                          <Camera size={15} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-800 block">
+                            Attach Photos <span className="text-[11px] text-zinc-400 font-normal lowercase">(optional)</span>
+                          </label>
+                          <span className="text-[10px] text-zinc-500">Upload up to 4 real photos of your bottle or packaging</span>
+                        </div>
+                      </div>
+                      <span className="text-[11px] font-mono text-zinc-400">{selectedPhotos.length}/4</span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                      {photoPreviews.map((url, idx) => (
+                        <div key={idx} className="relative h-16 w-16 overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 shadow-sm group">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt={`Preview ${idx + 1}`} className="h-full w-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePhoto(idx)}
+                            className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900/80 text-white backdrop-blur-sm transition-transform hover:scale-110"
+                            title="Remove photo"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+
+                      {selectedPhotos.length < 4 && (
+                        <label className="flex h-16 w-24 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 bg-white transition-all hover:border-zinc-400 shadow-sm group">
+                          <Camera size={18} className="text-zinc-600 transition-transform group-hover:scale-110" />
+                          <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-700">Add Photo</span>
+                          <input
+                            type="file"
+                            accept="image/png, image/jpeg, image/webp, image/gif"
+                            multiple
+                            onChange={handlePhotoSelect}
+                            className="hidden"
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ROW 3: REVIEW / QUESTION TEXTAREA */}
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-700 mb-1.5">
+                      {formMode === "question" ? "Your Question" : "Your Review"} <span className="text-amber-600">*</span>
+                    </label>
+                    <textarea
+                      value={content}
+                      onChange={(event) => setContent(event.target.value)}
                       required
-                      minLength={2}
-                      maxLength={80}
-                      className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-[#9b7a4a]"
-                      placeholder="Your name"
+                      minLength={formMode === "review" ? 20 : 5}
+                      maxLength={1200}
+                      rows={4}
+                      className="w-full resize-none rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 placeholder-zinc-400 outline-none transition-colors focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 shadow-sm"
+                      placeholder={
+                        formMode === "question"
+                          ? "Ask your question about fragrance notes, projection, longevity, delivery, or packaging..."
+                          : "How does it smell on your skin? How many hours did it last? Describe the opening and dry down..."
+                      }
                     />
-                  </label>
-                  <label className="text-sm text-foreground">
-                    City <span className="text-muted-foreground">(optional)</span>
+                  </div>
+
+                  {/* ROW 4: CITY INPUT (MOVED DOWN BELOW TEXTAREA) */}
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-700 mb-1.5">
+                      City <span className="text-zinc-400 font-normal lowercase">(optional)</span>
+                    </label>
                     <input
                       value={city}
                       onChange={(event) => setCity(event.target.value)}
                       maxLength={255}
-                      className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-[#9b7a4a]"
-                      placeholder="City"
+                      className="h-11 w-full rounded-xl border border-zinc-300 bg-white px-3.5 text-sm text-zinc-900 placeholder-zinc-400 outline-none transition-colors focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 shadow-sm"
+                      placeholder="e.g. Mumbai, Ahmedabad"
                     />
-                  </label>
-                </div>
-
-                {formMode === "review" ? (
-                  <div className="mt-4 flex flex-wrap items-center gap-3">
-                    <span className="text-sm text-foreground">Your rating</span>
-                    <StarRating rating={rating} interactive onChange={setRating} />
                   </div>
-                ) : null}
 
-                <label className="mt-4 block text-sm text-foreground">
-                  {formMode === "question" ? "Question" : "Review"}
-                  <textarea
-                    value={content}
-                    onChange={(event) => setContent(event.target.value)}
-                    required
-                    minLength={formMode === "review" ? 20 : 5}
-                    maxLength={1200}
-                    rows={4}
-                    className="mt-2 w-full resize-none rounded-xl border border-border bg-background px-3 py-3 text-sm outline-none focus:border-[#9b7a4a]"
-                    placeholder={
-                      formMode === "question"
-                        ? "Ask your question about the product, delivery, usage, or fragrance profile."
-                        : "Tell us how it smelled, how long it lasted, and when you wore it."
-                    }
-                  />
-                </label>
+                  {/* ROW 5: SUBMIT BUTTONS & ALERTS */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                    <p className="text-[11px] text-zinc-500">
+                      {formMode === "question"
+                        ? "Questions appear publicly to help other buyers."
+                        : "Verified buyer badges automatically attach to confirmed customer orders."}
+                    </p>
 
-                {/* PHOTO ATTACHMENT SECTION */}
-                <div className="mt-4">
-                  <label className="block text-sm text-foreground font-medium mb-1.5">
-                    Attach Photos <span className="text-xs text-muted-foreground font-normal">(optional, up to 4 photos)</span>
-                  </label>
-
-                  <div className="flex flex-wrap items-center gap-3">
-                    {photoPreviews.map((url, idx) => (
-                      <div key={idx} className="relative h-16 w-16 overflow-hidden rounded-xl border border-border bg-muted shadow-sm group">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={url} alt={`Preview ${idx + 1}`} className="h-full w-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => handleRemovePhoto(idx)}
-                          className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-white transition-transform hover:scale-110"
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                    ))}
-
-                    {selectedPhotos.length < 4 ? (
-                      <label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-border bg-background/50 transition-colors hover:border-[#9b7a4a] hover:bg-[#f8f4ed]">
-                        <Camera size={18} className="text-muted-foreground" />
-                        <span className="mt-1 text-[9px] font-semibold uppercase text-muted-foreground">Add</span>
-                        <input
-                          type="file"
-                          accept="image/png, image/jpeg, image/webp, image/gif"
-                          multiple
-                          onChange={handlePhotoSelect}
-                          className="hidden"
-                        />
-                      </label>
-                    ) : null}
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <button
+                        type="button"
+                        onClick={() => setIsFormOpen(false)}
+                        className="flex-1 sm:flex-initial h-11 rounded-xl border border-zinc-300 bg-white px-5 text-xs font-semibold text-zinc-700 hover:bg-zinc-100 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={status === "submitting"}
+                        className="flex-1 sm:flex-initial inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-zinc-900 px-7 text-xs font-semibold uppercase tracking-[0.16em] text-white shadow-md transition-all hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {status === "submitting" ? (
+                          <>
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                            <span>Posting...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Send size={13} className="text-amber-400" />
+                            <span>{formMode === "question" ? "Submit Question" : "Publish Review"}</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
-                </div>
+                </motion.form>
+              )}
+            </AnimatePresence>
 
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-xs text-muted-foreground">
-                    {formMode === "question"
-                      ? "Questions appear in the same customer section with a Question badge."
-                      : "Reviews appear as customer reviews with your attached photos."}
-                  </p>
-                  <button
-                    type="submit"
-                    disabled={status === "submitting"}
-                    className="inline-flex h-11 items-center justify-center rounded-full bg-[#15120f] px-6 text-sm font-medium text-[#fffaf2] transition-colors hover:bg-[#2a211a] disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {status === "submitting"
-                      ? "Posting..."
-                      : formMode === "question"
-                        ? "Submit question"
-                        : "Submit review"}
-                  </button>
-                </div>
-              </form>
-            ) : null}
-
-            {message ? (
-              <p className={`mt-4 text-sm ${status === "error" ? "text-red-600" : "text-emerald-700"}`}>
+            {message && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`mt-4 rounded-xl p-3 text-xs font-medium ${
+                  status === "error"
+                    ? "border border-red-200 bg-red-50 text-red-700"
+                    : "border border-emerald-200 bg-emerald-50 text-emerald-800"
+                }`}
+              >
                 {message}
-              </p>
-            ) : null}
+              </motion.div>
+            )}
           </div>
 
+          {/* REVIEWS GRID LIST */}
           {reviewItems.length > 0 ? (
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
               {reviewItems
                 .filter((review) => !isResponseEntry(review))
                 .map((review, index) => {
-                const isQuestion = isQuestionEntry(review);
-                const isResponse = isResponseEntry(review);
-                const responses = isQuestion
-                  ? reviewItems.filter(
-                      (item) =>
-                        isResponseEntry(item) && getResponseParentId(item) === review.id,
-                    )
-                  : [];
+                  const isQuestion = isQuestionEntry(review);
+                  const isResponse = isResponseEntry(review);
+                  const responses = isQuestion
+                    ? reviewItems.filter(
+                        (item) =>
+                          isResponseEntry(item) && getResponseParentId(item) === review.id,
+                      )
+                    : [];
 
-                return (
-                  <motion.article
-                    key={review.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                    className="group relative flex h-full flex-col justify-between overflow-hidden rounded-[28px] border border-border/60 bg-gradient-to-b from-white to-secondary/20 p-5 shadow-[0_18px_45px_rgba(15,15,20,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,15,20,0.10)]"
-                    itemScope
-                    itemType="https://schema.org/Review"
-                  >
-                    <meta itemProp="itemReviewed" content={productName} />
-                    <meta itemProp="author" content={review.author} />
-                    <div itemProp="reviewRating" itemScope itemType="https://schema.org/Rating">
-                      <meta itemProp="ratingValue" content={String(review.rating)} />
-                      <meta itemProp="bestRating" content="5" />
-                    </div>
-
-                    <div className="mb-4 flex items-center justify-between gap-3">
-                      {isQuestion ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#d9c8ad] bg-[#fbfaf8] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-[#9b7a4a]">
-                          <HelpCircle size={12} />
-                          Question
-                        </span>
-                      ) : isResponse ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-sky-700">
-                          <PenLine size={12} />
-                          Response
-                        </span>
-                      ) : (
-                        <StarRating rating={review.rating} />
-                      )}
-                      {review.verified ? (
-                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-700">
-                          Verified Buyer
-                        </span>
-                      ) : isQuestion || isResponse ? null : (
-                        <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-zinc-500">
-                          Review
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="text-body mb-4 leading-relaxed text-muted-foreground" itemProp="reviewBody">
-                      &ldquo;{review.content}&rdquo;
-                    </p>
-
-                    {/* REVIEW PHOTOS THUMBNAIL GALLERY */}
-                    {Array.isArray(review.images) && review.images.length > 0 ? (
-                      <div className="mb-4 flex flex-wrap gap-2">
-                        {review.images.map((photoUrl, pIdx) => (
-                          <button
-                            key={pIdx}
-                            type="button"
-                            onClick={() => setLightboxPhoto(photoUrl)}
-                            className="group/photo relative h-16 w-16 overflow-hidden rounded-xl border border-border/80 bg-black/5 transition-transform hover:scale-105"
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={withCloudinaryTransforms(photoUrl, { width: 300 })}
-                              alt={`Customer photo ${pIdx + 1}`}
-                              className="h-full w-full object-cover transition-opacity group-hover/photo:opacity-90"
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover/photo:opacity-100">
-                              <ZoomIn size={14} className="text-white drop-shadow" />
-                            </div>
-                          </button>
-                        ))}
+                  return (
+                    <motion.article
+                      key={review.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.5, delay: index * 0.08 }}
+                      className="group relative flex h-full flex-col justify-between overflow-hidden rounded-[28px] border border-zinc-200/80 bg-white p-6 shadow-[0_14px_40px_rgba(0,0,0,0.03)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_55px_rgba(0,0,0,0.07)]"
+                      itemScope
+                      itemType="https://schema.org/Review"
+                    >
+                      <meta itemProp="itemReviewed" content={productName} />
+                      <meta itemProp="author" content={review.author} />
+                      <div itemProp="reviewRating" itemScope itemType="https://schema.org/Rating">
+                        <meta itemProp="ratingValue" content={String(review.rating)} />
+                        <meta itemProp="bestRating" content="5" />
                       </div>
-                    ) : null}
 
-                    {isQuestion ? (
-                      <div className="mb-2">
-                        {activeReplyId === review.id ? (
-                          <div className="rounded-2xl border border-[#e8dfd4] bg-background/90 p-2">
-                            <div className="flex items-center gap-2">
-                              <input
-                                value={replyContent}
-                                onChange={(event) => setReplyContent(event.target.value)}
-                                minLength={5}
-                                maxLength={1200}
-                                className="h-10 min-w-0 flex-1 rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-[#9b7a4a]"
-                                placeholder="Write your answer..."
-                              />
+                      <div>
+                        {/* CARD BADGES */}
+                        <div className="mb-4 flex items-center justify-between gap-3">
+                          {isQuestion ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/60 bg-amber-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-800">
+                              <HelpCircle size={12} />
+                              Question
+                            </span>
+                          ) : isResponse ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-300/60 bg-sky-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-800">
+                              <PenLine size={12} />
+                              Response
+                            </span>
+                          ) : (
+                            <StarRating rating={review.rating} size={13} />
+                          )}
+
+                          {review.verified ? (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/60 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
+                              <Check size={11} /> Verified Buyer
+                            </span>
+                          ) : isQuestion || isResponse ? null : (
+                            <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+                              Review
+                            </span>
+                          )}
+                        </div>
+
+                        {/* CONTENT */}
+                        <p className="text-body mb-5 leading-relaxed text-zinc-700 font-light" itemProp="reviewBody">
+                          &ldquo;{review.content}&rdquo;
+                        </p>
+
+                        {/* PHOTO THUMBNAILS */}
+                        {Array.isArray(review.images) && review.images.length > 0 && (
+                          <div className="mb-5 flex flex-wrap gap-2">
+                            {review.images.map((photoUrl, pIdx) => (
+                              <button
+                                key={pIdx}
+                                type="button"
+                                onClick={() => setLightboxPhoto(photoUrl)}
+                                className="group/photo relative h-16 w-16 overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 shadow-sm transition-transform hover:scale-105"
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={withCloudinaryTransforms(photoUrl, { width: 300 })}
+                                  alt={`Customer photo ${pIdx + 1}`}
+                                  className="h-full w-full object-cover transition-opacity group-hover/photo:opacity-90"
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/25 opacity-0 transition-opacity group-hover/photo:opacity-100">
+                                  <ZoomIn size={15} className="text-white drop-shadow" />
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {isQuestion && (
+                          <div className="mb-3">
+                            {activeReplyId === review.id ? (
+                              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-2.5">
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    value={replyContent}
+                                    onChange={(event) => setReplyContent(event.target.value)}
+                                    minLength={5}
+                                    maxLength={1200}
+                                    className="h-10 min-w-0 flex-1 rounded-xl border border-zinc-300 bg-white px-3 text-xs outline-none focus:border-zinc-900"
+                                    placeholder="Write your answer..."
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={handleReplySubmit}
+                                    disabled={replyStatus === "submitting"}
+                                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-white transition-colors hover:bg-black disabled:opacity-60"
+                                    aria-label="Send response"
+                                  >
+                                    <Send size={14} />
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
                               <button
                                 type="button"
-                                onClick={handleReplySubmit}
-                                disabled={replyStatus === "submitting"}
-                                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#15120f] text-[#fffaf2] transition-colors hover:bg-[#2a211a] disabled:cursor-not-allowed disabled:opacity-60"
-                                aria-label="Send response"
+                                onClick={() => {
+                                  setActiveReplyId(review.id);
+                                  setReplyContent("");
+                                }}
+                                className="inline-flex h-9 w-fit items-center justify-center gap-1.5 rounded-full border border-zinc-300 bg-white px-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-900 shadow-sm transition-all hover:bg-zinc-50"
                               >
-                                <Send size={15} />
+                                <PenLine size={12} />
+                                Reply
                               </button>
-                            </div>
+                            )}
                           </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setActiveReplyId(review.id);
-                              setReplyContent("");
-                            }}
-                            className="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-full border border-[#d9c8ad] bg-background px-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground transition-colors hover:bg-[#f8f4ed]"
-                          >
-                            <PenLine size={13} />
-                            Reply
-                          </button>
+                        )}
+
+                        {responses.length > 0 && (
+                          <div className="mb-4 space-y-2.5">
+                            {responses.map((response) => (
+                              <div
+                                key={response.id}
+                                className="rounded-2xl border border-sky-100 bg-sky-50/50 p-3.5"
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-white px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-sky-800">
+                                    <User size={10} />
+                                    {response.author}
+                                  </span>
+                                  <span className="text-[10px] text-zinc-400">
+                                    {formatDate(response.date)}
+                                  </span>
+                                </div>
+                                <p className="mt-2 text-xs leading-relaxed text-slate-700">
+                                  {response.content}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
-                    ) : null}
 
-                    {responses.length > 0 ? (
-                      <div className="mb-4 space-y-3">
-                        {responses.map((response) => (
-                          <div
-                            key={response.id}
-                            className="rounded-2xl border border-sky-100 bg-sky-50/60 p-3"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-white px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-sky-700">
-                                <User size={10} />
-                                {response.author}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground">
-                                {formatDate(response.date)}
-                              </span>
-                            </div>
-                            <p className="mt-2 text-xs leading-relaxed text-slate-700">
-                              {response.content}
-                            </p>
-                          </div>
-                        ))}
+                      {/* CARD FOOTER */}
+                      <div className="flex items-center justify-between border-t border-zinc-200/60 pt-3 text-xs text-zinc-500">
+                        <span className="font-medium text-zinc-900">
+                          {review.author}
+                          {review.reviewerCity ? `, ${review.reviewerCity}` : ""}
+                        </span>
+                        <span className="font-mono text-[11px] text-zinc-400">{formatDate(review.date)}</span>
                       </div>
-                    ) : null}
-
-                    <div className="flex items-center justify-between pt-3 text-xs text-muted-foreground border-t border-border/40">
-                      <span className="font-medium text-foreground">
-                        {review.author}
-                        {review.reviewerCity ? `, ${review.reviewerCity}` : ""}
-                      </span>
-                      <span>{formatDate(review.date)}</span>
-                    </div>
-                  </motion.article>
-                );
-              })}
+                    </motion.article>
+                  );
+                })}
             </div>
           ) : null}
         </motion.div>
       </div>
 
-      {/* FULLSCREEN PHOTO LIGHTBOX MODAL */}
-      {lightboxPhoto ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md">
-          <div className="relative max-h-[90vh] max-w-[90vw] overflow-hidden rounded-2xl bg-black shadow-2xl border border-white/10">
+      {/* FULLSCREEN PHOTO LIGHTBOX */}
+      {lightboxPhoto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md">
+          <div className="relative max-h-[90vh] max-w-[90vw] overflow-hidden rounded-3xl bg-black shadow-2xl border border-white/10">
             <button
               type="button"
               onClick={() => setLightboxPhoto(null)}
-              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md transition-transform hover:scale-110"
+              className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/70 text-white backdrop-blur-md transition-transform hover:scale-110"
               aria-label="Close photo"
             >
-              <X size={18} />
+              <X size={20} />
             </button>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -612,7 +760,7 @@ const ProductReviews = ({ productId, reviews, productName, inspiration }: Produc
             />
           </div>
         </div>
-      ) : null}
+      )}
     </section>
   );
 };

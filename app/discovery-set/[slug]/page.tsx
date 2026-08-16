@@ -4,11 +4,14 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { JsonLd } from "@/components/JsonLd";
 import DiscoverySetBuilder from "@/components/DiscoverySetBuilder";
+import DiscoverySetAeoContent from "@/components/DiscoverySetAeoContent";
 import { getDiscoverySetSeoPageBySlug, getDiscoverySetSeoSlugs } from "@/lib/discovery-set-seo";
 import {
+  getDiscoverySetReviewAggregate,
   DISCOVERY_SET_IMAGES,
   DISCOVERY_SET_ORIGINAL_PRICE,
   DISCOVERY_SET_PRICE,
+  DISCOVERY_SET_PRODUCT_ID,
   DISCOVERY_SET_SAMPLE_COUNT,
   DISCOVERY_SET_SCHEMA_AVAILABILITY,
   DISCOVERY_SET_SIZE,
@@ -18,6 +21,7 @@ import { formatINR } from "@/lib/currency";
 import { getRequestSiteUrl } from "@/lib/request-site";
 import { getBreadcrumbSchema, getOrganizationSchema } from "@/lib/seo";
 import { siteUrlForBase } from "@/lib/site";
+import { getProductById } from "@/lib/db/products";
 import { Playfair_Display, Inter, Cormorant_Garamond } from "next/font/google";
 
 const inter = Inter({
@@ -160,10 +164,14 @@ export default async function DiscoverySetSeoPage({ params }: Props) {
   const page = getDiscoverySetSeoPageBySlug(slug);
   if (!page) notFound();
 
-  const baseUrl = await getRequestSiteUrl();
+  const [baseUrl, discoverySetProduct] = await Promise.all([
+    getRequestSiteUrl(),
+    getProductById(DISCOVERY_SET_PRODUCT_ID),
+  ]);
   const canonicalUrl = siteUrlForBase(baseUrl, `/discovery-set/${slug}`);
   const imageUrls = DISCOVERY_SET_IMAGES.map((image) => siteUrlForBase(baseUrl, image));
   const description = getPreorderDescription(page.description);
+  const aggregateRating = getDiscoverySetReviewAggregate(discoverySetProduct?.reviews ?? []);
   const jsonLd = [
     getOrganizationSchema(baseUrl),
     {
@@ -203,6 +211,7 @@ export default async function DiscoverySetSeoPage({ params }: Props) {
       sku: "HUME-DISCOVERY-SET",
       mpn: "HUME-DISCOVERY-SET",
       brand: { "@type": "Brand", name: "HUME Fragrance" },
+      ...(aggregateRating ? { aggregateRating } : {}),
       additionalProperty: [
         { "@type": "PropertyValue", name: "Tester count", value: `${DISCOVERY_SET_SAMPLE_COUNT} testers` },
         { "@type": "PropertyValue", name: "Tester size", value: "3ml each" },
@@ -301,6 +310,11 @@ export default async function DiscoverySetSeoPage({ params }: Props) {
           </div>
         </div>
       </section>
+
+      <DiscoverySetAeoContent
+        page={page}
+        reviews={discoverySetProduct?.reviews ?? []}
+      />
 
       <Footer />
     </main>

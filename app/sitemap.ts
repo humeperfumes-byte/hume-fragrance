@@ -139,6 +139,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.75,
     },
     {
+      url: `${baseUrl}/raksha-bandhan-gifts`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.85,
+    },
+    {
       url: `${baseUrl}/diwali-gifts`,
       lastModified: new Date(),
       changeFrequency: "weekly",

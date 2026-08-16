@@ -18,11 +18,17 @@ import { DISCOVERY_SET_PATH } from "@/lib/discovery-set";
 import AnnouncementBar from "./AnnouncementBar";
 import { useSiteControls } from "@/hooks/use-site-controls";
 
+// The mobile Raksha Bandhan takeover expires at the end of 26 August 2026 in India.
+const RAKSHA_BANDHAN_MENU_END_AT = new Date("2026-08-26T23:59:59+05:30").getTime();
+
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileGiftingOpen, setIsMobileGiftingOpen] = useState(false);
+  const [showRakshaBandhanMenuLink, setShowRakshaBandhanMenuLink] = useState(
+    () => Date.now() < RAKSHA_BANDHAN_MENU_END_AT,
+  );
   const settings = useSiteControls();
   const [isAnnouncementVisible, setIsAnnouncementVisible] = useState(true);
   const [topOffset, setTopOffset] = useState(0);
@@ -65,6 +71,19 @@ const Header = () => {
       document.body.style.overflow = previous;
     };
   }, [isMenuOpen]);
+
+  useEffect(() => {
+    const remainingTime = RAKSHA_BANDHAN_MENU_END_AT - Date.now();
+    if (remainingTime <= 0) {
+      return;
+    }
+
+    const expiryTimer = window.setTimeout(() => {
+      setShowRakshaBandhanMenuLink(false);
+    }, remainingTime);
+
+    return () => window.clearTimeout(expiryTimer);
+  }, []);
 
   const handleMobileFilterClick = (filterType: FilterType, value: string, href?: string) => {
     setIsMenuOpen(false);
@@ -142,12 +161,6 @@ const Header = () => {
           <div className="flex items-center gap-5">
             <nav className="hidden md:flex items-center gap-5">
               <Link
-                href="/spaces"
-                className="relative text-[11px] font-semibold uppercase tracking-[0.22em] text-[#365044] transition-colors hover:text-black after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-[40%] after:bg-current after:transition-all after:duration-300 hover:after:w-full"
-              >
-                HUME Spaces
-              </Link>
-              <Link
                 href={DISCOVERY_SET_PATH}
                 className="relative text-[11px] font-semibold uppercase tracking-[0.22em] text-black/80 transition-colors hover:text-black after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-[40%] after:bg-current after:transition-all after:duration-300 hover:after:w-full"
               >
@@ -174,6 +187,12 @@ const Header = () => {
                       className="px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.15em] text-[#171717] hover:bg-[#FAF9F5] hover:text-amber-800 transition-colors"
                     >
                       Wedding Gifts
+                    </Link>
+                    <Link
+                      href="/raksha-bandhan-gifts"
+                      className="px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.15em] text-[#171717] hover:bg-[#FAF9F5] hover:text-amber-800 transition-colors"
+                    >
+                      Raksha Bandhan Gifts
                     </Link>
                     <Link
                       href="/diwali-gifts"
@@ -309,17 +328,6 @@ const Header = () => {
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);
-                        navigateTo("/spaces");
-                      }}
-                      className="w-full border border-[#365044] bg-[#edf0eb] px-3 py-2.5 text-left text-[#22352c]"
-                    >
-                      <span className="inline-flex w-full items-center justify-between font-serif text-[1.45rem] italic leading-none">
-                        <span>HUME Spaces</span><span>→</span>
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsMenuOpen(false);
                         navigateTo("/shop");
                       }}
                       className="w-full border-b border-border pb-2 text-left"
@@ -413,6 +421,30 @@ const Header = () => {
                         </motion.span>
                       </div>
                     </motion.button>
+                    {showRakshaBandhanMenuLink ? (
+                      <button
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          navigateTo("/raksha-bandhan-gifts");
+                        }}
+                        className="group relative w-full overflow-hidden border border-[#e4ae52] bg-[linear-gradient(112deg,#6e1830_0%,#b52f43_42%,#dd9635_72%,#29456d_100%)] px-4 py-3 text-left text-white shadow-[0_10px_24px_rgba(112,24,47,0.22)]"
+                      >
+                        <span className="pointer-events-none absolute -left-8 top-2 h-px w-[115%] rotate-[-8deg] bg-gradient-to-r from-transparent via-[#ffe4a3]/80 to-transparent" />
+                        <span className="pointer-events-none absolute -left-8 bottom-2 h-px w-[115%] rotate-[7deg] bg-gradient-to-r from-transparent via-[#ffe4a3]/65 to-transparent" />
+                        <span className="relative flex items-center justify-between gap-4">
+                          <span className="flex flex-col">
+                            <span className="text-[9px] font-semibold uppercase tracking-[0.28em] text-[#ffe4a3]">
+                              Festive gifting
+                            </span>
+                            <span className="font-serif text-[1.3rem] leading-tight">Raksha Bandhan</span>
+                          </span>
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#ffe4a3]/70 bg-[#6e1830]/35 text-lg text-[#ffe4a3] transition-transform duration-300 group-hover:translate-x-1">
+                            →
+                          </span>
+                        </span>
+                      </button>
+                    ) : (
+                      <>
                     <button
                       onClick={() => {
                         setIsMobileGiftingOpen(!isMobileGiftingOpen);
@@ -431,6 +463,7 @@ const Header = () => {
                         {[
                           { href: "/corporate-gifting", label: "Corporate Gifting" },
                           { href: "/wedding-gifts", label: "Wedding Gifts" },
+                          { href: "/raksha-bandhan-gifts", label: "Raksha Bandhan Gifts" },
                           { href: "/diwali-gifts", label: "Diwali Gifts" },
                           { href: "/holi-gifts", label: "Holi Gifts" },
                           { href: "/new-years-gifts", label: "New Year's Gifts" },
@@ -448,6 +481,8 @@ const Header = () => {
                           </button>
                         ))}
                       </div>
+                    )}
+                      </>
                     )}
                     <button
                       onClick={() => {

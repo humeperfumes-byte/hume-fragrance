@@ -37,6 +37,77 @@ const DISCOVERY_SET_HERO_GALLERY = DISCOVERY_SET_IMAGES.map((src, index) => ({
   priority: index === 0,
 }));
 
+const PREORDER_COUNTDOWN_DURATION_MS = 5 * 24 * 60 * 60 * 1000;
+const PREORDER_COUNTDOWN_STORAGE_KEY = "hume_discovery_preorder_countdown_v1";
+
+function getPreorderCountdownTarget(now: number) {
+  const storedTarget = Number(window.localStorage.getItem(PREORDER_COUNTDOWN_STORAGE_KEY));
+  let target = Number.isFinite(storedTarget) && storedTarget > 0
+    ? storedTarget
+    : now + PREORDER_COUNTDOWN_DURATION_MS;
+
+  if (target <= now) {
+    const completedCycles = Math.floor((now - target) / PREORDER_COUNTDOWN_DURATION_MS) + 1;
+    target += completedCycles * PREORDER_COUNTDOWN_DURATION_MS;
+  }
+
+  window.localStorage.setItem(PREORDER_COUNTDOWN_STORAGE_KEY, String(target));
+  return target;
+}
+
+function PreorderCountdown() {
+  const [remainingMs, setRemainingMs] = useState(PREORDER_COUNTDOWN_DURATION_MS);
+
+  useEffect(() => {
+    let target = getPreorderCountdownTarget(Date.now());
+
+    const updateCountdown = () => {
+      const now = Date.now();
+      if (target <= now) {
+        target = getPreorderCountdownTarget(now);
+      }
+      setRemainingMs(Math.max(0, target - now));
+    };
+
+    updateCountdown();
+    const interval = window.setInterval(updateCountdown, 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const totalSeconds = Math.ceil(remainingMs / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const units = [
+    [days, "DAYS"],
+    [hours, "HRS"],
+    [minutes, "MIN"],
+    [seconds, "SEC"],
+  ] as const;
+
+  return (
+    <div
+      className="flex w-full items-center justify-center gap-3 sm:gap-5"
+      aria-label={`${days} days, ${hours} hours, ${minutes} minutes and ${seconds} seconds remaining in the current pre-order offer cycle`}
+    >
+      {units.map(([value, label], index) => (
+        <div key={label} className="flex items-center gap-3 sm:gap-5">
+          {index > 0 ? <span className="mb-3 text-base text-white/30">:</span> : null}
+          <span className="min-w-9 text-center font-sans">
+            <strong className="block text-lg font-semibold leading-none tracking-[0.08em] text-white sm:text-xl">
+              {String(value).padStart(2, "0")}
+            </strong>
+            <small className="mt-1.5 block text-[7px] font-semibold tracking-[0.18em] text-white/45">
+              {label}
+            </small>
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function MagicPrice() {
   return (
     <motion.div
@@ -273,10 +344,8 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
                 </span>
               </div>
 
-              <div className="mt-3.5 flex h-14 w-full items-center justify-center rounded-[1.1rem] bg-[#161618] px-4 shadow-inner">
-                <span className="text-sm font-semibold uppercase tracking-[0.22em] text-white">
-                  Pre-order open
-                </span>
+              <div className="mt-3.5 flex h-16 w-full items-center justify-center rounded-[1.1rem] bg-[#161618] px-4 shadow-inner">
+                <PreorderCountdown />
               </div>
             </div>
 
@@ -459,10 +528,8 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
                   </span>
                 </div>
 
-                <div className="mt-3.5 flex h-14 w-full items-center justify-center rounded-[1.1rem] bg-[#161618] px-4 shadow-inner">
-                  <span className="text-sm font-semibold uppercase tracking-[0.22em] text-white">
-                    Pre-order open
-                  </span>
+                <div className="mt-3.5 flex h-16 w-full items-center justify-center rounded-[1.1rem] bg-[#161618] px-4 shadow-inner">
+                  <PreorderCountdown />
                 </div>
               </div>
 

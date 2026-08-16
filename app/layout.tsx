@@ -5,6 +5,7 @@ import { Cormorant_Garamond, Geist, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import ClientGlobalOverlays from "@/components/ClientGlobalOverlays";
+import SiteOpeningVideoOverlay from "@/components/SiteOpeningVideoOverlay";
 import BrowserRecoveryGuard from "@/components/BrowserRecoveryGuard";
 import ConsentCaptureBanner from "@/components/ConsentCaptureBanner";
 import ConsentTimelineTracker from "@/components/ConsentTimelineTracker";
@@ -109,6 +110,7 @@ export default async function RootLayout({
         className={`${geist.variable} ${cormorant.variable} ${jetbrainsMono.variable} antialiased`}
       >
         <Providers>
+          <SiteOpeningVideoOverlay />
           <BrowserRecoveryGuard />
           {children}
           <ClientGlobalOverlays />

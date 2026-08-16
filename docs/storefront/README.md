@@ -129,6 +129,30 @@ Conversion priorities:
 
 ## Removed/Deprioritized Areas
 
+## Raksha Bandhan Gift Boxes
+
+Implementation:
+
+- Page: `app/raksha-bandhan-gifts/page.tsx`
+- Interactive box selector: `components/RakshaBandhanGiftPage.tsx`
+
+Current offer has four cart-ready variants:
+
+- Him or Her Essential box: one HUME-curated perfume, Pure Gulab Jal, chosen
+  Rakhi, and gift presentation for INR 1,299.
+- Him or Her Grand box: two HUME-curated perfumes, Pure Gulab Jal, chosen Rakhi,
+  and gift presentation for INR 1,999.
+
+The exact perfume lineup remains intentionally unspecified until HUME finalizes
+it. Do not hardcode perfume names or imply that representative imagery confirms
+the final bottles. The customer's Rakhi choice is preserved in the cart item's
+kit selections.
+
+The final campaign video is `/videos/raksha-bandhan-hero.mp4`. It plays behind
+the Raksha Bandhan hero and once as a global public-storefront opening overlay
+after a fresh load or refresh. The overlay does not replay during client-side
+navigation, excludes `/admin`, includes Skip, and has a safety timeout.
+
 Personalised bottle section:
 
 - User decided to remove it from the site.

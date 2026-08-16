@@ -45,6 +45,7 @@ export default async function Footer() {
   const giftingLinks = [
     { href: "/corporate-gifting", label: "Corporate Gifting" },
     { href: "/wedding-gifts", label: "Wedding Gifts" },
+    { href: "/raksha-bandhan-gifts", label: "Raksha Bandhan Gifts" },
     { href: "/diwali-gifts", label: "Diwali Gifts" },
     { href: "/holi-gifts", label: "Holi Gifts" },
     { href: "/new-years-gifts", label: "New Year's Gifts" },

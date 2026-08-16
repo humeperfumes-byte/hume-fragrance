@@ -60,6 +60,7 @@ async function fetchReviewsByProductIds(productIds: string[]): Promise<ReviewRow
         date,
         title,
         content,
+        coalesce(images, '[]'::jsonb) as images,
         verified,
         created_at as "createdAt"
       from reviews
@@ -108,6 +109,7 @@ function transformProduct(
     date: r.date,
     title: r.title,
     content: r.content,
+    images: Array.isArray(r.images) ? (r.images as string[]) : [],
     verified: r.verified,
   }));
 
