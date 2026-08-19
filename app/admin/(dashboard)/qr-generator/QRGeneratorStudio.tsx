@@ -51,7 +51,7 @@ const CITIES = [
 
 export default function QRGeneratorStudio() {
   const [city, setCity] = useState("ahmedabad");
-  const [targetType, setTargetType] = useState<"perfumes" | "discovery-set">("perfumes");
+  const targetType = "perfumes" as const;
   const [campaignName, setCampaignName] = useState("Ahmedabad Blinkit Flyer Batch 1");
   const [customUrl, setCustomUrl] = useState("");
   const [bodyType, setBodyType] = useState<"stars" | "squares" | "dots" | "diamonds" | "hearts">("stars");
@@ -281,7 +281,7 @@ export default function QRGeneratorStudio() {
       } else {
         toast({ title: "Failed to save QR campaign", variant: "destructive" });
       }
-    } catch (err) {
+    } catch {
       toast({ title: "Error saving QR campaign", variant: "destructive" });
     } finally {
       setSaving(false);
@@ -385,7 +385,7 @@ export default function QRGeneratorStudio() {
   };
 
   return (
-    <div className="space-y-8 text-white max-w-7xl mx-auto">
+    <div className="admin-page-layout mx-auto max-w-7xl space-y-6 text-white">
       {/* Studio Header */}
       <div className="flex flex-col gap-2 border-b border-white/10 pb-6">
         <div className="flex items-center gap-2 text-amber-400 text-xs font-semibold uppercase tracking-wider">

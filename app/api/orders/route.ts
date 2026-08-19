@@ -15,6 +15,7 @@ import { eq } from "drizzle-orm";
 const fragranceSelectionSchema = z.object({
   id: z.string().min(1).max(255),
   name: z.string().min(1).max(255),
+  image: z.string().max(2048).optional(),
   inspiration: z.string().max(255).optional(),
 });
 

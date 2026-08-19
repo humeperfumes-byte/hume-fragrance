@@ -1,8 +1,7 @@
-import { desc, gte } from "drizzle-orm";
+import { and, desc, gte, lte } from "drizzle-orm";
 import { Bot, ExternalLink, Globe2, Sparkles, TrendingUp } from "lucide-react";
 import { db } from "@/db";
 import { behavioralEvents, cartEvents, checkoutDrafts, orders } from "@/db/schema";
-import { AdminDateWindowControl } from "@/components/admin/AdminDateWindowControl";
 import { Badge } from "@/components/ui/badge";
 import {
   classifyAdminSource,
@@ -17,7 +16,7 @@ import { cn } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 type AdminPageProps = {
-  searchParams?: Promise<{ hours?: string }> | { hours?: string };
+  searchParams?: Promise<{ hours?: string; from?: string; to?: string }> | { hours?: string; from?: string; to?: string };
 };
 
 type CartItem = {
@@ -119,7 +118,7 @@ function pageLabel(path?: string | null) {
 
 export default async function AiVisibilityPage({ searchParams }: AdminPageProps) {
   const params = await searchParams;
-  const timeWindow = parseAdminTimeWindow(params?.hours);
+  const timeWindow = parseAdminTimeWindow(params?.hours, params?.from, params?.to);
 
   const [draftRows, orderRows, cartRows, behaviorRows] = await Promise.all([
     db
@@ -142,7 +141,7 @@ export default async function AiVisibilityPage({ searchParams }: AdminPageProps)
         updatedAt: checkoutDrafts.updatedAt,
       })
       .from(checkoutDrafts)
-      .where(gte(checkoutDrafts.updatedAt, timeWindow.since))
+      .where(and(gte(checkoutDrafts.updatedAt, timeWindow.since), lte(checkoutDrafts.updatedAt, timeWindow.until)))
       .orderBy(desc(checkoutDrafts.updatedAt))
       .limit(3000),
     db
@@ -168,7 +167,7 @@ export default async function AiVisibilityPage({ searchParams }: AdminPageProps)
         createdAt: orders.createdAt,
       })
       .from(orders)
-      .where(gte(orders.createdAt, timeWindow.since))
+      .where(and(gte(orders.createdAt, timeWindow.since), lte(orders.createdAt, timeWindow.until)))
       .orderBy(desc(orders.createdAt))
       .limit(3000),
     db
@@ -182,7 +181,7 @@ export default async function AiVisibilityPage({ searchParams }: AdminPageProps)
         createdAt: cartEvents.createdAt,
       })
       .from(cartEvents)
-      .where(gte(cartEvents.createdAt, timeWindow.since))
+      .where(and(gte(cartEvents.createdAt, timeWindow.since), lte(cartEvents.createdAt, timeWindow.until)))
       .orderBy(desc(cartEvents.createdAt))
       .limit(3000),
     db
@@ -194,7 +193,7 @@ export default async function AiVisibilityPage({ searchParams }: AdminPageProps)
         createdAt: behavioralEvents.createdAt,
       })
       .from(behavioralEvents)
-      .where(gte(behavioralEvents.createdAt, timeWindow.since))
+      .where(and(gte(behavioralEvents.createdAt, timeWindow.since), lte(behavioralEvents.createdAt, timeWindow.until)))
       .orderBy(desc(behavioralEvents.createdAt))
       .limit(3000),
   ]);
@@ -276,7 +275,7 @@ export default async function AiVisibilityPage({ searchParams }: AdminPageProps)
   aiRows.forEach((row) => row.pages.forEach((count, page) => incrementMap(topAiPages, page, count)));
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -293,7 +292,6 @@ export default async function AiVisibilityPage({ searchParams }: AdminPageProps)
             Track how ChatGPT, Perplexity, Gemini, Copilot, Google, Bing, and direct traffic move from checkout intent to paid or WhatsApp orders.
           </p>
         </div>
-        <AdminDateWindowControl />
       </div>
 
       <div className="grid gap-3 md:grid-cols-5">

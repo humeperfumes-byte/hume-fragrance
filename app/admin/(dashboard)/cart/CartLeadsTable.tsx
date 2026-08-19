@@ -141,7 +141,7 @@ function CartLeadDetailSheet({
 
   return (
     <Sheet open={Boolean(row)} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto border-white/10 bg-[#0f0f0f] p-0 text-white sm:max-w-2xl">
+      <SheetContent className="w-full overflow-y-auto border-white/10 bg-[#151517] p-0 text-white shadow-[-28px_0_80px_rgba(0,0,0,.45)] sm:max-w-2xl">
         <div className="space-y-5 p-5 sm:p-6">
           <SheetHeader className="space-y-2 text-left">
             <div className="flex items-start justify-between gap-4 pr-8">
@@ -384,20 +384,20 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
   return (
     <>
       <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-[18px] border border-white/10 bg-[#19191c] p-3 shadow-[inset_0_1px_rgba(255,255,255,.04)]">
         <div className="relative min-w-[240px] flex-1 sm:max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search name, phone, email, coupon, product..."
-            className="h-10 w-full rounded-lg border border-white/10 bg-white/[0.04] pl-10 pr-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/25"
+            className="h-11 w-full rounded-xl border border-white/10 bg-black/20 pl-10 pr-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-[#c5a9ff]/45 focus:bg-black/30"
           />
         </div>
         <select
           value={filter}
           onChange={(event) => setFilter(event.target.value as Filter)}
-          className="h-10 rounded-lg border border-white/10 bg-[#111111] px-3 text-sm font-medium text-white outline-none focus:border-white/25"
+          className="h-11 rounded-xl border border-white/10 bg-black/20 px-3 text-sm font-medium text-white outline-none transition focus:border-[#c5a9ff]/45"
         >
           <option value="all">All cart sessions</option>
           <option value="connected">Connected leads</option>
@@ -409,8 +409,8 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
         <p className="text-xs font-medium text-white/35">{filteredRows.length} leads</p>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-white/10 bg-[#141414]">
-        <div className="hidden grid-cols-[90px_minmax(220px,1fr)_minmax(260px,1.2fr)_minmax(240px,0.9fr)_190px] border-b border-white/10 bg-white/[0.03] px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35 xl:grid">
+      <div className="overflow-hidden rounded-[22px] border border-white/10 bg-[#19191c] shadow-[inset_0_1px_rgba(255,255,255,.04),0_24px_55px_rgba(0,0,0,.16)]">
+        <div className="hidden grid-cols-[110px_minmax(220px,1fr)_minmax(260px,1.2fr)_minmax(240px,0.9fr)_190px] border-b border-white/10 bg-[#222226] px-5 py-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/55 xl:grid">
           <div>Score</div>
           <div>Lead</div>
           <div>Cart Signal</div>
@@ -418,7 +418,7 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
           <div>Actions</div>
         </div>
 
-        <div className="divide-y divide-white/10">
+        <div className="divide-y divide-white/[0.07]">
           {filteredRows.length === 0 ? (
             <div className="p-12 text-center">
               <ShoppingCart className="mx-auto h-8 w-8 text-white/20" />
@@ -439,22 +439,22 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
                       setSelectedRow(row);
                     }
                   }}
-                  className="grid cursor-pointer gap-4 bg-[#111111] p-4 transition-colors hover:bg-[#151515] focus:outline-none focus:ring-1 focus:ring-white/20 xl:grid-cols-[90px_minmax(220px,1fr)_minmax(260px,1.2fr)_minmax(240px,0.9fr)_190px]"
+                  className="group grid cursor-pointer gap-5 border-l-2 border-l-transparent bg-[#171719] p-5 transition-all duration-200 hover:border-l-[#c5a9ff]/60 hover:bg-[#202024] focus:border-l-[#c5a9ff]/60 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-[#c5a9ff]/35 xl:grid-cols-[110px_minmax(220px,1fr)_minmax(260px,1.2fr)_minmax(240px,0.9fr)_190px]"
                 >
                   <div className="flex items-start justify-between gap-3 xl:block">
-                    <div>
+                    <div className="inline-flex min-w-[70px] flex-col rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 shadow-[inset_0_1px_rgba(255,255,255,.04)]">
                       <p className={`text-2xl font-semibold ${scoreClassName(row.potentialScore)}`}>{row.potentialScore}</p>
-                      <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/25">Potential</p>
+                      <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/40">Potential</p>
                     </div>
-                    <span className={`rounded-full border px-2 py-1 text-xs font-semibold xl:mt-3 xl:inline-flex ${stage.className}`}>
+                    <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold xl:mt-3 xl:inline-flex ${stage.className}`}>
                       {stage.label}
                     </span>
                   </div>
 
                   <div className="min-w-0 space-y-2">
                     <div className="flex min-w-0 items-center gap-2">
-                      <User className="h-4 w-4 shrink-0 text-white/30" />
-                      <p className="truncate text-lg font-semibold text-white">{row.name || "Unknown visitor"}</p>
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.05]"><User className="h-3.5 w-3.5 text-white/50" /></span>
+                      <p className="truncate text-base font-semibold text-white transition-colors group-hover:text-[#d9c8ff]">{row.name || "Unknown visitor"}</p>
                     </div>
                     {row.phone ? (
                       <p className="truncate text-sm text-white/45">{displayPhoneNumber(row.phone)}</p>
@@ -463,10 +463,10 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
                     ) : (
                       <p className="truncate text-sm text-white/25">No contact yet</p>
                     )}
-                    <p className="text-xs text-white/35">
+                      <p className="text-xs text-white/45">
                       Active {formatDistanceToNow(new Date(row.latestActivity), { addSuffix: true })}
                     </p>
-                    <p className="text-xs text-white/35">
+                      <p className="text-xs text-white/45">
                       {row.activityCount} active signal{row.activityCount === 1 ? "" : "s"}
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
@@ -496,7 +496,7 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
                           </p>
                         ) : null}
                         <p className="text-xl font-semibold text-white">{formatINR(row.cartSignalValue)}</p>
-                        <p className="text-xs text-white/35">
+                        <p className="text-xs text-white/45">
                           Current value • {row.addToCartCount} add-to-cart, {row.cartOpens} opens
                         </p>
                         {row.rewardBannerClicks > 0 ? (
@@ -529,7 +529,7 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
                       {row.products.slice(0, 3).map((product) => (
                         <span
                           key={product.name}
-                          className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-white/55"
+                          className="rounded-lg border border-white/10 bg-white/[0.045] px-2.5 py-1.5 text-xs text-white/65"
                         >
                           {product.name}{product.quantity > 1 ? ` x${product.quantity}` : ""}
                         </span>
@@ -587,7 +587,7 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
                     <button
                       type="button"
                       onClick={() => setSelectedRow(row)}
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs font-semibold text-white/65 transition-all hover:bg-white/[0.08] hover:text-white active:scale-[0.98]"
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#c5a9ff]/20 bg-[#c5a9ff]/10 px-3 text-xs font-semibold text-[#dacaff] transition-all hover:border-[#c5a9ff]/35 hover:bg-[#c5a9ff]/15 active:scale-[0.98]"
                     >
                       Details
                       <ExternalLink className="h-3 w-3 opacity-60" />

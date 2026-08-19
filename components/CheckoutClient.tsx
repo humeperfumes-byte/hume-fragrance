@@ -39,6 +39,13 @@ import { isRazorpayAllowedHost } from "@/lib/razorpay-domain";
 import { useSiteControls } from "@/hooks/use-site-controls";
 import { displayPhoneNumber, toPhoneDigits, toTenDigitPhone } from "@/lib/phone";
 import { isDiscoverySetCartItem } from "@/lib/discovery-set";
+import {
+  PAYMENT_RECOVERY_MODE_KEY,
+  clearPaymentRecovery,
+  readPaymentRecovery,
+  savePaymentRecovery,
+  type RecoveryPaymentMode,
+} from "@/lib/payment-recovery";
 
 const CHECKOUT_STORAGE_KEY = "hume_checkout_details_v1";
 const CHECKOUT_SESSION_KEY = "hume_checkout_session_id";
@@ -519,6 +526,18 @@ export default function CheckoutClient() {
     useState<WelcomeBackReward | null>(null);
   const [isRazorpayAvailable, setIsRazorpayAvailable] = useState(false);
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+  const [recoveryPaymentMode] = useState<RecoveryPaymentMode>(() => {
+    if (typeof window === "undefined") return "full";
+    return window.localStorage.getItem(PAYMENT_RECOVERY_MODE_KEY) === "partial_cod"
+      ? "partial_cod"
+      : "full";
+  });
+  const [isRecoveryCheckout, setIsRecoveryCheckout] = useState(false);
+
+  useEffect(() => {
+    // Hydrate this client-only recovery flag after mount.
+    setIsRecoveryCheckout(Boolean(readPaymentRecovery(window.localStorage)));
+  }, []);
   const [isStateListOpen, setIsStateListOpen] = useState(false);
   const [isCityListOpen, setIsCityListOpen] = useState(false);
   const [citySearchQuery, setCitySearchQuery] = useState("");
@@ -838,6 +857,7 @@ export default function CheckoutClient() {
         cartSnapshot: items.map((item) => ({
           id: item.id,
           name: item.name,
+          image: item.image,
           inspiration: item.inspiration,
           size: item.size,
           quantity: item.quantity,
@@ -1126,6 +1146,18 @@ export default function CheckoutClient() {
     const previousOrderNumber = window.localStorage.getItem(
       LAST_ORDER_NUMBER_KEY,
     );
+    const recoveryOrder = readPaymentRecovery(window.localStorage);
+
+    if (recoveryOrder) {
+      window.localStorage.setItem(LAST_ORDER_ID_KEY, recoveryOrder.orderId);
+      window.localStorage.setItem(LAST_ORDER_NUMBER_KEY, recoveryOrder.orderNumber);
+      window.localStorage.setItem(LAST_ORDER_SIGNATURE_KEY, signature);
+      return {
+        id: recoveryOrder.orderId,
+        orderNumber: recoveryOrder.orderNumber,
+        signature,
+      };
+    }
 
     if (
       previousSignature === signature &&
@@ -1205,6 +1237,7 @@ export default function CheckoutClient() {
           cartSnapshot: items.map((item) => ({
             id: item.id,
             name: item.name,
+            image: item.image,
             inspiration: item.inspiration,
             size: item.size,
             quantity: item.quantity,
@@ -1345,7 +1378,15 @@ export default function CheckoutClient() {
       const identity = getOrderIdentity();
       const sessionId =
         checkoutSessionIdRef.current ?? getOrCreateCheckoutSessionId();
-      const amount = Math.max(100, Math.round(grandTotal * 100));
+      const isPartialCod = recoveryPaymentMode === "partial_cod";
+      const paymentTotal = isPartialCod
+        ? Math.max(1, Math.round(grandTotal * 0.2))
+        : grandTotal;
+      const codBalance = Math.max(0, grandTotal - paymentTotal);
+      const amount = Math.max(100, Math.round(paymentTotal * 100));
+      const recoveryPaymentMethod = isPartialCod
+        ? "20% Prepaid + 80% Cash on Delivery"
+        : "Razorpay Online Payment";
       const createOrderResponse = await fetch("/api/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1358,6 +1399,9 @@ export default function CheckoutClient() {
             humeOrderNumber: identity.orderNumber,
             checkoutSessionId: sessionId,
             checkoutUrl: getCheckoutUrl(pathname),
+            paymentMode: isPartialCod ? "partial_cod" : "full",
+            prepaidAmount: paymentTotal.toFixed(2),
+            codBalance: codBalance.toFixed(2),
           },
         }),
       });
@@ -1382,7 +1426,7 @@ export default function CheckoutClient() {
 
       await persistOrder({
         checkoutChannel: "razorpay",
-        paymentMethod: "Razorpay Online Payment",
+        paymentMethod: recoveryPaymentMethod,
         status: "payment_pending",
         orderMessage: [
           buildOrderMessage(),
@@ -1391,6 +1435,23 @@ export default function CheckoutClient() {
           `Razorpay Order ID: ${orderData.order_id}`,
           "Payment Status: Awaiting Razorpay confirmation",
         ].join("\n"),
+      });
+      savePaymentRecovery(window.localStorage, {
+        orderId: identity.id,
+        orderNumber: identity.orderNumber,
+        grandTotal,
+        createdAt: new Date().toISOString(),
+        status: "payment_pending",
+        items: items.map((item) => ({
+          id: item.id,
+          name: item.name,
+          inspiration: item.inspiration,
+          size: item.size,
+          image: item.image,
+          price: item.price,
+          quantity: item.quantity,
+          isGift: item.isGift,
+        })),
       });
 
       const razorpay = new window.Razorpay({
@@ -1410,6 +1471,9 @@ export default function CheckoutClient() {
           humeOrderNumber: identity.orderNumber,
           humeOrderId: identity.id,
           checkoutUrl: getCheckoutUrl(pathname),
+          paymentMode: isPartialCod ? "partial_cod" : "full",
+          prepaidAmount: paymentTotal.toFixed(2),
+          codBalance: codBalance.toFixed(2),
         },
         theme: {
           color: "#171717",
@@ -1424,7 +1488,7 @@ export default function CheckoutClient() {
             setIsPaymentProcessing(false);
             toast({
               title: "Payment cancelled",
-              description: "You can retry online payment or use WhatsApp checkout.",
+              description: "Your order is saved. You can complete it with full payment or 20% prepaid + COD.",
             });
           },
         },
@@ -1466,11 +1530,13 @@ export default function CheckoutClient() {
               `Razorpay Order ID: ${response.razorpay_order_id}`,
               `Razorpay Payment ID: ${response.razorpay_payment_id}`,
               "Payment Status: Verified",
-            ].join("\n");
+              isPartialCod ? `Prepaid Amount: ${formatINR(paymentTotal)}` : null,
+              isPartialCod ? `Cash on Delivery Balance: ${formatINR(codBalance)}` : null,
+            ].filter(Boolean).join("\n");
 
             const orderSaved = await persistOrder({
               checkoutChannel: "razorpay",
-              paymentMethod: "Razorpay Online Payment",
+              paymentMethod: recoveryPaymentMethod,
               status: "processing",
               orderMessage: paymentMessage,
             });
@@ -1508,6 +1574,7 @@ export default function CheckoutClient() {
                 : "Payment verified, but the local order record could not be saved.",
             });
             clearCart();
+            clearPaymentRecovery(window.localStorage);
             showNavigationLoadingToast();
             router.push(
               `/order-success?order=${encodeURIComponent(identity.orderNumber)}&channel=razorpay`,
@@ -1682,6 +1749,17 @@ export default function CheckoutClient() {
             Checkout
           </h1>
         </div>
+
+        {isRecoveryCheckout ? (
+          <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 md:mb-6">
+            <strong>{recoveryPaymentMode === "partial_cod" ? "20% prepaid + COD selected" : "Completing your pending order"}</strong>
+            <p className="mt-1 text-xs leading-5 text-amber-900/70">
+              {recoveryPaymentMode === "partial_cod"
+                ? `Razorpay will collect ${formatINR(Math.max(1, Math.round(grandTotal * 0.2)))} now. The remaining ${formatINR(Math.max(0, grandTotal - Math.max(1, Math.round(grandTotal * 0.2))))} will be collected on delivery.`
+                : "Razorpay will collect the complete order amount."}
+            </p>
+          </div>
+        ) : null}
 
         <div className="mx-auto mb-4 max-w-3xl overflow-hidden rounded-2xl border border-border bg-secondary/20 shadow-[0_14px_38px_rgba(0,0,0,0.05)] md:mb-6">
           <div className="relative aspect-[16/7] w-full sm:aspect-[16/6]">

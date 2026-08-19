@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Search, Filter, MessageSquare, Star } from "lucide-react";
+import { Search, Filter, Star } from "lucide-react";
 
 type FeedbackRow = {
   id: string;

@@ -1,9 +1,8 @@
 import { db } from "@/db";
 import { couponCodeEvents, checkoutDrafts, orders, sessionIntelligence } from "@/db/schema";
-import { desc, gte, inArray } from "drizzle-orm";
+import { and, desc, gte, inArray, lte } from "drizzle-orm";
 import { CouponLeadsTable } from "./CouponLeadsTable";
 import { Ticket } from "lucide-react";
-import { AdminDateWindowControl } from "@/components/admin/AdminDateWindowControl";
 import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-data-filters";
 import { parseAdminTimeWindow } from "@/lib/admin-time-window";
 import { parseAdminMarket, isIndiaLeadSignal, isIndiaCheckoutSignal } from "@/lib/admin-market";
@@ -11,7 +10,7 @@ import { parseAdminMarket, isIndiaLeadSignal, isIndiaCheckoutSignal } from "@/li
 export const dynamic = "force-dynamic";
 
 type AdminPageProps = {
-  searchParams?: Promise<{ hours?: string; market?: string }> | { hours?: string; market?: string };
+  searchParams?: Promise<{ hours?: string; market?: string; from?: string; to?: string }> | { hours?: string; market?: string; from?: string; to?: string };
 };
 
 type CouponEventRow = typeof couponCodeEvents.$inferSelect;
@@ -44,7 +43,7 @@ function dedupeCouponLeadEvents(events: CouponEventRow[]) {
 
 export default async function CouponLeadsPage({ searchParams }: AdminPageProps) {
   const params = await searchParams;
-  const timeWindow = parseAdminTimeWindow(params?.hours);
+  const timeWindow = parseAdminTimeWindow(params?.hours, params?.from, params?.to);
   const market = parseAdminMarket(params?.market);
   let events: CouponEventRow[] = [];
   let dbError = false;
@@ -53,7 +52,7 @@ export default async function CouponLeadsPage({ searchParams }: AdminPageProps) 
     events = await db
       .select()
       .from(couponCodeEvents)
-      .where(gte(couponCodeEvents.createdAt, timeWindow.since))
+      .where(and(gte(couponCodeEvents.createdAt, timeWindow.since), lte(couponCodeEvents.createdAt, timeWindow.until)))
       .orderBy(desc(couponCodeEvents.createdAt))
       .limit(500);
     events = filterExcludedAdminRows(events, collectExcludedSessionIds(events));
@@ -70,7 +69,7 @@ export default async function CouponLeadsPage({ searchParams }: AdminPageProps) 
 
   if (dbError) {
     return (
-      <div className="space-y-6 max-w-7xl mx-auto">
+      <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-primary/10">
             <Ticket className="h-6 w-6 text-primary" />
@@ -196,7 +195,7 @@ export default async function CouponLeadsPage({ searchParams }: AdminPageProps) 
   const startedCheckout = enrichedEvents.filter((e) => e.xref.hasCheckout).length;
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div className="flex flex-col gap-2">
         <div className="flex items-center gap-3">
@@ -210,7 +209,6 @@ export default async function CouponLeadsPage({ searchParams }: AdminPageProps) 
         </p>
         <p className="ml-11 text-xs text-white/35">Showing coupon leads from {timeWindow.label.toLowerCase()}.</p>
         </div>
-        <AdminDateWindowControl />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">

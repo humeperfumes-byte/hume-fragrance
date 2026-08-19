@@ -1,8 +1,7 @@
 import { db } from "@/db";
 import { checkoutDrafts, orders, type CheckoutDraft, type Order } from "@/db/schema";
-import { desc, gte } from "drizzle-orm";
+import { and, desc, gte, lte } from "drizzle-orm";
 import { formatINR } from "@/lib/currency";
-import { AdminDateWindowControl } from "@/components/admin/AdminDateWindowControl";
 import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-data-filters";
 import { parseAdminTimeWindow } from "@/lib/admin-time-window";
 import { parseAdminMarket, isIndiaCheckoutSignal } from "@/lib/admin-market";
@@ -13,7 +12,7 @@ export const dynamic = "force-dynamic";
 type CustomerSource = Order | CheckoutDraft;
 
 type AdminPageProps = {
-  searchParams?: Promise<{ hours?: string; market?: string }> | { hours?: string; market?: string };
+  searchParams?: Promise<{ hours?: string; market?: string; from?: string; to?: string }> | { hours?: string; market?: string; from?: string; to?: string };
 };
 
 function getIdentityKeys(row: CustomerSource): string[] {
@@ -109,7 +108,7 @@ function createCustomerFromDraft(key: string, draft: CheckoutDraft): CustomerRec
 
 export default async function CustomersPage({ searchParams }: AdminPageProps) {
   const params = await searchParams;
-  const timeWindow = parseAdminTimeWindow(params?.hours);
+  const timeWindow = parseAdminTimeWindow(params?.hours, params?.from, params?.to);
   let allOrders: Order[] = [];
   let allDrafts: CheckoutDraft[] = [];
   let dbError = false;
@@ -119,13 +118,13 @@ export default async function CustomersPage({ searchParams }: AdminPageProps) {
       db
         .select()
         .from(orders)
-        .where(gte(orders.createdAt, timeWindow.since))
+        .where(and(gte(orders.createdAt, timeWindow.since), lte(orders.createdAt, timeWindow.until)))
         .orderBy(desc(orders.createdAt))
         .limit(1000),
       db
         .select()
         .from(checkoutDrafts)
-        .where(gte(checkoutDrafts.updatedAt, timeWindow.since))
+        .where(and(gte(checkoutDrafts.updatedAt, timeWindow.since), lte(checkoutDrafts.updatedAt, timeWindow.until)))
         .orderBy(desc(checkoutDrafts.updatedAt))
         .limit(1000),
     ]);
@@ -148,7 +147,7 @@ export default async function CustomersPage({ searchParams }: AdminPageProps) {
 
   if (dbError) {
     return (
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
         <div>
           <h1 className="text-2xl font-semibold text-white">Customer CRM</h1>
         </div>
@@ -235,7 +234,7 @@ export default async function CustomersPage({ searchParams }: AdminPageProps) {
   const potentialLeadValue = customers.reduce((sum, customer) => sum + customer.potentialValue, 0);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold text-white">Customer CRM</h1>
@@ -244,7 +243,6 @@ export default async function CustomersPage({ searchParams }: AdminPageProps) {
           </p>
           <p className="mt-1 text-xs text-white/35">Showing customers from {timeWindow.label.toLowerCase()}.</p>
         </div>
-        <AdminDateWindowControl />
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">

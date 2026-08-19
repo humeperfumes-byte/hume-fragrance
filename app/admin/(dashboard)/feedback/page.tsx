@@ -29,7 +29,7 @@ async function getFeedback() {
 }
 
 export default async function AdminFeedbackPage() {
-  let feedbackData: any[] = [];
+  let feedbackData: Awaited<ReturnType<typeof getFeedback>> = [];
   let dbError = false;
 
   try {
@@ -41,7 +41,7 @@ export default async function AdminFeedbackPage() {
 
   if (dbError) {
     return (
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
         <div>
           <h1 className="text-2xl font-semibold text-white">Feedback</h1>
         </div>
@@ -49,7 +49,7 @@ export default async function AdminFeedbackPage() {
           <div className="mx-auto max-w-md space-y-4">
             <h3 className="text-lg font-medium text-amber-300">Database Sync Required</h3>
             <p className="text-sm text-white/50">
-              The feedback table could not be loaded. Please ensure the database schema is synced and you've run db:push.
+              The feedback table could not be loaded. Please ensure the database schema is synced and you&apos;ve run db:push.
             </p>
           </div>
         </div>
@@ -58,7 +58,7 @@ export default async function AdminFeedbackPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <Badge className="mb-3 border-sky-400/20 bg-sky-400/10 text-sky-100 hover:bg-sky-400/10">

@@ -611,7 +611,10 @@ export async function POST(request: NextRequest) {
       paymentRefundStatus,
       currentStatus: existingOrder.status,
     });
-    const nextPaymentMethod =
+    const isPartialCodOrder = existingOrder.paymentMethod?.includes("Cash on Delivery");
+    const nextPaymentMethod = isPartialCodOrder
+      ? existingOrder.paymentMethod
+      :
       event === "payment.failed"
         ? existingOrder.paymentMethod ?? formatPaymentMethod(paymentMethod)
         : paymentMethod

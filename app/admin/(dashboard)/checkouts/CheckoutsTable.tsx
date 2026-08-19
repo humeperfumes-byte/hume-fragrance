@@ -269,7 +269,7 @@ function CheckoutDetailSheet({
 
   return (
     <Sheet open={Boolean(draft)} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto border-white/10 bg-[#0f0f0f] p-0 text-white sm:max-w-2xl">
+      <SheetContent className="w-full overflow-y-auto border-white/10 bg-[#151517] p-0 text-white shadow-[-28px_0_80px_rgba(0,0,0,.45)] sm:max-w-2xl">
         <div className="space-y-5 p-5 sm:p-6">
           <SheetHeader className="space-y-2 text-left">
             <div className="flex items-start justify-between gap-4 pr-8">
@@ -719,7 +719,7 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
 
   if (scoredDrafts.length === 0) {
     return (
-      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-12 text-center">
+      <div className="rounded-[22px] border border-dashed border-white/10 bg-[#19191c] p-12 text-center shadow-[inset_0_1px_rgba(255,255,255,.04)]">
         <div className="mx-auto flex max-w-sm flex-col items-center gap-3">
           <div className="rounded-full border border-white/10 bg-white/[0.04] p-4">
             <ShoppingCart className="h-7 w-7 text-white/35" />
@@ -733,15 +733,15 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
 
   return (
     <>
-      <div className="overflow-hidden rounded-xl border border-white/10 bg-[#141414]">
-      <div className="hidden grid-cols-[90px_minmax(190px,0.8fr)_minmax(220px,1fr)_320px] border-b border-white/10 bg-white/[0.03] px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35 xl:grid">
+      <div className="overflow-hidden rounded-[22px] border border-white/10 bg-[#19191c] shadow-[inset_0_1px_rgba(255,255,255,.04),0_24px_55px_rgba(0,0,0,.16)]">
+      <div className="hidden grid-cols-[110px_minmax(190px,0.8fr)_minmax(220px,1fr)_320px] border-b border-white/10 bg-[#222226] px-5 py-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/55 xl:grid">
         <div>Priority</div>
         <div>Customer</div>
         <div>Cart</div>
         <div>Recovery Workflow</div>
       </div>
 
-      <div className="divide-y divide-white/10">
+      <div className="divide-y divide-white/[0.07]">
         {scoredDrafts.map((draft) => {
           const workflow = getWorkflow(draft);
           const isRecoverable = !!draft.phone;
@@ -762,7 +762,7 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
                   setSelectedDraft(draft);
                 }
               }}
-              className="grid cursor-pointer gap-4 bg-[#111111] p-4 transition-colors hover:bg-[#151515] focus:outline-none focus:ring-1 focus:ring-white/20 xl:grid-cols-[90px_minmax(190px,0.8fr)_minmax(220px,1fr)_320px]"
+              className="group grid cursor-pointer gap-5 border-l-2 border-l-transparent bg-[#171719] p-5 transition-all duration-200 hover:border-l-[#f2d56b]/60 hover:bg-[#202024] focus:border-l-[#f2d56b]/60 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-[#f2d56b]/30 xl:grid-cols-[110px_minmax(190px,0.8fr)_minmax(220px,1fr)_320px]"
             >
               <div className="flex items-start justify-between gap-3 xl:block">
                 <div className="space-y-2">
@@ -774,9 +774,9 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
                       Score {draft.leadScore}
                     </Badge>
                   </div>
-                  <div className="hidden xl:block">
+                  <div className="hidden min-w-[70px] rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 shadow-[inset_0_1px_rgba(255,255,255,.04)] xl:block">
                     <p className="text-2xl font-semibold text-white">{draft.leadScore}</p>
-                    <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/25">Score</p>
+                    <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/40">Score</p>
                   </div>
                   <Badge className={`${getStatusClassName(workflow.leadStatus)} capitalize shadow-none`}>
                     {workflow.leadStatus}
@@ -788,8 +788,8 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
               <div className="min-w-0 space-y-2">
                 <div>
                   <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-white/30" />
-                    <p className="truncate text-lg font-semibold text-white">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.05]"><User className="h-3.5 w-3.5 text-white/50" /></span>
+                    <p className="truncate text-base font-semibold text-white transition-colors group-hover:text-[#d9c8ff]">
                       {draft.fullName || "Unknown guest"}
                     </p>
                   </div>
@@ -810,7 +810,7 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
                   ) : null}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 text-xs text-white/35">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-white/45">
                   <Clock className="h-3.5 w-3.5" />
                   <span>{formatDistanceToNow(new Date(draft.updatedAt), { addSuffix: true })}</span>
                   <span className="text-white/15">/</span>
@@ -830,10 +830,10 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-xl font-semibold text-white">{formatINR(value)}</p>
-                    <p className="mt-1 text-xs text-white/35">{itemCount} item{itemCount === 1 ? "" : "s"} in abandoned cart</p>
+                    <p className="mt-1 text-xs text-white/45">{itemCount} item{itemCount === 1 ? "" : "s"} in abandoned cart</p>
                   </div>
                   <div className="flex flex-col items-end gap-2">
-                    <Badge className="border-white/10 bg-white/[0.04] text-white/45 shadow-none hover:bg-white/[0.04]">
+                    <Badge className="rounded-full border-white/15 bg-white/[0.055] px-2.5 py-1 text-white/65 shadow-none hover:bg-white/[0.07]">
                       {draft.status.replace("_", " ")}
                     </Badge>
                     <button
@@ -842,7 +842,7 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
                         event.stopPropagation();
                         setSelectedDraft(draft);
                       }}
-                      className="rounded-md border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-white/60 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
+                      className="rounded-lg border border-[#c5a9ff]/20 bg-[#c5a9ff]/10 px-2.5 py-1.5 text-[11px] font-semibold text-[#dacaff] transition hover:border-[#c5a9ff]/35 hover:bg-[#c5a9ff]/15"
                     >
                       Details
                     </button>
@@ -854,7 +854,7 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
                     items.slice(0, 3).map((item, index) => (
                       <span
                         key={`${item.id}-${index}`}
-                        className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-white/55"
+                        className="rounded-lg border border-white/10 bg-white/[0.045] px-2.5 py-1.5 text-xs text-white/65"
                       >
                         {item.name}{item.quantity > 1 ? ` x${item.quantity}` : ""}
                       </span>
@@ -873,7 +873,7 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
               </div>
 
               <div
-                className="space-y-2 rounded-lg border border-white/10 bg-black/20 p-2.5"
+                className="space-y-2 rounded-2xl border border-white/10 bg-black/20 p-3 shadow-[inset_0_1px_rgba(255,255,255,.025)]"
                 onClick={(event) => event.stopPropagation()}
                 onKeyDown={(event) => event.stopPropagation()}
               >
@@ -884,7 +884,7 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
                     onChange={(event) =>
                       updateWorkflow(draft, { leadStatus: event.target.value as LeadStatus })
                     }
-                    className="h-9 rounded-md border border-white/10 bg-[#101010] px-3 text-xs font-medium capitalize text-white outline-none focus:border-white/30"
+                    className="h-10 rounded-xl border border-white/10 bg-[#111113] px-3 text-xs font-medium capitalize text-white outline-none transition focus:border-[#c5a9ff]/40"
                   >
                     {leadStatusOptions.map((status) => (
                       <option key={status} value={status}>
@@ -901,7 +901,7 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
                       onChange={(event) =>
                         updateWorkflow(draft, { overrideTotal: event.target.value })
                       }
-                      className="h-9 w-full rounded-md border border-white/10 bg-[#101010] px-3 text-xs text-white outline-none focus:border-white/30"
+                      className="h-10 w-full rounded-xl border border-white/10 bg-[#111113] px-3 text-xs text-white outline-none transition focus:border-[#c5a9ff]/40"
                     />
                   </div>
 
@@ -913,12 +913,12 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
                       onChange={(event) =>
                         updateWorkflow(draft, { nextFollowUpAt: event.target.value })
                       }
-                      className="h-9 w-full rounded-md border border-white/10 bg-[#101010] pl-9 pr-3 text-xs text-white outline-none focus:border-white/30"
+                      className="h-10 w-full rounded-xl border border-white/10 bg-[#111113] pl-9 pr-3 text-xs text-white outline-none transition focus:border-[#c5a9ff]/40"
                     />
                   </div>
                 </div>
 
-                <details className="group rounded-md border border-white/10 bg-[#101010]">
+                <details className="group rounded-xl border border-white/10 bg-[#111113]">
                   <summary className="flex h-9 cursor-pointer list-none items-center justify-between px-3 text-xs font-medium text-white/55 transition-colors hover:text-white">
                     <span>{workflow.leadNotes ? "Edit notes" : "Add notes"}</span>
                     <span className="text-white/25 transition-transform group-open:rotate-180">v</span>

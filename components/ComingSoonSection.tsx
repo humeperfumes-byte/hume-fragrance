@@ -77,7 +77,7 @@ export default function ComingSoonSection({
       <div className="container-luxury">
         <div className="mb-8 flex items-center justify-between">
           <h2 className="font-serif text-4xl font-light italic md:text-5xl">
-            Coming Soon
+            New Launch&apos;s
           </h2>
           <Link
             href="/shop"

@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { CheckCircle2, Copy, ExternalLink, MessageCircle, Package, Trash2, Truck } from "lucide-react";
+import { CheckCircle2, Copy, ExternalLink, MessageCircle, Package, Trash2, Truck, WalletCards } from "lucide-react";
 import { buildPublicTrackingUrl } from "@/lib/tracking-url";
 import { displayPhoneNumber } from "@/lib/phone";
 import { toast } from "@/hooks/use-toast";
@@ -63,6 +63,23 @@ function getOrderPriceBreakdown(order: Order) {
     grandTotal,
     discount,
   };
+}
+
+function isPartialCodOrder(order: Pick<Order, "paymentMethod">) {
+  return Boolean(order.paymentMethod?.includes("Prepaid") && order.paymentMethod.includes("Cash on Delivery"));
+}
+
+function getPartialCodBreakdown(order: Pick<Order, "paymentMethod" | "grandTotal" | "status">) {
+  if (!isPartialCodOrder(order)) return null;
+  const total = toOrderMoney(order.grandTotal);
+  const savedPercent = Number(order.paymentMethod?.match(/(\d+)%\s*Prepaid/i)?.[1] ?? 20);
+  const prepaidPercent = Number.isFinite(savedPercent) ? savedPercent : 20;
+  const codPercent = Math.max(0, 100 - prepaidPercent);
+  const prepaid = Math.max(0, Math.round(total * (prepaidPercent / 100)));
+  const codBalance = Math.max(0, total - prepaid);
+  const advanceReceived = ["processing", "shipped", "delivered", "complete", "payment_authorized"].includes(order.status);
+  const codCollected = ["delivered", "complete"].includes(order.status);
+  return { total, prepaid, codBalance, prepaidPercent, codPercent, advanceReceived, codCollected };
 }
 
 function getSavedCheckoutPricingLines(message: string | null) {
@@ -220,47 +237,56 @@ export function OrdersTable({
 
   // Status badge coloring
   const getStatusBadge = (status: string) => {
+    const badgeBase = "rounded-full border px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] shadow-none";
     switch (status) {
       case "delivered":
       case "complete":
-        return <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Delivered</Badge>;
+        return <Badge className={`${badgeBase} border-emerald-400/25 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/15`}>Delivered</Badge>;
       case "shipped":
-        return <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Shipped</Badge>;
+        return <Badge className={`${badgeBase} border-sky-400/25 bg-sky-400/10 text-sky-200 hover:bg-sky-400/15`}>Shipped</Badge>;
       case "processing":
-        return <Badge className="bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Confirmed</Badge>;
+        return <Badge className={`${badgeBase} border-[#c5a9ff]/25 bg-[#c5a9ff]/10 text-[#d9c8ff] hover:bg-[#c5a9ff]/15`}>Confirmed</Badge>;
       case "payment_pending":
-        return <Badge className="bg-sky-500/10 text-sky-600 hover:bg-sky-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Payment Pending</Badge>;
+        return <Badge className={`${badgeBase} border-amber-400/25 bg-amber-400/10 text-amber-200 hover:bg-amber-400/15`}>Payment Pending</Badge>;
       case "payment_authorized":
-        return <Badge className="bg-violet-500/10 text-violet-600 hover:bg-violet-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Payment Authorized</Badge>;
+        return <Badge className={`${badgeBase} border-violet-400/25 bg-violet-400/10 text-violet-200 hover:bg-violet-400/15`}>Payment Authorized</Badge>;
       case "payment_failed":
-        return <Badge className="bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Payment Failed</Badge>;
+        return <Badge className={`${badgeBase} border-rose-400/25 bg-rose-400/10 text-rose-200 hover:bg-rose-400/15`}>Payment Failed</Badge>;
       case "refund_initiated":
-        return <Badge className="bg-cyan-500/10 text-cyan-600 hover:bg-cyan-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Refund Started</Badge>;
+        return <Badge className={`${badgeBase} border-cyan-400/25 bg-cyan-400/10 text-cyan-200 hover:bg-cyan-400/15`}>Refund Started</Badge>;
       case "partially_refunded":
-        return <Badge className="bg-teal-500/10 text-teal-600 hover:bg-teal-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Part Refund</Badge>;
+        return <Badge className={`${badgeBase} border-teal-400/25 bg-teal-400/10 text-teal-200 hover:bg-teal-400/15`}>Part Refund</Badge>;
       case "refunded":
-        return <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Refunded</Badge>;
+        return <Badge className={`${badgeBase} border-emerald-400/25 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/15`}>Refunded</Badge>;
       case "refund_failed":
-        return <Badge className="bg-red-500/10 text-red-600 hover:bg-red-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Refund Failed</Badge>;
+        return <Badge className={`${badgeBase} border-red-400/25 bg-red-400/10 text-red-200 hover:bg-red-400/15`}>Refund Failed</Badge>;
       case "payment_disputed":
-        return <Badge className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Disputed</Badge>;
+        return <Badge className={`${badgeBase} border-orange-400/25 bg-orange-400/10 text-orange-200 hover:bg-orange-400/15`}>Disputed</Badge>;
       case "dispute_action_required":
-        return <Badge className="bg-red-500/10 text-red-600 hover:bg-red-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Action Required</Badge>;
+        return <Badge className={`${badgeBase} border-red-400/25 bg-red-400/10 text-red-200 hover:bg-red-400/15`}>Action Required</Badge>;
       case "dispute_under_review":
-        return <Badge className="bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Under Review</Badge>;
+        return <Badge className={`${badgeBase} border-yellow-400/25 bg-yellow-400/10 text-yellow-200 hover:bg-yellow-400/15`}>Under Review</Badge>;
       case "dispute_won":
-        return <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Dispute Won</Badge>;
+        return <Badge className={`${badgeBase} border-emerald-400/25 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/15`}>Dispute Won</Badge>;
       case "dispute_lost":
-        return <Badge className="bg-red-500/10 text-red-600 hover:bg-red-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Dispute Lost</Badge>;
+        return <Badge className={`${badgeBase} border-red-400/25 bg-red-400/10 text-red-200 hover:bg-red-400/15`}>Dispute Lost</Badge>;
       case "dispute_closed":
-        return <Badge className="bg-slate-500/10 text-slate-400 hover:bg-slate-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Dispute Closed</Badge>;
+        return <Badge className={`${badgeBase} border-slate-400/20 bg-slate-400/10 text-slate-300 hover:bg-slate-400/15`}>Dispute Closed</Badge>;
       case "cancelled":
-        return <Badge className="bg-red-500/10 text-red-600 hover:bg-red-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Cancelled</Badge>;
+        return <Badge className={`${badgeBase} border-red-400/25 bg-red-400/10 text-red-200 hover:bg-red-400/15`}>Cancelled</Badge>;
       case "whatsapp_initiated":
-        return <Badge className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-none font-bold uppercase tracking-tighter text-[10px]">Pending WhatsApp</Badge>;
+        return <Badge className={`${badgeBase} border-amber-400/25 bg-amber-400/10 text-amber-200 hover:bg-amber-400/15`}>Pending WhatsApp</Badge>;
       default:
-        return <Badge variant="secondary" className="capitalize border-none text-[10px]">{status.replace("_", " ")}</Badge>;
+        return <Badge variant="secondary" className={`${badgeBase} border-white/15 bg-white/[0.06] capitalize text-white/65`}>{status.replace("_", " ")}</Badge>;
     }
+  };
+
+  const getOrderStatusBadge = (order: Order) => {
+    const partialCod = getPartialCodBreakdown(order);
+    if (partialCod && partialCod.advanceReceived && !partialCod.codCollected) {
+      return <Badge className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-emerald-200 shadow-none hover:bg-emerald-400/15">{partialCod.prepaidPercent}% Paid + COD</Badge>;
+    }
+    return getStatusBadge(order.status);
   };
 
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
@@ -408,7 +434,7 @@ export function OrdersTable({
     const fulfillmentCarrier = String(editForm.fulfillmentCarrier || "shiprocket").trim();
     const trackingUrl = buildPublicTrackingUrl(trackingNumber, window.location.origin);
 
-    const payload: Record<string, any> = {
+    const payload: Record<string, unknown> = {
       fulfillmentCarrier,
       trackingNumber,
       trackingUrl,
@@ -512,48 +538,68 @@ export function OrdersTable({
   // Calculate earnings stats
   const paidStatuses = new Set(["processing", "shipped", "delivered", "complete", "payment_authorized"]);
   const paidOrders = initialOrders.filter((o) => paidStatuses.has(o.status));
-  const totalEarnings = paidOrders.reduce((sum, o) => sum + Number(o.grandTotal || 0), 0);
+  const totalEarnings = paidOrders.reduce((sum, order) => {
+    const partialCod = getPartialCodBreakdown(order);
+    if (!partialCod) return sum + Number(order.grandTotal || 0);
+    return sum + (partialCod.codCollected ? partialCod.total : partialCod.prepaid);
+  }, 0);
   const totalCount = paidOrders.length;
   const aov = totalCount > 0 ? totalEarnings / totalCount : 0;
 
   // Pending checkout count
   const pendingOrders = initialOrders.filter((o) => ["whatsapp_initiated", "payment_pending"].includes(o.status));
   const pendingCount = pendingOrders.length;
+  const partialCodOrders = initialOrders.filter((order) => isPartialCodOrder(order));
+  const outstandingCod = partialCodOrders.reduce((sum, order) => {
+    const breakdown = getPartialCodBreakdown(order);
+    return sum + (breakdown && breakdown.advanceReceived && !breakdown.codCollected ? breakdown.codBalance : 0);
+  }, 0);
 
   return (
     <div className="space-y-6">
       {/* Top Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         {/* Total Earnings */}
-        <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 sm:p-5 shadow-lg backdrop-blur-md">
+        <div className="relative overflow-hidden rounded-[20px] border border-[#b9f6ce]/15 bg-[#19191c] p-4 shadow-[inset_0_1px_rgba(255,255,255,.04)] sm:p-5">
+          <div className="absolute -right-5 -top-8 h-24 w-24 rounded-full bg-emerald-400/10 blur-2xl" />
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Total Earnings</p>
           <p className="mt-2 text-xl sm:text-2xl font-semibold text-white">{formatINR(totalEarnings)}</p>
           <p className="mt-1 text-xs text-emerald-400 font-medium">From {totalCount} paid orders</p>
         </div>
 
+        <div className="relative overflow-hidden rounded-[20px] border border-emerald-400/15 bg-[#19191c] p-4 shadow-[inset_0_1px_rgba(255,255,255,.04)] sm:p-5">
+          <div className="absolute -right-5 -top-8 h-24 w-24 rounded-full bg-emerald-400/10 blur-2xl" />
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-200/45">Partial COD</p>
+          <p className="mt-2 text-xl font-semibold text-white sm:text-2xl">{partialCodOrders.length}</p>
+          <p className="mt-1 text-xs font-medium text-amber-300/90">{formatINR(outstandingCod)} COD outstanding</p>
+        </div>
+
         {/* Paid Orders */}
-        <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 sm:p-5 shadow-lg backdrop-blur-md">
+        <div className="relative overflow-hidden rounded-[20px] border border-[#c5a9ff]/15 bg-[#19191c] p-4 shadow-[inset_0_1px_rgba(255,255,255,.04)] sm:p-5">
+          <div className="absolute -right-5 -top-8 h-24 w-24 rounded-full bg-[#c5a9ff]/10 blur-2xl" />
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Paid Orders</p>
           <p className="mt-2 text-xl sm:text-2xl font-semibold text-white">{totalCount}</p>
           <p className="mt-1 text-xs text-white/35">Successfully processed</p>
         </div>
 
         {/* Average Order Value */}
-        <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 sm:p-5 shadow-lg backdrop-blur-md">
+        <div className="relative overflow-hidden rounded-[20px] border border-[#70d6ff]/15 bg-[#19191c] p-4 shadow-[inset_0_1px_rgba(255,255,255,.04)] sm:p-5">
+          <div className="absolute -right-5 -top-8 h-24 w-24 rounded-full bg-sky-400/10 blur-2xl" />
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Avg. Order Value</p>
           <p className="mt-2 text-xl sm:text-2xl font-semibold text-white">{formatINR(aov)}</p>
           <p className="mt-1 text-xs text-white/35">Average basket size</p>
         </div>
 
         {/* Pending Checkout */}
-        <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 sm:p-5 shadow-lg backdrop-blur-md">
+        <div className="relative overflow-hidden rounded-[20px] border border-[#f2d56b]/15 bg-[#19191c] p-4 shadow-[inset_0_1px_rgba(255,255,255,.04)] sm:p-5">
+          <div className="absolute -right-5 -top-8 h-24 w-24 rounded-full bg-amber-400/10 blur-2xl" />
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Pending Checkout</p>
           <p className="mt-2 text-xl sm:text-2xl font-semibold text-white">{pendingCount}</p>
           <p className="mt-1 text-xs text-amber-400/90 font-medium">Abandoned/Initiated intents</p>
         </div>
       </div>
 
-      <div className="rounded-3xl border border-white/5 bg-white/[0.02] shadow-2xl backdrop-blur-md overflow-hidden">
+      <div className="overflow-hidden rounded-[22px] border border-white/10 bg-[#19191c] shadow-[inset_0_1px_rgba(255,255,255,.04),0_24px_55px_rgba(0,0,0,.16)]">
       {isSelectionMode ? (
         <div className="flex flex-col gap-3 border-b border-white/10 bg-white/[0.04] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>
@@ -584,27 +630,28 @@ export function OrdersTable({
       ) : null}
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader className="bg-white/[0.03]">
+          <TableHeader className="bg-[#222226]">
             <TableRow className="border-white/5 hover:bg-transparent">
               {isSelectionMode ? (
                 <TableHead className="w-12 px-6 py-5">
                   <span className="sr-only">Selected</span>
                 </TableHead>
               ) : null}
-              <TableHead className="w-[120px] font-bold text-[10px] uppercase tracking-[0.2em] text-white/30 py-5 px-6">Order ID</TableHead>
-              <TableHead className="font-bold text-[10px] uppercase tracking-[0.2em] text-white/30 py-5">Date</TableHead>
-              <TableHead className="font-bold text-[10px] uppercase tracking-[0.2em] text-white/30 py-5">Customer</TableHead>
-              <TableHead className="font-bold text-[10px] uppercase tracking-[0.2em] text-white/30 py-5">Site</TableHead>
-              <TableHead className="font-bold text-[10px] uppercase tracking-[0.2em] text-white/30 py-5">Items</TableHead>
-              <TableHead className="font-bold text-[10px] uppercase tracking-[0.2em] text-white/30 py-5">Tracking</TableHead>
-              <TableHead className="text-right font-bold text-[10px] uppercase tracking-[0.2em] text-white/30 py-5 px-6">Total</TableHead>
-              <TableHead className="text-center font-bold text-[10px] uppercase tracking-[0.2em] text-white/30 py-5 px-6">Status</TableHead>
+              <TableHead className="w-[120px] px-6 py-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Order ID</TableHead>
+              <TableHead className="py-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Date</TableHead>
+              <TableHead className="py-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Customer</TableHead>
+              <TableHead className="py-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Site</TableHead>
+              <TableHead className="py-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Items</TableHead>
+              <TableHead className="py-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Tracking</TableHead>
+              <TableHead className="px-6 py-5 text-right text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Total</TableHead>
+              <TableHead className="py-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Payment</TableHead>
+              <TableHead className="px-6 py-5 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {initialOrders.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={isSelectionMode ? 9 : 8} className="h-[400px] text-center">
+                <TableCell colSpan={isSelectionMode ? 10 : 9} className="h-[400px] text-center">
                   <div className="flex flex-col items-center justify-center space-y-3">
                     <div className="rounded-full bg-white/[0.03] p-6 border border-white/5 shadow-2xl">
                       <Package className="h-8 w-8 text-white/20" />
@@ -620,12 +667,13 @@ export function OrdersTable({
               initialOrders.map((order) => {
                 const totalItems = order.cartSnapshot?.reduce((acc: number, item: { quantity: number }) => acc + item.quantity, 0) || 0;
                 const isSelected = selectedOrderIds.includes(order.id);
+                const partialCod = getPartialCodBreakdown(order);
                 
                 return (
                   <TableRow 
                     key={order.id} 
-                    className={`cursor-pointer transition-all duration-300 border-white/5 group ${
-                      isSelected ? "bg-emerald-400/[0.08] hover:bg-emerald-400/[0.1]" : "hover:bg-white/[0.02]"
+                    className={`cursor-pointer border-white/[0.07] transition-all duration-200 group ${
+                      isSelected ? "bg-emerald-400/[0.08] hover:bg-emerald-400/[0.1]" : "bg-[#171719] hover:bg-[#202024]"
                     }`}
                     onPointerDown={(event) => {
                       if (event.button !== 0 || isSelectionMode) return;
@@ -655,22 +703,22 @@ export function OrdersTable({
                         </span>
                       </TableCell>
                     ) : null}
-                    <TableCell className="px-6 py-5 font-mono text-[10px] text-white/40 font-bold tracking-widest">{order.orderNumber}</TableCell>
-                    <TableCell className="text-[12px] text-white/40 font-medium italic">
+                    <TableCell className="border-l-2 border-l-transparent px-6 py-6 transition-colors group-hover:border-l-[#c5a9ff]/60"><span className="inline-flex rounded-lg border border-white/10 bg-black/20 px-2.5 py-1.5 font-mono text-[10px] font-bold tracking-wider text-white/65">{order.orderNumber}</span></TableCell>
+                    <TableCell className="text-[12px] font-medium text-white/55">
                       {format(new Date(order.createdAt), "MMM d, h:mm a")}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-lg text-white group-hover:text-primary transition-colors">{order.fullName || "Guest"}</span>
-                        <span className="text-[11px] text-white/30 font-medium tracking-tight">{displayPhoneNumber(order.phone) || order.email || "No contact"}</span>
+                        <span className="text-base font-semibold text-white transition-colors group-hover:text-[#d9c8ff]">{order.fullName || "Guest"}</span>
+                        <span className="text-[11px] font-medium tracking-tight text-white/45">{displayPhoneNumber(order.phone) || order.email || "No contact"}</span>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge className="border-white/10 bg-white/[0.04] text-white/55 shadow-none hover:bg-white/[0.04]">
+                      <Badge className="rounded-full border-white/15 bg-white/[0.055] px-2.5 py-1 text-white/70 shadow-none hover:bg-white/[0.07]">
                         {getOrderHost(order)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-[12px] text-white/40 font-medium">{totalItems} items</TableCell>
+                    <TableCell className="text-[12px] font-medium text-white/60">{totalItems} items</TableCell>
                     <TableCell>
                       {order.trackingNumber ? (
                         <span className="inline-flex items-center gap-1 rounded-full border border-blue-400/20 bg-blue-400/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-blue-200">
@@ -678,14 +726,24 @@ export function OrdersTable({
                           {order.trackingNumber}
                         </span>
                       ) : (
-                        <span className="text-[11px] text-white/25">Not added</span>
+                        <span className="text-[11px] text-white/40">Not added</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right text-lg text-white px-6">
+                    <TableCell className="px-6 text-right text-lg font-semibold tracking-tight text-white">
                       {formatINR(Number(order.grandTotal))}
                     </TableCell>
+                    <TableCell>
+                      {partialCod ? (
+                        <div className="min-w-[125px] text-[10px] leading-5">
+                          <p className={partialCod.advanceReceived ? "font-semibold text-emerald-300" : "font-semibold text-amber-300"}>{partialCod.advanceReceived ? `${formatINR(partialCod.prepaid)} received` : `${formatINR(partialCod.prepaid)} pending`}</p>
+                          <p className="text-white/35">{formatINR(partialCod.codBalance)} on delivery</p>
+                        </div>
+                      ) : (
+                        <span className="text-[11px] font-medium text-white/50">{order.paymentMethod || "Not selected"}</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-center px-6">
-                      {getStatusBadge(order.status)}
+                      {getOrderStatusBadge(order)}
                     </TableCell>
                   </TableRow>
                 );
@@ -702,7 +760,7 @@ export function OrdersTable({
           setReplacementSelections({});
         }
       }}>
-        <SheetContent className="sm:max-w-md w-full overflow-y-auto bg-[#0a0a0a] border-l border-white/5 text-white font-sans">
+        <SheetContent className="w-full overflow-y-auto border-l border-white/10 bg-[#151517] text-white shadow-[-28px_0_80px_rgba(0,0,0,.45)] sm:max-w-md">
           {selectedOrder && (
             <>
               <SheetHeader className="mb-8 mt-4">
@@ -725,8 +783,26 @@ export function OrdersTable({
               <div className="space-y-8">
                 <div className="flex items-center justify-between border-b border-white/5 pb-6">
                   <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Current Status</div>
-                  {getStatusBadge(selectedOrder.status)}
+                  {getOrderStatusBadge(selectedOrder)}
                 </div>
+
+                {(() => {
+                  const partialCod = getPartialCodBreakdown(selectedOrder);
+                  if (!partialCod) return null;
+                  return (
+                    <div className="rounded-3xl border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(16,185,129,.10),rgba(245,158,11,.05))] p-5">
+                      <div className="flex items-center justify-between gap-3">
+                        <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-200/55">{partialCod.prepaidPercent}% Prepaid + {partialCod.codPercent}% COD</p><p className="mt-1 text-xs text-white/40">{partialCod.advanceReceived ? "Advance payment confirmed" : "Advance payment is still pending"}</p></div>
+                        <WalletCards className="h-5 w-5 text-emerald-300" />
+                      </div>
+                      <div className="mt-4 grid grid-cols-3 gap-2">
+                        <div className="rounded-xl bg-black/20 p-3"><p className="text-[9px] uppercase tracking-wider text-white/30">Order total</p><p className="mt-1 text-sm font-semibold text-white">{formatINR(partialCod.total)}</p></div>
+                        <div className="rounded-xl bg-black/20 p-3"><p className="text-[9px] uppercase tracking-wider text-white/30">{partialCod.prepaidPercent}% prepaid</p><p className={`mt-1 text-sm font-semibold ${partialCod.advanceReceived ? "text-emerald-300" : "text-amber-300"}`}>{formatINR(partialCod.prepaid)}</p></div>
+                        <div className="rounded-xl bg-black/20 p-3"><p className="text-[9px] uppercase tracking-wider text-white/30">COD balance</p><p className="mt-1 text-sm font-semibold text-amber-200">{partialCod.codCollected ? "Collected" : formatINR(partialCod.codBalance)}</p></div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div className="space-y-3 rounded-2xl border border-white/5 bg-white/[0.02] p-4 sm:rounded-3xl sm:p-6">
                   <h4 className="font-bold text-[10px] uppercase tracking-[0.2em] text-white/30">Checkout Origin</h4>

@@ -18,7 +18,7 @@ export default async function BlogsPage() {
 
   if (dbError) {
     return (
-      <div className="space-y-6 max-w-7xl mx-auto">
+      <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
         <div>
           <h1 className="text-2xl">Editorial Content</h1>
         </div>
@@ -35,7 +35,7 @@ export default async function BlogsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
       <div>
         <h1 className="text-2xl">Editorial Content</h1>
         <p className="text-muted-foreground mt-1 text-sm">

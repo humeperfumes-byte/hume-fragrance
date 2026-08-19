@@ -1,6 +1,5 @@
 import { format, formatDistanceToNow } from "date-fns";
-import { desc, gte } from "drizzle-orm";
-import { AdminDateWindowControl } from "@/components/admin/AdminDateWindowControl";
+import { and, desc, gte, lte } from "drizzle-orm";
 import { db } from "@/db";
 import {
   checkoutDrafts,
@@ -22,7 +21,7 @@ import { parseAdminTimeWindow } from "@/lib/admin-time-window";
 export const dynamic = "force-dynamic";
 
 type AdminPageProps = {
-  searchParams?: Promise<{ hours?: string }> | { hours?: string };
+  searchParams?: Promise<{ hours?: string; from?: string; to?: string }> | { hours?: string; from?: string; to?: string };
 };
 
 type CustomerSource = Order | CheckoutDraft;
@@ -175,7 +174,7 @@ export default async function LoginActivityPage({
   searchParams,
 }: AdminPageProps) {
   const params = await searchParams;
-  const timeWindow = parseAdminTimeWindow(params?.hours);
+  const timeWindow = parseAdminTimeWindow(params?.hours, params?.from, params?.to);
 
   let rows: LoginStatusRow[] = [];
   let recentSessions: CustomerAccountSession[] = [];
@@ -188,13 +187,13 @@ export default async function LoginActivityPage({
       db
         .select()
         .from(orders)
-        .where(gte(orders.createdAt, timeWindow.since))
+        .where(and(gte(orders.createdAt, timeWindow.since), lte(orders.createdAt, timeWindow.until)))
         .orderBy(desc(orders.createdAt))
         .limit(1200),
       db
         .select()
         .from(checkoutDrafts)
-        .where(gte(checkoutDrafts.updatedAt, timeWindow.since))
+        .where(and(gte(checkoutDrafts.updatedAt, timeWindow.since), lte(checkoutDrafts.updatedAt, timeWindow.until)))
         .orderBy(desc(checkoutDrafts.updatedAt))
         .limit(1200),
       db
@@ -218,7 +217,7 @@ export default async function LoginActivityPage({
     );
 
     recentSessions = filteredSessions.filter(
-      (session) => session.lastUsedAt >= timeWindow.since,
+      (session) => session.lastUsedAt >= timeWindow.since && session.lastUsedAt <= timeWindow.until,
     );
 
     const customerMap = new Map<string, Omit<LoginStatusRow, "loginStatus" | "loginCount" | "lastLoginAt" | "firstLoginAt" | "latestSession">>();
@@ -348,7 +347,7 @@ export default async function LoginActivityPage({
 
   if (dbError) {
     return (
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
         <div>
           <h1 className="text-2xl font-semibold text-white">Login Activity</h1>
         </div>
@@ -377,7 +376,7 @@ export default async function LoginActivityPage({
   ).length;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold text-white">Login Activity</h1>
@@ -390,7 +389,6 @@ export default async function LoginActivityPage({
             {timeWindow.label.toLowerCase()}.
           </p>
         </div>
-        <AdminDateWindowControl />
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">

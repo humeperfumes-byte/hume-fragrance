@@ -16,6 +16,18 @@ export interface CouponData {
 
 export const coupons: CouponData[] = [
   {
+    id: "buy-3-get-1",
+    code: "BUY3GET1",
+    title: "Buy 3 Get 1 Free",
+    description: "B3G1 - Add any four perfumes and get the lowest-priced one free",
+    type: "B3G1",
+    value: 0,
+    minSubtotal: 0,
+    active: true,
+    displayInCart: true,
+    welcomeBackMode: "disable",
+  },
+  {
     id: "cash5",
     code: "CASH5",
     title: "You save ₹26.20",

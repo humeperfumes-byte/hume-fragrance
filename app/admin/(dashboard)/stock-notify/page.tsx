@@ -16,7 +16,7 @@ export default async function StockNotifyPage() {
   const requests = await listStockNotifyRequests(200);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <Badge className="mb-3 border-emerald-400/20 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/10">

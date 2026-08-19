@@ -9,12 +9,17 @@ const WelcomeBackRewardBanner = dynamic(
   () => import("@/components/WelcomeBackRewardBanner"),
   { ssr: false },
 );
+const PaymentRecoveryPrompt = dynamic(
+  () => import("@/components/PaymentRecoveryPrompt"),
+  { ssr: false },
+);
 
 export default function ClientGlobalOverlays() {
   return (
     <>
       <EarlyBirdPopup />
       <WelcomeBackRewardBanner />
+      <PaymentRecoveryPrompt />
     </>
   );
 }

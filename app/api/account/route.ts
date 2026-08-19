@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { desc, eq, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { checkoutDrafts, orders } from "@/db/schema";
+import { checkoutDrafts, orders, products } from "@/db/schema";
 import {
   accountDraftWhere,
   accountOrderWhere,
@@ -27,6 +27,10 @@ function getTrackingHref(order: {
   trackingUrl: string | null;
 }) {
   return buildPublicTrackingPath(order.trackingNumber) || order.trackingUrl || null;
+}
+
+function productNameKey(value: string | null | undefined) {
+  return String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
 export async function POST(request: NextRequest) {
@@ -55,7 +59,7 @@ export async function POST(request: NextRequest) {
         ? accountOrderWhere(identity)
         : eq(orders.sessionId, sessionId as string);
 
-    const [latestDraft, accountOrders] = await Promise.all([
+    const [latestDraft, accountOrders, productImages] = await Promise.all([
       db
         .select()
         .from(checkoutDrafts)
@@ -68,7 +72,13 @@ export async function POST(request: NextRequest) {
         .where(orderWhere)
         .orderBy(desc(orders.createdAt))
         .limit(50),
+      db
+        .select({ id: products.id, name: products.name, images: products.images })
+        .from(products),
     ]);
+
+    const imageById = new Map(productImages.map((product) => [product.id, product.images[0]]));
+    const imageByName = new Map(productImages.map((product) => [productNameKey(product.name), product.images[0]]));
 
     const newestOrder = accountOrders[0];
     const profileSource = newestOrder || latestDraft[0] || null;
@@ -105,7 +115,14 @@ export async function POST(request: NextRequest) {
         shippingFee: toNumber(order.shippingFee),
         grandTotal: toNumber(order.grandTotal),
         appliedCouponCode: order.appliedCouponCode,
-        cartSnapshot: order.cartSnapshot,
+        cartSnapshot: order.cartSnapshot.map((item) => ({
+          ...item,
+          image:
+            item.image ||
+            imageById.get(item.id) ||
+            imageByName.get(productNameKey(item.name)) ||
+            "/images/logo.png",
+        })),
         giftItems: order.giftItems,
         createdAt: order.createdAt.toISOString(),
         updatedAt: order.updatedAt.toISOString(),

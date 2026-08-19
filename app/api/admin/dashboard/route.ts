@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { desc, gte } from "drizzle-orm";
+import { and, desc, gte, lte } from "drizzle-orm";
 import { db } from "@/db";
 import { cartEvents, checkoutDrafts, consentEvents, orders } from "@/db/schema";
 import { requireAdminToken } from "@/lib/admin-auth";
@@ -11,6 +11,7 @@ import {
   parseAdminMarket,
 } from "@/lib/admin-market";
 import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-data-filters";
+import { parseAdminTimeWindow } from "@/lib/admin-time-window";
 
 type TimelineRow = {
   sessionId: string;
@@ -64,6 +65,10 @@ type OrderRow = {
   orderNumber: string;
   sessionId: string;
   status: string;
+  paymentMethod: string | null;
+  trackingNumber: string | null;
+  shippedAt: Date | null;
+  deliveredAt: Date | null;
   acquisitionSource: string | null;
   acquisitionCategory: string | null;
   fullName: string | null;
@@ -88,6 +93,31 @@ type OrderRow = {
 function money(value: unknown): number {
   const parsed = Number.parseFloat(String(value ?? "0") || "0");
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function isPartialCodOrder(order: OrderRow): boolean {
+  return Boolean(order.paymentMethod?.includes("Prepaid") && order.paymentMethod.includes("Cash on Delivery"));
+}
+
+function isRevenueQualifiedOrder(order: OrderRow): boolean {
+  if (["cancelled", "payment_pending", "payment_failed", "refunded", "partially_refunded"].includes(order.status)) return false;
+  const hasFulfillmentProof = Boolean(
+    order.trackingNumber || order.shippedAt || order.deliveredAt || ["shipped", "delivered"].includes(order.status),
+  );
+  const hasCapturedPayment = order.status === "processing" && Boolean(order.paymentMethod);
+  const isCompleted = order.status === "complete";
+  return hasFulfillmentProof || hasCapturedPayment || isCompleted;
+}
+
+function recognizedRevenue(order: OrderRow): number {
+  const total = money(order.grandTotal);
+  if (!isPartialCodOrder(order)) return total;
+  const codCollected = Boolean(order.deliveredAt || order.status === "delivered" || order.status === "complete");
+  const fulfillmentStarted = Boolean(order.trackingNumber || order.shippedAt || order.status === "shipped");
+  if (codCollected || fulfillmentStarted) return total;
+  const savedPercent = Number(order.paymentMethod?.match(/(\d+)%\s*Prepaid/i)?.[1] ?? 20);
+  const prepaidPercent = Number.isFinite(savedPercent) ? savedPercent : 20;
+  return Math.round(total * (prepaidPercent / 100));
 }
 
 function percent(numerator: number, denominator: number): number {
@@ -133,9 +163,9 @@ function parseUserAgent(ua: string | null) {
   return { browser, os };
 }
 
-function getTimelineChartData(pageViews: TimelineRow[], hours: number) {
+function getTimelineChartData(pageViews: TimelineRow[], hours: number, until: Date) {
   const dataMap = new Map<string, { views: number; visitSessions: Set<string> }>();
-  const now = new Date();
+  const now = until;
 
   if (hours <= 72) {
     for (let i = hours - 1; i >= 0; i--) {
@@ -179,15 +209,90 @@ function getTimelineChartData(pageViews: TimelineRow[], hours: number) {
   }));
 }
 
+function getRevenueTimelineData(orderRows: OrderRow[], since: Date, hours: number, until: Date) {
+  const bucketCount = 12;
+  const endTime = until.getTime();
+  const startTime = since.getTime();
+  const bucketSize = Math.max(1, (endTime - startTime) / bucketCount);
+  const buckets = Array.from({ length: bucketCount }, (_, index) => {
+    const bucketDate = new Date(startTime + index * bucketSize);
+    const label = hours <= 72
+      ? bucketDate.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
+      : bucketDate.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    return { label, revenue: 0, orders: 0 };
+  });
+
+  orderRows.forEach((order) => {
+    const position = Math.floor((order.createdAt.getTime() - startTime) / bucketSize);
+    const index = Math.min(bucketCount - 1, Math.max(0, position));
+    buckets[index].revenue += recognizedRevenue(order);
+    buckets[index].orders += 1;
+  });
+
+  return buckets;
+}
+
+function getProductSalesTimelineData(orderRows: OrderRow[], since: Date, hours: number, until: Date) {
+  const bucketCount = 12;
+  const endTime = until.getTime();
+  const startTime = since.getTime();
+  const bucketSize = Math.max(1, (endTime - startTime) / bucketCount);
+  const labels = Array.from({ length: bucketCount }, (_, index) => {
+    const bucketDate = new Date(startTime + index * bucketSize);
+    return hours <= 72
+      ? bucketDate.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
+      : bucketDate.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  });
+  const products = new Map<string, {
+    productId: string;
+    name: string;
+    totalUnits: number;
+    totalRevenue: number;
+    points: Array<{ label: string; units: number; revenue: number }>;
+  }>();
+
+  orderRows.forEach((order) => {
+    const position = Math.floor((order.createdAt.getTime() - startTime) / bucketSize);
+    const index = Math.min(bucketCount - 1, Math.max(0, position));
+    const total = money(order.grandTotal);
+    const recognizedRatio = total > 0 ? recognizedRevenue(order) / total : 0;
+    order.cartSnapshot?.forEach((item) => {
+      if (item.isGift) return;
+      const current = products.get(item.id) ?? {
+        productId: item.id,
+        name: item.name,
+        totalUnits: 0,
+        totalRevenue: 0,
+        points: labels.map((label) => ({ label, units: 0, revenue: 0 })),
+      };
+      current.totalUnits += item.quantity;
+      current.totalRevenue += item.price * item.quantity * recognizedRatio;
+      current.points[index].units += item.quantity;
+      current.points[index].revenue += item.price * item.quantity * recognizedRatio;
+      products.set(item.id, current);
+    });
+  });
+
+  return Array.from(products.values())
+    .sort((a, b) => b.totalUnits - a.totalUnits || b.totalRevenue - a.totalRevenue)
+    .slice(0, 12);
+}
+
 export async function GET(request: NextRequest) {
   const unauthorized = requireAdminToken(request);
   if (unauthorized) return unauthorized;
 
   try {
     const { searchParams } = new URL(request.url);
-    const hours = Math.min(24 * 90, Math.max(1, Number(searchParams.get("hours") || "720")));
+    const timeWindow = parseAdminTimeWindow(
+      searchParams.get("hours") || "720",
+      searchParams.get("from"),
+      searchParams.get("to"),
+    );
+    const hours = Math.min(24 * 3650, timeWindow.hours);
     const market = parseAdminMarket(searchParams.get("market"));
-    const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+    const since = timeWindow.since;
+    const until = timeWindow.until;
 
     const [timelineRows, cartRows, draftRows, orderRows] = await Promise.all([
       db
@@ -201,7 +306,7 @@ export async function GET(request: NextRequest) {
           data: consentEvents.data,
         })
         .from(consentEvents)
-        .where(gte(consentEvents.createdAt, since))
+        .where(and(gte(consentEvents.createdAt, since), lte(consentEvents.createdAt, until)))
         .orderBy(desc(consentEvents.createdAt))
         .limit(10000) as Promise<TimelineRow[]>,
       db
@@ -216,7 +321,7 @@ export async function GET(request: NextRequest) {
           createdAt: cartEvents.createdAt,
         })
         .from(cartEvents)
-        .where(gte(cartEvents.createdAt, since))
+        .where(and(gte(cartEvents.createdAt, since), lte(cartEvents.createdAt, until)))
         .orderBy(desc(cartEvents.createdAt))
         .limit(10000) as Promise<CartRow[]>,
       db
@@ -240,7 +345,7 @@ export async function GET(request: NextRequest) {
           whatsappInitiatedAt: checkoutDrafts.whatsappInitiatedAt,
         })
         .from(checkoutDrafts)
-        .where(gte(checkoutDrafts.updatedAt, since))
+        .where(and(gte(checkoutDrafts.updatedAt, since), lte(checkoutDrafts.updatedAt, until)))
         .orderBy(desc(checkoutDrafts.updatedAt))
         .limit(5000) as Promise<DraftRow[]>,
       db
@@ -249,6 +354,10 @@ export async function GET(request: NextRequest) {
           orderNumber: orders.orderNumber,
           sessionId: orders.sessionId,
           status: orders.status,
+          paymentMethod: orders.paymentMethod,
+          trackingNumber: orders.trackingNumber,
+          shippedAt: orders.shippedAt,
+          deliveredAt: orders.deliveredAt,
           acquisitionSource: orders.acquisitionSource,
           acquisitionCategory: orders.acquisitionCategory,
           fullName: orders.fullName,
@@ -264,7 +373,7 @@ export async function GET(request: NextRequest) {
           createdAt: orders.createdAt,
         })
         .from(orders)
-        .where(gte(orders.createdAt, since))
+        .where(and(gte(orders.createdAt, since), lte(orders.createdAt, until)))
         .orderBy(desc(orders.createdAt))
         .limit(5000) as Promise<OrderRow[]>,
     ]);
@@ -418,7 +527,7 @@ export async function GET(request: NextRequest) {
       (row) => row.eventType === "remove_from_cart",
     ).length;
 
-    const completedOrders = scopedOrderRows.filter((row) => row.status !== "cancelled");
+    const completedOrders = scopedOrderRows.filter(isRevenueQualifiedOrder);
     const deliveredOrders = scopedOrderRows.filter((row) => row.status === "delivered");
     const openOrders = scopedOrderRows.filter((row) =>
       [
@@ -435,9 +544,19 @@ export async function GET(request: NextRequest) {
       ].includes(row.status),
     );
     const cancelledOrders = scopedOrderRows.filter((row) => row.status === "cancelled");
-    const revenue = completedOrders.reduce((sum, row) => sum + money(row.grandTotal), 0);
+    const revenue = completedOrders.reduce((sum, row) => sum + recognizedRevenue(row), 0);
     const deliveredRevenue = deliveredOrders.reduce((sum, row) => sum + money(row.grandTotal), 0);
     const averageOrderValue = completedOrders.length ? revenue / completedOrders.length : 0;
+    const revenueTimeline = getRevenueTimelineData(completedOrders, since, hours, until);
+    const productSalesTimeline = getProductSalesTimelineData(completedOrders, since, hours, until);
+    const revenueByDate = Array.from(completedOrders.reduce((map, order) => {
+      const date = order.createdAt.toISOString().slice(0, 10);
+      const current = map.get(date) ?? { date, revenue: 0, orders: 0 };
+      current.revenue += recognizedRevenue(order);
+      current.orders += 1;
+      map.set(date, current);
+      return map;
+    }, new Map<string, { date: string; revenue: number; orders: number }>()).values());
 
     const activeDrafts = scopedDraftRows.filter((row) => row.status !== "started");
     const whatsappInitiatedDrafts = scopedDraftRows.filter(
@@ -516,7 +635,7 @@ export async function GET(request: NextRequest) {
       os: sortAndSlice(osMap),
     };
 
-    const timelineChart = getTimelineChartData(pageViews, hours);
+    const timelineChart = getTimelineChartData(pageViews, hours, until);
 
     const sourceMap = new Map<
       string,
@@ -598,7 +717,7 @@ export async function GET(request: NextRequest) {
         row.acquisitionCategory || source?.category || "unknown",
       );
       entry.orders += 1;
-      entry.revenue += money(row.grandTotal);
+      entry.revenue += recognizedRevenue(row);
     });
 
     const sourceRoi = Array.from(sourceMap.values())
@@ -645,11 +764,13 @@ export async function GET(request: NextRequest) {
     });
 
     completedOrders.forEach((order) => {
+      const total = money(order.grandTotal);
+      const recognizedRatio = total > 0 ? recognizedRevenue(order) / total : 0;
       order.cartSnapshot?.forEach((item) => {
         if (item.isGift) return;
         const demand = getProductDemand(item.id, item.name);
         demand.orderedUnits += item.quantity;
-        demand.orderRevenue += item.price * item.quantity;
+        demand.orderRevenue += item.price * item.quantity * recognizedRatio;
       });
     });
 
@@ -688,7 +809,7 @@ export async function GET(request: NextRequest) {
       const existing = customerMap.get(key);
       if (existing) {
         existing.orders += 1;
-        existing.revenue += money(order.grandTotal);
+        existing.revenue += recognizedRevenue(order);
         if (order.createdAt > existing.lastOrderAt) existing.lastOrderAt = order.createdAt;
         return;
       }
@@ -697,7 +818,7 @@ export async function GET(request: NextRequest) {
         phone: order.phone,
         email: order.email,
         orders: 1,
-        revenue: money(order.grandTotal),
+        revenue: recognizedRevenue(order),
         lastOrderAt: order.createdAt,
       });
     });
@@ -737,6 +858,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       windowHours: hours,
+      windowStart: since.toISOString(),
+      windowEnd: until.toISOString(),
       market,
       overview: {
         uniqueViewers: uniqueViewerSessions.size,
@@ -762,6 +885,9 @@ export async function GET(request: NextRequest) {
       },
       conversionFunnel,
       timelineChart,
+      revenueTimeline,
+      revenueByDate,
+      productSalesTimeline,
       breakdowns,
       sourceRoi,
       productDemand,

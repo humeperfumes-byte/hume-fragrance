@@ -72,6 +72,16 @@ interface RegisteredQRCampaign {
   createdAt: string;
 }
 
+interface CampaignDetails extends RegisteredQRCampaign {
+  metrics?: CampaignTotals;
+  funnelStages?: FunnelStage[];
+}
+
+interface CampaignEvent {
+  eventType: string;
+  createdAt: string;
+}
+
 const CITIES = [
   { slug: "all", name: "All Cities" },
   { slug: "ahmedabad", name: "Ahmedabad" },
@@ -83,8 +93,6 @@ const CITIES = [
   { slug: "jaipur", name: "Jaipur" },
 ];
 
-const BASE_PRODUCTION_DOMAIN = "https://www.humefragrance.com";
-
 export default function FlyerAnalyticsView() {
   const [selectedCity, setSelectedCity] = useState("all");
   const [selectedCampaignId, setSelectedCampaignId] = useState("all");
@@ -95,15 +103,13 @@ export default function FlyerAnalyticsView() {
   
   // Registered QR Campaigns State
   const [registeredCampaigns, setRegisteredCampaigns] = useState<RegisteredQRCampaign[]>([]);
-  const [selectedCampaign, setSelectedCampaign] = useState<any | null>(null);
-  const [campaignEvents, setCampaignEvents] = useState<any[]>([]);
+  const [selectedCampaign, setSelectedCampaign] = useState<CampaignDetails | null>(null);
+  const [campaignEvents, setCampaignEvents] = useState<CampaignEvent[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
   // Link Copy Helper State
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const [copiedModalUrl, setCopiedModalUrl] = useState(false);
-
-  const activeCitySlug = selectedCity === "all" ? "ahmedabad" : selectedCity;
 
   const fetchAnalytics = async (city: string, campaignId: string = "all") => {
     setLoading(true);
@@ -234,7 +240,7 @@ export default function FlyerAnalyticsView() {
   };
 
   return (
-    <div className="space-y-8 text-white">
+    <div className="admin-page-layout mx-auto max-w-7xl space-y-6 text-white">
       {/* Top Header & City Filter */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b border-white/10 pb-6">
         <div>
@@ -709,7 +715,7 @@ export default function FlyerAnalyticsView() {
                     </div>
 
                     <div className="space-y-2">
-                      {selectedCampaign.funnelStages.map((stage: any, idx: number) => (
+                      {selectedCampaign.funnelStages.map((stage, idx) => (
                         <div key={idx} className="space-y-1">
                           <div className="flex justify-between text-[11px]">
                             <span className="text-stone-300 font-medium">{stage.stage}</span>

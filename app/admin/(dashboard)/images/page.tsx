@@ -41,7 +41,7 @@ export default async function AdminImagesPage() {
 
   if (dbError) {
     return (
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
         <div>
           <h1 className="text-2xl text-white">Image Library</h1>
           <p className="mt-1 text-sm text-white/45">Reusable customer update and offer images.</p>

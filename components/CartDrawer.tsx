@@ -29,6 +29,7 @@ import {
   getEffectiveWelcomeBackCode,
   getEffectiveWelcomeBackLabel,
   getEffectiveWelcomeBackPercent,
+  getBuyGetEligibleItemCount,
   isCouponEligible as isCartCouponEligible,
   parseBuyGetConfig,
   trackWelcomeBackVisit,
@@ -219,10 +220,7 @@ const CartDrawer = () => {
   const isEmptyCart = items.length === 0;
 
   const subtotal = totalPrice;
-  const paidItemCount = items.reduce(
-    (sum, item) => sum + (item.isGift ? 0 : item.quantity),
-    0,
-  );
+  const paidItemCount = getBuyGetEligibleItemCount(items);
   const appliedCoupon = useMemo(
     () =>
       allCoupons.find(
@@ -377,6 +375,21 @@ const CartDrawer = () => {
     if (!storedCode) return;
     setAppliedCouponCode(storedCode);
     setCouponInput(storedCode);
+  }, []);
+
+  useEffect(() => {
+    const handleCouponRequest = (event: Event) => {
+      const code = (event as CustomEvent<{ code?: string }>).detail?.code
+        ?.trim()
+        .toUpperCase();
+      if (!code) return;
+      setAppliedCouponCode(code);
+      setCouponInput(code);
+      setExpandedCouponCode(null);
+    };
+
+    window.addEventListener("hume:apply-coupon", handleCouponRequest);
+    return () => window.removeEventListener("hume:apply-coupon", handleCouponRequest);
   }, []);
 
   useEffect(() => {

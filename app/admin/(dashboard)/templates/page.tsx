@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 export default function TemplatesPage() {
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
       <div>
         <p className="text-xs font-medium text-white/45">Copy Desk</p>
         <h1 className="mt-2 text-2xl font-semibold text-white">Template Messages</h1>

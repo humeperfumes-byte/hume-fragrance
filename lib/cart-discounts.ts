@@ -12,6 +12,7 @@ export type CartDiscountItem = {
   price: number;
   quantity: number;
   isGift?: boolean;
+  size?: string;
 };
 
 export type BuyGetConfig = {
@@ -76,6 +77,17 @@ export function getPaidItemCount(items: CartDiscountItem[]) {
   );
 }
 
+export function getBuyGetEligibleItemCount(items: CartDiscountItem[]) {
+  return items.reduce(
+    (sum, item) =>
+      sum +
+      (!item.isGift && item.size?.replace(/\s+/g, "").toLowerCase() === "50ml"
+        ? item.quantity
+        : 0),
+    0,
+  );
+}
+
 export function isCouponEligible(
   coupon: CouponLike,
   items: CartDiscountItem[],
@@ -83,7 +95,7 @@ export function isCouponEligible(
 ) {
   if (subtotal < coupon.minSubtotal) return false;
   const buyGet = parseBuyGetConfig(coupon);
-  if (buyGet && getPaidItemCount(items) < buyGet.buy + buyGet.get) return false;
+  if (buyGet && getBuyGetEligibleItemCount(items) < buyGet.buy + buyGet.get) return false;
   return true;
 }
 
@@ -135,7 +147,7 @@ export function calculateCouponDiscount(
     };
   }
 
-  const paidItemCount = getPaidItemCount(items);
+  const paidItemCount = getBuyGetEligibleItemCount(items);
   const eligiblePaidUnits = buyGetConfig.buy + buyGetConfig.get;
   const buyGetEligible = paidItemCount >= eligiblePaidUnits;
   const freeUnitTargetCount = buyGetEligible
@@ -153,7 +165,11 @@ export function calculateCouponDiscount(
   }
 
   const sortedUnits = items
-    .filter((item) => !item.isGift)
+    .filter(
+      (item) =>
+        !item.isGift &&
+        item.size?.replace(/\s+/g, "").toLowerCase() === "50ml",
+    )
     .flatMap((item) =>
       Array.from({ length: item.quantity }, () => ({
         itemId: item.id,

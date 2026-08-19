@@ -15,7 +15,35 @@ export const ADMIN_TIME_WINDOW_OPTIONS: AdminTimeWindowOption[] = [
   { label: "Last 90 Days", hours: 2160 },
 ];
 
-export function parseAdminTimeWindow(value: string | string[] | null | undefined) {
+function parseCustomDate(value: string | string[] | null | undefined): Date | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (!raw) return null;
+  const date = new Date(raw);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatRangeDate(value: Date): string {
+  return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" }).format(value);
+}
+
+export function parseAdminTimeWindow(
+  value: string | string[] | null | undefined,
+  from?: string | string[] | null,
+  to?: string | string[] | null,
+) {
+  const customFrom = parseCustomDate(from);
+  const customTo = parseCustomDate(to);
+  if (customFrom && customTo && customFrom.getTime() <= customTo.getTime()) {
+    const hours = Math.max(1, Math.ceil((customTo.getTime() - customFrom.getTime()) / (60 * 60 * 1000)));
+    return {
+      hours,
+      label: `${formatRangeDate(customFrom)} – ${formatRangeDate(customTo)}`,
+      since: customFrom,
+      until: customTo,
+      isCustom: true,
+    };
+  }
+
   const raw = Array.isArray(value) ? value[0] : value;
   const parsed = Number(raw || "24");
   const hours = ADMIN_TIME_WINDOW_OPTIONS.some((option) => option.hours === parsed)
@@ -27,5 +55,7 @@ export function parseAdminTimeWindow(value: string | string[] | null | undefined
     hours,
     label: option.label,
     since: new Date(Date.now() - hours * 60 * 60 * 1000),
+    until: new Date(),
+    isCustom: false,
   };
 }

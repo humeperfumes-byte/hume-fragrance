@@ -1,10 +1,9 @@
 import { db } from "@/db";
 import { cartEvents, checkoutDrafts, couponCodeEvents, orders, sessionIntelligence } from "@/db/schema";
-import { desc, gte } from "drizzle-orm";
+import { and, desc, gte, lte } from "drizzle-orm";
 import { ShoppingCart } from "lucide-react";
 import { CartLeadsTable, type CartLeadRow } from "./CartLeadsTable";
 import { formatINR } from "@/lib/currency";
-import { AdminDateWindowControl } from "@/components/admin/AdminDateWindowControl";
 import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-data-filters";
 import { parseAdminTimeWindow } from "@/lib/admin-time-window";
 import { getCapturedDomainInfo } from "@/lib/captured-domain";
@@ -53,7 +52,7 @@ function productKey(value: string | null | undefined): string {
 }
 
 type AdminPageProps = {
-  searchParams?: Promise<{ hours?: string; market?: string }> | { hours?: string; market?: string };
+  searchParams?: Promise<{ hours?: string; market?: string; from?: string; to?: string }> | { hours?: string; market?: string; from?: string; to?: string };
 };
 
 type RewardSignal = {
@@ -266,7 +265,7 @@ function mergeCartLeadRows(rows: CartLeadRow[]): CartLeadRow[] {
 
 export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
   const params = await searchParams;
-  const timeWindow = parseAdminTimeWindow(params?.hours);
+  const timeWindow = parseAdminTimeWindow(params?.hours, params?.from, params?.to);
   let rows: CartLeadRow[] = [];
   let dbError = false;
 
@@ -288,7 +287,7 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
         createdAt: cartEvents.createdAt,
       })
       .from(cartEvents)
-      .where(gte(cartEvents.createdAt, timeWindow.since))
+      .where(and(gte(cartEvents.createdAt, timeWindow.since), lte(cartEvents.createdAt, timeWindow.until)))
       .orderBy(desc(cartEvents.createdAt))
       .limit(1500);
 
@@ -304,7 +303,7 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
           createdAt: couponCodeEvents.createdAt,
         })
         .from(couponCodeEvents)
-        .where(gte(couponCodeEvents.createdAt, timeWindow.since))
+        .where(and(gte(couponCodeEvents.createdAt, timeWindow.since), lte(couponCodeEvents.createdAt, timeWindow.until)))
         .orderBy(desc(couponCodeEvents.createdAt))
         .limit(1000),
       db
@@ -325,7 +324,7 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
           updatedAt: checkoutDrafts.updatedAt,
         })
         .from(checkoutDrafts)
-        .where(gte(checkoutDrafts.updatedAt, timeWindow.since))
+        .where(and(gte(checkoutDrafts.updatedAt, timeWindow.since), lte(checkoutDrafts.updatedAt, timeWindow.until)))
         .orderBy(desc(checkoutDrafts.updatedAt))
         .limit(1000),
       db
@@ -342,7 +341,7 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
           createdAt: orders.createdAt,
         })
         .from(orders)
-        .where(gte(orders.createdAt, timeWindow.since))
+        .where(and(gte(orders.createdAt, timeWindow.since), lte(orders.createdAt, timeWindow.until)))
         .orderBy(desc(orders.createdAt))
         .limit(1000),
       db
@@ -354,7 +353,7 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
           lastActiveAt: sessionIntelligence.lastActiveAt,
         })
         .from(sessionIntelligence)
-        .where(gte(sessionIntelligence.updatedAt, timeWindow.since))
+        .where(and(gte(sessionIntelligence.updatedAt, timeWindow.since), lte(sessionIntelligence.updatedAt, timeWindow.until)))
         .orderBy(desc(sessionIntelligence.updatedAt))
         .limit(1000),
     ]);
@@ -689,7 +688,7 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
 
   if (dbError) {
     return (
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
         <div>
           <h1 className="text-2xl font-semibold text-white">Cart Leads</h1>
         </div>
@@ -709,31 +708,41 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
   const totalCartValue = rows.reduce((sum, row) => sum + row.cartSignalValue, 0);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5">
-      <div className="flex items-start gap-3">
-        <div className="rounded-lg border border-white/10 bg-white/[0.04] p-2">
+    <div className="admin-page-layout mx-auto max-w-7xl space-y-5">
+      <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
+        <div className="flex items-center gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#c5a9ff]/25 bg-[#c5a9ff]/10 shadow-[inset_0_1px_rgba(255,255,255,.08)]">
           <ShoppingCart className="h-5 w-5 text-white/65" />
         </div>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold text-white">Cart Leads</h1>
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#c9b0ff]/65">Live buyer intent</p>
+          <h1 className="mt-1 text-2xl font-semibold text-white">Cart Activity</h1>
+          <p className="mt-1 text-sm text-white/45">See high-intent baskets, connected shoppers, and recovery signals.</p>
         </div>
-        <AdminDateWindowControl />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+        <div className="relative overflow-hidden rounded-[20px] border border-white/10 bg-[#19191c] p-4 shadow-[inset_0_1px_rgba(255,255,255,.04)] sm:p-5">
+          <div className="absolute -right-5 -top-8 h-24 w-24 rounded-full bg-[#c5a9ff]/10 blur-2xl" />
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">Potential Cart Leads</p>
           <p className="mt-2 text-2xl font-semibold text-white">{rows.length}</p>
+          <p className="mt-1 text-xs text-white/30">Active buyer journeys</p>
         </div>
-        <div className="rounded-lg border border-emerald-500/15 bg-emerald-500/[0.04] p-4">
+        <div className="relative overflow-hidden rounded-[20px] border border-emerald-400/15 bg-[#19191c] p-4 shadow-[inset_0_1px_rgba(255,255,255,.04)] sm:p-5">
+          <div className="absolute -right-5 -top-8 h-24 w-24 rounded-full bg-emerald-400/10 blur-2xl" />
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-200/45">Connected Leads</p>
           <p className="mt-2 text-2xl font-semibold text-emerald-200">{connectedLeads}</p>
+          <p className="mt-1 text-xs text-white/30">Contact or checkout captured</p>
         </div>
-        <div className="rounded-lg border border-blue-500/15 bg-blue-500/[0.04] p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-200/45">Coupon Connected</p>
-          <p className="mt-2 text-2xl font-semibold text-blue-200">{couponConnected}</p>
+        <div className="relative overflow-hidden rounded-[20px] border border-[#c5a9ff]/15 bg-[#19191c] p-4 shadow-[inset_0_1px_rgba(255,255,255,.04)] sm:p-5">
+          <div className="absolute -right-5 -top-8 h-24 w-24 rounded-full bg-[#c5a9ff]/10 blur-2xl" />
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#d5c1ff]/55">Coupon Connected</p>
+          <p className="mt-2 text-2xl font-semibold text-[#d5c1ff]">{couponConnected}</p>
+          <p className="mt-1 text-xs text-white/30">Offer-linked shoppers</p>
         </div>
-        <div className="rounded-lg border border-amber-500/15 bg-amber-500/[0.04] p-4">
+        <div className="relative overflow-hidden rounded-[20px] border border-[#f2d56b]/15 bg-[#19191c] p-4 shadow-[inset_0_1px_rgba(255,255,255,.04)] sm:p-5">
+          <div className="absolute -right-5 -top-8 h-24 w-24 rounded-full bg-[#f2d56b]/10 blur-2xl" />
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200/45">Cart Signal Value</p>
           <p className="mt-2 text-2xl font-semibold text-amber-200">{formatINR(totalCartValue)}</p>
           <p className="mt-1 text-xs text-white/30">{checkoutStarted} started checkout</p>

@@ -14,7 +14,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Bell, Handshake, ImageIcon, LayoutDashboard, ShoppingBag, ShoppingCart, Package, FileText, LogOut, Truck, Sparkles, QrCode } from "lucide-react";
+import { Bell, Handshake, ImageIcon, LayoutDashboard, ShoppingBag, ShoppingCart, Package, FileText, LogOut, Truck, Sparkles, QrCode, Warehouse } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
@@ -28,11 +28,23 @@ const navItems = [
   { title: "Invoice Engine", url: "/bill", icon: FileText },
   { title: "Tracking", url: "/admin/tracking", icon: Truck },
   { title: "Stock Requests", url: "/admin/stock-notify", icon: Bell },
+  { title: "Stock", url: "/admin/stock", icon: Warehouse },
   { title: "Checkouts", url: "/admin/checkouts", icon: ShoppingCart },
   { title: "Catalog", url: "/admin/products", icon: Package },
   { title: "Content", url: "/admin/blogs", icon: FileText },
   { title: "Images", url: "/admin/images", icon: ImageIcon },
   { title: "Partnerships", url: "/admin/partnerships", icon: Handshake },
+];
+
+const navGroups = [
+  {
+    label: "Main",
+    items: navItems.filter((item) => !["Stock", "Stock Requests"].includes(item.title)),
+  },
+  {
+    label: "Inventory",
+    items: navItems.filter((item) => ["Stock", "Stock Requests"].includes(item.title)),
+  },
 ];
 
 export function AppSidebar() {
@@ -54,11 +66,12 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent className="px-3">
-        <SidebarGroup>
-          <SidebarGroupLabel className="mb-3 px-3 text-xs font-medium text-white/35">Main</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="gap-1.5">
-              {navItems.map((item) => (
+        {navGroups.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel className="mb-3 px-3 text-xs font-medium text-white/35">{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-1.5">
+                {group.items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
                     asChild 
@@ -71,10 +84,11 @@ export function AppSidebar() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
       <SidebarFooter className="border-t border-white/10 p-3">
         <SidebarMenu>

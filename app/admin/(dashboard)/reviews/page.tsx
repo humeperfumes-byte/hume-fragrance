@@ -52,7 +52,7 @@ export default async function AdminReviewsPage() {
 
   if (dbError) {
     return (
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
         <div>
           <h1 className="text-2xl font-semibold text-white">Reviews</h1>
         </div>
@@ -69,7 +69,7 @@ export default async function AdminReviewsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <Badge className="mb-3 border-sky-400/20 bg-sky-400/10 text-sky-100 hover:bg-sky-400/10">

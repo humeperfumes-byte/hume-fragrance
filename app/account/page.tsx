@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 export default function AccountPage() {
   return (
-    <main className="min-h-screen bg-[#f7f7f8] text-[#171717]">
+    <main className="min-h-screen bg-[#f4efe8] text-[#211713]">
       <Header />
       <AccountClient />
       <Footer />

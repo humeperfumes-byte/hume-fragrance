@@ -197,7 +197,7 @@ export default function AdminImagesClient({ initialImages }: AdminImagesClientPr
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="flex items-center gap-3">

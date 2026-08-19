@@ -106,7 +106,7 @@ export default function DataExportPage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
+    <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-primary/10">

@@ -221,6 +221,7 @@ export const checkoutDrafts = pgTable("checkout_drafts", {
       Array<{
         id: string;
         name: string;
+        image?: string;
         inspiration?: string;
         size?: string;
           quantity: number;
@@ -295,6 +296,7 @@ export const orders = pgTable("orders", {
       Array<{
         id: string;
         name: string;
+        image?: string;
         inspiration?: string;
         size?: string;
           quantity: number;
