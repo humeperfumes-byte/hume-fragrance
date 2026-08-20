@@ -15,6 +15,12 @@ const imageColumns = {
   tags: images.tags,
   mimeType: images.mimeType,
   sizeBytes: images.sizeBytes,
+  provider: images.provider,
+  providerAssetId: images.providerAssetId,
+  providerPublicId: images.providerPublicId,
+  width: images.width,
+  height: images.height,
+  format: images.format,
   createdAt: images.createdAt,
   updatedAt: images.updatedAt,
 };
@@ -42,7 +48,7 @@ export default async function AdminImagesPage() {
   if (dbError) {
     return (
       <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
-        <div>
+        <div className="admin-page-intro-copy">
           <h1 className="text-2xl text-white">Image Library</h1>
           <p className="mt-1 text-sm text-white/45">Reusable customer update and offer images.</p>
         </div>

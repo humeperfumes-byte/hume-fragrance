@@ -689,7 +689,7 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
   if (dbError) {
     return (
       <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
-        <div>
+        <div className="admin-page-intro-copy">
           <h1 className="text-2xl font-semibold text-white">Cart Leads</h1>
         </div>
         <div className="rounded-xl border border-dashed border-amber-500/30 bg-amber-500/[0.04] p-12 text-center">
@@ -709,7 +709,7 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
 
   return (
     <div className="admin-page-layout mx-auto max-w-7xl space-y-5">
-      <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
+      <div className="admin-page-intro-copy flex flex-col justify-between gap-5 md:flex-row md:items-center">
         <div className="flex items-center gap-4">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#c5a9ff]/25 bg-[#c5a9ff]/10 shadow-[inset_0_1px_rgba(255,255,255,.08)]">
           <ShoppingCart className="h-5 w-5 text-white/65" />

@@ -394,11 +394,14 @@
     margin-bottom: 0.5rem;
   }
   .admin-shell .admin-page-layout > div:first-child {
-    border: 1px solid rgb(255 255 255 / 0.09);
-    border-radius: 1.375rem;
-    background: radial-gradient(circle at 88% -30%, rgb(201 179 255 / 0.11), transparent 38%), #171719;
-    padding: 1.25rem;
-    box-shadow: inset 0 1px rgb(255 255 255 / 0.04), 0 18px 55px rgb(0 0 0 / 0.14);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+    box-shadow: none;
+  }
+  .admin-shell .admin-page-intro-copy {
+    display: none !important;
   }
   .admin-shell .admin-page-layout > .grid > div {
     border-radius: 1.125rem;
@@ -413,8 +416,8 @@
   }
   @media (max-width: 640px) {
     .admin-shell .admin-page-layout > div:first-child {
-      border-radius: 1.125rem;
-      padding: 1rem;
+      border-radius: 0;
+      padding: 0;
     }
   }
   .admin-shell code {

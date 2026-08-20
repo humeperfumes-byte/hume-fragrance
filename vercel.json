@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/cron/ai-weekly",
+      "schedule": "30 2 * * 1"
+    },
+    {
       "path": "/api/cron/retention",
       "schedule": "30 20 * * *"
     }

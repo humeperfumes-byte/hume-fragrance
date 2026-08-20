@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
+import { cleanupAiReportHistory } from "@/lib/ai/reports";
 
 export const ANALYTICS_RETENTION_DAYS = 30;
 
@@ -11,6 +12,7 @@ type RetentionResult = {
     couponCodeEvents: number;
     behavioralEvents: number;
     sessionIntelligence: number;
+    aiAnalyticsReports: number;
   };
 };
 
@@ -43,11 +45,12 @@ export async function runAnalyticsRetentionCleanup(
   const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
   const cutoffIso = cutoff.toISOString();
 
-  const [cartEvents, couponCodeEvents, behavioralEvents, sessionIntelligence] = await Promise.all([
+  const [cartEvents, couponCodeEvents, behavioralEvents, sessionIntelligence, aiAnalyticsReports] = await Promise.all([
     deleteOlderThan("cart_events", "created_at", cutoffIso),
     deleteOlderThan("coupon_code_events", "created_at", cutoffIso),
     deleteOlderThan("behavioral_events", "created_at", cutoffIso),
     deleteOlderThan("session_intelligence", "updated_at", cutoffIso),
+    cleanupAiReportHistory(),
   ]);
 
   return {
@@ -58,6 +61,7 @@ export async function runAnalyticsRetentionCleanup(
       couponCodeEvents,
       behavioralEvents,
       sessionIntelligence,
+      aiAnalyticsReports,
     },
   };
 }

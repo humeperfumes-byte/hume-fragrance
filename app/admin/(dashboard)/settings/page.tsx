@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default function AdminSettingsPage() {
   return (
     <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+      <div className="admin-page-intro-copy flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <Badge className="mb-3 border-violet-400/20 bg-violet-400/10 text-violet-100 hover:bg-violet-400/10">
             <Settings className="mr-1 h-3.5 w-3.5" />

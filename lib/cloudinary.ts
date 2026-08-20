@@ -27,3 +27,22 @@ export function withCloudinaryTransforms(
   return `${prefix}${marker}${transforms}/${suffix}`;
 }
 
+export function getCloudinaryPublicIdFromUrl(imageUrl: string) {
+  try {
+    const url = new URL(imageUrl);
+    if (!url.hostname.endsWith("cloudinary.com")) return null;
+
+    const uploadMarker = "/image/upload/";
+    const markerIndex = url.pathname.indexOf(uploadMarker);
+    if (markerIndex === -1) return null;
+
+    const afterUpload = url.pathname.slice(markerIndex + uploadMarker.length);
+    const versionMatch = afterUpload.match(/(?:^|\/)v\d+\/(.+)$/);
+    const assetPath = versionMatch?.[1] || afterUpload;
+    if (!assetPath) return null;
+
+    return decodeURIComponent(assetPath).replace(/\.[^/.]+$/, "");
+  } catch {
+    return null;
+  }
+}

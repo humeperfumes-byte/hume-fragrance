@@ -48,7 +48,7 @@ export default async function OrdersPage({ searchParams }: AdminPageProps) {
 
   return (
     <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
-      <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
+      <div className="admin-page-intro-copy flex flex-col justify-between gap-5 md:flex-row md:items-center">
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#c5a9ff]/25 bg-[#c5a9ff]/10 shadow-[inset_0_1px_rgba(255,255,255,.08)]">
             <PackageCheck className="h-5 w-5 text-[#d5c1ff]" />

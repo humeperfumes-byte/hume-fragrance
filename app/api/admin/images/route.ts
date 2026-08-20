@@ -40,6 +40,12 @@ const imageColumns = {
   tags: images.tags,
   mimeType: images.mimeType,
   sizeBytes: images.sizeBytes,
+  provider: images.provider,
+  providerAssetId: images.providerAssetId,
+  providerPublicId: images.providerPublicId,
+  width: images.width,
+  height: images.height,
+  format: images.format,
   createdAt: images.createdAt,
   updatedAt: images.updatedAt,
 };

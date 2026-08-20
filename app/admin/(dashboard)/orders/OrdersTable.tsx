@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { CheckCircle2, Copy, ExternalLink, MessageCircle, Package, Trash2, Truck, WalletCards } from "lucide-react";
+import { CheckCircle2, Clock3, Copy, ExternalLink, History, MessageCircle, Package, ShoppingCart, Trash2, Truck, WalletCards } from "lucide-react";
 import { buildPublicTrackingUrl } from "@/lib/tracking-url";
 import { displayPhoneNumber } from "@/lib/phone";
 import { toast } from "@/hooks/use-toast";
@@ -30,6 +30,18 @@ function getOrderHost(order: Order) {
 }
 
 type OrderCartItem = Order["cartSnapshot"][number];
+
+type CustomerActivity = {
+  id: string;
+  type: "order" | "checkout";
+  reference: string;
+  status: string;
+  amount: number;
+  itemCount: number;
+  itemNames: string[];
+  path: string | null;
+  occurredAt: string;
+};
 
 function toOrderMoney(value: unknown): number {
   const parsed = Number.parseFloat(String(value ?? "0"));
@@ -232,8 +244,12 @@ export function OrdersTable({
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [replacementSelections, setReplacementSelections] = useState<Record<number, string>>({});
+  const [customerActivity, setCustomerActivity] = useState<CustomerActivity[]>([]);
+  const [isActivityLoading, setIsActivityLoading] = useState(false);
+  const [activityError, setActivityError] = useState("");
   const longPressTimerRef = useRef<number | null>(null);
   const longPressTriggeredRef = useRef(false);
+  const activityRequestRef = useRef(0);
 
   // Status badge coloring
   const getStatusBadge = (status: string) => {
@@ -348,6 +364,25 @@ export function OrdersTable({
     setSelectedOrderIds([]);
   };
 
+  const loadCustomerActivity = async (orderId: string) => {
+    const requestId = ++activityRequestRef.current;
+    setCustomerActivity([]);
+    setActivityError("");
+    setIsActivityLoading(true);
+
+    try {
+      const response = await fetch(`/api/admin/orders/${orderId}/activity`, { cache: "no-store" });
+      if (!response.ok) throw new Error("Unable to load recent activity");
+      const data = (await response.json()) as { activity?: CustomerActivity[] };
+      if (requestId === activityRequestRef.current) setCustomerActivity(data.activity ?? []);
+    } catch (error) {
+      console.error(error);
+      if (requestId === activityRequestRef.current) setActivityError("Recent activity could not be loaded.");
+    } finally {
+      if (requestId === activityRequestRef.current) setIsActivityLoading(false);
+    }
+  };
+
   const openOrderDetails = (order: Order) => {
     setSelectedOrder(order);
     setEditForm({
@@ -355,6 +390,7 @@ export function OrdersTable({
       fulfillmentCarrier: order.fulfillmentCarrier || "shiprocket",
     });
     setReplacementSelections({});
+    void loadCustomerActivity(order.id);
   };
 
   const handleOrderRowClick = (order: Order) => {
@@ -755,9 +791,13 @@ export function OrdersTable({
 
       <Sheet open={!!selectedOrder} onOpenChange={(open) => {
         if (!open) {
+          activityRequestRef.current += 1;
           setSelectedOrder(null);
           setIsEditing(false);
           setReplacementSelections({});
+          setCustomerActivity([]);
+          setActivityError("");
+          setIsActivityLoading(false);
         }
       }}>
         <SheetContent className="w-full overflow-y-auto border-l border-white/10 bg-[#151517] text-white shadow-[-28px_0_80px_rgba(0,0,0,.45)] sm:max-w-md">
@@ -951,6 +991,84 @@ export function OrdersTable({
                         ) : null}
                       </div>
                     </div>
+
+                    {isActivityLoading || activityError || customerActivity.length > 0 ? (
+                    <div className="overflow-hidden rounded-2xl border border-[#c5a9ff]/15 bg-[linear-gradient(145deg,rgba(197,169,255,.075),rgba(255,255,255,.018))] sm:rounded-3xl">
+                      <div className="flex items-start justify-between gap-4 border-b border-white/[0.06] p-4 sm:p-5">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#c5a9ff]/20 bg-[#c5a9ff]/10 text-[#d7c5ff]">
+                            <History className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d7c5ff]/75">Recent customer activity</h4>
+                            <p className="mt-1 text-xs text-white/35">Previous checkout attempts and orders from this customer.</p>
+                          </div>
+                        </div>
+                        {!isActivityLoading && !activityError ? (
+                          <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-semibold text-white/50">
+                            {customerActivity.length}
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <div className="p-3 sm:p-4">
+                        {isActivityLoading ? (
+                          <div className="space-y-2">
+                            {[0, 1, 2].map((item) => (
+                              <div key={item} className="h-20 animate-pulse rounded-2xl border border-white/[0.05] bg-white/[0.035]" />
+                            ))}
+                          </div>
+                        ) : activityError ? (
+                          <div className="rounded-2xl border border-rose-400/15 bg-rose-400/[0.05] p-4 text-center">
+                            <p className="text-xs text-rose-100/65">{activityError}</p>
+                            <button type="button" onClick={() => void loadCustomerActivity(selectedOrder.id)} className="mt-3 rounded-lg border border-rose-300/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-rose-200 transition hover:bg-rose-300/10">Try again</button>
+                          </div>
+                        ) : customerActivity.length ? (
+                          <div className="space-y-2">
+                            {customerActivity.map((activity) => {
+                              const isOrder = activity.type === "order";
+                              const ActivityIcon = isOrder ? Package : ShoppingCart;
+                              const itemSummary = activity.itemNames.length
+                                ? `${activity.itemNames.join(", ")}${activity.itemCount > activity.itemNames.length ? ` +${activity.itemCount - activity.itemNames.length} more` : ""}`
+                                : "No products captured";
+
+                              return (
+                                <div key={`${activity.type}-${activity.id}`} className="group rounded-2xl border border-white/[0.065] bg-black/15 p-3.5 transition hover:border-[#c5a9ff]/20 hover:bg-white/[0.035]">
+                                  <div className="flex items-start gap-3">
+                                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${isOrder ? "border-emerald-400/15 bg-emerald-400/[0.07] text-emerald-200" : "border-sky-400/15 bg-sky-400/[0.07] text-sky-200"}`}>
+                                      <ActivityIcon className="h-4 w-4" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0">
+                                          <p className="truncate text-sm font-semibold text-white">{activity.reference}</p>
+                                          <div className="mt-1 flex items-center gap-1.5 text-[10px] text-white/35">
+                                            <Clock3 className="h-3 w-3" />
+                                            {format(new Date(activity.occurredAt), "dd MMM yyyy, h:mm a")}
+                                          </div>
+                                        </div>
+                                        <div className="shrink-0 text-right">
+                                          {activity.amount > 0 ? <p className="text-xs font-semibold text-white">{formatINR(activity.amount)}</p> : null}
+                                          <span className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.1em] ${isOrder ? "border-emerald-400/15 bg-emerald-400/[0.07] text-emerald-200/75" : "border-sky-400/15 bg-sky-400/[0.07] text-sky-200/75"}`}>
+                                            {activity.status.replaceAll("_", " ")}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <p className="mt-2 line-clamp-2 text-[11px] leading-5 text-white/38">{itemSummary}</p>
+                                      <div className="mt-2 flex items-center justify-between gap-3 text-[9px] uppercase tracking-[0.12em] text-white/25">
+                                        <span>{isOrder ? "Previous order" : "Checkout activity"}</span>
+                                        <span>{activity.itemCount} item{activity.itemCount === 1 ? "" : "s"}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                    ) : null}
 
                     {(() => {
                       const fullAddressParts = [

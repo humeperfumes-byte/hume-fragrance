@@ -4,12 +4,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { images } from "@/db/schema";
 import { requireAdminToken } from "@/lib/admin-auth";
+import {
+  destroyCloudinaryImageByUrl,
+  getCloudinaryConfiguration,
+  uploadImageToCloudinary,
+} from "@/lib/cloudinary-server";
+import { persistCloudinaryAsset } from "@/lib/cloudinary-persistence";
+import { validateImageUpload } from "@/lib/image-upload-policy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
-const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 
 const imageColumns = {
   id: images.id,
@@ -20,6 +24,12 @@ const imageColumns = {
   tags: images.tags,
   mimeType: images.mimeType,
   sizeBytes: images.sizeBytes,
+  provider: images.provider,
+  providerAssetId: images.providerAssetId,
+  providerPublicId: images.providerPublicId,
+  width: images.width,
+  height: images.height,
+  format: images.format,
   createdAt: images.createdAt,
   updatedAt: images.updatedAt,
 };
@@ -31,6 +41,14 @@ function parseTags(value: FormDataEntryValue | null) {
     .map((tag) => tag.trim())
     .filter(Boolean)
     .slice(0, 12);
+}
+
+export async function GET(request: NextRequest) {
+  const unauthorized = requireAdminToken(request);
+  if (unauthorized) return unauthorized;
+
+  const configuration = getCloudinaryConfiguration();
+  return NextResponse.json(configuration);
 }
 
 export async function POST(request: NextRequest) {
@@ -48,35 +66,82 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Image file is required" }, { status: 400 });
     }
 
-    if (!ALLOWED_TYPES.has(file.type)) {
-      return NextResponse.json({ error: "Only PNG, JPG, WebP, or GIF images are allowed" }, { status: 400 });
-    }
-
-    if (file.size > MAX_UPLOAD_BYTES) {
-      return NextResponse.json({ error: "Image must be 4 MB or smaller" }, { status: 400 });
+    const validationError = validateImageUpload(file);
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
     const id = randomUUID();
     const bytes = Buffer.from(await file.arrayBuffer());
-    const [created] = await db
-      .insert(images)
-      .values({
-        id,
-        label: label || file.name.replace(/\.[^.]+$/, "") || "Untitled image",
-        url: `/api/image-assets/${id}`,
-        link: linkValue || null,
-        usage,
-        tags: parseTags(formData.get("tags")),
-        mimeType: file.type,
-        sizeBytes: file.size,
-        dataBase64: bytes.toString("base64"),
-        updatedAt: new Date(),
-      })
-      .returning(imageColumns);
+    const resolvedLabel =
+      label || file.name.replace(/\.[^.]+$/, "") || "Untitled image";
+    const tags = parseTags(formData.get("tags"));
+    const uploaded = await uploadImageToCloudinary({
+      buffer: bytes,
+      fileName: file.name,
+      label: resolvedLabel,
+      usage,
+      tags,
+    });
 
-    return NextResponse.json({ image: created }, { status: 201 });
+    const created = await persistCloudinaryAsset({
+      persist: () =>
+        db
+          .insert(images)
+          .values({
+            id,
+            label: resolvedLabel,
+            url: uploaded.secureUrl,
+            link: linkValue || null,
+            usage,
+            tags,
+            mimeType: file.type,
+            sizeBytes: uploaded.bytes,
+            provider: "cloudinary",
+            providerAssetId: uploaded.assetId,
+            providerPublicId: uploaded.publicId,
+            width: uploaded.width,
+            height: uploaded.height,
+            format: uploaded.format,
+            dataBase64: null,
+            updatedAt: new Date(),
+          })
+          .returning(imageColumns)
+          .then(([record]) => record),
+      rollback: () => destroyCloudinaryImageByUrl(uploaded.secureUrl),
+    });
+
+    return NextResponse.json(
+      {
+        image: created,
+        cloudinary: {
+          assetId: uploaded.assetId,
+          publicId: uploaded.publicId,
+          width: uploaded.width,
+          height: uploaded.height,
+          format: uploaded.format,
+        },
+      },
+      { status: 201 },
+    );
   } catch (error) {
     console.error("Admin image upload error:", error);
-    return NextResponse.json({ error: "Failed to upload image" }, { status: 500 });
+    const detail =
+      error instanceof Error
+        ? error.message
+        : error && typeof error === "object" && "message" in error
+          ? String(error.message)
+          : "Unknown upload error";
+    const message =
+      detail === "Cloudinary is not configured"
+        ? "Cloudinary is not configured. Add its credentials to .env.local."
+        : "Failed to upload image to Cloudinary";
+    return NextResponse.json(
+      {
+        error: message,
+        ...(process.env.NODE_ENV === "development" ? { detail: detail.slice(0, 300) } : {}),
+      },
+      { status: 500 },
+    );
   }
 }

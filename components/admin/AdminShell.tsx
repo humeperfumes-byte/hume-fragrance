@@ -35,6 +35,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "@/hooks/use-toast";
 import { parseAdminMarket } from "@/lib/admin-market";
 import { AdminDateWindowControl } from "@/components/admin/AdminDateWindowControl";
+import { AdminAiInsightDock } from "@/components/admin/AdminAiInsights";
 
 const navItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
@@ -55,7 +56,7 @@ const navItems = [
   { title: "Stock", url: "/admin/stock", icon: Warehouse },
   { title: "Checkouts", url: "/admin/checkouts", icon: ShoppingCart },
   { title: "Cart Leads", url: "/admin/cart", icon: ShoppingBasket },
-  { title: "Coupon Leads", url: "/admin/coupon-leads", icon: Ticket },
+  { title: "Coupons", url: "/admin/coupon-leads", icon: Ticket },
   { title: "Customers", url: "/admin/customers", icon: Users },
   { title: "Login Activity", url: "/admin/login-activity", icon: LogIn },
   { title: "Settings", url: "/admin/settings", icon: Settings },
@@ -89,7 +90,7 @@ const navGroups = [
         "Tracking",
         "Checkouts",
         "Cart Leads",
-        "Coupon Leads",
+        "Coupons",
       ].includes(item.title),
     ),
   },
@@ -169,7 +170,6 @@ function AdminNav({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="p-3 pt-1">
-        <div className="mb-2 flex items-center justify-between rounded-[16px] border border-white/[0.06] bg-white/[0.025] px-3 py-2.5"><div><p className="text-[9px] font-bold uppercase tracking-[.16em] text-white/25">System status</p><p className="mt-1 text-[10px] text-white/45">Operations online</p></div><span className="relative flex h-2.5 w-2.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#80f0b2] opacity-40" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#80f0b2]" /></span></div>
         <button
           type="button"
           onClick={handleLogout}
@@ -228,6 +228,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               </p>
             </div>
             <AdminDateWindowControl />
+            <AdminAiInsightDock />
             <div className="flex shrink-0 items-center gap-1 rounded-lg border border-white/10 bg-white/[0.035] p-1 sm:gap-2">
               <button
                 type="button"

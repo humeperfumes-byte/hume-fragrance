@@ -1,7 +1,10 @@
 "use client";
 
-import { FormEvent, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AlertTriangle,
+  CheckCircle2,
+  Cloud,
   Copy,
   ExternalLink,
   ImageIcon,
@@ -24,6 +27,12 @@ export type AdminImageAsset = {
   tags: string[];
   mimeType: string | null;
   sizeBytes: number | null;
+  provider: string | null;
+  providerAssetId: string | null;
+  providerPublicId: string | null;
+  width: number | null;
+  height: number | null;
+  format: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -36,6 +45,12 @@ type AdminImagesClientProps = {
   initialImages: AdminImageAsset[];
 };
 
+type CloudinaryStatus = {
+  configured: boolean;
+  cloudName: string;
+  uploadFolder: string;
+};
+
 const BUILT_IN_IMAGES: DisplayImageAsset[] = [
   {
     id: "builtin-order-success",
@@ -46,6 +61,12 @@ const BUILT_IN_IMAGES: DisplayImageAsset[] = [
     tags: ["order", "success", "whatsapp"],
     mimeType: "image/png",
     sizeBytes: null,
+    provider: null,
+    providerAssetId: null,
+    providerPublicId: null,
+    width: null,
+    height: null,
+    format: "png",
     createdAt: new Date(0).toISOString(),
     updatedAt: new Date(0).toISOString(),
     builtIn: true,
@@ -90,7 +111,34 @@ export default function AdminImagesClient({ initialImages }: AdminImagesClientPr
   const [uploading, setUploading] = useState(false);
   const [savingUrl, setSavingUrl] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [cloudinaryStatus, setCloudinaryStatus] =
+    useState<CloudinaryStatus | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/admin/images/upload", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Could not check Cloudinary");
+        return (await response.json()) as CloudinaryStatus;
+      })
+      .then((status) => {
+        if (active) setCloudinaryStatus(status);
+      })
+      .catch(() => {
+        if (active) {
+          setCloudinaryStatus({
+            configured: false,
+            cloudName: "",
+            uploadFolder: "hume-fragrance",
+          });
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const allImages = useMemo<DisplayImageAsset[]>(() => {
     const builtInIds = new Set(BUILT_IN_IMAGES.map((image) => image.url));
@@ -132,7 +180,7 @@ export default function AdminImagesClient({ initialImages }: AdminImagesClientPr
       setUploadLabel("");
       setUploadTags("");
       if (fileInputRef.current) fileInputRef.current.value = "";
-      toast({ title: "Image uploaded" });
+      toast({ title: "Image uploaded to Cloudinary" });
     } catch (error) {
       toast({
         title: error instanceof Error ? error.message : "Upload failed",
@@ -198,7 +246,7 @@ export default function AdminImagesClient({ initialImages }: AdminImagesClientPr
 
   return (
     <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div className="admin-page-intro-copy flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/12 text-emerald-300">
@@ -221,11 +269,34 @@ export default function AdminImagesClient({ initialImages }: AdminImagesClientPr
         <form onSubmit={handleUpload} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
           <div className="mb-5 flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/8 text-white">
-              <Upload className="h-4 w-4" />
+              <Cloud className="h-4 w-4" />
             </span>
-            <div>
-              <h2 className="text-base font-semibold text-white">Upload Image</h2>
-              <p className="text-xs text-white/40">PNG, JPG, WebP, or GIF up to 4 MB.</p>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-base font-semibold text-white">Upload to Cloudinary</h2>
+                {cloudinaryStatus ? (
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[9px] font-bold uppercase tracking-[.1em]",
+                      cloudinaryStatus.configured
+                        ? "border-emerald-300/20 bg-emerald-300/[0.08] text-emerald-200"
+                        : "border-amber-300/20 bg-amber-300/[0.08] text-amber-100",
+                    )}
+                  >
+                    {cloudinaryStatus.configured ? (
+                      <CheckCircle2 className="h-3 w-3" />
+                    ) : (
+                      <AlertTriangle className="h-3 w-3" />
+                    )}
+                    {cloudinaryStatus.configured
+                      ? cloudinaryStatus.cloudName
+                      : "Setup required"}
+                  </span>
+                ) : null}
+              </div>
+              <p className="text-xs text-white/40">
+                PNG, JPG, WebP, GIF, or AVIF up to 10 MB.
+              </p>
             </div>
           </div>
 
@@ -235,7 +306,7 @@ export default function AdminImagesClient({ initialImages }: AdminImagesClientPr
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
+                accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
                 className="block w-full rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-sm text-white file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-2 file:text-xs file:font-semibold file:text-black"
               />
             </label>
@@ -273,11 +344,13 @@ export default function AdminImagesClient({ initialImages }: AdminImagesClientPr
 
           <button
             type="submit"
-            disabled={uploading}
+            disabled={uploading || cloudinaryStatus?.configured === false}
             className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-400 px-5 text-sm font-semibold text-black transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            Upload to library
+            {cloudinaryStatus?.configured === false
+              ? "Add Cloudinary credentials"
+              : "Upload to Cloudinary"}
           </button>
         </form>
 
@@ -358,6 +431,7 @@ export default function AdminImagesClient({ initialImages }: AdminImagesClientPr
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {allImages.map((asset) => {
             const publicUrl = absoluteUrl(asset.url);
+            const isCloudinary = asset.url.includes("res.cloudinary.com");
             return (
               <article key={asset.id} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
                 <div className="aspect-[1.6] bg-white/[0.04]">
@@ -376,6 +450,7 @@ export default function AdminImagesClient({ initialImages }: AdminImagesClientPr
                       <p className="mt-1 text-xs text-white/38">
                         {asset.usage.replace(/_/g, " ")} - {formatSize(asset.sizeBytes)}
                       </p>
+                      {(asset.width || asset.height || asset.format) ? <p className="mt-1 text-[10px] uppercase tracking-[.1em] text-white/25">{[asset.width && asset.height ? `${asset.width} × ${asset.height}` : null, asset.format].filter(Boolean).join(" · ")}</p> : null}
                     </div>
                     <span
                       className={cn(
@@ -385,7 +460,7 @@ export default function AdminImagesClient({ initialImages }: AdminImagesClientPr
                           : "bg-emerald-400/12 text-emerald-200",
                       )}
                     >
-                      {asset.builtIn ? "Built in" : "Saved"}
+                      {asset.builtIn ? "Built in" : isCloudinary ? "Cloudinary" : "Saved"}
                     </span>
                   </div>
 
@@ -398,6 +473,8 @@ export default function AdminImagesClient({ initialImages }: AdminImagesClientPr
                       ))}
                     </div>
                   )}
+
+                  {asset.providerPublicId ? <button type="button" onClick={() => copyText(asset.providerPublicId || "", "Cloudinary public ID copied")} className="flex w-full items-center gap-2 rounded-xl border border-white/[0.07] bg-black/15 px-3 py-2 text-left"><Cloud className="h-3.5 w-3.5 shrink-0 text-sky-200/45" /><span className="min-w-0 flex-1 truncate font-mono text-[9px] text-white/30">{asset.providerPublicId}</span><Copy className="h-3 w-3 shrink-0 text-white/25" /></button> : null}
 
                   <div className="grid grid-cols-2 gap-2">
                     <button

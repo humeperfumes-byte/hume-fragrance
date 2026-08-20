@@ -53,7 +53,7 @@ export default async function AdminReviewsPage() {
   if (dbError) {
     return (
       <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
-        <div>
+        <div className="admin-page-intro-copy">
           <h1 className="text-2xl font-semibold text-white">Reviews</h1>
         </div>
         <div className="rounded-2xl border border-dashed border-amber-500/30 bg-amber-500/[0.04] p-12 text-center">
@@ -71,7 +71,7 @@ export default async function AdminReviewsPage() {
   return (
     <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-        <div>
+        <div className="admin-page-intro-copy">
           <Badge className="mb-3 border-sky-400/20 bg-sky-400/10 text-sky-100 hover:bg-sky-400/10">
             <MessageSquareText className="mr-1 h-3.5 w-3.5" />
             Reviews desk

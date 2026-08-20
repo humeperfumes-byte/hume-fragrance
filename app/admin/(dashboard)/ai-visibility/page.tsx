@@ -276,7 +276,7 @@ export default async function AiVisibilityPage({ searchParams }: AdminPageProps)
 
   return (
     <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+      <div className="admin-page-intro-copy flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <Badge className="border-emerald-400/20 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/10">

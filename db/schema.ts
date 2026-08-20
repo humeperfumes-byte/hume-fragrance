@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, decimal, jsonb, boolean, timestamp, pgEnum, integer, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, decimal, jsonb, boolean, timestamp, pgEnum, integer, serial, index } from "drizzle-orm/pg-core";
 
 // Enums
 export const genderEnum = pgEnum("gender", ["Men", "Women", "Unisex"]);
@@ -118,10 +118,41 @@ export const images = pgTable("images", {
   tags: jsonb("tags").$type<string[]>().notNull().default([]),
   mimeType: varchar("mime_type", { length: 100 }),
   sizeBytes: integer("size_bytes"),
+  provider: varchar("provider", { length: 40 }),
+  providerAssetId: varchar("provider_asset_id", { length: 255 }),
+  providerPublicId: varchar("provider_public_id", { length: 512 }),
+  width: integer("width"),
+  height: integer("height"),
+  format: varchar("format", { length: 40 }),
   dataBase64: text("data_base64"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// Persisted, privacy-safe AI summaries generated from aggregated admin metrics.
+export const aiAnalyticsReports = pgTable(
+  "ai_analytics_reports",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    periodStart: timestamp("period_start").notNull(),
+    periodEnd: timestamp("period_end").notNull(),
+    trigger: varchar("trigger", { length: 30 }).notNull(), // scheduled | manual
+    status: varchar("status", { length: 30 }).notNull(), // processing | completed | failed
+    provider: varchar("provider", { length: 50 }),
+    model: varchar("model", { length: 120 }),
+    inputHash: varchar("input_hash", { length: 64 }).notNull(),
+    report: jsonb("report").$type<Record<string, unknown>>(),
+    attempts: jsonb("attempts")
+      .$type<Array<{ provider: string; model: string; error?: string }>>()
+      .notNull()
+      .default([]),
+    error: text("error"),
+    durationMs: integer("duration_ms"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    completedAt: timestamp("completed_at"),
+  },
+  (table) => [index("ai_analytics_reports_status_created_idx").on(table.status, table.createdAt)],
+);
 
 // Coupons Table
 export const coupons = pgTable("coupons", {
@@ -489,6 +520,8 @@ export type Accessory = typeof accessories.$inferSelect;
 export type NewAccessory = typeof accessories.$inferInsert;
 export type ImageAsset = typeof images.$inferSelect;
 export type NewImageAsset = typeof images.$inferInsert;
+export type AiAnalyticsReport = typeof aiAnalyticsReports.$inferSelect;
+export type NewAiAnalyticsReport = typeof aiAnalyticsReports.$inferInsert;
 export type Coupon = typeof coupons.$inferSelect;
 export type NewCoupon = typeof coupons.$inferInsert;
 export type ProductCategory = typeof productCategories.$inferSelect;

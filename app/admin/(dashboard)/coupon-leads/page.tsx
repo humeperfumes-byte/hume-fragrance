@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { couponCodeEvents, checkoutDrafts, orders, sessionIntelligence } from "@/db/schema";
 import { and, desc, gte, inArray, lte } from "drizzle-orm";
 import { CouponLeadsTable } from "./CouponLeadsTable";
+import { CreateCouponDialog } from "./CreateCouponDialog";
 import { Ticket } from "lucide-react";
 import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-data-filters";
 import { parseAdminTimeWindow } from "@/lib/admin-time-window";
@@ -70,11 +71,11 @@ export default async function CouponLeadsPage({ searchParams }: AdminPageProps) 
   if (dbError) {
     return (
       <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
-        <div className="flex items-center gap-3">
+        <div className="admin-page-intro-copy flex items-center gap-3">
           <div className="p-2 rounded-xl bg-primary/10">
             <Ticket className="h-6 w-6 text-primary" />
           </div>
-          <h1 className="text-2xl text-white tracking-tight">Coupon Leads</h1>
+          <h1 className="text-2xl text-white tracking-tight">Coupons</h1>
         </div>
         <div className="rounded-2xl border border-dashed border-amber-500/30 bg-amber-500/[0.04] p-12 text-center">
           <div className="max-w-md mx-auto space-y-4">
@@ -196,19 +197,20 @@ export default async function CouponLeadsPage({ searchParams }: AdminPageProps) 
 
   return (
     <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+      <div className="admin-page-intro-copy flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div className="flex flex-col gap-2">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-primary/10">
             <Ticket className="h-6 w-6 text-primary" />
           </div>
-          <h1 className="text-2xl text-white tracking-tight">Coupon Leads</h1>
+          <h1 className="text-2xl text-white tracking-tight">Coupons</h1>
         </div>
         <p className="text-white/40 text-sm font-medium uppercase tracking-[0.2em] ml-11">
           People who claimed your coupon codes — cross-referenced with their full journey
         </p>
         <p className="ml-11 text-xs text-white/35">Showing coupon leads from {timeWindow.label.toLowerCase()}.</p>
         </div>
+        <CreateCouponDialog />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">

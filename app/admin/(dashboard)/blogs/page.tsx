@@ -19,7 +19,7 @@ export default async function BlogsPage() {
   if (dbError) {
     return (
       <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
-        <div>
+        <div className="admin-page-intro-copy">
           <h1 className="text-2xl">Editorial Content</h1>
         </div>
         <div className="rounded-2xl border border-dashed border-amber-500/30 bg-amber-500/[0.04] p-12 text-center">
@@ -36,7 +36,7 @@ export default async function BlogsPage() {
 
   return (
     <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
-      <div>
+      <div className="admin-page-intro-copy">
         <h1 className="text-2xl">Editorial Content</h1>
         <p className="text-muted-foreground mt-1 text-sm">
           Manage your blog posts, SEO guides, and editorial content.

@@ -243,7 +243,7 @@ export default function FlyerAnalyticsView() {
     <div className="admin-page-layout mx-auto max-w-7xl space-y-6 text-white">
       {/* Top Header & City Filter */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b border-white/10 pb-6">
-        <div>
+        <div className="admin-page-intro-copy">
           <div className="flex items-center gap-2 text-amber-400 text-xs font-semibold uppercase tracking-wider mb-1">
             <BarChart3 className="h-4 w-4" />
             <span>Campaign Intelligence</span>

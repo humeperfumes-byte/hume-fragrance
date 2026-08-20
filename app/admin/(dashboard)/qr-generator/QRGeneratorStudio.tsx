@@ -387,7 +387,7 @@ export default function QRGeneratorStudio() {
   return (
     <div className="admin-page-layout mx-auto max-w-7xl space-y-6 text-white">
       {/* Studio Header */}
-      <div className="flex flex-col gap-2 border-b border-white/10 pb-6">
+      <div className="admin-page-intro-copy flex flex-col gap-2 border-b border-white/10 pb-6">
         <div className="flex items-center gap-2 text-amber-400 text-xs font-semibold uppercase tracking-wider">
           <QrCode className="h-4 w-4" />
           <span>Brand QR Generator Studio</span>

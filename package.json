@@ -13,7 +13,9 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "tsx scripts/seed.ts"
+    "db:seed": "tsx scripts/seed.ts",
+    "db:fix-admin": "tsx scripts/fix-admin-schema.ts",
+    "test:ai-media": "node --import tsx --test tests/ai-provider.test.ts tests/cloudinary-media.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -48,6 +50,7 @@
     "@radix-ui/react-tooltip": "^1.2.7",
     "@types/qrcode-generator": "^0.0.16",
     "class-variance-authority": "^0.7.1",
+    "cloudinary": "^2.10.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",

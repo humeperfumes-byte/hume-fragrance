@@ -25,6 +25,7 @@ import { formatINR } from "@/lib/currency";
 import { parseAdminMarket } from "@/lib/admin-market";
 import { parseAdminTimeWindow } from "@/lib/admin-time-window";
 import { displayPhoneNumber } from "@/lib/phone";
+import { AdminAiExecutiveBrief } from "@/components/admin/AdminAiInsights";
 
 type DashboardAnalytics = {
   ok: boolean;
@@ -365,29 +366,29 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-[1540px] space-y-4 sm:space-y-5">
-      <div className="overflow-hidden rounded-[26px] border border-white/10 bg-[radial-gradient(circle_at_82%_-20%,rgba(201,179,255,.13),transparent_38%),#151517] p-4 shadow-[inset_0_1px_rgba(255,255,255,.05),0_22px_80px_rgba(0,0,0,.2)] sm:p-5">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-          <div className="min-w-0">
+      <div className="flex justify-end">
+        <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="admin-page-intro-copy min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#c9b3ff]/75">Daily operating view</p>
             <h1 className="mt-2 text-3xl font-medium tracking-[-0.04em] text-white sm:text-4xl">Command Center</h1>
             <p className="mt-2 max-w-2xl text-sm text-white/40">Revenue, funnel leakage, source quality, demand, and customer signals in one working view.</p>
           </div>
 
-          <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center">
-            <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-full border border-white/10 bg-black/20 p-1">
-              <a href="#overview" className="shrink-0 rounded-full bg-white px-5 py-2 text-xs font-semibold text-black">Overview</a>
-              <a href="#funnel" className="shrink-0 rounded-full px-5 py-2 text-xs font-medium text-white/45 transition hover:bg-white/5 hover:text-white">Funnel</a>
-              <a href="#demand" className="shrink-0 rounded-full px-5 py-2 text-xs font-medium text-white/45 transition hover:bg-white/5 hover:text-white">Demand</a>
-              <a href="#customers" className="shrink-0 rounded-full px-5 py-2 text-xs font-medium text-white/45 transition hover:bg-white/5 hover:text-white">Customers</a>
-            </div>
+          <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-full border border-white/10 bg-black/20 p-1">
+            <a href="#overview" className="shrink-0 rounded-full bg-white px-5 py-2 text-xs font-semibold text-black">Overview</a>
+            <a href="#funnel" className="shrink-0 rounded-full px-5 py-2 text-xs font-medium text-white/45 transition hover:bg-white/5 hover:text-white">Funnel</a>
+            <a href="#demand" className="shrink-0 rounded-full px-5 py-2 text-xs font-medium text-white/45 transition hover:bg-white/5 hover:text-white">Demand</a>
+            <a href="#customers" className="shrink-0 rounded-full px-5 py-2 text-xs font-medium text-white/45 transition hover:bg-white/5 hover:text-white">Customers</a>
+          </div>
 
-            <div className="flex items-center gap-2">
-              <div className="hidden rounded-full border border-white/10 bg-black/20 px-4 py-2.5 text-[10px] font-semibold text-white/45 lg:block">{selectedWindow.label}</div>
-              <Button variant="outline" size="icon" onClick={() => { void loadData(); void loadFinanceData(); }} disabled={loading || financeLoading} className="h-10 w-10 shrink-0 rounded-full border-white/10 bg-white/[0.035] text-white hover:bg-white hover:text-black"><RefreshCcw className={`h-4 w-4 ${loading || financeLoading ? "animate-spin" : ""}`} /></Button>
-            </div>
+          <div className="flex items-center gap-2">
+            <div className="hidden rounded-full border border-white/10 bg-black/20 px-4 py-2.5 text-[10px] font-semibold text-white/45 lg:block">{selectedWindow.label}</div>
+            <Button variant="outline" size="icon" onClick={() => { void loadData(); void loadFinanceData(); }} disabled={loading || financeLoading} className="h-10 w-10 shrink-0 rounded-full border-white/10 bg-white/[0.035] text-white hover:bg-white hover:text-black"><RefreshCcw className={`h-4 w-4 ${loading || financeLoading ? "animate-spin" : ""}`} /></Button>
           </div>
         </div>
       </div>
+
+      <AdminAiExecutiveBrief />
 
       {!analytics && loading ? (
         <div className="grid animate-pulse gap-4 md:grid-cols-2 xl:grid-cols-4">

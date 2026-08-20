@@ -1,4 +1,4 @@
-import { neon } from "@neondatabase/serverless";
+import postgres from "postgres";
 import { config } from "dotenv";
 
 config({ path: ".env.local" });
@@ -9,7 +9,12 @@ if (!DATABASE_URL) {
   process.exit(1);
 }
 
-const sql = neon(DATABASE_URL);
+const sql = postgres(DATABASE_URL, {
+  max: 1,
+  prepare: false,
+  connect_timeout: 10,
+  idle_timeout: 2,
+});
 
 async function migrate() {
   console.log("🔄 Starting admin panel database migration...\n");
@@ -197,6 +202,39 @@ async function migrate() {
       query: `ALTER TABLE products ADD COLUMN IF NOT EXISTS visibility product_visibility NOT NULL DEFAULT 'public'`,
     },
 
+    // ── Image library: Cloudinary metadata ──
+    { label: "images: add provider", query: `ALTER TABLE images ADD COLUMN IF NOT EXISTS provider VARCHAR(40)` },
+    { label: "images: add provider_asset_id", query: `ALTER TABLE images ADD COLUMN IF NOT EXISTS provider_asset_id VARCHAR(255)` },
+    { label: "images: add provider_public_id", query: `ALTER TABLE images ADD COLUMN IF NOT EXISTS provider_public_id VARCHAR(512)` },
+    { label: "images: add width", query: `ALTER TABLE images ADD COLUMN IF NOT EXISTS width INTEGER` },
+    { label: "images: add height", query: `ALTER TABLE images ADD COLUMN IF NOT EXISTS height INTEGER` },
+    { label: "images: add format", query: `ALTER TABLE images ADD COLUMN IF NOT EXISTS format VARCHAR(40)` },
+
+    // ── Weekly privacy-safe AI analytics reports ──
+    {
+      label: "Create ai_analytics_reports table",
+      query: `CREATE TABLE IF NOT EXISTS ai_analytics_reports (
+        id VARCHAR(255) PRIMARY KEY,
+        period_start TIMESTAMP NOT NULL,
+        period_end TIMESTAMP NOT NULL,
+        trigger VARCHAR(30) NOT NULL,
+        status VARCHAR(30) NOT NULL,
+        provider VARCHAR(50),
+        model VARCHAR(120),
+        input_hash VARCHAR(64) NOT NULL,
+        report JSONB,
+        attempts JSONB NOT NULL DEFAULT '[]',
+        error TEXT,
+        duration_ms INTEGER,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        completed_at TIMESTAMP
+      )`,
+    },
+    {
+      label: "ai_analytics_reports: add status index",
+      query: `CREATE INDEX IF NOT EXISTS ai_analytics_reports_status_created_idx ON ai_analytics_reports (status, created_at DESC)`,
+    },
+
     // ── Unique constraint on checkout_drafts.session_id (safe) ──
     {
       label: "checkout_drafts: add unique constraint on session_id (safe)",
@@ -216,7 +254,7 @@ async function migrate() {
 
   for (const m of migrations) {
     try {
-      await sql(m.query);
+      await sql.unsafe(m.query);
       console.log(`  ✅ ${m.label}`);
       success++;
     } catch (error: unknown) {
@@ -235,11 +273,15 @@ async function migrate() {
   console.log(`\n🏁 Migration complete: ${success} applied, ${skipped} skipped, ${failed} failed`);
 
   if (failed > 0) {
+    await sql.end();
     process.exit(1);
   }
+
+  await sql.end();
 }
 
 migrate().catch((err) => {
   console.error("Migration script failed:", err);
+  void sql.end();
   process.exit(1);
 });

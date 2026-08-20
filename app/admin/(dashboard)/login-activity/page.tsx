@@ -348,7 +348,7 @@ export default async function LoginActivityPage({
   if (dbError) {
     return (
       <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
-        <div>
+        <div className="admin-page-intro-copy">
           <h1 className="text-2xl font-semibold text-white">Login Activity</h1>
         </div>
         <div className="rounded-2xl border border-dashed border-amber-500/30 bg-amber-500/[0.04] p-12 text-center">
@@ -377,7 +377,7 @@ export default async function LoginActivityPage({
 
   return (
     <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+      <div className="admin-page-intro-copy flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold text-white">Login Activity</h1>
           <p className="mt-1 text-sm text-white/45">
