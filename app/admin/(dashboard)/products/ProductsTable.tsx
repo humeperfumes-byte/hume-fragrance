@@ -270,7 +270,7 @@ export function ProductsTable({
           <Button type="button" variant="ghost" onClick={() => { setQuery(""); setCategoryFilter("all"); setStatusFilter("all"); }} className="mt-2 text-xs text-white/45">Clear filters</Button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-3 2xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {visibleProducts.map((product) => {
             const badges = getBadges(product);
             const actionClass = "group/menu flex min-h-10 cursor-pointer items-center rounded-xl px-3 py-2 text-xs text-white/65 outline-none transition focus:bg-white/[0.07] focus:text-white";
@@ -284,7 +284,7 @@ export function ProductsTable({
                       src={product.images[0]}
                       alt={product.name}
                       fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, (max-width: 1536px) 33vw, 25vw"
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, (max-width: 1536px) 25vw, 20vw"
                       className="object-cover transition duration-700 group-hover:scale-[1.035]"
                     />
                   ) : (
