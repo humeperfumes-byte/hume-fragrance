@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import type { Product } from "@/db/schema";
@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { AlertTriangle, Check, Clock3, ExternalLink, Eye, EyeOff, FlaskConical, MoreHorizontal, PackageX, Pencil, Plus, Sparkles, Star, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, Clock3, ExternalLink, Eye, EyeOff, FlaskConical, MoreHorizontal, PackageX, Pencil, Plus, Search, Sparkles, Star, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ProductFormSheet } from "./ProductFormSheet";
 
@@ -24,6 +24,10 @@ export function ProductsTable({
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [kitOutOfStock, setKitOutOfStock] = useState(initialKitOutOfStock);
   const [kitSaving, setKitSaving] = useState(false);
+  const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
   const router = useRouter();
 
   const getBadges = (product: Product) =>
@@ -36,6 +40,37 @@ export function ProductsTable({
       showInDiscoverySet?: boolean;
       recommendedSample?: boolean;
     };
+
+  const categories = useMemo(
+    () => Array.from(new Set(products.map((product) => product.category).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
+    [products],
+  );
+
+  const visibleProducts = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    const filtered = products.filter((product) => {
+      const badges = getBadges(product);
+      const matchesQuery = !normalizedQuery || [product.name, product.id, product.inspiration, product.inspirationBrand]
+        .some((value) => value.toLowerCase().includes(normalizedQuery));
+      const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
+      const matchesStatus = statusFilter === "all"
+        || (statusFilter === "public" && product.visibility === "public")
+        || (statusFilter === "seo_only" && product.visibility === "seo_only")
+        || (statusFilter === "sold_out" && badges.soldOut)
+        || (statusFilter === "limited_stock" && badges.limitedStock)
+        || (statusFilter === "best_seller" && badges.bestSeller);
+      return matchesQuery && matchesCategory && matchesStatus;
+    });
+
+    return filtered.sort((a, b) => {
+      if (sortBy === "oldest") return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      if (sortBy === "name_asc") return a.name.localeCompare(b.name);
+      if (sortBy === "name_desc") return b.name.localeCompare(a.name);
+      if (sortBy === "price_asc") return Number(a.price) - Number(b.price);
+      if (sortBy === "price_desc") return Number(b.price) - Number(a.price);
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }, [categoryFilter, products, query, sortBy, statusFilter]);
 
   const openCreateForm = () => {
     setEditingProduct(null);
@@ -186,6 +221,41 @@ export function ProductsTable({
         </div>
       </div>
 
+      <div className="rounded-2xl border border-white/[0.085] bg-[#18181b] p-3">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_180px_180px_180px]">
+          <label className="relative block">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search catalogue"
+              className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.035] pl-10 pr-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#c5a9ff]/45"
+            />
+          </label>
+          <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} aria-label="Filter by category" className="h-11 rounded-xl border border-white/10 bg-[#202024] px-3 text-sm text-white/70 outline-none focus:border-[#c5a9ff]/45">
+            <option value="all">All categories</option>
+            {categories.map((category) => <option key={category} value={category}>{category}</option>)}
+          </select>
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter by status" className="h-11 rounded-xl border border-white/10 bg-[#202024] px-3 text-sm text-white/70 outline-none focus:border-[#c5a9ff]/45">
+            <option value="all">All statuses</option>
+            <option value="public">Public</option>
+            <option value="seo_only">SEO only</option>
+            <option value="sold_out">Sold out</option>
+            <option value="limited_stock">Limited stock</option>
+            <option value="best_seller">Best seller</option>
+          </select>
+          <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} aria-label="Sort products" className="h-11 rounded-xl border border-white/10 bg-[#202024] px-3 text-sm text-white/70 outline-none focus:border-[#c5a9ff]/45">
+            <option value="newest">Sort: Newest</option>
+            <option value="oldest">Sort: Oldest</option>
+            <option value="name_asc">Name: A–Z</option>
+            <option value="name_desc">Name: Z–A</option>
+            <option value="price_asc">Price: Low to high</option>
+            <option value="price_desc">Price: High to low</option>
+          </select>
+        </div>
+        <p className="mt-2 px-1 text-[11px] text-white/30">Showing {visibleProducts.length} of {products.length} products</p>
+      </div>
+
       {products.length === 0 ? (
         <div className="flex min-h-72 flex-col items-center justify-center rounded-3xl border border-dashed border-white/10 bg-white/[0.025] px-6 text-center">
           <FlaskConical className="h-8 w-8 text-white/20" />
@@ -193,9 +263,15 @@ export function ProductsTable({
           <p className="mt-1 text-xs text-white/30">Add your first fragrance to begin building the catalogue.</p>
           <Button onClick={openCreateForm} className="mt-5 rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add Product</Button>
         </div>
+      ) : visibleProducts.length === 0 ? (
+        <div className="flex min-h-56 flex-col items-center justify-center rounded-3xl border border-dashed border-white/10 bg-white/[0.025] px-6 text-center">
+          <Search className="h-7 w-7 text-white/20" />
+          <p className="mt-3 text-sm font-medium text-white/60">No matching products</p>
+          <Button type="button" variant="ghost" onClick={() => { setQuery(""); setCategoryFilter("all"); setStatusFilter("all"); }} className="mt-2 text-xs text-white/45">Clear filters</Button>
+        </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {products.map((product) => {
+        <div className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-3 2xl:grid-cols-4">
+          {visibleProducts.map((product) => {
             const badges = getBadges(product);
             const actionClass = "group/menu flex min-h-10 cursor-pointer items-center rounded-xl px-3 py-2 text-xs text-white/65 outline-none transition focus:bg-white/[0.07] focus:text-white";
             const activeIconClass = "ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-[#c5a9ff]/15 text-[#d8c8ff]";
@@ -278,13 +354,13 @@ export function ProductsTable({
                   </div>
                 </div>
 
-                <div className="p-4 sm:p-5">
+                <div className="p-3 sm:p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h3 className="truncate text-base font-semibold text-white">{product.name}</h3>
+                      <h3 className="truncate text-sm font-semibold text-white sm:text-base">{product.name}</h3>
                       <p className="mt-1 line-clamp-1 text-xs text-white/38">Inspired by {product.inspirationBrand} {product.inspiration}</p>
                     </div>
-                    <p className="shrink-0 text-sm font-semibold text-[#dfd2ff]">₹{Number(product.price).toLocaleString("en-IN")}</p>
+                    <p className="shrink-0 text-xs font-semibold text-[#dfd2ff] sm:text-sm">₹{Number(product.price).toLocaleString("en-IN")}</p>
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-1.5 text-[9px] font-semibold uppercase tracking-[0.1em]">
@@ -301,8 +377,8 @@ export function ProductsTable({
                     {!badges.bestSeller && !badges.humeSpecial && !badges.showInDiscoverySet && !badges.recommendedSample ? <span className="text-[10px] text-white/20">Standard catalogue product</span> : null}
                   </div>
 
-                  <div className="mt-5 grid grid-cols-[1fr_auto] gap-2 border-t border-white/[0.065] pt-4">
-                    <Button type="button" variant="outline" onClick={() => openEditForm(product)} className="h-10 rounded-xl border-white/10 bg-white/[0.035] text-xs text-white hover:bg-white hover:text-black"><Pencil className="mr-2 h-3.5 w-3.5" /> Edit product</Button>
+                  <div className="mt-4 grid grid-cols-[1fr_auto] gap-2 border-t border-white/[0.065] pt-3 sm:mt-5 sm:pt-4">
+                    <Button type="button" variant="outline" onClick={() => openEditForm(product)} className="h-10 rounded-xl border-white/10 bg-white/[0.035] px-2 text-[11px] text-white hover:bg-white hover:text-black sm:px-4 sm:text-xs"><Pencil className="mr-1 h-3.5 w-3.5 sm:mr-2" /> Edit</Button>
                     <Button type="button" variant="outline" size="icon" onClick={() => window.open(`/product/${encodeURIComponent(product.id)}`, "_blank")} className="h-10 w-10 rounded-xl border-white/10 bg-white/[0.035] text-white hover:bg-white hover:text-black" aria-label={`View ${product.name} live`}><ExternalLink className="h-3.5 w-3.5" /></Button>
                   </div>
                 </div>
