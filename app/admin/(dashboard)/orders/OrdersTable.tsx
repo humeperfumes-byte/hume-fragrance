@@ -163,33 +163,33 @@ function getProductOptionLabel(product: Product) {
 function getOrderRowTone(status: string) {
   switch (status) {
     case "processing":
-      return "border-l-[3px] border-l-violet-300 bg-violet-500/[0.15] hover:bg-violet-500/[0.21]";
+      return "border-l-[3px] border-l-violet-300";
     case "packed":
-      return "border-l-[3px] border-l-fuchsia-300 bg-fuchsia-500/[0.14] hover:bg-fuchsia-500/[0.20]";
+      return "border-l-[3px] border-l-fuchsia-300";
     case "shipped":
-      return "border-l-[3px] border-l-sky-300 bg-sky-500/[0.14] hover:bg-sky-500/[0.20]";
+      return "border-l-[3px] border-l-sky-300";
     case "delivered":
     case "complete":
-      return "border-l-[3px] border-l-emerald-300 bg-emerald-500/[0.14] hover:bg-emerald-500/[0.20]";
+      return "border-l-[3px] border-l-emerald-300";
     case "cancelled":
-      return "border-l-[3px] border-l-rose-300 bg-rose-500/[0.14] hover:bg-rose-500/[0.20]";
+      return "border-l-[3px] border-l-rose-300";
     case "payment_pending":
     case "whatsapp_initiated":
-      return "border-l-[3px] border-l-amber-300 bg-amber-500/[0.14] hover:bg-amber-500/[0.20]";
+      return "border-l-[3px] border-l-amber-300";
     case "payment_authorized":
-      return "border-l-[3px] border-l-indigo-300 bg-indigo-500/[0.15] hover:bg-indigo-500/[0.21]";
+      return "border-l-[3px] border-l-indigo-300";
     case "payment_failed":
     case "refund_failed":
     case "payment_disputed":
     case "dispute_action_required":
-      return "border-l-[3px] border-l-red-300 bg-red-500/[0.14] hover:bg-red-500/[0.20]";
+      return "border-l-[3px] border-l-red-300";
     case "refund_initiated":
     case "partially_refunded":
-      return "border-l-[3px] border-l-cyan-300 bg-cyan-500/[0.14] hover:bg-cyan-500/[0.20]";
+      return "border-l-[3px] border-l-cyan-300";
     case "refunded":
-      return "border-l-[3px] border-l-teal-300 bg-teal-500/[0.14] hover:bg-teal-500/[0.20]";
+      return "border-l-[3px] border-l-teal-300";
     default:
-      return "border-l-2 border-l-white/20 bg-[#171719] hover:bg-[#202024]";
+      return "border-l-[3px] border-l-white/20";
   }
 }
 
@@ -712,10 +712,80 @@ export function OrdersTable({
           </div>
         </div>
       ) : null}
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader className="bg-[#222226]">
-            <TableRow className="border-white/5 hover:bg-transparent">
+      <div className="space-y-3 p-3 md:hidden">
+        {orderRows.length === 0 ? (
+          <div className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-white/[0.07] bg-[#171719] px-6 text-center">
+            <div className="rounded-full border border-white/[0.07] bg-white/[0.035] p-5">
+              <Package className="h-7 w-7 text-white/25" />
+            </div>
+            <p className="mt-4 text-base font-semibold text-white/55">No confirmed orders</p>
+            <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.18em] text-white/25">System is ready for new orders</p>
+          </div>
+        ) : orderRows.map((order) => {
+          const isSelected = selectedOrderIds.includes(order.id);
+
+          return (
+            <article
+              key={order.id}
+              className={`relative cursor-pointer overflow-hidden rounded-2xl border p-4 shadow-[inset_0_1px_rgba(255,255,255,.04),0_12px_28px_rgba(0,0,0,.14)] transition active:scale-[0.99] ${
+                isSelected
+                  ? "border-emerald-300/35 bg-emerald-400/[0.09]"
+                  : "border-white/[0.08] bg-[linear-gradient(145deg,rgba(197,169,255,.055),rgba(24,24,27,.98)_42%)]"
+              }`}
+              onPointerDown={(event) => {
+                if (event.button !== 0 || isSelectionMode) return;
+                longPressTriggeredRef.current = false;
+                clearLongPressTimer();
+                longPressTimerRef.current = window.setTimeout(() => beginOrderSelection(order.id), 520);
+              }}
+              onPointerUp={clearLongPressTimer}
+              onPointerCancel={clearLongPressTimer}
+              onPointerLeave={clearLongPressTimer}
+              onContextMenu={(event) => {
+                event.preventDefault();
+                beginOrderSelection(order.id);
+              }}
+              onClick={() => handleOrderRowClick(order)}
+            >
+              <div className="flex min-w-0 items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <span className="inline-flex max-w-full break-all rounded-lg border border-white/10 bg-black/20 px-2.5 py-1.5 font-mono text-[10px] font-bold tracking-[0.1em] text-white/65">{order.orderNumber}</span>
+                  <p className="mt-2 text-[10px] font-medium text-white/35">{format(new Date(order.createdAt), "MMM d, yyyy · h:mm a")}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {isSelectionMode ? (
+                    <span className={`flex h-6 w-6 items-center justify-center rounded-md border ${isSelected ? "border-emerald-300 bg-emerald-300 text-black" : "border-white/20 bg-white/[0.03] text-transparent"}`}>
+                      {isSelected ? <CheckCircle2 className="h-4 w-4" /> : null}
+                    </span>
+                  ) : null}
+                  {getOrderStatusBadge(order)}
+                </div>
+              </div>
+
+              <div className="mt-4 border-t border-white/[0.07] pt-4">
+                <p className="break-words text-lg font-semibold leading-6 text-white">{order.fullName || "Guest"}</p>
+                <p className="mt-0.5 break-all text-[11px] font-medium text-white/40">{displayPhoneNumber(order.phone) || order.email || "No contact"}</p>
+              </div>
+
+              <div className="mt-4 flex min-w-0 items-end justify-between gap-3 border-t border-white/[0.07] pt-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[8px] font-bold uppercase tracking-[0.16em] text-white/25">Tracking</p>
+                  {order.trackingNumber ? <p className="mt-1.5 break-all text-[10px] font-bold leading-4 text-sky-200"><Truck className="mr-1 inline h-3 w-3" />{order.trackingNumber}</p> : <p className="mt-1.5 text-[11px] text-white/35">Not added</p>}
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-[8px] font-bold uppercase tracking-[0.16em] text-white/25">Total</p>
+                  <p className="mt-1 text-xl font-semibold tracking-tight text-white">{formatINR(Number(order.grandTotal))}</p>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      <div className="hidden overflow-x-auto bg-[#121214] px-3 pb-3 md:block">
+        <Table className="border-separate border-spacing-y-3">
+          <TableHeader className="bg-transparent">
+            <TableRow className="border-0 bg-[#202023] shadow-[inset_0_1px_rgba(255,255,255,.035)] hover:bg-[#202023] [&>th:first-child]:rounded-l-xl [&>th:last-child]:rounded-r-xl">
               {isSelectionMode ? (
                 <TableHead className="w-12 px-6 py-5">
                   <span className="sr-only">Selected</span>
@@ -724,8 +794,6 @@ export function OrdersTable({
               <TableHead className="w-[120px] px-6 py-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Order ID</TableHead>
               <TableHead className="py-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Date</TableHead>
               <TableHead className="py-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Customer</TableHead>
-              <TableHead className="py-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Site</TableHead>
-              <TableHead className="py-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Items</TableHead>
               <TableHead className="py-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Tracking</TableHead>
               <TableHead className="px-6 py-5 text-right text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Total</TableHead>
               <TableHead className="py-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Payment</TableHead>
@@ -735,7 +803,7 @@ export function OrdersTable({
           <TableBody>
             {orderRows.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={isSelectionMode ? 10 : 9} className="h-[400px] text-center">
+                <TableCell colSpan={isSelectionMode ? 8 : 7} className="h-[400px] text-center">
                   <div className="flex flex-col items-center justify-center space-y-3">
                     <div className="rounded-full bg-white/[0.03] p-6 border border-white/5 shadow-2xl">
                       <Package className="h-8 w-8 text-white/20" />
@@ -749,14 +817,13 @@ export function OrdersTable({
               </TableRow>
             ) : (
               orderRows.map((order) => {
-                const totalItems = order.cartSnapshot?.reduce((acc: number, item: { quantity: number }) => acc + item.quantity, 0) || 0;
                 const isSelected = selectedOrderIds.includes(order.id);
                 const partialCod = getPartialCodBreakdown(order);
                 
                 return (
                   <TableRow 
                     key={order.id} 
-                    className={`cursor-pointer border-white/[0.07] transition-all duration-200 group ${
+                    className={`group cursor-pointer overflow-hidden rounded-2xl border-y border-white/[0.075] bg-[linear-gradient(145deg,rgba(197,169,255,.055),rgba(24,24,27,.98)_38%)] shadow-[inset_0_1px_rgba(255,255,255,.045),0_10px_24px_rgba(0,0,0,.15)] outline outline-1 outline-white/[0.035] transition-[transform,filter,box-shadow] duration-200 hover:-translate-y-px hover:brightness-110 hover:shadow-[inset_0_1px_rgba(255,255,255,.065),0_15px_32px_rgba(0,0,0,.22)] [&>td:first-child]:rounded-l-2xl [&>td:last-child]:rounded-r-2xl ${
                       isSelected ? "border-l-2 border-l-emerald-300 bg-emerald-400/[0.10] hover:bg-emerald-400/[0.13]" : getOrderRowTone(order.status)
                     }`}
                     onPointerDown={(event) => {
@@ -797,12 +864,6 @@ export function OrdersTable({
                         <span className="text-[11px] font-medium tracking-tight text-white/45">{displayPhoneNumber(order.phone) || order.email || "No contact"}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <Badge className="rounded-full border-white/15 bg-white/[0.055] px-2.5 py-1 text-white/70 shadow-none hover:bg-white/[0.07]">
-                        {getOrderHost(order)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-[12px] font-medium text-white/60">{totalItems} items</TableCell>
                     <TableCell>
                       {order.trackingNumber ? (
                         <span className="inline-flex items-center gap-1 rounded-full border border-blue-400/20 bg-blue-400/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-blue-200">

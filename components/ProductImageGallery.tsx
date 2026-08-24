@@ -131,7 +131,7 @@ const ProductImageGallery = ({ images, videos = [], name }: ProductImageGalleryP
         <CarouselContent className="-ml-0">
           {mediaItems.map((item, index) => (
             <CarouselItem key={`${item.src}-${index}`} className="pl-0 basis-full">
-              <div className="aspect-[3/4] lg:aspect-square bg-background overflow-hidden relative">
+              <div className="relative aspect-square overflow-hidden bg-background">
                 {item.type === "video" ? (
                   <video
                     src={item.src}

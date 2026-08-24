@@ -6,7 +6,7 @@ import ImageWithFallback from "@/components/ImageWithFallback";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, Menu, X, Search, Sparkles, ExternalLink, UserRound } from "lucide-react";
+import { ArrowRight, ChevronRight, Menu, X, Search, Sparkles, ExternalLink, UserRound } from "lucide-react";
 import { HiOutlineShoppingBag } from "react-icons/hi2";
 import { useCart } from "@/context/CartContext";
 import ShopMegaMenu from "./ShopMegaMenu";
@@ -19,7 +19,7 @@ import { DISCOVERY_SET_PATH } from "@/lib/discovery-set";
 import AnnouncementBar from "./AnnouncementBar";
 import { useSiteControls } from "@/hooks/use-site-controls";
 import { useOverlayHistory } from "@/hooks/use-overlay-history";
-import { getMobileBackFallback, isMobileNavigationHub, readMobileNavigationStack, recordMobileNavigation } from "@/lib/mobile-navigation";
+import { getMobileBackFallback, getStorefrontBreadcrumbs, readMobileNavigationStack, recordMobileNavigation } from "@/lib/mobile-navigation";
 
 // The mobile Raksha Bandhan takeover expires at the end of 26 August 2026 in India.
 const RAKSHA_BANDHAN_MENU_END_AT = new Date("2026-08-26T23:59:59+05:30").getTime();
@@ -38,7 +38,8 @@ const Header = () => {
   const { totalItems, isCartOpen, setIsCartOpen } = useCart();
   const router = useRouter();
   const pathname = usePathname();
-  const showMobileBack = !isMobileNavigationHub(pathname);
+  const breadcrumbs = getStorefrontBreadcrumbs(pathname);
+  const showBreadcrumbs = breadcrumbs.length > 0;
 
   useOverlayHistory(isMenuOpen, setIsMenuOpen, "menu");
   useOverlayHistory(isSearchOpen, setIsSearchOpen, "search");
@@ -57,23 +58,18 @@ const Header = () => {
     recordMobileNavigation(`${pathname}${search}`);
   }, [pathname]);
 
-  const handleMobileBack = () => {
-    if (isMenuOpen) return setIsMenuOpen(false);
-    if (isSearchOpen) return setIsSearchOpen(false);
-    if (isCartOpen) return setIsCartOpen(false);
+  const openSearchFromMenu = () => {
+    setIsMenuOpen(false);
+    window.setTimeout(() => setIsSearchOpen(true), 80);
+  };
 
+  const handleBreadcrumbBack = () => {
     if (readMobileNavigationStack().length > 1) {
       router.back();
       return;
     }
-
     showNavigationLoadingToast("Going back");
     router.replace(getMobileBackFallback(pathname));
-  };
-
-  const openSearchFromMenu = () => {
-    setIsMenuOpen(false);
-    window.setTimeout(() => setIsSearchOpen(true), 80);
   };
 
   useEffect(() => {
@@ -138,6 +134,7 @@ const Header = () => {
   ];
 
   return (
+    <>
     <header 
       className="fixed left-0 right-0 z-50 bg-background/95 backdrop-blur-sm transition-[top] duration-100 ease-out"
       style={{ top: `${topOffset}px` }}
@@ -152,16 +149,6 @@ const Header = () => {
       <div className="container-luxury">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center py-5 md:flex md:justify-between">
           <div className="flex items-center justify-self-start gap-1.5 md:gap-6">
-            {showMobileBack ? (
-              <button
-                type="button"
-                onClick={handleMobileBack}
-                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/25 md:hidden"
-                aria-label="Go back"
-              >
-                <ArrowLeft className="h-5 w-5 stroke-[2.25]" />
-              </button>
-            ) : null}
             <button
               onClick={() => {
                 setIsSearchOpen(false);
@@ -275,7 +262,7 @@ const Header = () => {
                 setIsCartOpen(false);
                 setIsSearchOpen(true);
               }}
-              className={`inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/25 ${showMobileBack ? "max-[360px]:hidden" : ""}`}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/25"
               aria-label="Search"
             >
               <Search size={18} />
@@ -643,6 +630,32 @@ const Header = () => {
 
       <SearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </header>
+    {showBreadcrumbs ? (
+      <nav aria-label="Breadcrumb" className="-mb-20 mt-[84px] border-y border-black/[0.07] bg-background md:mt-[84px]">
+        <div className="container-luxury flex h-[52px] min-w-0 items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={handleBreadcrumbBack}
+            aria-label="Go back"
+            className="-mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-start text-black transition-opacity hover:opacity-60 focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/25"
+          >
+            <span className="text-[1.55rem] font-light leading-none" aria-hidden="true">
+              ←
+            </span>
+          </button>
+          <span aria-hidden="true" className="h-5 w-px shrink-0 bg-black/10" />
+          <ol className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden text-[10px] font-medium uppercase tracking-[0.13em] sm:gap-2 sm:text-[11px]">
+            {breadcrumbs.map((crumb, index) => (
+              <li key={`${crumb.label}-${index}`} className={`flex min-w-0 items-center gap-1.5 sm:gap-2 ${index === breadcrumbs.length - 1 ? "flex-1" : "shrink-0"}`}>
+                {index > 0 ? <ChevronRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-black/25" /> : null}
+                {crumb.href ? <Link href={crumb.href} className="shrink-0 text-muted-foreground transition hover:text-foreground">{crumb.label}</Link> : <span aria-current="page" className="min-w-0 truncate font-semibold text-foreground">{crumb.label}</span>}
+              </li>
+            ))}
+          </ol>
+        </div>
+      </nav>
+    ) : null}
+    </>
   );
 };
 
