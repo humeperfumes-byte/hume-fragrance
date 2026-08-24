@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { orders, products, type Order, type Product } from "@/db/schema";
-import { and, asc, desc, gte, lte } from "drizzle-orm";
+import { orders, products, razorpayWebhookEvents, type Order, type Product } from "@/db/schema";
+import { and, asc, desc, gte, inArray, lte, sql } from "drizzle-orm";
 import { OrdersTable } from "./OrdersTable";
 import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-data-filters";
 import { parseAdminTimeWindow } from "@/lib/admin-time-window";
@@ -8,9 +8,11 @@ import { parseAdminMarket, isIndiaCheckoutSignal } from "@/lib/admin-market";
 import { PackageCheck } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 type AdminPageProps = {
-  searchParams?: Promise<{ hours?: string; market?: string; from?: string; to?: string }> | { hours?: string; market?: string; from?: string; to?: string };
+  searchParams?: Promise<{ hours?: string; market?: string; from?: string; to?: string }>;
 };
 
 export default async function OrdersPage({ searchParams }: AdminPageProps) {
@@ -19,12 +21,17 @@ export default async function OrdersPage({ searchParams }: AdminPageProps) {
   let allOrders: Order[] = [];
   let productOptions: Product[] = [];
   let tableExists = true;
+  const capturedAmounts: Record<string, number> = {};
 
   try {
+    const orderWindow = timeWindow.isCustom
+      ? and(gte(orders.createdAt, timeWindow.since), lte(orders.createdAt, timeWindow.until))
+      : sql`${orders.createdAt} >= (now() - (${timeWindow.hours} * interval '1 hour'))::timestamp
+          and ${orders.createdAt} <= now()::timestamp`;
     allOrders = await db
       .select()
       .from(orders)
-      .where(and(gte(orders.createdAt, timeWindow.since), lte(orders.createdAt, timeWindow.until)))
+      .where(orderWindow)
       .orderBy(desc(orders.createdAt))
       .limit(200);
     allOrders = filterExcludedAdminRows(allOrders, collectExcludedSessionIds(allOrders));
@@ -45,6 +52,22 @@ export default async function OrdersPage({ searchParams }: AdminPageProps) {
   } catch (error) {
     console.error("Unable to load product replacement options:", error);
   }
+
+  if (allOrders.length) {
+    try {
+      const captured = await db.select({ localOrderId: razorpayWebhookEvents.localOrderId, amount: sql<string>`max(${razorpayWebhookEvents.amount})` }).from(razorpayWebhookEvents)
+        .where(and(inArray(razorpayWebhookEvents.localOrderId, allOrders.map((order) => order.id)), sql`lower(coalesce(${razorpayWebhookEvents.status}, '')) in ('captured','authorized','paid')`))
+        .groupBy(razorpayWebhookEvents.localOrderId);
+      captured.forEach((row) => { if (row.localOrderId) capturedAmounts[row.localOrderId] = Number(row.amount || 0) / 100; });
+    } catch (error) { console.error("Unable to load captured payment totals:", error); }
+  }
+
+  // OrdersTable keeps local state for inline edits. Remount it whenever the
+  // server result changes so client navigation cannot retain an older empty
+  // snapshot after fresh orders arrive.
+  const ordersVersion = allOrders
+    .map((order) => `${order.id}:${order.updatedAt.getTime()}`)
+    .join("|");
 
   return (
     <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
@@ -75,7 +98,7 @@ export default async function OrdersPage({ searchParams }: AdminPageProps) {
           </div>
         </div>
       ) : (
-        <OrdersTable initialOrders={allOrders} productOptions={productOptions} />
+        <OrdersTable key={ordersVersion || "no-orders"} initialOrders={allOrders} productOptions={productOptions} capturedAmounts={capturedAmounts} />
       )}
     </div>
   );

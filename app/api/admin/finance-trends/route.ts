@@ -29,7 +29,7 @@ function isRevenueQualifiedOrder(order: Order): boolean {
   const hasFulfillmentProof = Boolean(
     order.trackingNumber || order.shippedAt || order.deliveredAt || ["shipped", "delivered"].includes(order.status),
   );
-  const hasCapturedPayment = order.status === "processing" && Boolean(order.paymentMethod);
+  const hasCapturedPayment = ["processing", "packed"].includes(order.status) && Boolean(order.paymentMethod);
   return hasFulfillmentProof || hasCapturedPayment || order.status === "complete";
 }
 

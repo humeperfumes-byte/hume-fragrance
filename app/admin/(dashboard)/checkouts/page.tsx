@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { checkoutDrafts } from "@/db/schema";
-import { and, desc, gte, lte } from "drizzle-orm";
+import { checkoutDrafts, orders } from "@/db/schema";
+import { and, desc, gte, inArray, lte, or, sql } from "drizzle-orm";
 import { CheckoutsTable } from "./CheckoutsTable";
 import { formatINR } from "@/lib/currency";
 import { filterExcludedAdminRows, collectExcludedSessionIds } from "@/lib/admin-data-filters";
@@ -11,22 +11,53 @@ import { RotateCcw } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 type AdminPageProps = {
-  searchParams?: Promise<{ hours?: string; market?: string; from?: string; to?: string }> | { hours?: string; market?: string; from?: string; to?: string };
+  searchParams?: Promise<{ hours?: string; market?: string; from?: string; to?: string }>;
 };
 
 export default async function CheckoutsPage({ searchParams }: AdminPageProps) {
   const params = await searchParams;
   const timeWindow = parseAdminTimeWindow(params?.hours, params?.from, params?.to);
-  let drafts: (typeof checkoutDrafts.$inferSelect)[] = [];
+  let drafts: Array<typeof checkoutDrafts.$inferSelect & { hasOrderRecord: boolean; hasConfirmedOrder: boolean; linkedOrderNumber: string | null; linkedOrderStatus: string | null }> = [];
   let dbError = false;
 
   try {
-    drafts = await db
+    const checkoutWindow = timeWindow.isCustom
+      ? and(gte(checkoutDrafts.updatedAt, timeWindow.since), lte(checkoutDrafts.updatedAt, timeWindow.until))
+      : sql`${checkoutDrafts.updatedAt} >= (now() - (${timeWindow.hours} * interval '1 hour'))::timestamp
+          and ${checkoutDrafts.updatedAt} <= now()::timestamp`;
+    const checkoutRows = await db
       .select()
       .from(checkoutDrafts)
-      .where(and(gte(checkoutDrafts.updatedAt, timeWindow.since), lte(checkoutDrafts.updatedAt, timeWindow.until)))
+      .where(checkoutWindow)
       .orderBy(desc(checkoutDrafts.updatedAt))
       .limit(500);
+    const sessionIds = checkoutRows.map((draft) => draft.sessionId).filter((value): value is string => Boolean(value));
+    const emails = checkoutRows.map((draft) => draft.email?.trim().toLowerCase()).filter((value): value is string => Boolean(value));
+    const phones = checkoutRows.map((draft) => draft.phone?.replace(/\D/g, "")).filter((value): value is string => Boolean(value));
+    const matchConditions = [];
+    if (sessionIds.length) matchConditions.push(inArray(orders.sessionId, sessionIds));
+    if (emails.length) matchConditions.push(inArray(orders.email, emails));
+    if (phones.length) matchConditions.push(inArray(orders.phone, phones));
+    const linkedOrders = matchConditions.length
+      ? await db.select({ sessionId: orders.sessionId, email: orders.email, phone: orders.phone, orderNumber: orders.orderNumber, status: orders.status, createdAt: orders.createdAt })
+          .from(orders).where(or(...matchConditions)).orderBy(desc(orders.createdAt))
+      : [];
+    const bySession = new Map(linkedOrders.filter((order) => order.sessionId).map((order) => [order.sessionId, order]));
+    const byEmail = new Map(linkedOrders.filter((order) => order.email).map((order) => [order.email!.trim().toLowerCase(), order]));
+    const byPhone = new Map(linkedOrders.filter((order) => order.phone).map((order) => [order.phone!.replace(/\D/g, ""), order]));
+    const confirmedStatuses = new Set(["payment_authorized", "processing", "shipped", "delivered", "complete"]);
+    drafts = checkoutRows.map((draft) => {
+      const linkedOrder = bySession.get(draft.sessionId)
+        || (draft.email ? byEmail.get(draft.email.trim().toLowerCase()) : undefined)
+        || (draft.phone ? byPhone.get(draft.phone.replace(/\D/g, "")) : undefined);
+      return {
+        ...draft,
+        hasOrderRecord: Boolean(linkedOrder),
+        hasConfirmedOrder: Boolean(linkedOrder && confirmedStatuses.has(linkedOrder.status)),
+        linkedOrderNumber: linkedOrder?.orderNumber || null,
+        linkedOrderStatus: linkedOrder?.status || null,
+      };
+    });
     drafts = filterExcludedAdminRows(drafts, collectExcludedSessionIds(drafts));
 
     const market = parseAdminMarket(params?.market);
@@ -60,13 +91,13 @@ export default async function CheckoutsPage({ searchParams }: AdminPageProps) {
     );
   }
 
-  const activeDrafts = drafts.filter((d) => d.status !== "complete").length;
+  const activeDrafts = drafts.filter((d) => !d.hasConfirmedOrder).length;
   const recoverable = drafts.filter(
-    (d) => d.status !== "complete" && d.status !== "whatsapp_initiated" && (d.phone || d.email || d.fullName),
+    (d) => !d.hasConfirmedOrder && d.status !== "whatsapp_initiated" && (d.phone || d.email || d.fullName),
   ).length;
-  const whatsappInitiated = drafts.filter((d) => d.status === "whatsapp_initiated").length;
+  const whatsappInitiated = drafts.filter((d) => !d.hasConfirmedOrder && d.status === "whatsapp_initiated").length;
   const totalAbandonedValue = drafts
-    .filter((d) => d.status !== "complete")
+    .filter((d) => !d.hasConfirmedOrder)
     .reduce((acc, d) => acc + Number.parseFloat(String(d.grandTotal ?? "0")), 0);
 
   return (

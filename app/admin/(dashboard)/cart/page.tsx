@@ -52,7 +52,7 @@ function productKey(value: string | null | undefined): string {
 }
 
 type AdminPageProps = {
-  searchParams?: Promise<{ hours?: string; market?: string; from?: string; to?: string }> | { hours?: string; market?: string; from?: string; to?: string };
+  searchParams?: Promise<{ hours?: string; market?: string; from?: string; to?: string }>;
 };
 
 type RewardSignal = {

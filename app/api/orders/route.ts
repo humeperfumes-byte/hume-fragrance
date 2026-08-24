@@ -42,6 +42,8 @@ const orderSchema = z.object({
   status: z.string().max(50).default("whatsapp_initiated"),
   checkoutChannel: z.string().max(50).default("whatsapp"),
   paymentMethod: z.string().max(100).optional(),
+  razorpayOrderId: z.string().max(255).optional(),
+  razorpayPaymentId: z.string().max(255).optional(),
   shippingMethod: z.string().max(100).optional(),
   path: z.string().max(2048).optional(),
   acquisitionSource: z.string().max(100).optional(),
@@ -119,6 +121,12 @@ export async function POST(request: NextRequest) {
       .from(orders)
       .where(eq(orders.id, data.id))
       .limit(1);
+    const protectedStatuses = new Set(["processing", "packed", "shipped", "delivered", "complete"]);
+    const transientStatuses = new Set(["payment_pending", "payment_authorized", "payment_failed"]);
+    const preventPaymentDowngrade = Boolean(
+      existingOrder && protectedStatuses.has(existingOrder.status) && transientStatuses.has(data.status),
+    );
+    const persistedStatus = preventPaymentDowngrade ? existingOrder!.status : data.status;
 
     const capturedPath = getCapturedPath(request, data.path);
     const forwardedFor = request.headers.get("x-forwarded-for");
@@ -144,9 +152,11 @@ export async function POST(request: NextRequest) {
         id: data.id,
         orderNumber: data.orderNumber,
         sessionId: data.sessionId,
-        status: data.status,
+        status: persistedStatus,
         checkoutChannel: data.checkoutChannel,
         paymentMethod: data.paymentMethod ?? null,
+        razorpayOrderId: data.razorpayOrderId ?? null,
+        razorpayPaymentId: data.razorpayPaymentId ?? null,
         shippingMethod: data.shippingMethod ?? null,
         path: capturedPath,
         acquisitionSource: data.acquisitionSource ?? null,
@@ -185,9 +195,11 @@ export async function POST(request: NextRequest) {
         set: {
           orderNumber: data.orderNumber,
           sessionId: data.sessionId,
-          status: data.status,
+          status: persistedStatus,
           checkoutChannel: data.checkoutChannel,
           paymentMethod: data.paymentMethod ?? null,
+          razorpayOrderId: preventPaymentDowngrade ? undefined : data.razorpayOrderId,
+          razorpayPaymentId: data.razorpayPaymentId,
           shippingMethod: data.shippingMethod ?? null,
           path: capturedPath,
           acquisitionSource: data.acquisitionSource ?? null,
@@ -227,17 +239,17 @@ export async function POST(request: NextRequest) {
     // leaves transient payment states.
     if (
       data.details.email &&
-      shouldSendOrderConfirmation(data.status, existingOrder?.status)
+      shouldSendOrderConfirmation(persistedStatus, existingOrder?.status)
     ) {
       sendOrderConfirmationEmail(data).catch((err) => {
         console.error("Async email send failed:", err);
       });
     }
 
-    if (shouldSendAdminOrderAlert(data.status, existingOrder?.status)) {
+    if (shouldSendAdminOrderAlert(persistedStatus, existingOrder?.status)) {
       sendAdminOrderAlert({
         orderNumber: data.orderNumber,
-        status: data.status,
+        status: persistedStatus,
         checkoutChannel: data.checkoutChannel,
         paymentMethod: data.paymentMethod,
         shippingMethod: data.shippingMethod,

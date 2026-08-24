@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { and, desc, eq, ne, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
-import { checkoutDrafts, orders } from "@/db/schema";
+import { checkoutDrafts, orderEditAudits, orders } from "@/db/schema";
 import { requireAdminToken } from "@/lib/admin-auth";
 
 function normalizePhone(value: string | null) {
@@ -51,7 +51,7 @@ export async function GET(
       relatedCheckoutConditions.push(sql`lower(trim(coalesce(${checkoutDrafts.email}, ''))) = ${email}`);
     }
 
-    const [relatedOrders, relatedCheckouts] = await Promise.all([
+    const [relatedOrders, audits, relatedCheckouts] = await Promise.all([
       db
         .select({
           id: orders.id,
@@ -66,6 +66,8 @@ export async function GET(
         .where(and(ne(orders.id, selectedOrder.id), or(...relatedOrderConditions)))
         .orderBy(desc(orders.createdAt))
         .limit(12),
+      db.select({ id: orderEditAudits.id, changeType: orderEditAudits.changeType, reason: orderEditAudits.reason, actor: orderEditAudits.actor, beforeSnapshot: orderEditAudits.beforeSnapshot, afterSnapshot: orderEditAudits.afterSnapshot, createdAt: orderEditAudits.createdAt })
+        .from(orderEditAudits).where(eq(orderEditAudits.orderId, selectedOrder.id)).orderBy(desc(orderEditAudits.createdAt)).limit(20),
       db
         .select({
           id: checkoutDrafts.id,
@@ -113,7 +115,7 @@ export async function GET(
       .sort((left, right) => right.occurredAt.getTime() - left.occurredAt.getTime())
       .slice(0, 12);
 
-    return NextResponse.json({ activity });
+    return NextResponse.json({ activity, audits });
   } catch (error) {
     console.error("Failed to load customer order activity:", error);
     return NextResponse.json({ error: "Failed to load customer activity" }, { status: 500 });

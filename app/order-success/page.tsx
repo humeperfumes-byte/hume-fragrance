@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 type OrderSuccessPageProps = {
-  searchParams?: Promise<{ order?: string; channel?: string }> | { order?: string; channel?: string };
+  searchParams?: Promise<{ order?: string; channel?: string }>;
 };
 
 export default async function OrderSuccessPage({ searchParams }: OrderSuccessPageProps) {

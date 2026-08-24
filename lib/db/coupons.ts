@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { coupons } from "@/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { CouponData } from "@/data/coupons";
 
 type CouponRow = typeof coupons.$inferSelect;
@@ -72,14 +72,11 @@ export async function getActiveCoupons(options?: { cartOnly?: boolean }): Promis
   const cartOnly = options?.cartOnly ?? false;
   try {
     ensureCouponsSeeded().catch(() => {});
-    const whereClause = cartOnly
-      ? and(eq(coupons.active, true), eq(coupons.displayInCart, true))
-      : eq(coupons.active, true);
-
-    const rows = await db.select().from(coupons).where(whereClause);
-    const dbCoupons = rows.map(transformCoupon);
+    const rows = await db.select().from(coupons);
+    const activeRows = rows.filter((row) => row.active && !row.archivedAt && (!cartOnly || row.displayInCart));
+    const dbCoupons = activeRows.map(transformCoupon);
     const missingStatic = couponsData.filter(
-      (sc) => !dbCoupons.some((dbc) => dbc.code.toUpperCase() === sc.code.toUpperCase())
+      (sc) => !rows.some((row) => row.code.toUpperCase() === sc.code.toUpperCase())
     );
     const combined = [...dbCoupons, ...missingStatic];
     return withHiddenSpecialCoupon(combined.filter((c) => !cartOnly || c.displayInCart), cartOnly);
@@ -96,7 +93,7 @@ export async function getCouponByCode(code: string): Promise<CouponData | null> 
     const [row] = await db
       .select()
       .from(coupons)
-      .where(and(eq(coupons.code, normalized), eq(coupons.active, true)))
+      .where(and(eq(coupons.code, normalized), eq(coupons.active, true), sql`${coupons.archivedAt} is null`))
       .limit(1);
     if (row) return transformCoupon(row);
   } catch (error) {

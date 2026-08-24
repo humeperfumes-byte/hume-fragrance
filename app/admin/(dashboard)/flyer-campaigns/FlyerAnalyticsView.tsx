@@ -621,9 +621,10 @@ export default function FlyerAnalyticsView() {
               <button
                 type="button"
                 onClick={() => setSelectedCampaign(null)}
-                className="rounded-lg p-2 text-stone-400 hover:bg-stone-900 hover:text-white"
+                aria-label="Close"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/25 bg-[#29292e] text-white shadow-[0_8px_24px_rgba(0,0,0,.45)] transition hover:border-[#c5a9ff]/45 hover:bg-[#3a3545]"
               >
-                <X className="h-5 w-5" />
+                <X className="h-5 w-5 stroke-[2.5]" />
               </button>
             </div>
 

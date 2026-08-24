@@ -150,6 +150,7 @@ function AdminNav({ onNavigate }: { onNavigate?: () => void }) {
                     <Link
                       key={item.url}
                       href={`${item.url}${marketQuery}`}
+                      prefetch={false}
                       onClick={onNavigate}
                       className={`group relative flex h-11 items-center gap-3 overflow-hidden rounded-[13px] border px-2.5 text-sm font-medium transition duration-300 ${
                         active

@@ -1,13 +1,15 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { format } from "date-fns";
+import Image from "next/image";
 import type { Order, Product } from "@/db/schema";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { CheckCircle2, Clock3, Copy, ExternalLink, History, MessageCircle, Package, ShoppingCart, Trash2, Truck, WalletCards } from "lucide-react";
+import { CheckCircle2, Clock3, Copy, ExternalLink, History, MessageCircle, Package, Plus, RefreshCw, ShoppingCart, Trash2, Truck, Undo2, WalletCards } from "lucide-react";
 import { buildPublicTrackingUrl } from "@/lib/tracking-url";
 import { displayPhoneNumber } from "@/lib/phone";
 import { toast } from "@/hooks/use-toast";
@@ -30,6 +32,7 @@ function getOrderHost(order: Order) {
 }
 
 type OrderCartItem = Order["cartSnapshot"][number];
+type OrderEditForm = Partial<Order> & { editReason?: string };
 
 type CustomerActivity = {
   id: string;
@@ -42,6 +45,7 @@ type CustomerActivity = {
   path: string | null;
   occurredAt: string;
 };
+type OrderAudit = { id: string; changeType: string; reason: string | null; actor: string; beforeSnapshot: Record<string, unknown>; afterSnapshot: Record<string, unknown>; createdAt: string };
 
 function toOrderMoney(value: unknown): number {
   const parsed = Number.parseFloat(String(value ?? "0"));
@@ -89,20 +93,9 @@ function getPartialCodBreakdown(order: Pick<Order, "paymentMethod" | "grandTotal
   const codPercent = Math.max(0, 100 - prepaidPercent);
   const prepaid = Math.max(0, Math.round(total * (prepaidPercent / 100)));
   const codBalance = Math.max(0, total - prepaid);
-  const advanceReceived = ["processing", "shipped", "delivered", "complete", "payment_authorized"].includes(order.status);
+  const advanceReceived = ["processing", "packed", "shipped", "delivered", "complete", "payment_authorized"].includes(order.status);
   const codCollected = ["delivered", "complete"].includes(order.status);
   return { total, prepaid, codBalance, prepaidPercent, codPercent, advanceReceived, codCollected };
-}
-
-function getSavedCheckoutPricingLines(message: string | null) {
-  if (!message) return [];
-
-  return message
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) =>
-      /^(Subtotal|Coupon Discount|Welcome Back|Delivery|Grand Total|Offer Codes):/i.test(line),
-    );
 }
 
 function getPaymentTrail(message: string | null) {
@@ -167,8 +160,37 @@ function getProductOptionLabel(product: Product) {
   return `${product.name} - Inspired by ${product.inspiration} - ${formatINR(product.price)}${status}`;
 }
 
-function canReplaceOrderItem(item: OrderCartItem) {
-  return !item.isGift && !item.kitSelections?.length && !item.sampleSelections?.length;
+function getOrderRowTone(status: string) {
+  switch (status) {
+    case "processing":
+      return "border-l-[3px] border-l-violet-300 bg-violet-500/[0.15] hover:bg-violet-500/[0.21]";
+    case "packed":
+      return "border-l-[3px] border-l-fuchsia-300 bg-fuchsia-500/[0.14] hover:bg-fuchsia-500/[0.20]";
+    case "shipped":
+      return "border-l-[3px] border-l-sky-300 bg-sky-500/[0.14] hover:bg-sky-500/[0.20]";
+    case "delivered":
+    case "complete":
+      return "border-l-[3px] border-l-emerald-300 bg-emerald-500/[0.14] hover:bg-emerald-500/[0.20]";
+    case "cancelled":
+      return "border-l-[3px] border-l-rose-300 bg-rose-500/[0.14] hover:bg-rose-500/[0.20]";
+    case "payment_pending":
+    case "whatsapp_initiated":
+      return "border-l-[3px] border-l-amber-300 bg-amber-500/[0.14] hover:bg-amber-500/[0.20]";
+    case "payment_authorized":
+      return "border-l-[3px] border-l-indigo-300 bg-indigo-500/[0.15] hover:bg-indigo-500/[0.21]";
+    case "payment_failed":
+    case "refund_failed":
+    case "payment_disputed":
+    case "dispute_action_required":
+      return "border-l-[3px] border-l-red-300 bg-red-500/[0.14] hover:bg-red-500/[0.20]";
+    case "refund_initiated":
+    case "partially_refunded":
+      return "border-l-[3px] border-l-cyan-300 bg-cyan-500/[0.14] hover:bg-cyan-500/[0.20]";
+    case "refunded":
+      return "border-l-[3px] border-l-teal-300 bg-teal-500/[0.14] hover:bg-teal-500/[0.20]";
+    default:
+      return "border-l-2 border-l-white/20 bg-[#171719] hover:bg-[#202024]";
+  }
 }
 
 function buildTrackingMessage(order: Order) {
@@ -233,18 +255,32 @@ function buildOrderSuccessMessage(order: Order) {
 export function OrdersTable({
   initialOrders,
   productOptions = [],
+  capturedAmounts = {},
 }: {
   initialOrders: Order[];
   productOptions?: Product[];
+  capturedAmounts?: Record<string, number>;
 }) {
+  const [orderRows, setOrderRows] = useState(initialOrders);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState<Partial<Order>>({});
+  const [editForm, setEditForm] = useState<OrderEditForm>({});
+  const [addProductId, setAddProductId] = useState("");
+  const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null);
+
+  useEffect(() => {
+    if (!previewImage) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPreviewImage(null);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [previewImage]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
-  const [replacementSelections, setReplacementSelections] = useState<Record<number, string>>({});
   const [customerActivity, setCustomerActivity] = useState<CustomerActivity[]>([]);
+  const [orderAudits, setOrderAudits] = useState<OrderAudit[]>([]);
   const [isActivityLoading, setIsActivityLoading] = useState(false);
   const [activityError, setActivityError] = useState("");
   const longPressTimerRef = useRef<number | null>(null);
@@ -262,6 +298,8 @@ export function OrdersTable({
         return <Badge className={`${badgeBase} border-sky-400/25 bg-sky-400/10 text-sky-200 hover:bg-sky-400/15`}>Shipped</Badge>;
       case "processing":
         return <Badge className={`${badgeBase} border-[#c5a9ff]/25 bg-[#c5a9ff]/10 text-[#d9c8ff] hover:bg-[#c5a9ff]/15`}>Confirmed</Badge>;
+      case "packed":
+        return <Badge className={`${badgeBase} border-violet-400/25 bg-violet-400/10 text-violet-200 hover:bg-violet-400/15`}>Packed</Badge>;
       case "payment_pending":
         return <Badge className={`${badgeBase} border-amber-400/25 bg-amber-400/10 text-amber-200 hover:bg-amber-400/15`}>Payment Pending</Badge>;
       case "payment_authorized":
@@ -305,19 +343,42 @@ export function OrdersTable({
     return getStatusBadge(order.status);
   };
 
-  const handleUpdateStatus = async (orderId: string, newStatus: string) => {
+  const handleUpdateStatus = async (orderId: string, newStatus: string, reason?: string) => {
+    if (!reason && !window.confirm(`Change this order to ${newStatus.replaceAll("_", " ")}?`)) return;
     setIsUpdating(true);
     try {
       const res = await fetch(`/api/admin/orders/${orderId}/status`, {
         method: "PATCH",
-        body: JSON.stringify({ status: newStatus }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus, reason }),
       });
       if (!res.ok) throw new Error("Failed to update status");
-      
-      // Update local state if needed or just reload
-      window.location.reload();
+      const data = await res.json() as { order: Order };
+      setOrderRows((current) => current.map((order) => order.id === orderId ? data.order : order));
+      setSelectedOrder(data.order);
+      setEditForm((current) => ({ ...current, status: data.order.status }));
+      await loadCustomerActivity(orderId);
+      toast({ title: reason ? "Status change reverted" : "Order status updated" });
     } catch (error) {
       console.error(error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleReconcilePayment = async (orderId: string) => {
+    setIsUpdating(true);
+    try {
+      const response = await fetch(`/api/admin/orders/${orderId}/reconcile-payment`, { method: "POST" });
+      const data = await response.json() as { error?: string; order?: Order; capturedAmount?: number; syncStatus?: string; providerOrders?: number };
+      if (!response.ok || !data.order) throw new Error(data.error || "Payment reconciliation failed");
+      setOrderRows((current) => current.map((order) => order.id === orderId ? data.order! : order));
+      setSelectedOrder(data.order);
+      setEditForm((current) => ({ ...current, status: data.order!.status }));
+      await loadCustomerActivity(orderId);
+      toast({ title: data.capturedAmount ? `Payment verified: ${formatINR(data.capturedAmount)}` : "No captured payment found", description: `${data.providerOrders ?? 0} Razorpay attempt(s) checked · ${data.syncStatus ?? "unknown"}` });
+    } catch (error) {
+      toast({ title: error instanceof Error ? error.message : "Payment reconciliation failed", variant: "destructive" });
     } finally {
       setIsUpdating(false);
     }
@@ -367,14 +428,15 @@ export function OrdersTable({
   const loadCustomerActivity = async (orderId: string) => {
     const requestId = ++activityRequestRef.current;
     setCustomerActivity([]);
+    setOrderAudits([]);
     setActivityError("");
     setIsActivityLoading(true);
 
     try {
       const response = await fetch(`/api/admin/orders/${orderId}/activity`, { cache: "no-store" });
       if (!response.ok) throw new Error("Unable to load recent activity");
-      const data = (await response.json()) as { activity?: CustomerActivity[] };
-      if (requestId === activityRequestRef.current) setCustomerActivity(data.activity ?? []);
+      const data = (await response.json()) as { activity?: CustomerActivity[]; audits?: OrderAudit[] };
+      if (requestId === activityRequestRef.current) { setCustomerActivity(data.activity ?? []); setOrderAudits(data.audits ?? []); }
     } catch (error) {
       console.error(error);
       if (requestId === activityRequestRef.current) setActivityError("Recent activity could not be loaded.");
@@ -389,7 +451,6 @@ export function OrdersTable({
       ...order,
       fulfillmentCarrier: order.fulfillmentCarrier || "shiprocket",
     });
-    setReplacementSelections({});
     void loadCustomerActivity(order.id);
   };
 
@@ -448,20 +509,46 @@ export function OrdersTable({
 
   const handleSaveEdit = async () => {
     if (!selectedOrder) return;
+    const payload = {
+      fullName: editForm.fullName || "", phone: editForm.phone || "", alternatePhone: editForm.alternatePhone || "", email: editForm.email || "",
+      addressLine1: editForm.addressLine1 || "", addressLine2: editForm.addressLine2 || "", city: editForm.city || "", state: editForm.state || "", pincode: editForm.pincode || "", notes: editForm.notes || "",
+      cartSnapshot: editForm.cartSnapshot || [], appliedCouponCode: editForm.appliedCouponCode || "", shippingFee: Number(editForm.shippingFee || 0), manualAdjustment: Number(editForm.manualAdjustment || 0), adjustmentReason: editForm.adjustmentReason || "", editReason: editForm.editReason || "",
+      shippingMethod: editForm.shippingMethod || "", paymentMethod: editForm.paymentMethod || "", fulfillmentCarrier: editForm.fulfillmentCarrier || "", trackingNumber: editForm.trackingNumber || "", trackingUrl: editForm.trackingUrl || "", trackingStatus: editForm.trackingStatus || "", status: editForm.status,
+    };
     setIsUpdating(true);
     try {
       const res = await fetch(`/api/admin/orders/${selectedOrder.id}`, {
         method: "PATCH",
-        body: JSON.stringify(editForm),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error("Failed to update order");
-      window.location.reload();
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update order");
+      setSelectedOrder(data.order);
+      setOrderRows((current) => current.map((order) => order.id === data.order.id ? data.order : order));
+      setEditForm({ ...data.order, fulfillmentCarrier: data.order.fulfillmentCarrier || "shiprocket" });
+      toast({ title: "Order updated", description: data.reconciliation?.capturedAmount ? `Payment difference: ${formatINR(data.reconciliation.difference)}` : undefined });
+      void loadCustomerActivity(data.order.id);
     } catch (error) {
-      console.error(error);
+      console.error(error); toast({ title: error instanceof Error ? error.message : "Could not update order", variant: "destructive" });
     } finally {
       setIsUpdating(false);
       setIsEditing(false);
     }
+  };
+
+  const updateEditItem = (index: number, patch: Partial<OrderCartItem>) => {
+    setEditForm((current) => ({ ...current, cartSnapshot: (current.cartSnapshot || []).map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item) }));
+  };
+
+  const removeEditItem = (index: number) => {
+    setEditForm((current) => ({ ...current, cartSnapshot: (current.cartSnapshot || []).filter((_, itemIndex) => itemIndex !== index) }));
+  };
+
+  const addEditProduct = () => {
+    const product = productOptions.find((item) => item.id === addProductId); if (!product) return;
+    setEditForm((current) => ({ ...current, cartSnapshot: [...(current.cartSnapshot || []), { id: product.id, name: product.name, inspiration: product.inspiration, image: product.images?.[0], size: product.size, price: Number(product.price), quantity: 1 }] }));
+    setAddProductId("");
   };
 
   const handleSaveTracking = async () => {
@@ -496,60 +583,6 @@ export function OrdersTable({
     }
   };
 
-  const handleReplaceOrderItem = async (itemIndex: number) => {
-    if (!selectedOrder) return;
-    const replacementId = replacementSelections[itemIndex];
-    const replacement = productOptions.find((product) => product.id === replacementId);
-    const currentItem = selectedOrder.cartSnapshot?.[itemIndex];
-
-    if (!replacement || !currentItem) {
-      toast({ title: "Choose a replacement product", variant: "destructive" });
-      return;
-    }
-
-    if (!canReplaceOrderItem(currentItem)) {
-      toast({ title: "This item cannot be replaced here", variant: "destructive" });
-      return;
-    }
-
-    const nextItem: OrderCartItem = {
-      ...currentItem,
-      id: replacement.id,
-      name: replacement.name,
-      inspiration: replacement.inspiration,
-      size: replacement.size,
-      price: toOrderMoney(replacement.price),
-    };
-    const nextItems = selectedOrder.cartSnapshot.map((item, index) => (index === itemIndex ? nextItem : item));
-    const oldLineTotal = getOrderItemLineTotal(currentItem);
-    const nextLineTotal = getOrderItemLineTotal(nextItem);
-    const priceDelta = nextLineTotal - oldLineTotal;
-    const priceBreakdown = getOrderPriceBreakdown(selectedOrder);
-    const nextSubtotal = Math.max(0, priceBreakdown.subtotal + priceDelta);
-    const nextGrandTotal = Math.max(0, priceBreakdown.grandTotal + priceDelta);
-
-    setIsUpdating(true);
-    try {
-      const res = await fetch(`/api/admin/orders/${selectedOrder.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          cartSnapshot: nextItems,
-          subtotal: nextSubtotal.toFixed(2),
-          grandTotal: nextGrandTotal.toFixed(2),
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to replace order item");
-
-      toast({ title: `${currentItem.name} replaced with ${replacement.name}` });
-      window.location.reload();
-    } catch (error) {
-      console.error(error);
-      toast({ title: "Replacement failed", variant: "destructive" });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
   const handleRemoveOrder = async () => {
     if (!selectedOrder) return;
     const confirmed = window.confirm(
@@ -572,8 +605,8 @@ export function OrdersTable({
   };
 
   // Calculate earnings stats
-  const paidStatuses = new Set(["processing", "shipped", "delivered", "complete", "payment_authorized"]);
-  const paidOrders = initialOrders.filter((o) => paidStatuses.has(o.status));
+  const paidStatuses = new Set(["processing", "packed", "shipped", "delivered", "complete", "payment_authorized"]);
+  const paidOrders = orderRows.filter((o) => paidStatuses.has(o.status));
   const totalEarnings = paidOrders.reduce((sum, order) => {
     const partialCod = getPartialCodBreakdown(order);
     if (!partialCod) return sum + Number(order.grandTotal || 0);
@@ -583,13 +616,28 @@ export function OrdersTable({
   const aov = totalCount > 0 ? totalEarnings / totalCount : 0;
 
   // Pending checkout count
-  const pendingOrders = initialOrders.filter((o) => ["whatsapp_initiated", "payment_pending"].includes(o.status));
+  const pendingOrders = orderRows.filter((o) => ["whatsapp_initiated", "payment_pending"].includes(o.status));
   const pendingCount = pendingOrders.length;
-  const partialCodOrders = initialOrders.filter((order) => isPartialCodOrder(order));
+  const partialCodOrders = orderRows.filter((order) => isPartialCodOrder(order));
   const outstandingCod = partialCodOrders.reduce((sum, order) => {
     const breakdown = getPartialCodBreakdown(order);
     return sum + (breakdown && breakdown.advanceReceived && !breakdown.codCollected ? breakdown.codBalance : 0);
   }, 0);
+  const latestRevertibleStatusAudit = selectedOrder
+    ? orderAudits.find((audit) => {
+        const beforeStatus = audit.beforeSnapshot?.status;
+        const afterStatus = audit.afterSnapshot?.status;
+        return (
+          ["status", "status_reversal"].includes(audit.changeType) &&
+          typeof beforeStatus === "string" &&
+          beforeStatus !== afterStatus &&
+          afterStatus === selectedOrder.status
+        );
+      })
+    : undefined;
+  const previousOrderStatus = typeof latestRevertibleStatusAudit?.beforeSnapshot?.status === "string"
+    ? latestRevertibleStatusAudit.beforeSnapshot.status
+    : null;
 
   return (
     <div className="space-y-6">
@@ -685,7 +733,7 @@ export function OrdersTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {initialOrders.length === 0 ? (
+            {orderRows.length === 0 ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={isSelectionMode ? 10 : 9} className="h-[400px] text-center">
                   <div className="flex flex-col items-center justify-center space-y-3">
@@ -700,7 +748,7 @@ export function OrdersTable({
                 </TableCell>
               </TableRow>
             ) : (
-              initialOrders.map((order) => {
+              orderRows.map((order) => {
                 const totalItems = order.cartSnapshot?.reduce((acc: number, item: { quantity: number }) => acc + item.quantity, 0) || 0;
                 const isSelected = selectedOrderIds.includes(order.id);
                 const partialCod = getPartialCodBreakdown(order);
@@ -709,7 +757,7 @@ export function OrdersTable({
                   <TableRow 
                     key={order.id} 
                     className={`cursor-pointer border-white/[0.07] transition-all duration-200 group ${
-                      isSelected ? "bg-emerald-400/[0.08] hover:bg-emerald-400/[0.1]" : "bg-[#171719] hover:bg-[#202024]"
+                      isSelected ? "border-l-2 border-l-emerald-300 bg-emerald-400/[0.10] hover:bg-emerald-400/[0.13]" : getOrderRowTone(order.status)
                     }`}
                     onPointerDown={(event) => {
                       if (event.button !== 0 || isSelectionMode) return;
@@ -739,7 +787,7 @@ export function OrdersTable({
                         </span>
                       </TableCell>
                     ) : null}
-                    <TableCell className="border-l-2 border-l-transparent px-6 py-6 transition-colors group-hover:border-l-[#c5a9ff]/60"><span className="inline-flex rounded-lg border border-white/10 bg-black/20 px-2.5 py-1.5 font-mono text-[10px] font-bold tracking-wider text-white/65">{order.orderNumber}</span></TableCell>
+                    <TableCell className="px-6 py-6"><span className="inline-flex rounded-lg border border-white/10 bg-black/20 px-2.5 py-1.5 font-mono text-[10px] font-bold tracking-wider text-white/65">{order.orderNumber}</span></TableCell>
                     <TableCell className="text-[12px] font-medium text-white/55">
                       {format(new Date(order.createdAt), "MMM d, h:mm a")}
                     </TableCell>
@@ -794,38 +842,48 @@ export function OrdersTable({
           activityRequestRef.current += 1;
           setSelectedOrder(null);
           setIsEditing(false);
-          setReplacementSelections({});
           setCustomerActivity([]);
+          setOrderAudits([]);
           setActivityError("");
           setIsActivityLoading(false);
         }
       }}>
-        <SheetContent className="w-full overflow-y-auto border-l border-white/10 bg-[#151517] text-white shadow-[-28px_0_80px_rgba(0,0,0,.45)] sm:max-w-md">
+        <SheetContent className="w-full overflow-y-auto border-l border-white/[0.08] bg-[radial-gradient(circle_at_top_right,rgba(139,92,246,.10),transparent_28%),linear-gradient(180deg,#17171a_0%,#111113_100%)] p-0 text-white shadow-[-36px_0_100px_rgba(0,0,0,.58)] sm:max-w-2xl lg:max-w-3xl [&>button]:right-5 [&>button]:top-5 [&>button]:z-30 [&>button]:rounded-full [&>button]:border [&>button]:border-white/25 [&>button]:bg-[#29292e] [&>button]:p-3 [&>button]:text-white [&>button]:opacity-100 [&>button]:shadow-[0_8px_24px_rgba(0,0,0,.45)] [&>button]:backdrop-blur-xl [&>button]:transition [&>button]:hover:border-[#c5a9ff]/45 [&>button]:hover:bg-[#3a3545] [&>button]:hover:text-white [&>button>svg]:h-5 [&>button>svg]:w-5 [&>button>svg]:stroke-[2.5]">
           {selectedOrder && (
             <>
-              <SheetHeader className="mb-8 mt-4">
-                <div className="flex items-center justify-between">
-                  <SheetTitle className="text-xl font-semibold text-white">Order #{selectedOrder.orderNumber}</SheetTitle>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setIsEditing(!isEditing)}
-                    className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary hover:text-primary/80 hover:bg-primary/5"
-                  >
-                    {isEditing ? "CANCEL EDIT" : "EDIT INFO"}
-                  </Button>
+              <SheetHeader className="border-b border-white/[0.07] bg-[#151518]/90 px-4 py-4 pr-16 text-left sm:px-6 sm:py-5 sm:pr-20">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="mb-2 flex items-center gap-2 text-[8px] font-bold uppercase tracking-[0.22em] text-[#c9b3ff]/65">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#b99cff] shadow-[0_0_12px_rgba(185,156,255,.8)]" />
+                      Order workspace
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <SheetTitle className="font-sans text-xl font-semibold tracking-[-0.025em] text-white sm:text-2xl">#{selectedOrder.orderNumber}</SheetTitle>
+                      {getOrderStatusBadge(selectedOrder)}
+                    </div>
+                    <SheetDescription className="mt-1.5 text-[11px] font-medium text-white/35">
+                      Placed {format(new Date(selectedOrder.createdAt), "MMMM d, yyyy 'at' h:mm a")}
+                    </SheetDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-lg border border-white/[0.07] bg-white/[0.035] px-3 py-1.5 text-right">
+                      <p className="text-[8px] font-bold uppercase tracking-[0.18em] text-white/30">Order value</p>
+                      <p className="text-sm font-semibold text-white">{formatINR(Number(selectedOrder.grandTotal || 0))}</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditing(!isEditing)}
+                      className={`h-10 rounded-lg px-3.5 text-[9px] font-bold uppercase tracking-[0.15em] transition ${isEditing ? "border-white/10 bg-white/[0.04] text-white/60 hover:bg-white/[0.08] hover:text-white" : "border-[#c9b3ff]/25 bg-[#c9b3ff]/10 text-[#ddceff] hover:bg-[#c9b3ff]/15 hover:text-white"}`}
+                    >
+                      {isEditing ? "Cancel edit" : "Edit order"}
+                    </Button>
+                  </div>
                 </div>
-                <SheetDescription className="text-white/40 font-medium">
-                  Placed on {format(new Date(selectedOrder.createdAt), "MMMM d, yyyy 'at' h:mm a")}
-                </SheetDescription>
               </SheetHeader>
 
-              <div className="space-y-8">
-                <div className="flex items-center justify-between border-b border-white/5 pb-6">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Current Status</div>
-                  {getOrderStatusBadge(selectedOrder)}
-                </div>
-
+              <div className="space-y-5 px-4 py-5 sm:px-7 sm:py-7">
                 {(() => {
                   const partialCod = getPartialCodBreakdown(selectedOrder);
                   if (!partialCod) return null;
@@ -844,7 +902,7 @@ export function OrdersTable({
                   );
                 })()}
 
-                <div className="space-y-3 rounded-2xl border border-white/5 bg-white/[0.02] p-4 sm:rounded-3xl sm:p-6">
+                <div className="space-y-3 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4 sm:p-5">
                   <h4 className="font-bold text-[10px] uppercase tracking-[0.2em] text-white/30">Checkout Origin</h4>
                   <div className="text-sm space-y-2">
                     <div className="flex justify-between gap-4">
@@ -948,6 +1006,28 @@ export function OrdersTable({
                             onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
                           />
                         </div>
+                        <div className="space-y-3 border-t border-white/10 pt-5">
+                          <div><h5 className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary/60">Order items</h5><p className="mt-1 text-xs text-white/30">Prices and discounts are recalculated from the current catalogue when saved.</p></div>
+                          {(editForm.cartSnapshot || []).map((item, index) => (
+                            <div key={`${item.id}-${index}`} className="grid grid-cols-[1fr_72px_38px] items-center gap-2 rounded-xl border border-white/8 bg-black/20 p-2.5">
+                              <div className="min-w-0"><p className="truncate text-xs font-medium text-white">{item.name}</p><p className="mt-0.5 text-[10px] text-white/30">{item.isGift ? "Complimentary gift" : `${formatINR(item.price)} each`}</p></div>
+                              <input type="number" min="1" max="100" value={item.quantity} onChange={(event) => updateEditItem(index, { quantity: Math.max(1, Number(event.target.value) || 1) })} disabled={item.isGift} aria-label={`Quantity for ${item.name}`} className="h-9 rounded-lg border border-white/10 bg-white/5 px-2 text-center text-xs text-white outline-none" />
+                              <Button type="button" size="icon" variant="ghost" onClick={() => removeEditItem(index)} disabled={(editForm.cartSnapshot || []).length <= 1} aria-label={`Remove ${item.name}`} className="h-9 w-9 text-rose-300"><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                          ))}
+                          <div className="grid gap-2 sm:grid-cols-[1fr_auto]"><select value={addProductId} onChange={(event) => setAddProductId(event.target.value)} className="h-10 min-w-0 rounded-xl border border-white/10 bg-black/30 px-3 text-xs text-white outline-none"><option value="">Add a product</option>{productOptions.filter((product) => !product.badges?.soldOut && !product.badges?.comingSoon).map((product) => <option key={product.id} value={product.id}>{getProductOptionLabel(product)}</option>)}</select><Button type="button" onClick={addEditProduct} disabled={!addProductId} className="h-10 bg-white text-black hover:bg-white/90"><Plus className="mr-1 h-4 w-4" /> Add</Button></div>
+                        </div>
+                        <div className="grid gap-4 border-t border-white/10 pt-5 sm:grid-cols-2">
+                          <label className="space-y-2"><span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Coupon code</span><input value={editForm.appliedCouponCode || ""} onChange={(e) => setEditForm({ ...editForm, appliedCouponCode: e.target.value.toUpperCase() })} placeholder="No coupon" className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none" /></label>
+                          <label className="space-y-2"><span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Shipping fee</span><input type="number" min="0" step="0.01" value={editForm.shippingFee || "0"} onChange={(e) => setEditForm({ ...editForm, shippingFee: e.target.value })} className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none" /></label>
+                          <label className="space-y-2"><span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Shipping method</span><input value={editForm.shippingMethod || ""} onChange={(e) => setEditForm({ ...editForm, shippingMethod: e.target.value })} placeholder="Standard delivery" className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none" /></label>
+                          <label className="space-y-2"><span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Payment method</span><input value={editForm.paymentMethod || ""} onChange={(e) => setEditForm({ ...editForm, paymentMethod: e.target.value })} placeholder="Payment method" className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none" /></label>
+                          <label className="space-y-2"><span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Status</span><select value={editForm.status || "whatsapp_initiated"} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} className="w-full rounded-xl border border-white/10 bg-[#1c1c20] px-4 py-3 text-sm text-white outline-none"><option value="whatsapp_initiated">WhatsApp initiated</option><option value="payment_pending">Payment pending</option><option value="payment_authorized">Payment authorized</option><option value="processing">Confirmed</option><option value="packed">Packed</option><option value="shipped">Shipped</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></label>
+                          <label className="space-y-2"><span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Manual adjustment</span><input type="number" step="0.01" value={editForm.manualAdjustment || "0"} onChange={(e) => setEditForm({ ...editForm, manualAdjustment: e.target.value })} className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none" /></label>
+                        </div>
+                        {Number(editForm.manualAdjustment || 0) !== 0 ? <label className="block space-y-2"><span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Adjustment reason</span><input required value={editForm.adjustmentReason || ""} onChange={(e) => setEditForm({ ...editForm, adjustmentReason: e.target.value })} placeholder="Why is this adjustment needed?" className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none" /></label> : null}
+                        {capturedAmounts[selectedOrder.id] > 0 ? <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.05] p-4 text-xs text-amber-100/70"><p className="font-semibold text-amber-200">Paid order reconciliation</p><div className="mt-2 flex justify-between"><span>Captured payment</span><span>{formatINR(capturedAmounts[selectedOrder.id])}</span></div><div className="mt-1 flex justify-between"><span>Current order total</span><span>{formatINR(Number(selectedOrder.grandTotal || 0))}</span></div><p className="mt-2 text-[10px] text-amber-100/45">Saving does not refund or collect money automatically.</p></div> : null}
+                        <label className="block space-y-2"><span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Reason for change</span><textarea value={editForm.editReason || ""} onChange={(e) => setEditForm({ ...editForm, editReason: e.target.value })} placeholder="Required for financial changes to paid orders" className="min-h-20 w-full resize-y rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none" /></label>
                       </div>
                       <Button onClick={handleSaveEdit} disabled={isUpdating} className="w-full rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground h-12 font-bold text-[11px] tracking-[0.2em] uppercase shadow-lg shadow-primary/10">
                         CONFIRM CHANGES
@@ -1226,97 +1306,97 @@ export function OrdersTable({
                         </pre>
                       </div>
                     )}
+                    {selectedOrder.checkoutChannel === "razorpay" ? (
+                      <div className="space-y-4 rounded-2xl border border-sky-400/15 bg-sky-400/[0.035] p-4 sm:rounded-3xl sm:p-6">
+                        <div className="flex items-start justify-between gap-4">
+                          <div><h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-200/65">Razorpay reconciliation</h4><p className="mt-1 text-xs text-white/35">Provider payment status is checked independently of the customer browser.</p></div>
+                          <span className={`rounded-full border px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider ${selectedOrder.paymentSyncStatus === "captured" ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-200" : selectedOrder.paymentSyncStatus?.includes("mismatch") || selectedOrder.paymentSyncStatus === "multiple_captures" ? "border-rose-400/25 bg-rose-400/10 text-rose-200" : "border-amber-400/20 bg-amber-400/10 text-amber-200"}`}>{selectedOrder.paymentSyncStatus?.replaceAll("_", " ") || "Not checked"}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                          <div className="rounded-xl bg-black/20 p-3"><p className="text-[8px] uppercase tracking-wider text-white/25">Captured</p><p className="mt-1 font-semibold text-white">{selectedOrder.capturedPaymentAmount ? formatINR(Number(selectedOrder.capturedPaymentAmount)) : "—"}</p></div>
+                          <div className="rounded-xl bg-black/20 p-3"><p className="text-[8px] uppercase tracking-wider text-white/25">Attempts</p><p className="mt-1 font-semibold text-white">{selectedOrder.paymentAttemptCount ?? "—"}</p></div>
+                          <div className="rounded-xl bg-black/20 p-3"><p className="text-[8px] uppercase tracking-wider text-white/25">Order ID</p><p className="mt-1 truncate font-mono text-[10px] text-white/65">{selectedOrder.razorpayOrderId || "—"}</p></div>
+                          <div className="rounded-xl bg-black/20 p-3"><p className="text-[8px] uppercase tracking-wider text-white/25">Payment ID</p><p className="mt-1 truncate font-mono text-[10px] text-white/65">{selectedOrder.razorpayPaymentId || "—"}</p></div>
+                        </div>
+                        <Button type="button" variant="outline" disabled={isUpdating} onClick={() => void handleReconcilePayment(selectedOrder.id)} className="h-11 w-full rounded-xl border-sky-300/25 bg-sky-300/[0.07] text-[10px] font-bold uppercase tracking-[0.13em] text-sky-100 hover:bg-sky-300/[0.13]">
+                          <RefreshCw className={`mr-2 h-4 w-4 ${isUpdating ? "animate-spin" : ""}`} /> Check Razorpay payment
+                        </Button>
+                        {selectedOrder.paymentReconciledAt ? <p className="text-center text-[9px] text-white/25">Last checked {format(new Date(selectedOrder.paymentReconciledAt), "dd MMM, h:mm a")}</p> : null}
+                      </div>
+                    ) : null}
                   </>
                 )}
 
                 {(() => {
                   const priceBreakdown = getOrderPriceBreakdown(selectedOrder);
-                  const savedPricingLines = getSavedCheckoutPricingLines(selectedOrder.whatsappMessage);
                   const discountLabel = selectedOrder.appliedCouponCode
                     ? `Discount / offer (${selectedOrder.appliedCouponCode})`
                     : "Discount / offer adjustment";
 
                   return (
-                    <div className="rounded-xl border border-border/50 bg-secondary/10 p-5 space-y-4">
+                    <div className="space-y-5 rounded-2xl border border-white/[0.07] bg-[linear-gradient(145deg,rgba(197,169,255,.055),rgba(255,255,255,.018))] p-4 shadow-[inset_0_1px_rgba(255,255,255,.03)] sm:p-6">
                       <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h4 className="font-semibold text-sm uppercase tracking-widest text-muted-foreground">Order Items</h4>
-                          <p className="mt-1 text-xs text-muted-foreground/80">Full saved price calculation for this order.</p>
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#c5a9ff]/20 bg-[#c5a9ff]/10 text-[#d8c8ff]"><ShoppingCart className="h-4 w-4" /></span>
+                          <div>
+                          <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d7c5ff]/75">Order items</h4>
+                          </div>
                         </div>
                         {selectedOrder.appliedCouponCode ? (
-                          <span className="rounded-md border border-emerald-400/20 bg-emerald-400/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-200">
+                          <span className="rounded-full border border-[#c5a9ff]/20 bg-[#c5a9ff]/10 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-[#ddceff]">
                             {selectedOrder.appliedCouponCode}
                           </span>
                         ) : null}
                       </div>
 
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         {priceBreakdown.items.length > 0 ? (
                           priceBreakdown.items.map((item, i) => (
-                            <div key={`${item.id}-${i}`} className="flex justify-between text-sm items-start gap-4">
-                              <div className="min-w-0">
+                            <div key={`${item.id}-${i}`} className="relative rounded-2xl border border-white/[0.065] bg-black/20 p-4">
+                              <div>
+                              <div className="min-w-0 w-full">
+                                {!item.sampleSelections?.length && !item.kitSelections?.length && !item.isGift ? (
+                                  <div className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[82px_minmax(0,1fr)] sm:gap-4">
+                                    <button type="button" disabled={!item.image && !productOptions.find((product) => product.id === item.id)?.images?.[0]} onClick={() => { const url = item.image || productOptions.find((product) => product.id === item.id)?.images?.[0]; if (url) setPreviewImage({ url, name: item.name }); }} className="group/image relative h-[72px] w-[72px] overflow-hidden rounded-xl border border-[#c5a9ff]/15 bg-[#c5a9ff]/[0.055] shadow-[inset_0_1px_rgba(255,255,255,.04)] transition hover:border-[#c5a9ff]/45 hover:shadow-[0_0_20px_rgba(197,169,255,.12)] disabled:cursor-default sm:h-[82px] sm:w-[82px]" aria-label={`View larger image of ${item.name}`}>
+                                      {item.image || productOptions.find((product) => product.id === item.id)?.images?.[0] ? <Image src={item.image || productOptions.find((product) => product.id === item.id)!.images[0]} alt={item.name} fill sizes="82px" className="object-cover transition duration-300 group-hover/image:scale-105" /> : <div className="flex h-full w-full items-center justify-center text-[9px] font-bold uppercase tracking-wider text-[#d8c8ff]/35">No image</div>}
+                                      {(item.image || productOptions.find((product) => product.id === item.id)?.images?.[0]) ? <span className="absolute inset-x-1.5 bottom-1.5 rounded-md bg-black/65 px-1 py-0.5 text-[7px] font-bold uppercase tracking-wider text-white/70 opacity-0 backdrop-blur-sm transition group-hover/image:opacity-100">View</span> : null}
+                                    </button>
+                                    <div className="min-w-0">
+                                      <div className="flex items-start justify-between gap-3"><p className="min-w-0 text-sm font-semibold leading-5 text-white sm:text-base">{item.name}</p><p className="shrink-0 text-sm font-semibold text-[#e3d8ff]">{formatINR(getOrderItemLineTotal(item))}</p></div>
+                                      {item.inspiration ? <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-[#c5a9ff]/50">Inspired by {item.inspiration}</p> : null}
+                                      <div className="mt-2 flex flex-wrap gap-1.5"><span className="rounded-md border border-white/[0.07] bg-white/[0.035] px-2 py-1 text-[9px] font-semibold text-white/35">Qty {getOrderItemQuantity(item)}</span>{item.size ? <span className="rounded-md border border-white/[0.07] bg-white/[0.035] px-2 py-1 text-[9px] font-semibold text-white/35">{item.size}</span> : null}</div>
+                                    </div>
+                                  </div>
+                                ) : <>
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <p className="font-medium text-white">{item.isGift ? `Gift ${i + 1}` : item.name}</p>
+                                  <p className="pr-20 text-sm font-semibold leading-5 text-white">{item.isGift ? `Gift ${i + 1}` : item.name}</p>
                                   {item.isGift ? (
                                     <span className="rounded bg-emerald-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-emerald-200">
                                       Free
                                     </span>
                                   ) : null}
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-0.5">
+                                <p className="mt-1 text-[11px] text-white/30">
                                   Qty {getOrderItemQuantity(item)}
                                   {item.size ? ` · ${item.size}` : ""}
                                   {!item.isGift ? ` · ${formatINR(toOrderMoney(item.price))} each` : ""}
                                 </p>
+                                </>}
                                 {item.sampleSelections?.length ? (
-                                  <div className="mt-2 flex flex-wrap gap-1.5">
-                                    {item.sampleSelections.map((selection) => (
-                                      <span key={selection.id} className="rounded bg-emerald-400/[0.08] px-2 py-1 text-xs text-emerald-100/65">
-                                        {selection.name}
-                                      </span>
+                                  <div className="mt-4 overflow-hidden rounded-2xl border border-[#c5a9ff]/15 bg-[linear-gradient(145deg,rgba(197,169,255,.065),rgba(0,0,0,.12))] shadow-[inset_0_1px_rgba(255,255,255,.035)]">
+                                    {item.sampleSelections.map((selection, selectionIndex) => (
+                                      <label key={`${selection.id}-${selectionIndex}`} className="group flex min-h-11 cursor-pointer items-center gap-3 border-b border-white/[0.055] px-3.5 py-2.5 transition hover:bg-[#c5a9ff]/[0.065] last:border-b-0">
+                                        <input type="checkbox" className="peer sr-only" aria-label={`Mark ${selection.name} as packed`} />
+                                        <span className="relative flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-white/20 bg-black/25 text-[12px] font-bold text-white opacity-80 transition after:content-['✓'] after:scale-75 after:opacity-0 after:transition peer-checked:border-[#b99cff] peer-checked:bg-[#a786ee] peer-checked:shadow-[0_0_14px_rgba(185,156,255,.35)] peer-checked:after:scale-100 peer-checked:after:opacity-100 group-hover:border-[#c5a9ff]/45" />
+                                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-[#c5a9ff]/10 bg-[#c5a9ff]/[0.07] text-[9px] font-bold text-[#d8c8ff]/55 transition peer-checked:border-emerald-300/15 peer-checked:bg-emerald-300/[0.08] peer-checked:text-emerald-200/70">{selectionIndex + 1}</span>
+                                        <span className="min-w-0 flex-1 whitespace-normal break-words text-xs font-semibold leading-5 text-[#ded2fb]/80 transition peer-checked:text-white/35 peer-checked:line-through">{selection.name}</span>
+                                      </label>
                                     ))}
                                   </div>
                                 ) : null}
-                                {canReplaceOrderItem(item) && productOptions.length > 0 ? (
-                                  <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                                    <select
-                                      value={replacementSelections[i] || ""}
-                                      onChange={(event) =>
-                                        setReplacementSelections((current) => ({
-                                          ...current,
-                                          [i]: event.target.value,
-                                        }))
-                                      }
-                                      className="h-10 min-w-0 rounded-xl border border-white/10 bg-black/30 px-3 text-xs text-white outline-none focus:border-emerald-300/50"
-                                    >
-                                      <option className="bg-[#111]" value="">
-                                        Replace this product
-                                      </option>
-                                      {productOptions.map((product) => (
-                                        <option
-                                          key={product.id}
-                                          className="bg-[#111]"
-                                          value={product.id}
-                                          disabled={product.id === item.id || product.badges?.soldOut || product.badges?.comingSoon}
-                                        >
-                                          {getProductOptionLabel(product)}
-                                        </option>
-                                      ))}
-                                    </select>
-                                    <Button
-                                      type="button"
-                                      onClick={() => handleReplaceOrderItem(i)}
-                                      disabled={isUpdating || !replacementSelections[i]}
-                                      className="h-10 rounded-xl bg-white text-black hover:bg-white/90"
-                                    >
-                                      Replace
-                                    </Button>
-                                  </div>
-                                ) : null}
                               </div>
-                              <p className={item.isGift ? "font-medium text-emerald-300" : "font-medium text-white"}>
-                                {item.isGift ? "Free" : formatINR(getOrderItemLineTotal(item))}
-                              </p>
+                              {item.sampleSelections?.length || item.kitSelections?.length || item.isGift ? <p className={`absolute right-4 top-4 ${item.isGift ? "text-sm font-semibold text-emerald-300" : "text-sm font-semibold text-[#e3d8ff]"}`}>{item.isGift ? "Free" : formatINR(getOrderItemLineTotal(item))}</p> : null}
+                              </div>
                             </div>
                           ))
                         ) : (
@@ -1324,79 +1404,52 @@ export function OrdersTable({
                         )}
                       </div>
 
-                      <div className="pt-4 border-t border-border/50 space-y-2">
+                      <div className="space-y-2 rounded-2xl border border-white/[0.065] bg-black/20 p-4 sm:p-5">
                         {priceBreakdown.itemTotal > 0 && priceBreakdown.itemTotal !== priceBreakdown.subtotal ? (
-                          <div className="flex justify-between text-sm text-muted-foreground">
+                          <div className="flex justify-between text-xs text-white/40">
                             <span>Item line total</span>
                             <span>{formatINR(priceBreakdown.itemTotal)}</span>
                           </div>
                         ) : null}
-                        <div className="flex justify-between text-sm text-muted-foreground">
+                        <div className="flex justify-between text-xs text-white/40">
                           <span>Subtotal</span>
                           <span>{formatINR(priceBreakdown.subtotal)}</span>
                         </div>
-                        <div className="flex justify-between text-sm text-muted-foreground">
+                        <div className="flex justify-between text-xs text-white/40">
                           <span>Shipping Fee</span>
                           <span>{priceBreakdown.shippingFee === 0 ? "Free" : formatINR(priceBreakdown.shippingFee)}</span>
                         </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">{discountLabel}</span>
-                          <span className={priceBreakdown.discount > 0 ? "font-medium text-emerald-300" : "text-muted-foreground"}>
+                        <div className="flex justify-between gap-4 text-xs">
+                          <span className="text-white/40">{discountLabel}</span>
+                          <span className={priceBreakdown.discount > 0 ? "font-semibold text-emerald-300" : "text-white/40"}>
                             {priceBreakdown.discount > 0 ? `-${formatINR(priceBreakdown.discount)}` : formatINR(0)}
                           </span>
                         </div>
-                        {priceBreakdown.discount > 0 ? (
-                          <div className="rounded-lg border border-amber-400/15 bg-amber-400/[0.04] px-3 py-2 text-[11px] leading-relaxed text-amber-100/60">
-                            This discount is calculated from saved order totals: subtotal + shipping - grand total.
-                          </div>
-                        ) : null}
-                        {savedPricingLines.length > 0 ? (
-                          <div className="rounded-lg border border-white/10 bg-black/25 p-3">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/30">
-                              Exact checkout message pricing
-                            </p>
-                            <div className="mt-2 space-y-1.5">
-                              {savedPricingLines.map((line) => {
-                                const [label, ...rest] = line.split(":");
-                                const value = rest.join(":").trim();
-                                const isDiscount = /^Coupon Discount|^Welcome Back/i.test(label);
-                                const isTotal = /^Grand Total/i.test(label);
-
-                                return (
-                                  <div
-                                    key={line}
-                                    className={`flex justify-between gap-4 text-xs ${isTotal ? "font-semibold text-white" : "text-muted-foreground"}`}
-                                  >
-                                    <span>{label}</span>
-                                    <span className={isDiscount ? "text-emerald-300" : "text-right"}>{value}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        ) : null}
-                        <div className="flex justify-between font-semibold pt-3 text-base border-t border-border/50">
-                          <span>Grand Total</span>
-                          <span>{formatINR(priceBreakdown.grandTotal)}</span>
+                        <div className="mt-3 flex items-end justify-between border-t border-white/[0.08] pt-4">
+                          <div><p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/30">Grand total</p><p className="mt-1 text-[10px] text-white/20">Final saved order value</p></div>
+                          <span className="text-xl font-semibold tracking-tight text-[#e3d8ff]">{formatINR(priceBreakdown.grandTotal)}</span>
                         </div>
                       </div>
                     </div>
                   );
                 })()}
 
-                <div className="rounded-xl border border-border/50 bg-secondary/10 p-5 space-y-4">
-                  <h4 className="font-semibold text-sm uppercase tracking-widest text-muted-foreground">Order Management</h4>
+                {orderAudits.length ? <div className="rounded-2xl border border-[#c5a9ff]/15 bg-[linear-gradient(145deg,rgba(197,169,255,.065),rgba(255,255,255,.018))] p-5 sm:p-6"><div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#c5a9ff]/20 bg-[#c5a9ff]/10"><History className="h-4 w-4 text-[#d7c5ff]"/></div><div><h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d7c5ff]/75">Admin edit history</h4><p className="mt-1 text-xs text-white/30">A permanent record of changes to this order.</p></div></div><div className="mt-4 space-y-2">{orderAudits.map((audit)=><div key={audit.id} className="rounded-xl border border-white/[0.06] bg-black/15 p-3.5"><div className="flex justify-between gap-3 text-[9px] font-bold uppercase tracking-[0.14em] text-white/28"><span>{audit.changeType.replaceAll("_"," ")}</span><span>{format(new Date(audit.createdAt), "dd MMM, h:mm a")}</span></div><p className="mt-1.5 text-xs leading-5 text-white/55">{audit.reason || "Operational update"}</p></div>)}</div></div> : null}
+
+                <div className="space-y-4 rounded-2xl border border-white/[0.07] bg-[linear-gradient(145deg,rgba(197,169,255,.045),rgba(255,255,255,.018))] p-5 shadow-[inset_0_1px_rgba(255,255,255,.03)] sm:p-6">
+                  <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d7c5ff]/75">Order management</h4>
                   <div className="grid gap-2.5 sm:grid-cols-2">
                     {/* Confirm Order / Processing */}
                     <Button 
                       onClick={() => handleUpdateStatus(selectedOrder.id, "processing")} 
                       disabled={isUpdating || selectedOrder.status === "processing"}
-                      className={`rounded-xl font-bold text-[10px] tracking-widest uppercase h-10 shadow-md ${
+                      className={`h-11 w-full min-w-0 overflow-hidden whitespace-nowrap rounded-xl border px-2 text-[9px] font-bold uppercase tracking-[0.12em] transition sm:text-[10px] ${
                         selectedOrder.status === "processing"
-                          ? "bg-indigo-600/30 text-indigo-300 border border-indigo-500/20 cursor-default"
-                          : "bg-indigo-650 hover:bg-indigo-700 text-white"
+                          ? "cursor-default border-[#c5a9ff]/20 bg-[#c5a9ff]/10 text-[#d7c5ff]/65"
+                          : "border-[#c5a9ff]/25 bg-[#c5a9ff]/[0.07] text-[#ddceff] hover:border-[#c5a9ff]/45 hover:bg-[#c5a9ff]/[0.13]"
                       }`}
                     >
+                      {selectedOrder.status === "processing" ? <span className="mr-2 h-1.5 w-1.5 rounded-full bg-[#d7c5ff] shadow-[0_0_8px_rgba(215,197,255,.8)]" /> : null}
                       {selectedOrder.status === "processing" ? "Confirmed" : "CONFIRM ORDER"}
                     </Button>
 
@@ -1404,12 +1457,13 @@ export function OrdersTable({
                     <Button 
                       onClick={() => handleUpdateStatus(selectedOrder.id, "shipped")} 
                       disabled={isUpdating || selectedOrder.status === "shipped"}
-                      className={`rounded-xl font-bold text-[10px] tracking-widest uppercase h-10 shadow-md ${
+                      className={`h-11 w-full min-w-0 overflow-hidden whitespace-nowrap rounded-xl border px-2 text-[9px] font-bold uppercase tracking-[0.12em] transition sm:text-[10px] ${
                         selectedOrder.status === "shipped"
-                          ? "bg-blue-600/30 text-blue-300 border border-blue-500/20 cursor-default"
-                          : "bg-blue-600 hover:bg-blue-700 text-white"
+                          ? "cursor-default border-sky-400/20 bg-sky-400/10 text-sky-200/65"
+                          : "border-sky-400/20 bg-sky-400/[0.06] text-sky-200 hover:border-sky-400/40 hover:bg-sky-400/[0.12]"
                       }`}
                     >
+                      {selectedOrder.status === "shipped" ? <span className="mr-2 h-1.5 w-1.5 rounded-full bg-sky-200 shadow-[0_0_8px_rgba(186,230,253,.8)]" /> : null}
                       {selectedOrder.status === "shipped" ? "Shipped" : "MARK SHIPPED"}
                     </Button>
 
@@ -1417,12 +1471,13 @@ export function OrdersTable({
                     <Button 
                       onClick={() => handleUpdateStatus(selectedOrder.id, "delivered")} 
                       disabled={isUpdating || selectedOrder.status === "delivered"}
-                      className={`rounded-xl font-bold text-[10px] tracking-widest uppercase h-10 shadow-md ${
+                      className={`h-11 w-full min-w-0 overflow-hidden whitespace-nowrap rounded-xl border px-2 text-[9px] font-bold uppercase tracking-[0.12em] transition sm:text-[10px] ${
                         selectedOrder.status === "delivered"
-                          ? "bg-emerald-600/30 text-emerald-300 border border-emerald-500/20 cursor-default"
-                          : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                          ? "cursor-default border-emerald-400/20 bg-emerald-400/10 text-emerald-200/65"
+                          : "border-emerald-400/20 bg-emerald-400/[0.06] text-emerald-200 hover:border-emerald-400/40 hover:bg-emerald-400/[0.12]"
                       }`}
                     >
+                      {selectedOrder.status === "delivered" ? <span className="mr-2 h-1.5 w-1.5 rounded-full bg-emerald-200 shadow-[0_0_8px_rgba(167,243,208,.8)]" /> : null}
                       {selectedOrder.status === "delivered" ? "Delivered" : "FULFILL ORDER"}
                     </Button>
 
@@ -1430,13 +1485,24 @@ export function OrdersTable({
                     <Button 
                       onClick={() => handleUpdateStatus(selectedOrder.id, "cancelled")} 
                       disabled={isUpdating || selectedOrder.status === "cancelled"}
-                      className={`rounded-xl font-bold text-[10px] tracking-widest uppercase h-10 shadow-md ${
+                      className={`h-11 w-full min-w-0 overflow-hidden whitespace-nowrap rounded-xl border px-2 text-[9px] font-bold uppercase tracking-[0.12em] transition sm:text-[10px] ${
                         selectedOrder.status === "cancelled"
-                          ? "bg-red-950/30 text-red-400 border border-red-900/30 cursor-default"
-                          : "bg-red-650 hover:bg-red-700 text-white"
+                          ? "cursor-default border-rose-400/20 bg-rose-400/10 text-rose-200/65"
+                          : "border-rose-400/15 bg-rose-400/[0.035] text-rose-200/80 hover:border-rose-400/35 hover:bg-rose-400/[0.09]"
                       }`}
                     >
+                      {selectedOrder.status === "cancelled" ? <span className="mr-2 h-1.5 w-1.5 rounded-full bg-rose-200 shadow-[0_0_8px_rgba(254,205,211,.8)]" /> : null}
                       {selectedOrder.status === "cancelled" ? "Cancelled" : "CANCEL ORDER"}
+                    </Button>
+
+                    <Button
+                      type="button"
+                      onClick={() => handleUpdateStatus(selectedOrder.id, "packed")}
+                      disabled={isUpdating || selectedOrder.status === "packed"}
+                      className={`h-11 w-full min-w-0 overflow-hidden whitespace-nowrap rounded-xl border px-2 text-[9px] font-bold uppercase tracking-[0.12em] transition sm:text-[10px] ${selectedOrder.status === "packed" ? "cursor-default border-violet-400/20 bg-violet-400/10 text-violet-200/65" : "border-violet-400/20 bg-violet-400/[0.055] text-violet-200 hover:border-violet-400/40 hover:bg-violet-400/[0.12]"}`}
+                    >
+                      {selectedOrder.status === "packed" ? <span className="mr-2 h-1.5 w-1.5 rounded-full bg-violet-200 shadow-[0_0_8px_rgba(221,214,254,.8)]" /> : null}
+                      {selectedOrder.status === "packed" ? "Packed" : "MARK PACKED"}
                     </Button>
 
                     <Button
@@ -1444,16 +1510,31 @@ export function OrdersTable({
                       onClick={handleRemoveOrder}
                       disabled={isUpdating}
                       variant="outline"
-                      className="col-span-2 rounded-xl border-red-500/40 bg-red-500/[0.04] text-red-300 hover:bg-red-500/10 font-bold text-[10px] tracking-widest uppercase h-10 mt-2"
+                      className="h-11 w-full min-w-0 overflow-hidden whitespace-nowrap rounded-xl border-rose-400/20 bg-transparent px-2 text-[9px] font-bold uppercase tracking-[0.12em] text-rose-200/70 hover:border-rose-400/40 hover:bg-rose-400/[0.07] hover:text-rose-100 sm:text-[10px]"
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
                       REMOVE TEST ORDER
                     </Button>
                   </div>
+                  {previousOrderStatus ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={isUpdating}
+                      onClick={() => {
+                        const currentLabel = selectedOrder.status.replaceAll("_", " ");
+                        const previousLabel = previousOrderStatus.replaceAll("_", " ");
+                        if (!window.confirm(`Revert this order from ${currentLabel} back to ${previousLabel}?`)) return;
+                        void handleUpdateStatus(selectedOrder.id, previousOrderStatus, `Reverted accidental status change from ${selectedOrder.status} to ${previousOrderStatus}`);
+                      }}
+                      className="h-11 w-full rounded-xl border-amber-300/25 bg-amber-300/[0.06] text-[9px] font-bold uppercase tracking-[0.12em] text-amber-100 hover:border-amber-300/45 hover:bg-amber-300/[0.12] sm:text-[10px]"
+                    >
+                      <Undo2 className="mr-2 h-4 w-4" /> Revert to {previousOrderStatus.replaceAll("_", " ")}
+                    </Button>
+                  ) : null}
                 </div>
 
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5 space-y-4">
-                  <h4 className="text-sm font-semibold uppercase tracking-widest text-white/45">Customer Updates</h4>
+                <div className="space-y-4 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5 sm:p-6">
+                  <div><h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/45">Customer updates</h4><p className="mt-1 text-xs text-white/30">Copy a ready-to-send update for this customer.</p></div>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <Button
                       type="button"
@@ -1491,7 +1572,7 @@ export function OrdersTable({
                 </div>
 
                 {selectedOrder.phone && (
-                  <Button onClick={() => openWhatsApp(selectedOrder)} className="w-full rounded-xl bg-[#25D366] hover:bg-[#128C7E] text-white h-12 shadow-md">
+                  <Button onClick={() => openWhatsApp(selectedOrder)} className="h-13 w-full rounded-2xl border border-emerald-300/20 bg-[linear-gradient(135deg,#25D366,#17a653)] font-semibold text-white shadow-[0_14px_32px_rgba(37,211,102,.16)] hover:brightness-105">
                     <MessageCircle className="mr-2 h-5 w-5" /> Message via WhatsApp
                   </Button>
                 )}
@@ -1500,6 +1581,20 @@ export function OrdersTable({
           )}
         </SheetContent>
       </Sheet>
+      {previewImage ? createPortal(
+        <div role="dialog" aria-modal="true" aria-label={`${previewImage.name} image preview`} className="pointer-events-auto fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4 backdrop-blur-md" onClick={() => setPreviewImage(null)}>
+          <div className="relative w-full max-w-3xl" onClick={(event) => event.stopPropagation()}>
+            <div className="relative aspect-square max-h-[82vh] w-full overflow-hidden rounded-3xl border border-white/15 bg-[#111113] shadow-[0_30px_100px_rgba(0,0,0,.7)]">
+              <Image src={previewImage.url} alt={previewImage.name} fill sizes="(max-width: 768px) 100vw, 768px" className="object-contain" priority />
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#19191c] px-4 py-3">
+              <p className="truncate text-sm font-semibold text-white">{previewImage.name}</p>
+              <button type="button" onClick={() => setPreviewImage(null)} className="shrink-0 rounded-xl border border-white/15 bg-white/[0.06] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-white/[0.12]">Close</button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      ) : null}
       </div>
     </div>
   );

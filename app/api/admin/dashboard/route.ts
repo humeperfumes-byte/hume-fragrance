@@ -104,7 +104,7 @@ function isRevenueQualifiedOrder(order: OrderRow): boolean {
   const hasFulfillmentProof = Boolean(
     order.trackingNumber || order.shippedAt || order.deliveredAt || ["shipped", "delivered"].includes(order.status),
   );
-  const hasCapturedPayment = order.status === "processing" && Boolean(order.paymentMethod);
+  const hasCapturedPayment = ["processing", "packed"].includes(order.status) && Boolean(order.paymentMethod);
   const isCompleted = order.status === "complete";
   return hasFulfillmentProof || hasCapturedPayment || isCompleted;
 }
@@ -540,6 +540,7 @@ export async function GET(request: NextRequest) {
         "dispute_action_required",
         "dispute_under_review",
         "processing",
+        "packed",
         "shipped",
       ].includes(row.status),
     );

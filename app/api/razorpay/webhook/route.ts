@@ -310,10 +310,10 @@ async function findOrder({
   }
 
   const orderIdMatcher = razorpayOrderId
-    ? ilike(orders.whatsappMessage, `%Razorpay Order ID: ${razorpayOrderId}%`)
+    ? or(eq(orders.razorpayOrderId, razorpayOrderId), ilike(orders.whatsappMessage, `%Razorpay Order ID: ${razorpayOrderId}%`))
     : undefined;
   const paymentIdMatcher = razorpayPaymentId
-    ? ilike(orders.whatsappMessage, `%Razorpay Payment ID: ${razorpayPaymentId}%`)
+    ? or(eq(orders.razorpayPaymentId, razorpayPaymentId), ilike(orders.whatsappMessage, `%Razorpay Payment ID: ${razorpayPaymentId}%`))
     : undefined;
   const fallbackMatcher =
     orderIdMatcher && paymentIdMatcher
@@ -651,6 +651,12 @@ export async function POST(request: NextRequest) {
       .set({
         status: nextStatus,
         paymentMethod: nextPaymentMethod,
+        razorpayOrderId: razorpayOrderId ?? existingOrder.razorpayOrderId,
+        razorpayPaymentId: razorpayPaymentId ?? existingOrder.razorpayPaymentId,
+        capturedPaymentAmount: nextStatus === "processing" && paymentAmount ? (Number(paymentAmount) / 100).toFixed(2) : existingOrder.capturedPaymentAmount,
+        paymentCapturedAt: nextStatus === "processing" ? unixSecondsToDate(payment?.created_at) ?? new Date() : existingOrder.paymentCapturedAt,
+        paymentReconciledAt: new Date(),
+        paymentSyncStatus: nextStatus === "processing" ? "captured" : paymentStatus ?? event,
         whatsappMessage: nextMessage,
         updatedAt: new Date(),
       })

@@ -1,8 +1,8 @@
 import { db } from "@/db";
-import { couponCodeEvents, checkoutDrafts, orders, sessionIntelligence } from "@/db/schema";
+import { couponCodeEvents, coupons, checkoutDrafts, orders, sessionIntelligence } from "@/db/schema";
 import { and, desc, gte, inArray, lte } from "drizzle-orm";
 import { CouponLeadsTable } from "./CouponLeadsTable";
-import { CreateCouponDialog } from "./CreateCouponDialog";
+import { CouponManagement } from "./CouponManagement";
 import { Ticket } from "lucide-react";
 import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-data-filters";
 import { parseAdminTimeWindow } from "@/lib/admin-time-window";
@@ -11,7 +11,7 @@ import { parseAdminMarket, isIndiaLeadSignal, isIndiaCheckoutSignal } from "@/li
 export const dynamic = "force-dynamic";
 
 type AdminPageProps = {
-  searchParams?: Promise<{ hours?: string; market?: string; from?: string; to?: string }> | { hours?: string; market?: string; from?: string; to?: string };
+  searchParams?: Promise<{ hours?: string; market?: string; from?: string; to?: string }>;
 };
 
 type CouponEventRow = typeof couponCodeEvents.$inferSelect;
@@ -47,22 +47,26 @@ export default async function CouponLeadsPage({ searchParams }: AdminPageProps) 
   const timeWindow = parseAdminTimeWindow(params?.hours, params?.from, params?.to);
   const market = parseAdminMarket(params?.market);
   let events: CouponEventRow[] = [];
+  let couponRows: Array<typeof coupons.$inferSelect> = [];
+  let couponOrders: Array<typeof orders.$inferSelect> = [];
   let dbError = false;
 
   try {
-    events = await db
-      .select()
-      .from(couponCodeEvents)
-      .where(and(gte(couponCodeEvents.createdAt, timeWindow.since), lte(couponCodeEvents.createdAt, timeWindow.until)))
-      .orderBy(desc(couponCodeEvents.createdAt))
-      .limit(500);
+    [events, couponRows, couponOrders] = await Promise.all([
+      db.select().from(couponCodeEvents).where(and(gte(couponCodeEvents.createdAt, timeWindow.since), lte(couponCodeEvents.createdAt, timeWindow.until))).orderBy(desc(couponCodeEvents.createdAt)).limit(500),
+      db.select().from(coupons).orderBy(desc(coupons.updatedAt)),
+      db.select().from(orders).where(and(gte(orders.createdAt, timeWindow.since), lte(orders.createdAt, timeWindow.until))).orderBy(desc(orders.createdAt)).limit(1000),
+    ]);
     events = filterExcludedAdminRows(events, collectExcludedSessionIds(events));
+    couponOrders = filterExcludedAdminRows(couponOrders, collectExcludedSessionIds(couponOrders));
 
     if (market === "india") {
       events = events.filter((row) => isIndiaLeadSignal(row));
     } else if (market === "out_of_india") {
       events = events.filter((row) => !isIndiaLeadSignal(row));
     }
+    if (market === "india") couponOrders = couponOrders.filter(isIndiaCheckoutSignal);
+    else if (market === "out_of_india") couponOrders = couponOrders.filter((row) => !isIndiaCheckoutSignal(row));
   } catch (error) {
     console.error("Coupon leads page DB error:", error);
     dbError = true;
@@ -195,6 +199,32 @@ export default async function CouponLeadsPage({ searchParams }: AdminPageProps) 
   const convertedToOrder = enrichedEvents.filter((e) => e.xref.hasOrder).length;
   const startedCheckout = enrichedEvents.filter((e) => e.xref.hasCheckout).length;
 
+  const couponManagementRows = couponRows.map((coupon) => {
+    const code = coupon.code.trim().toUpperCase();
+    const claims = enrichedEvents.filter((event) => event.couponCode?.trim().toUpperCase() === code);
+    const redemptions = couponOrders.filter((order) =>
+      (order.appliedCouponCode || "").split(",").map((value) => value.trim().toUpperCase()).includes(code),
+    );
+    const uniqueClaimants = new Set(claims.map((event) => event.destination?.trim().toLowerCase() || event.sessionId).filter(Boolean)).size;
+    const discountGranted = redemptions.reduce((sum, order) => sum + Math.max(0, Number(order.subtotal || 0) + Number(order.shippingFee || 0) - Number(order.grandTotal || 0)), 0);
+    return {
+      ...coupon,
+      createdAt: coupon.createdAt.toISOString(), updatedAt: coupon.updatedAt.toISOString(), archivedAt: coupon.archivedAt?.toISOString() || null,
+      metrics: {
+        claims: claims.length, uniqueClaimants,
+        emailClaims: claims.filter((event) => event.channel === "email").length,
+        whatsappClaims: claims.filter((event) => event.channel === "whatsapp").length,
+        checkoutStarts: claims.filter((event) => event.xref.hasCheckout).length,
+        redemptions: redemptions.length,
+        conversionRate: uniqueClaimants ? Math.round((redemptions.length / uniqueClaimants) * 1000) / 10 : 0,
+        discountGranted,
+        revenue: redemptions.reduce((sum, order) => sum + Number(order.grandTotal || 0), 0),
+      },
+      claimants: claims.slice(0, 20).map((event) => ({ id: event.id, destination: event.destination, channel: event.channel, createdAt: event.createdAt.toISOString(), hasCheckout: event.xref.hasCheckout, hasOrder: event.xref.hasOrder })),
+      redeemedOrders: redemptions.slice(0, 20).map((order) => ({ id: order.id, orderNumber: order.orderNumber, fullName: order.fullName, grandTotal: Number(order.grandTotal || 0), status: order.status, createdAt: order.createdAt.toISOString() })),
+    };
+  });
+
   return (
     <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
       <div className="admin-page-intro-copy flex flex-col justify-between gap-4 md:flex-row md:items-end">
@@ -210,7 +240,6 @@ export default async function CouponLeadsPage({ searchParams }: AdminPageProps) 
         </p>
         <p className="ml-11 text-xs text-white/35">Showing coupon leads from {timeWindow.label.toLowerCase()}.</p>
         </div>
-        <CreateCouponDialog />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -239,6 +268,8 @@ export default async function CouponLeadsPage({ searchParams }: AdminPageProps) 
           <p className="text-2xl text-emerald-300 mt-2">{convertedToOrder}</p>
         </div>
       </div>
+
+      <CouponManagement initialCoupons={couponManagementRows} />
 
       <CouponLeadsTable events={enrichedEvents} />
     </div>

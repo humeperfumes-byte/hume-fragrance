@@ -64,6 +64,11 @@ Current admin navigation:
 
 The sidebar lives in `components/admin/AdminShell.tsx`.
 
+Admin navigation deliberately disables Next.js link prefetching. Data-heavy
+pages must load their current server state when selected instead of reusing a
+background-prefetched snapshot, and unnecessary prefetch queries should not
+consume database egress.
+
 Mobile behavior:
 
 - Sidebar opens as a sheet.
@@ -224,6 +229,18 @@ Admin recovery fields:
 
 Actions should stay visible without hover-only behavior.
 
+Converted-customer visibility:
+
+- Checkout drafts are linked to orders by session ID, with normalized email and
+  phone fallbacks.
+- Only a checkout linked to a confirmed order (`payment_authorized`,
+  `processing`, `shipped`, `delivered`, or `complete`) uses an emerald-tinted
+  full row. No additional confirmed/payment-pending badge is shown in the row.
+- A linked `payment_pending` order remains a normal recovery target and receives
+  the normal row treatment.
+- Confirmed-order drafts remain visible for journey history but are excluded from
+  active, recoverable, WhatsApp-pending, and abandoned-value summary metrics.
+
 Message actions should support:
 
 - WhatsApp
@@ -317,6 +334,23 @@ Repeat customer automation should wait until order history is clean.
 Purpose:
 
 - Operational fulfillment and revenue tracking.
+
+Order detail workspace:
+
+- Order details open in a full-width mobile drawer and a wide desktop operations panel.
+- The header stays visible while scrolling and keeps the order number, status,
+  value, placed date, and edit action in view. It stays compact so operational
+  details receive most of the available drawer height.
+- Customer, payment, and fulfillment summaries appear before the detailed
+  workflow sections so an admin can understand the order at a glance.
+- Detail, editing, tracking, audit, status, and customer-message sections use a
+  consistent dark card hierarchy matching the rest of the admin system.
+- The orders table is remounted when its server result changes. This keeps its
+  editable local state aligned with fresh orders received during client-side
+  admin navigation and avoids requiring a hard browser refresh.
+- Preset Orders date windows use PostgreSQL's clock for their relative bounds.
+  This prevents local runtime timezone or clock differences from excluding
+  current orders. Custom ranges continue to use the explicitly selected dates.
 
 Orders should preserve:
 

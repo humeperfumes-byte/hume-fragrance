@@ -61,7 +61,7 @@ function isRevenueQualifiedOrder(order: SafeOrder) {
       order.shippedAt ||
       order.deliveredAt ||
       ["shipped", "delivered", "complete"].includes(order.status) ||
-      (order.status === "processing" && order.paymentMethod),
+      (["processing", "packed"].includes(order.status) && order.paymentMethod),
   );
 }
 

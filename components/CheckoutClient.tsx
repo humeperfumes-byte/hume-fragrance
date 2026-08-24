@@ -1185,6 +1185,8 @@ export default function CheckoutClient() {
     paymentMethod,
     status,
     orderMessage,
+    razorpayOrderId,
+    razorpayPaymentId,
   }: {
     checkoutChannel: "whatsapp" | "razorpay";
     paymentMethod: string;
@@ -1195,6 +1197,8 @@ export default function CheckoutClient() {
       | "payment_failed"
       | "processing";
     orderMessage: string;
+    razorpayOrderId?: string;
+    razorpayPaymentId?: string;
   }) => {
     if (typeof window === "undefined") return false;
 
@@ -1215,6 +1219,8 @@ export default function CheckoutClient() {
           status,
           checkoutChannel,
           paymentMethod,
+          razorpayOrderId,
+          razorpayPaymentId,
           shippingMethod:
             shippingFee === 0 ? "Free Delivery" : "Standard Shipping",
           path: getCheckoutUrl(pathname),
@@ -1428,6 +1434,7 @@ export default function CheckoutClient() {
         checkoutChannel: "razorpay",
         paymentMethod: recoveryPaymentMethod,
         status: "payment_pending",
+        razorpayOrderId: orderData.order_id,
         orderMessage: [
           buildOrderMessage(),
           "",
@@ -1538,6 +1545,8 @@ export default function CheckoutClient() {
               checkoutChannel: "razorpay",
               paymentMethod: recoveryPaymentMethod,
               status: "processing",
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
               orderMessage: paymentMessage,
             });
 

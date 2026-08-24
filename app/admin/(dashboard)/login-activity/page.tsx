@@ -21,7 +21,7 @@ import { parseAdminTimeWindow } from "@/lib/admin-time-window";
 export const dynamic = "force-dynamic";
 
 type AdminPageProps = {
-  searchParams?: Promise<{ hours?: string; from?: string; to?: string }> | { hours?: string; from?: string; to?: string };
+  searchParams?: Promise<{ hours?: string; from?: string; to?: string }>;
 };
 
 type CustomerSource = Order | CheckoutDraft;

@@ -166,6 +166,7 @@ export const coupons = pgTable("coupons", {
   active: boolean("active").notNull().default(true),
   displayInCart: boolean("display_in_cart").notNull().default(true),
   welcomeBackMode: varchar("welcome_back_mode", { length: 30 }).notNull().default("cap_5"),
+  archivedAt: timestamp("archived_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -292,6 +293,13 @@ export const orders = pgTable("orders", {
   status: varchar("status", { length: 50 }).notNull().default("whatsapp_initiated"),
   checkoutChannel: varchar("checkout_channel", { length: 50 }).notNull().default("whatsapp"),
   paymentMethod: varchar("payment_method", { length: 100 }),
+  razorpayOrderId: varchar("razorpay_order_id", { length: 255 }),
+  razorpayPaymentId: varchar("razorpay_payment_id", { length: 255 }),
+  capturedPaymentAmount: decimal("captured_payment_amount", { precision: 10, scale: 2 }),
+  paymentCapturedAt: timestamp("payment_captured_at"),
+  paymentReconciledAt: timestamp("payment_reconciled_at"),
+  paymentSyncStatus: varchar("payment_sync_status", { length: 50 }),
+  paymentAttemptCount: integer("payment_attempt_count"),
   shippingMethod: varchar("shipping_method", { length: 100 }),
   fulfillmentCarrier: varchar("fulfillment_carrier", { length: 100 }),
   trackingNumber: varchar("tracking_number", { length: 120 }),
@@ -320,6 +328,8 @@ export const orders = pgTable("orders", {
   appliedCouponCode: varchar("applied_coupon_code", { length: 50 }),
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }),
   shippingFee: decimal("shipping_fee", { precision: 10, scale: 2 }),
+  manualAdjustment: decimal("manual_adjustment", { precision: 10, scale: 2 }).notNull().default("0"),
+  adjustmentReason: text("adjustment_reason"),
   grandTotal: decimal("grand_total", { precision: 10, scale: 2 }),
   whatsappMessage: text("whatsapp_message"),
   cartSnapshot: jsonb("cart_snapshot")
@@ -357,6 +367,20 @@ export const orders = pgTable("orders", {
   shippedAt: timestamp("shipped_at"),
   deliveredAt: timestamp("delivered_at"),
 });
+
+// Immutable admin audit trail for operational order corrections.
+export const orderEditAudits = pgTable("order_edit_audits", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  orderId: varchar("order_id", { length: 255 })
+    .notNull()
+    .references(() => orders.id, { onDelete: "cascade" }),
+  changeType: varchar("change_type", { length: 80 }).notNull(),
+  reason: text("reason"),
+  actor: varchar("actor", { length: 120 }).notNull().default("admin"),
+  beforeSnapshot: jsonb("before_snapshot").$type<Record<string, unknown>>().notNull(),
+  afterSnapshot: jsonb("after_snapshot").$type<Record<string, unknown>>().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [index("order_edit_audits_order_created_idx").on(table.orderId, table.createdAt)]);
 
 // Raw Razorpay webhook ledger for payment, refund, dispute, settlement and downtime reconciliation.
 export const razorpayWebhookEvents = pgTable("razorpay_webhook_events", {
@@ -534,6 +558,7 @@ export type CheckoutDraft = typeof checkoutDrafts.$inferSelect;
 export type NewCheckoutDraft = typeof checkoutDrafts.$inferInsert;
 export type Order = typeof orders.$inferSelect;
 export type NewOrder = typeof orders.$inferInsert;
+export type OrderEditAudit = typeof orderEditAudits.$inferSelect;
 export type RazorpayWebhookEvent = typeof razorpayWebhookEvents.$inferSelect;
 export type NewRazorpayWebhookEvent = typeof razorpayWebhookEvents.$inferInsert;
 export type CouponCodeEvent = typeof couponCodeEvents.$inferSelect;

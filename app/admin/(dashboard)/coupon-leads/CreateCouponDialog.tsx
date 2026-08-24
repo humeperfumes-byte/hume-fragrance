@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 
 type CouponForm = {
   code: string;
@@ -39,6 +40,7 @@ const fieldClass =
   "h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-white outline-none transition placeholder:text-white/22 focus:border-[#c9b3ff]/55 focus:ring-2 focus:ring-[#c9b3ff]/10";
 
 export function CreateCouponDialog() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<CouponForm>(INITIAL_FORM);
@@ -74,6 +76,7 @@ export function CreateCouponDialog() {
       toast({ title: `${data.coupon.code} coupon created` });
       setForm(INITIAL_FORM);
       setOpen(false);
+      router.refresh();
     } catch (error) {
       toast({
         title: error instanceof Error ? error.message : "Could not create coupon",

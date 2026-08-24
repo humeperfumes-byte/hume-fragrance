@@ -1,42 +1,28 @@
 import { randomUUID } from "node:crypto";
 
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { db } from "@/db";
 import { coupons } from "@/db/schema";
 import { requireAdminToken } from "@/lib/admin-auth";
+import { couponDescription, couponInputSchema } from "@/lib/admin-coupon-schema";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const couponInputSchema = z
-  .object({
-    code: z
-      .string()
-      .trim()
-      .min(3, "Coupon code must contain at least 3 characters")
-      .max(32)
-      .regex(/^[A-Za-z0-9_-]+$/, "Use only letters, numbers, hyphens or underscores"),
-    title: z.string().trim().min(2, "Coupon title is required").max(120),
-    description: z.string().trim().max(400).optional().default(""),
-    type: z.enum(["fixed", "percent"]),
-    value: z.coerce.number().positive("Discount value must be greater than zero"),
-    minSubtotal: z.coerce.number().min(0).default(0),
-    active: z.boolean().default(true),
-    displayInCart: z.boolean().default(false),
-    welcomeBackMode: z.enum(["allow", "cap_5", "disable"]).default("allow"),
-  })
-  .superRefine((value, context) => {
-    if (value.type === "percent" && value.value > 100) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["value"],
-        message: "Percentage discount cannot exceed 100%",
-      });
-    }
-  });
+export async function GET(request: NextRequest) {
+  const unauthorized = requireAdminToken(request);
+  if (unauthorized) return unauthorized;
+  try {
+    const rows = await db.select().from(coupons).orderBy(asc(coupons.code));
+    return NextResponse.json({ coupons: rows });
+  } catch (error) {
+    console.error("Admin coupon list error:", error);
+    return NextResponse.json({ error: "Could not load coupons" }, { status: 500 });
+  }
+}
 
 export async function POST(request: NextRequest) {
   const unauthorized = requireAdminToken(request);
@@ -64,11 +50,7 @@ export async function POST(request: NextRequest) {
         id: `coupon-${randomUUID()}`,
         code,
         title: input.title,
-        description:
-          input.description ||
-          (input.type === "percent"
-            ? `${input.value}% off above ₹${input.minSubtotal}`
-            : `₹${input.value} off above ₹${input.minSubtotal}`),
+        description: couponDescription(input),
         type: input.type,
         value: input.value.toFixed(2),
         minSubtotal: input.minSubtotal.toFixed(2),

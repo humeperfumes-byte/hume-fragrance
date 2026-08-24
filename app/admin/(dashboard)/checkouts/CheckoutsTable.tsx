@@ -34,7 +34,14 @@ function getDraftValue(draft: CheckoutDraft): number {
   return Number.parseFloat(String(draft.grandTotal ?? "0") || "0");
 }
 
-type ScoredCheckoutDraft = CheckoutDraft & {
+type CheckoutDraftWithOrder = CheckoutDraft & {
+  hasOrderRecord: boolean;
+  hasConfirmedOrder: boolean;
+  linkedOrderNumber: string | null;
+  linkedOrderStatus: string | null;
+};
+
+type ScoredCheckoutDraft = CheckoutDraftWithOrder & {
   leadScore: number;
   leadTemperature: "Hot" | "Warm" | "Cold";
 };
@@ -584,7 +591,7 @@ function CheckoutDetailSheet({
   );
 }
 
-export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft[] }) {
+export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraftWithOrder[] }) {
   const [workflowById, setWorkflowById] = useState<
     Record<string, { leadStatus: LeadStatus; leadNotes: string; nextFollowUpAt: string; overrideTotal: string }>
   >({});
@@ -749,6 +756,7 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
           const items = draft.cartSnapshot || [];
           const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
           const domain = getCapturedDomainInfo(draft.path);
+          const hasConfirmedOrder = draft.hasConfirmedOrder;
 
           return (
             <div
@@ -762,7 +770,7 @@ export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraft
                   setSelectedDraft(draft);
                 }
               }}
-              className="group grid cursor-pointer gap-5 border-l-2 border-l-transparent bg-[#171719] p-5 transition-all duration-200 hover:border-l-[#f2d56b]/60 hover:bg-[#202024] focus:border-l-[#f2d56b]/60 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-[#f2d56b]/30 xl:grid-cols-[110px_minmax(190px,0.8fr)_minmax(220px,1fr)_320px]"
+              className={`group grid cursor-pointer gap-5 border-l-2 p-5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-inset xl:grid-cols-[110px_minmax(190px,0.8fr)_minmax(220px,1fr)_320px] ${hasConfirmedOrder ? "border-l-emerald-400/80 bg-[linear-gradient(90deg,rgba(16,185,129,.105),rgba(16,185,129,.035)_42%,rgba(23,23,25,.96))] hover:bg-[linear-gradient(90deg,rgba(16,185,129,.14),rgba(16,185,129,.05)_42%,rgba(31,31,34,.98))] focus:ring-emerald-400/30" : "border-l-transparent bg-[#171719] hover:border-l-[#f2d56b]/60 hover:bg-[#202024] focus:border-l-[#f2d56b]/60 focus:ring-[#f2d56b]/30"}`}
             >
               <div className="flex items-start justify-between gap-3 xl:block">
                 <div className="space-y-2">

@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import ImageWithFallback from "@/components/ImageWithFallback";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Menu, X, Search, Sparkles, ExternalLink, UserRound } from "lucide-react";
+import { ArrowLeft, ArrowRight, Menu, X, Search, Sparkles, ExternalLink, UserRound } from "lucide-react";
 import { HiOutlineShoppingBag } from "react-icons/hi2";
 import { useCart } from "@/context/CartContext";
 import ShopMegaMenu from "./ShopMegaMenu";
@@ -17,6 +18,8 @@ import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 import { DISCOVERY_SET_PATH } from "@/lib/discovery-set";
 import AnnouncementBar from "./AnnouncementBar";
 import { useSiteControls } from "@/hooks/use-site-controls";
+import { useOverlayHistory } from "@/hooks/use-overlay-history";
+import { getMobileBackFallback, isMobileNavigationHub, readMobileNavigationStack, recordMobileNavigation } from "@/lib/mobile-navigation";
 
 // The mobile Raksha Bandhan takeover expires at the end of 26 August 2026 in India.
 const RAKSHA_BANDHAN_MENU_END_AT = new Date("2026-08-26T23:59:59+05:30").getTime();
@@ -32,8 +35,14 @@ const Header = () => {
   const settings = useSiteControls();
   const [isAnnouncementVisible, setIsAnnouncementVisible] = useState(true);
   const [topOffset, setTopOffset] = useState(0);
-  const { totalItems, setIsCartOpen } = useCart();
+  const { totalItems, isCartOpen, setIsCartOpen } = useCart();
   const router = useRouter();
+  const pathname = usePathname();
+  const showMobileBack = !isMobileNavigationHub(pathname);
+
+  useOverlayHistory(isMenuOpen, setIsMenuOpen, "menu");
+  useOverlayHistory(isSearchOpen, setIsSearchOpen, "search");
+  useOverlayHistory(isCartOpen, setIsCartOpen, "cart");
 
   const isShown = isAnnouncementVisible && settings.announcementEnabled;
   const displayCartCount = totalItems > 99 ? "99+" : `${totalItems}`;
@@ -41,6 +50,30 @@ const Header = () => {
   const navigateTo = (href: string) => {
     showNavigationLoadingToast();
     router.push(href);
+  };
+
+  useEffect(() => {
+    const search = window.location.search;
+    recordMobileNavigation(`${pathname}${search}`);
+  }, [pathname]);
+
+  const handleMobileBack = () => {
+    if (isMenuOpen) return setIsMenuOpen(false);
+    if (isSearchOpen) return setIsSearchOpen(false);
+    if (isCartOpen) return setIsCartOpen(false);
+
+    if (readMobileNavigationStack().length > 1) {
+      router.back();
+      return;
+    }
+
+    showNavigationLoadingToast("Going back");
+    router.replace(getMobileBackFallback(pathname));
+  };
+
+  const openSearchFromMenu = () => {
+    setIsMenuOpen(false);
+    window.setTimeout(() => setIsSearchOpen(true), 80);
   };
 
   useEffect(() => {
@@ -117,11 +150,25 @@ const Header = () => {
       `}} />
       <AnnouncementBar isVisible={isShown} onClose={() => setIsAnnouncementVisible(false)} />
       <div className="container-luxury">
-        <div className="flex items-center justify-between py-5">
-          <div className="flex items-center gap-6">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center py-5 md:flex md:justify-between">
+          <div className="flex items-center justify-self-start gap-1.5 md:gap-6">
+            {showMobileBack ? (
+              <button
+                type="button"
+                onClick={handleMobileBack}
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/25 md:hidden"
+                aria-label="Go back"
+              >
+                <ArrowLeft className="h-5 w-5 stroke-[2.25]" />
+              </button>
+            ) : null}
             <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="inline-flex h-9 w-9 items-center justify-center md:hidden"
+              onClick={() => {
+                setIsSearchOpen(false);
+                setIsCartOpen(false);
+                setIsMenuOpen(!isMenuOpen);
+              }}
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/25 md:hidden"
               aria-label="Toggle menu"
             >
               {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
@@ -149,7 +196,7 @@ const Header = () => {
             </nav>
           </div>
 
-          <Link href="/" className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 leading-none">
+          <Link href="/" className="flex items-center gap-1.5 leading-none md:absolute md:left-1/2 md:-translate-x-1/2">
             <span className="font-serif text-2xl md:text-3xl font-light leading-none tracking-widest">
               HUME
             </span>
@@ -158,7 +205,7 @@ const Header = () => {
             </span>
           </Link>
 
-          <div className="flex items-center gap-5">
+          <div className="flex items-center justify-self-end gap-1.5 md:gap-5">
             <nav className="hidden md:flex items-center gap-5">
               <Link
                 href={DISCOVERY_SET_PATH}
@@ -223,8 +270,12 @@ const Header = () => {
               </div>
             </nav>
             <button
-              onClick={() => setIsSearchOpen(true)}
-              className="inline-flex h-9 w-9 items-center justify-center hover:bg-muted transition-colors"
+              onClick={() => {
+                setIsMenuOpen(false);
+                setIsCartOpen(false);
+                setIsSearchOpen(true);
+              }}
+              className={`inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/25 ${showMobileBack ? "max-[360px]:hidden" : ""}`}
               aria-label="Search"
             >
               <Search size={18} />
@@ -245,9 +296,11 @@ const Header = () => {
                     })
                   );
                 }
+                setIsMenuOpen(false);
+                setIsSearchOpen(false);
                 setIsCartOpen(true);
               }}
-              className="relative inline-flex h-9 w-9 items-center justify-center hover:bg-muted transition-colors"
+              className="relative inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/25"
               aria-label="Open cart"
             >
               <motion.span
@@ -291,23 +344,23 @@ const Header = () => {
         </div>
       </div>
 
-      <AnimatePresence>
+      {typeof document !== "undefined" ? createPortal(<AnimatePresence>
         {isMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "100dvh" }}
-            exit={{ opacity: 0, height: 0 }}
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.25 }}
-            className="fixed inset-0 z-[80] md:hidden"
+            className="fixed inset-0 z-[200] h-[100dvh] w-screen overflow-hidden bg-background md:hidden"
           >
-            <div className="h-full overflow-y-auto bg-background text-foreground">
-              <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <div className="h-[100dvh] overflow-y-auto overscroll-contain bg-background text-foreground">
+              <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/98 px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur-xl">
                 <button
                   onClick={() => setIsMenuOpen(false)}
-                  className="inline-flex h-8 w-8 items-center justify-center"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/15 bg-[#f2eee8] text-[#171717] shadow-[0_6px_18px_rgba(23,23,23,.14)] transition hover:border-black/25 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
                   aria-label="Close menu"
                 >
-                  <X size={20} />
+                  <X className="h-5 w-5 stroke-[2.5]" />
                 </button>
                 <span className="font-serif text-[1.65rem] leading-none tracking-[0.2em]">HUME</span>
                 <button
@@ -315,16 +368,19 @@ const Header = () => {
                     setIsMenuOpen(false);
                     navigateTo("/account");
                   }}
-                  className="inline-flex h-8 w-8 items-center justify-center"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/15 bg-[#f2eee8] text-[#171717] shadow-[0_6px_18px_rgba(23,23,23,.14)] transition hover:border-black/25 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
                   aria-label="Open account"
                 >
-                  <UserRound size={19} />
+                  <UserRound className="h-5 w-5 stroke-[2.25]" />
                 </button>
               </div>
 
               <div className="px-4 py-5 space-y-6">
                 <section>
                   <div className="space-y-3">
+                    <button type="button" onClick={openSearchFromMenu} className="flex h-12 w-full items-center gap-3 rounded-xl border border-border bg-muted/45 px-4 text-left text-sm font-medium" aria-label="Search the store">
+                      <Search className="h-4 w-4" /> Search perfumes and orders
+                    </button>
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);
@@ -583,7 +639,7 @@ const Header = () => {
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>, document.body) : null}
 
       <SearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </header>

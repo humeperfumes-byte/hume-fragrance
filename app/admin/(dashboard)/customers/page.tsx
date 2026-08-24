@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 type CustomerSource = Order | CheckoutDraft;
 
 type AdminPageProps = {
-  searchParams?: Promise<{ hours?: string; market?: string; from?: string; to?: string }> | { hours?: string; market?: string; from?: string; to?: string };
+  searchParams?: Promise<{ hours?: string; market?: string; from?: string; to?: string }>;
 };
 
 function getIdentityKeys(row: CustomerSource): string[] {
