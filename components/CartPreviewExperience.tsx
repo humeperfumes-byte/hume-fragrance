@@ -420,7 +420,11 @@ function RewardPreviewDrawer({ reward }: { reward: RewardPreview }) {
         <Button
           onClick={() => {
             showNavigationLoadingToast("Opening checkout");
-            router.push("/checkout");
+            if (typeof window !== "undefined") {
+              window.location.href = "/checkout";
+            } else {
+              router.push("/checkout");
+            }
           }}
           className="mt-4 h-12 w-full rounded-none bg-black text-sm font-semibold text-white hover:bg-black/85"
         >

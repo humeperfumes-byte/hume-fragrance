@@ -718,9 +718,12 @@ const CartDrawer = () => {
 
   const handleContinueCheckout = () => {
     setIsCartOpen(false);
-    router.prefetch("/checkout");
     showNavigationLoadingToast("Opening checkout");
-    router.push("/checkout");
+    if (typeof window !== "undefined") {
+      window.location.href = "/checkout";
+    } else {
+      router.push("/checkout");
+    }
   };
 
   const renderSidebarCartLayout = () => (
