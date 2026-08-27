@@ -52,7 +52,13 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching products:", error);
-    return NextResponse.json([]);
+    return NextResponse.json(
+      { error: "Products are temporarily unavailable" },
+      {
+        status: 503,
+        headers: { "Cache-Control": "private, no-store" },
+      },
+    );
   }
 }
 

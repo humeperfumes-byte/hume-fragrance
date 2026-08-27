@@ -12,10 +12,13 @@ if (!process.env.DATABASE_URL) {
 const connectionString = process.env.DATABASE_URL;
 
 const client = postgres(connectionString, {
-  max: 5, // Allow up to 5 concurrent connections per serverless instance for parallel queries (Promise.all)
+  // Keep the per-instance client pool deliberately small. Supavisor already
+  // performs the shared pooling, and a large client pool on every Vercel
+  // instance can create avoidable connection spikes.
+  max: 2,
   prepare: false, // Must be false for Supabase Transaction Mode (port 6543)
-  idle_timeout: 2, // Automatically close connection after 2s of inactivity to prevent dead sockets in serverless environment
-  connect_timeout: 5, // Lower connection timeout to prevent long hangs on cold starts
+  idle_timeout: 20,
+  connect_timeout: 5,
 });
 
 export const db = drizzle(client, { schema });

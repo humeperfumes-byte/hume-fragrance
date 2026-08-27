@@ -27,6 +27,7 @@ import {
   readStoredCustomerAccount,
 } from "@/lib/customer-account";
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
+import { prepareOverlayNavigation } from "@/hooks/use-overlay-history";
 import { buildPublicTrackingPath } from "@/lib/tracking-url";
 
 interface SearchOverlayProps {
@@ -183,7 +184,6 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
   const [orders, setOrders] = useState<AccountOrder[]>([]);
   const [mounted, setMounted] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setMounted(true), 0);
@@ -339,23 +339,23 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
     if (!query.trim()) return;
 
     if (isLikelyTrackingId(query)) {
-      onClose();
+      prepareOverlayNavigation();
       showNavigationLoadingToast("Opening tracking");
-      router.push(`/track-order/${encodeURIComponent(cleanTrackingQuery)}`);
+      window.location.assign(`/track-order/${encodeURIComponent(cleanTrackingQuery)}`);
       return;
     }
 
     if (productResults.length > 0) {
       const href = getProductPath(productResults[0]);
-      onClose();
+      prepareOverlayNavigation();
       showNavigationLoadingToast();
-      router.push(href);
+      window.location.assign(href);
       return;
     }
 
-    onClose();
+    prepareOverlayNavigation();
     showNavigationLoadingToast();
-    router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+    window.location.assign(`/search?q=${encodeURIComponent(query.trim())}`);
   };
 
   const handleClose = () => {
@@ -512,7 +512,7 @@ function ActionResult({
     <Link
       href={action.href}
       onClick={() => {
-        onClose();
+        prepareOverlayNavigation();
         showNavigationLoadingToast();
       }}
       className="group flex min-w-0 items-center gap-3 rounded-2xl border border-zinc-100 bg-zinc-50/70 p-3 transition-colors hover:border-zinc-200 hover:bg-white"
@@ -551,7 +551,7 @@ function OrderResult({
     <Link
       href={href}
       onClick={() => {
-        onClose();
+        prepareOverlayNavigation();
         showNavigationLoadingToast(order.trackingNumber ? "Opening tracking" : "Opening account");
       }}
       className="group flex min-w-0 gap-3 rounded-2xl border border-zinc-100 bg-zinc-50/70 p-3 transition-colors hover:border-zinc-200 hover:bg-white"
@@ -604,7 +604,7 @@ function ProductResultCard({
     <Link
       href={productPath}
       onClick={() => {
-        onClose();
+        prepareOverlayNavigation();
         showNavigationLoadingToast();
       }}
       onMouseEnter={() => router.prefetch(productPath)}

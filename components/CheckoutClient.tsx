@@ -781,12 +781,18 @@ export default function CheckoutClient() {
       }
     };
 
-    checkOverride();
-    const interval = setInterval(checkOverride, 4000);
+    const checkOverrideWhileVisible = () => {
+      if (document.visibilityState === "visible") void checkOverride();
+    };
+
+    void checkOverride();
+    const interval = window.setInterval(checkOverrideWhileVisible, 15_000);
+    document.addEventListener("visibilitychange", checkOverrideWhileVisible);
 
     return () => {
       active = false;
-      clearInterval(interval);
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", checkOverrideWhileVisible);
     };
   }, []);
 

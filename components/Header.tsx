@@ -18,7 +18,7 @@ import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 import { DISCOVERY_SET_PATH } from "@/lib/discovery-set";
 import AnnouncementBar from "./AnnouncementBar";
 import { useSiteControls } from "@/hooks/use-site-controls";
-import { useOverlayHistory } from "@/hooks/use-overlay-history";
+import { prepareOverlayNavigation, useOverlayHistory } from "@/hooks/use-overlay-history";
 import { getMobileBackFallback, getStorefrontBreadcrumbs, readMobileNavigationStack, recordMobileNavigation } from "@/lib/mobile-navigation";
 
 // The mobile Raksha Bandhan takeover expires at the end of 26 August 2026 in India.
@@ -49,6 +49,7 @@ const Header = () => {
   const displayCartCount = totalItems > 99 ? "99+" : `${totalItems}`;
 
   const navigateTo = (href: string) => {
+    prepareOverlayNavigation();
     showNavigationLoadingToast();
     router.push(href);
   };
@@ -59,6 +60,7 @@ const Header = () => {
   }, [pathname]);
 
   const openSearchFromMenu = () => {
+    prepareOverlayNavigation();
     setIsMenuOpen(false);
     window.setTimeout(() => setIsSearchOpen(true), 80);
   };

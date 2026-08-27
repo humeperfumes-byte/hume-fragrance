@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { products, reviews, productCategories } from "@/db/schema";
 import { eq, inArray, sql } from "drizzle-orm";
-import { type PerfumeData } from "@/data/perfumes";
+import { perfumes as catalogueFallback, type PerfumeData } from "@/data/perfumes";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getProductSeoSlug } from "@/lib/product-route";
 import {
@@ -30,6 +30,35 @@ type ProductBadges = Partial<{
 }>;
 type ProductVisibility = "public" | "seo_only";
 let hasLoggedLegacyReviewsFallback = false;
+let lastKnownProducts: PerfumeData[] | null = null;
+const PRODUCT_QUERY_RETRY_DELAYS_MS = [0, 250] as const;
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchProductRowsWithRetry(): Promise<ProductRow[]> {
+  let lastError: unknown;
+
+  for (const delay of PRODUCT_QUERY_RETRY_DELAYS_MS) {
+    if (delay > 0) await wait(delay);
+    try {
+      return await db.select().from(products);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("Unable to load products from the database");
+}
+
+function getEmergencyPublicCatalogue(): PerfumeData[] {
+  return catalogueFallback.filter(
+    (product) => (product.visibility ?? "public") === "public",
+  );
+}
 
 function readExecuteRows<T>(result: unknown): T[] {
   if (Array.isArray(result)) return result as T[];
@@ -172,12 +201,15 @@ function transformProduct(
 // Get all products
 async function getAllProductsRaw(): Promise<PerfumeData[]> {
   try {
-    const allProducts = await db.select().from(products);
+    const allProducts = await fetchProductRowsWithRetry();
     if (allProducts.length === 0) return [];
 
     const productIds = allProducts.map((product) => product.id);
     const [allReviews, allCategoryRows] = await Promise.all([
-      fetchReviewsByProductIds(productIds),
+      fetchReviewsByProductIds(productIds).catch((error) => {
+        console.warn("Products loaded without reviews after the reviews query failed:", error);
+        return [] as ReviewRow[];
+      }),
       db
         .select({
           productId: productCategories.productId,
@@ -212,10 +244,12 @@ async function getAllProductsRaw(): Promise<PerfumeData[]> {
       )
     );
 
+    lastKnownProducts = productsWithReviews;
     return productsWithReviews;
   } catch (error) {
     console.error("Error loading products from DB:", error);
-    return [];
+    if (lastKnownProducts?.length) return lastKnownProducts;
+    throw error;
   }
 }
 
@@ -230,7 +264,24 @@ export const getAllProducts = cache(async (): Promise<PerfumeData[]> => {
 
 const getAllPublicProductsCached = unstable_cache(
   async (): Promise<PerfumeData[]> => {
-    const all = await getAllProductsRaw();
+    let all: PerfumeData[];
+    try {
+      all = await getAllProductsRaw();
+    } catch (error) {
+      const fallback = getEmergencyPublicCatalogue();
+      console.error(
+        `Serving the emergency public catalogue (${fallback.length} products) after the database remained unavailable:`,
+        error,
+      );
+      return fallback;
+    }
+    if (all.length === 0) {
+      const fallback = getEmergencyPublicCatalogue();
+      console.error(
+        `Serving the emergency public catalogue (${fallback.length} products) because the database returned no products.`,
+      );
+      return fallback;
+    }
     const visible = all.filter((product) => (product.visibility ?? "public") === "public");
 
     // Safety fallback: if visibility flags are misconfigured in DB,

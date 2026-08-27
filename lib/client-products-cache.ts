@@ -16,7 +16,7 @@ function isFresh(ts: number) {
   return Date.now() - ts < CACHE_TTL_MS;
 }
 
-function readSessionCache(): PerfumeData[] | null {
+function readSessionCache(requireFresh = true): PerfumeData[] | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.sessionStorage.getItem(CACHE_KEY);
@@ -25,7 +25,7 @@ function readSessionCache(): PerfumeData[] | null {
     if (!parsed || !Array.isArray(parsed.data) || typeof parsed.ts !== "number") {
       return null;
     }
-    if (!isFresh(parsed.ts)) return null;
+    if (requireFresh && !isFresh(parsed.ts)) return null;
     return parsed.data;
   } catch {
     return null;
@@ -59,16 +59,18 @@ export async function getClientCachedProducts(): Promise<PerfumeData[]> {
       if (!res.ok) throw new Error(`Failed to fetch products: ${res.status}`);
       const json = (await res.json()) as PerfumeData[];
       const products = Array.isArray(json) ? json : [];
+      if (products.length === 0) {
+        throw new Error("The products endpoint returned an empty catalogue");
+      }
       memoryCache = products;
       memoryCacheAt = Date.now();
       writeSessionCache(products);
       return products;
     })
-    .catch(() => [])
+    .catch(() => memoryCache ?? readSessionCache(false) ?? [])
     .finally(() => {
       pendingRequest = null;
     });
 
   return pendingRequest;
 }
-

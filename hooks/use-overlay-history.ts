@@ -4,6 +4,21 @@ import { useEffect, useRef } from "react";
 
 const OVERLAY_STATE_KEY = "__humeOverlay";
 
+/**
+ * Remove the synthetic overlay marker before deliberately navigating to a new
+ * page. Without this, closing the overlay schedules history.back() at the same
+ * time as the route change and can cancel the intended navigation.
+ */
+export function prepareOverlayNavigation() {
+  if (typeof window === "undefined") return;
+  const currentState = window.history.state;
+  if (!currentState?.[OVERLAY_STATE_KEY]) return;
+
+  const nextState = { ...currentState };
+  delete nextState[OVERLAY_STATE_KEY];
+  window.history.replaceState(nextState, "", window.location.href);
+}
+
 export function useOverlayHistory(
   open: boolean,
   setOpen: (open: boolean) => void,

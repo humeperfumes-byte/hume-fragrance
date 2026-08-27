@@ -22,6 +22,7 @@ import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { stripRegionPrefix } from "@/lib/region-routing";
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 import { useSiteControls } from "@/hooks/use-site-controls";
+import { prepareOverlayNavigation } from "@/hooks/use-overlay-history";
 import {
   calculateCouponDiscount,
   calculateWelcomeBackDiscount,
@@ -331,12 +332,6 @@ const CartDrawer = () => {
       : "2nd visit? Secret reward unlocked ;)";
   const isUrgentReward = effectiveWelcomeBackPercent === 10;
 
-  const unlockedGiftCount =
-    subtotal >= secondGiftThreshold
-      ? 2
-      : subtotal >= firstGiftThreshold
-        ? 1
-        : 0;
   const amountToFirstGift = Math.max(0, firstGiftThreshold - subtotal);
   const amountToSecondGift = Math.max(0, secondGiftThreshold - subtotal);
   const giftProgress = Math.min(100, (subtotal / secondGiftThreshold) * 100);
@@ -717,6 +712,7 @@ const CartDrawer = () => {
   };
 
   const handleContinueCheckout = () => {
+    prepareOverlayNavigation();
     setIsCartOpen(false);
     showNavigationLoadingToast("Opening checkout");
     if (typeof window !== "undefined") {
@@ -1267,6 +1263,7 @@ const CartDrawer = () => {
                 <button
                   type="button"
                   onClick={() => {
+                    prepareOverlayNavigation();
                     setIsCartOpen(false);
                     showNavigationLoadingToast();
                     router.push(DISCOVERY_SET_PATH);
