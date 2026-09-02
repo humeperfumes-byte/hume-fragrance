@@ -77,6 +77,7 @@ export type CartLeadRow = {
   abandonmentRisk: number | null;
   predictedNextAction: string | null;
   pricingBreakdown: SavedPricingBreakdown | null;
+  chatSessionId: string | null;
 };
 
 type Filter = "all" | "connected" | "coupon" | "checkout" | "contactable" | "hot";
@@ -592,6 +593,20 @@ export function CartLeadsTable({ rows }: { rows: CartLeadRow[] }) {
                       Details
                       <ExternalLink className="h-3 w-3 opacity-60" />
                     </button>
+                    {row.chatSessionId ? (
+                      <Link
+                        href={`/admin/live-chat?session=${encodeURIComponent(row.chatSessionId)}`}
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-[#d8f39a]/20 bg-[#d8f39a]/10 px-3 text-xs font-semibold text-[#d8f39a] transition-all hover:bg-[#d8f39a]/15 active:scale-[0.98]"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        Site chat
+                      </Link>
+                    ) : (
+                      <span title="This visitor has not connected to site chat yet" className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-white/[.07] bg-white/[.025] px-3 text-xs font-semibold text-white/25">
+                        <MessageCircle className="h-4 w-4" />
+                        Chat unavailable
+                      </span>
+                    )}
                     <a
                       href={buildAdminWhatsAppHref(row.phone, {
                         template: getTemplate(row),

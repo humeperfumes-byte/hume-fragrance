@@ -6,12 +6,12 @@ import { getCollectionPageSchema, getBreadcrumbSchema } from "@/lib/seo";
 import { getAllPublicProducts } from "@/lib/db/products";
 import ShopContent from "./ShopContent";
 import SeoHubTeaser from "@/components/SeoHubTeaser";
-import { getRequestSiteUrl } from "@/lib/request-site";
+import { SITE_URL } from "@/lib/site";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 21600;
 
 export default async function ShopPage() {
-  const baseUrl = await getRequestSiteUrl();
+  const baseUrl = SITE_URL;
   const perfumes = await getAllPublicProducts();
 
   const shopJsonLd = [

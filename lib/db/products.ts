@@ -32,6 +32,12 @@ type ProductVisibility = "public" | "seo_only";
 let hasLoggedLegacyReviewsFallback = false;
 let lastKnownProducts: PerfumeData[] | null = null;
 const PRODUCT_QUERY_RETRY_DELAYS_MS = [0, 250] as const;
+const STOREFRONT_CACHE_SECONDS = 6 * 60 * 60;
+const IS_PRODUCTION_BUILD = process.env.NEXT_PHASE === "phase-production-build";
+
+export function getProductCacheTag(productId: string) {
+  return `product:${productId}`;
+}
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -200,6 +206,10 @@ function transformProduct(
 
 // Get all products
 async function getAllProductsRaw(): Promise<PerfumeData[]> {
+  // Static generation must not depend on a quota-limited external database.
+  // Runtime/ISR requests continue to use Supabase and refresh the shared cache.
+  if (IS_PRODUCTION_BUILD) return getEmergencyPublicCatalogue();
+
   try {
     const allProducts = await fetchProductRowsWithRetry();
     if (allProducts.length === 0) return [];
@@ -254,7 +264,7 @@ async function getAllProductsRaw(): Promise<PerfumeData[]> {
 }
 
 const getAllProductsCached = unstable_cache(getAllProductsRaw, ["products:all"], {
-  revalidate: 120,
+  revalidate: STOREFRONT_CACHE_SECONDS,
   tags: ["products"],
 });
 
@@ -262,49 +272,35 @@ export const getAllProducts = cache(async (): Promise<PerfumeData[]> => {
   return getAllProductsCached();
 });
 
-const getAllPublicProductsCached = unstable_cache(
-  async (): Promise<PerfumeData[]> => {
-    let all: PerfumeData[];
-    try {
-      all = await getAllProductsRaw();
-    } catch (error) {
-      const fallback = getEmergencyPublicCatalogue();
-      console.error(
-        `Serving the emergency public catalogue (${fallback.length} products) after the database remained unavailable:`,
-        error,
-      );
-      return fallback;
-    }
-    if (all.length === 0) {
-      const fallback = getEmergencyPublicCatalogue();
-      console.error(
-        `Serving the emergency public catalogue (${fallback.length} products) because the database returned no products.`,
-      );
-      return fallback;
-    }
-    const visible = all.filter((product) => (product.visibility ?? "public") === "public");
-
-    // Safety fallback: if visibility flags are misconfigured in DB,
-    // do not return an empty storefront.
-    if (visible.length === 0 && all.length > 0) {
-      return all;
-    }
-
-    return visible;
-  },
-  ["products:public"],
-  {
-    revalidate: 120,
-    tags: ["products"],
-  }
-);
-
 export const getAllPublicProducts = cache(async (): Promise<PerfumeData[]> => {
-  return getAllPublicProductsCached();
+  let all: PerfumeData[];
+  try {
+    // Public and admin catalogue views intentionally share one database cache.
+    // Filtering here prevents a second heavy Supabase query/cache entry.
+    all = await getAllProductsCached();
+  } catch (error) {
+    const fallback = getEmergencyPublicCatalogue();
+    console.error(
+      `Serving the emergency public catalogue (${fallback.length} products) after the database remained unavailable:`,
+      error,
+    );
+    return fallback;
+  }
+
+  if (all.length === 0) {
+    const fallback = getEmergencyPublicCatalogue();
+    console.error(
+      `Serving the emergency public catalogue (${fallback.length} products) because the database returned no products.`,
+    );
+    return fallback;
+  }
+
+  const visible = all.filter((product) => (product.visibility ?? "public") === "public");
+  return visible.length > 0 ? visible : all;
 });
 
 // Get product by ID
-export async function getProductById(id: string): Promise<PerfumeData | null> {
+async function getProductByIdRaw(id: string): Promise<PerfumeData | null> {
   try {
     const [product] = await db
       .select()
@@ -342,12 +338,26 @@ export async function getProductById(id: string): Promise<PerfumeData | null> {
   }
 }
 
-export const getProductByRouteSegment = cache(async (segment: string): Promise<PerfumeData | null> => {
-  const byId = await getProductById(segment);
-  if (byId) return byId;
+export const getProductById = cache(async (id: string): Promise<PerfumeData | null> => {
+  const getCachedProduct = unstable_cache(
+    () => getProductByIdRaw(id),
+    ["product:by-id", id],
+    {
+      revalidate: STOREFRONT_CACHE_SECONDS,
+      tags: ["products", getProductCacheTag(id)],
+    },
+  );
 
+  return getCachedProduct();
+});
+
+export const getProductByRouteSegment = cache(async (segment: string): Promise<PerfumeData | null> => {
+  // SEO routes use generated slugs rather than database IDs. Resolve them from
+  // the shared catalogue cache instead of issuing a failed ID query first.
   const all = await getAllProducts();
-  return all.find((product) => getProductSeoSlug(product) === segment) ?? null;
+  return all.find(
+    (product) => product.id === segment || getProductSeoSlug(product) === segment,
+  ) ?? null;
 });
 
 // Get products by category

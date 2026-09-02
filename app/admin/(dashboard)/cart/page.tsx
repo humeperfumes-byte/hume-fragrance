@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { cartEvents, checkoutDrafts, couponCodeEvents, orders, sessionIntelligence } from "@/db/schema";
+import { cartEvents, checkoutDrafts, couponCodeEvents, liveChatSessions, orders, sessionIntelligence } from "@/db/schema";
 import { and, desc, gte, lte } from "drizzle-orm";
 import { ShoppingCart } from "lucide-react";
 import { CartLeadsTable, type CartLeadRow } from "./CartLeadsTable";
@@ -357,6 +357,10 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
         .orderBy(desc(sessionIntelligence.updatedAt))
         .limit(1000),
     ]);
+    const chatRows = await db
+      .select({ id: liveChatSessions.id })
+      .from(liveChatSessions)
+      .limit(2000);
 
     const excludedSessionIds = collectExcludedSessionIds(cartRows, couponRows, draftRows, orderRows);
     let visibleCartRows = filterExcludedAdminRows(cartRows, excludedSessionIds);
@@ -675,11 +679,17 @@ export default async function CartLeadsPage({ searchParams }: AdminPageProps) {
           abandonmentRisk: intelligence?.abandonmentRisk ?? null,
           predictedNextAction: intelligence?.predictedNextAction || null,
           pricingBreakdown: pricing,
+          chatSessionId: null,
         };
       })
       .filter((row) => !row.hasOrder);
 
+    const chatSessionIds = new Set(chatRows.map((session) => session.id));
     rows = mergeCartLeadRows(sessionRows)
+      .map((row) => ({
+        ...row,
+        chatSessionId: (row.sessionIds || [row.sessionId]).find((sessionId) => chatSessionIds.has(sessionId)) || null,
+      }))
       .sort((a, b) => b.potentialScore - a.potentialScore || new Date(b.latestActivity).getTime() - new Date(a.latestActivity).getTime());
   } catch (error) {
     console.error("Cart leads page DB error:", error);

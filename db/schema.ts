@@ -424,6 +424,28 @@ export const couponCodeEvents = pgTable("coupon_code_events", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const liveChatSessions = pgTable("live_chat_sessions", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  visitorTokenHash: varchar("visitor_token_hash", { length: 64 }).notNull(),
+  status: varchar("status", { length: 30 }).notNull().default("open"),
+  handlingMode: varchar("handling_mode", { length: 20 }).notNull().default("ai"),
+  page: varchar("page", { length: 2048 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [index("live_chat_sessions_updated_idx").on(table.updatedAt)]);
+
+export const liveChatMessages = pgTable("live_chat_messages", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  sessionId: varchar("session_id", { length: 255 }).notNull().references(() => liveChatSessions.id, { onDelete: "cascade" }),
+  sender: varchar("sender", { length: 20 }).notNull(),
+  message: text("message").notNull(),
+  telegramMessageId: integer("telegram_message_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("live_chat_messages_session_created_idx").on(table.sessionId, table.createdAt),
+  index("live_chat_messages_telegram_idx").on(table.telegramMessageId),
+]);
+
 export const siteSettings = pgTable("site_settings", {
   key: varchar("key", { length: 120 }).primaryKey(),
   value: jsonb("value").$type<Record<string, unknown>>().notNull().default({}),

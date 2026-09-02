@@ -5,7 +5,7 @@ import Footer from "@/components/Footer";
 import { JsonLd } from "@/components/JsonLd";
 import ProductDetailView from "./ProductDetailView";
 import { getRelatedBlogPostsByProductId } from "@/lib/db/blog";
-import { getProductByRouteSegment } from "@/lib/db/products";
+import { getAllPublicProducts, getProductByRouteSegment } from "@/lib/db/products";
 import {
   getProductSchema,
   getBreadcrumbSchema,
@@ -13,14 +13,18 @@ import {
   getProductReviewSchema,
 } from "@/lib/seo";
 import { getProductPath, getProductSeoSlug } from "@/lib/product-route";
-import { getRequestSiteUrl } from "@/lib/request-site";
 import {
   getUpcomingProductAsPerfume,
   getUpcomingProductBySlug,
 } from "@/lib/upcoming-products";
-import { siteUrlForBase } from "@/lib/site";
+import { SITE_URL, siteUrlForBase } from "@/lib/site";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 21600;
+
+export async function generateStaticParams() {
+  const products = await getAllPublicProducts();
+  return products.map((product) => ({ id: getProductSeoSlug(product) }));
+}
 
 export async function generateMetadata({
   params,
@@ -30,7 +34,7 @@ export async function generateMetadata({
   const { id } = await params;
   const perfume = await getProductByRouteSegment(id);
 
-  const baseUrl = await getRequestSiteUrl();
+  const baseUrl = SITE_URL;
   if (!perfume) {
     const launchProduct = getUpcomingProductBySlug(id);
     if (!launchProduct) return { title: "Product Not Found" };
@@ -84,7 +88,7 @@ export default async function ProductPage({
     if (!launchProduct) notFound();
 
     const liveProduct = getUpcomingProductAsPerfume(launchProduct);
-    const baseUrl = await getRequestSiteUrl();
+    const baseUrl = SITE_URL;
     const canonicalUrl = siteUrlForBase(baseUrl, launchProduct.path);
     const jsonLd = [
       getProductSchema(liveProduct, baseUrl),
@@ -117,7 +121,7 @@ export default async function ProductPage({
   }
 
   const relatedBlogs = await getRelatedBlogPostsByProductId(perfume.id, 3);
-  const baseUrl = await getRequestSiteUrl();
+  const baseUrl = SITE_URL;
 
   const productJsonLd = [
     getProductSchema(perfume, baseUrl),

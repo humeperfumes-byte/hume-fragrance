@@ -6,7 +6,7 @@ import SeoHubTeaser from "@/components/SeoHubTeaser";
 import { JsonLd } from "@/components/JsonLd";
 import { getAllPublicProducts } from "@/lib/db/products";
 import { getBreadcrumbSchema, getItemListSchema } from "@/lib/seo";
-import { getRequestSiteUrl } from "@/lib/request-site";
+import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "HUME Special",
@@ -14,10 +14,10 @@ export const metadata: Metadata = {
     "Discover all HUME Special perfumes - curated premium inspired fragrances with standout profiles.",
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 21600;
 
 export default async function HumeSpecialPage() {
-  const baseUrl = await getRequestSiteUrl();
+  const baseUrl = SITE_URL;
   const products = await getAllPublicProducts();
   const specialProducts = products.filter((p) => p.badges?.humeSpecial);
   const specialProductIds = new Set(specialProducts.map((product) => product.id));
