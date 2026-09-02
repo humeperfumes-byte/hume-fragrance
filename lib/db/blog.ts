@@ -7,7 +7,6 @@ import { blogPosts as localBlogPosts, type BlogPost } from "@/data/blogPosts";
 
 // Transform database blog post to BlogPost format
 type BlogPostRow = typeof blogPosts.$inferSelect;
-const IS_PRODUCTION_BUILD = process.env.NEXT_PHASE === "phase-production-build";
 
 function transformBlogPost(post: BlogPostRow): BlogPost {
   return {
@@ -31,7 +30,6 @@ function transformBlogPost(post: BlogPostRow): BlogPost {
 
 const getAllBlogPostsPersistent = unstable_cache(
   async (): Promise<BlogPost[]> => {
-    if (IS_PRODUCTION_BUILD) return localBlogPosts;
     try {
       const posts = await db
         .select()
@@ -66,7 +64,6 @@ export async function getAllBlogPosts(): Promise<BlogPost[]> {
 }
 
 const getBlogPostBySlugCached = cache(async (slug: string): Promise<BlogPost | null> => {
-  if (IS_PRODUCTION_BUILD) return localBlogPosts.find((post) => post.slug === slug) ?? null;
   try {
     const [post] = await db
       .select()
@@ -96,7 +93,6 @@ export async function getBlogPostBySlug(
 export async function getBlogPostsByCategory(
   category: string
 ): Promise<BlogPost[]> {
-  if (IS_PRODUCTION_BUILD) return localBlogPosts.filter((post) => post.category === category);
   try {
     const posts = await db
       .select()
@@ -113,7 +109,6 @@ export async function getBlogPostsByCategory(
 
 // Get featured blog posts
 export async function getFeaturedBlogPosts(): Promise<BlogPost[]> {
-  if (IS_PRODUCTION_BUILD) return localBlogPosts.filter((post) => post.featured);
   try {
     const posts = await db
       .select()
@@ -133,9 +128,6 @@ async function getRelatedBlogPostsByProductIdRaw(
   productId: string,
   limit = 3
 ): Promise<BlogPost[]> {
-  if (IS_PRODUCTION_BUILD) {
-    return localBlogPosts.filter((post) => post.relatedProductId === productId).slice(0, limit);
-  }
   try {
     const directPosts = await db
       .select()

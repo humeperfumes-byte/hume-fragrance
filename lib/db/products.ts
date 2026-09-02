@@ -33,7 +33,6 @@ let hasLoggedLegacyReviewsFallback = false;
 let lastKnownProducts: PerfumeData[] | null = null;
 const PRODUCT_QUERY_RETRY_DELAYS_MS = [0, 250] as const;
 const STOREFRONT_CACHE_SECONDS = 6 * 60 * 60;
-const IS_PRODUCTION_BUILD = process.env.NEXT_PHASE === "phase-production-build";
 
 export function getProductCacheTag(productId: string) {
   return `product:${productId}`;
@@ -206,10 +205,6 @@ function transformProduct(
 
 // Get all products
 async function getAllProductsRaw(): Promise<PerfumeData[]> {
-  // Static generation must not depend on a quota-limited external database.
-  // Runtime/ISR requests continue to use Supabase and refresh the shared cache.
-  if (IS_PRODUCTION_BUILD) return getEmergencyPublicCatalogue();
-
   try {
     const allProducts = await fetchProductRowsWithRetry();
     if (allProducts.length === 0) return [];

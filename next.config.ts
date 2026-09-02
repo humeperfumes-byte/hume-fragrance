@@ -3,6 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   turbopack: {},
   experimental: {
+    // Supabase is quota-limited. Keep static generation serial so parallel
+    // workers do not exhaust the connection pool and fall back to stale data.
+    cpus: 1,
+    staticGenerationMaxConcurrency: 1,
     optimizePackageImports: [
       "lucide-react",
       "date-fns",
