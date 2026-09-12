@@ -202,61 +202,12 @@ const Header = () => {
               >
                 DISCOVERY SET
               </Link>
-              <div className="group relative">
-                <Link
-                  href="/corporate-gifting"
-                  className="relative text-[11px] font-semibold uppercase tracking-[0.22em] text-black/80 transition-colors hover:text-black after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-[40%] after:bg-current after:transition-all after:duration-300 group-hover:after:w-full"
-                >
-                  GIFTS
-                </Link>
-                {/* Hover Dropdown */}
-                <div className="absolute left-1/2 -translate-x-1/2 top-full pt-3 w-48 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50">
-                  <div className="bg-[#fbfaf8] border border-[#e8dfd4] shadow-[0_12px_36px_rgba(24,18,14,0.08)] rounded-xl py-2 flex flex-col">
-                    <Link
-                      href="/corporate-gifting"
-                      className="px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.15em] text-[#171717] hover:bg-[#FAF9F5] hover:text-amber-800 transition-colors"
-                    >
-                      Corporate Gifting
-                    </Link>
-                    <Link
-                      href="/wedding-gifts"
-                      className="px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.15em] text-[#171717] hover:bg-[#FAF9F5] hover:text-amber-800 transition-colors"
-                    >
-                      Wedding Gifts
-                    </Link>
-                    <Link
-                      href="/raksha-bandhan-gifts"
-                      className="px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.15em] text-[#171717] hover:bg-[#FAF9F5] hover:text-amber-800 transition-colors"
-                    >
-                      Raksha Bandhan Gifts
-                    </Link>
-                    <Link
-                      href="/diwali-gifts"
-                      className="px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.15em] text-[#171717] hover:bg-[#FAF9F5] hover:text-amber-800 transition-colors"
-                    >
-                      Diwali Gifts
-                    </Link>
-                    <Link
-                      href="/holi-gifts"
-                      className="px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.15em] text-[#171717] hover:bg-[#FAF9F5] hover:text-amber-800 transition-colors"
-                    >
-                      Holi Gifts
-                    </Link>
-                    <Link
-                      href="/new-years-gifts"
-                      className="px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.15em] text-[#171717] hover:bg-[#FAF9F5] hover:text-amber-800 transition-colors"
-                    >
-                      New Year&apos;s Gifts
-                    </Link>
-                    <Link
-                      href="/christmas-gifts"
-                      className="px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.15em] text-[#171717] hover:bg-[#FAF9F5] hover:text-amber-800 transition-colors"
-                    >
-                      Christmas Gifts
-                    </Link>
-                  </div>
-                </div>
-              </div>
+              <Link
+                href="/spaces"
+                className="relative text-[11px] font-semibold uppercase tracking-[0.22em] text-black/80 transition-colors hover:text-black after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-[40%] after:bg-current after:transition-all after:duration-300 hover:after:w-full"
+              >
+                SPACES
+              </Link>
             </nav>
             <button
               onClick={() => {
@@ -367,9 +318,6 @@ const Header = () => {
               <div className="px-4 py-5 space-y-6">
                 <section>
                   <div className="space-y-3">
-                    <button type="button" onClick={openSearchFromMenu} className="flex h-12 w-full items-center gap-3 rounded-xl border border-border bg-muted/45 px-4 text-left text-sm font-medium" aria-label="Search the store">
-                      <Search className="h-4 w-4" /> Search perfumes and orders
-                    </button>
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);
@@ -466,75 +414,26 @@ const Header = () => {
                         </motion.span>
                       </div>
                     </motion.button>
-                    {showRakshaBandhanMenuLink ? (
-                      <button
-                        onClick={() => {
-                          setIsMenuOpen(false);
-                          navigateTo("/raksha-bandhan-gifts");
-                        }}
-                        className="group relative w-full overflow-hidden border border-[#e4ae52] bg-[linear-gradient(112deg,#6e1830_0%,#b52f43_42%,#dd9635_72%,#29456d_100%)] px-4 py-3 text-left text-white shadow-[0_10px_24px_rgba(112,24,47,0.22)]"
-                      >
-                        <span className="pointer-events-none absolute -left-8 top-2 h-px w-[115%] rotate-[-8deg] bg-gradient-to-r from-transparent via-[#ffe4a3]/80 to-transparent" />
-                        <span className="pointer-events-none absolute -left-8 bottom-2 h-px w-[115%] rotate-[7deg] bg-gradient-to-r from-transparent via-[#ffe4a3]/65 to-transparent" />
-                        <span className="relative flex items-center justify-between gap-4">
-                          <span className="flex flex-col">
-                            <span className="text-[9px] font-semibold uppercase tracking-[0.28em] text-[#ffe4a3]">
-                              Festive gifting
-                            </span>
-                            <span className="font-serif text-[1.3rem] leading-tight">Raksha Bandhan</span>
-                          </span>
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#ffe4a3]/70 bg-[#6e1830]/35 text-lg text-[#ffe4a3] transition-transform duration-300 group-hover:translate-x-1">
-                            →
-                          </span>
-                        </span>
-                      </button>
-                    ) : (
-                      <>
                     <button
                       onClick={() => {
-                        setIsMobileGiftingOpen(!isMobileGiftingOpen);
+                        setIsMenuOpen(false);
+                        navigateTo("/spaces");
                       }}
-                      className="w-full border border-[#2a2116] bg-[#2a2116] px-3 py-2 text-left text-[#f7d79b]"
+                      className="w-full border border-[#2a2116] bg-[#2a2116] px-3.5 py-3 text-left text-[#f7d79b]"
                     >
                       <div className="flex items-center justify-between">
-                        <p className="font-serif text-[1.18rem]">
-                          Gifting
+                        <p className="font-serif text-[1.25rem]">
+                          Spaces
                         </p>
-                        <span className={`text-[1.18rem] transition-transform duration-200 ${isMobileGiftingOpen ? "rotate-90" : ""}`}>→</span>
+                        <span className="text-[1.25rem]">→</span>
                       </div>
                     </button>
-                    {isMobileGiftingOpen && (
-                      <div className="pl-4 py-1 space-y-2 border-l border-[#f7d79b]/25 animate-fade-in">
-                        {[
-                          { href: "/corporate-gifting", label: "Corporate Gifting" },
-                          { href: "/wedding-gifts", label: "Wedding Gifts" },
-                          { href: "/raksha-bandhan-gifts", label: "Raksha Bandhan Gifts" },
-                          { href: "/diwali-gifts", label: "Diwali Gifts" },
-                          { href: "/holi-gifts", label: "Holi Gifts" },
-                          { href: "/new-years-gifts", label: "New Year's Gifts" },
-                          { href: "/christmas-gifts", label: "Christmas Gifts" },
-                        ].map((subLink) => (
-                          <button
-                            key={subLink.href}
-                            onClick={() => {
-                              setIsMenuOpen(false);
-                              navigateTo(subLink.href);
-                            }}
-                            className="block w-full py-1.5 text-left text-[14px] text-[#f7d79b]/90 hover:text-white transition-colors"
-                          >
-                            {subLink.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                      </>
-                    )}
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);
                         navigateTo("/scent-quiz");
                       }}
-                      className="mt-3 flex w-full items-center justify-between rounded-full border border-[#e5ddd1] bg-[#fbf8f2] px-3 py-2.5 text-left text-foreground shadow-[0_8px_18px_rgba(42,33,22,0.06)] transition-luxury hover:border-[#2a2116]/25 hover:bg-white"
+                      className="mt-3 flex w-full items-center justify-between rounded-full border border-[#e5ddd1] bg-[#fbf8f2] px-3 py-2.5 text-left text-[#171717] shadow-[0_8px_18px_rgba(42,33,22,0.06)] transition-luxury hover:border-[#2a2116]/25 hover:bg-white"
                     >
                       <div className="flex min-w-0 items-center gap-2.5">
                         <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#2a2116] text-[#f7d79b]">

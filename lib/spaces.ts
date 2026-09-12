@@ -9,6 +9,30 @@ export type SpacePage = {
   faqs: { question: string; answer: string }[];
 };
 
+export type SpacesProductCategory = "reed-diffuser" | "room-freshener" | "scent-machine" | "fragrance-oil";
+
+export type SpacesProduct = {
+  id: string;
+  name: string;
+  category: SpacesProductCategory;
+  categoryLabel: string;
+  subtitle: string;
+  description: string;
+  price: number;
+  originalPrice?: number;
+  size: string;
+  coverage: string;
+  image: string;
+  notes: string;
+  mood: string;
+  badges?: {
+    bestSeller?: boolean;
+    newLaunch?: boolean;
+    featured?: boolean;
+  };
+  roomSuitability: string[];
+};
+
 export const SPACE_SCENTS = [
   { name: "Ivory Lobby", family: "Citrus · tea · woods", notes: "Bergamot, white tea, cedar", mood: "Polished and welcoming" },
   { name: "Santal Residence", family: "Soft woods · amber", notes: "Sandalwood, iris, amber", mood: "Quiet, residential luxury" },
@@ -17,6 +41,115 @@ export const SPACE_SCENTS = [
   { name: "Coastal Gallery", family: "Mineral · fresh woods", notes: "Mineral air, sage, pale woods", mood: "Clean, modern clarity" },
   { name: "Quiet Library", family: "Tea · leather · woods", notes: "Black tea, suede, cedar", mood: "Cultivated and composed" },
 ] as const;
+
+export const SPACES_PRODUCTS: SpacesProduct[] = [
+  {
+    id: "hume-mini-reed-diffuser-50ml",
+    name: "HUME Mini Reed Diffuser",
+    category: "reed-diffuser",
+    categoryLabel: "Reed Diffuser",
+    subtitle: "A compact glass vessel for intimate rituals",
+    description: "Flameless, low-profile fragrance for bedside tables, powder rooms, wardrobes and desks.",
+    price: 799,
+    originalPrice: 999,
+    size: "50ml",
+    coverage: "Up to 120 sq ft",
+    image: "/images/spaces/decorative-diffuser.png",
+    notes: "Australian Sandalwood · Tuscan Iris · Amber & Cedar",
+    mood: "A quiet finishing touch",
+    badges: { newLaunch: true, featured: true },
+    roomSuitability: ["Bedside Tables", "Powder Rooms", "Wardrobes", "Desks"],
+  },
+  {
+    id: "hume-signature-reed-diffuser-100ml",
+    name: "HUME Signature Reed Diffuser",
+    category: "reed-diffuser",
+    categoryLabel: "Reed Diffuser",
+    subtitle: "A considered vessel for daily living spaces",
+    description: "A longer-lasting reed diffuser that lends a measured signature to bedrooms, foyers and compact lounges.",
+    price: 1299,
+    originalPrice: 1599,
+    size: "100ml",
+    coverage: "Up to 250 sq ft",
+    image: "/images/spaces/decorative-diffuser.png",
+    notes: "Australian Sandalwood · Tuscan Iris · Amber & Cedar",
+    mood: "Composed, continuous atmosphere",
+    badges: { bestSeller: true, featured: true },
+    roomSuitability: ["Bedrooms", "Foyers", "Living Rooms", "Guest Suites"],
+  },
+  {
+    id: "hume-smart-aroma-diffuser",
+    name: "HUME Ambient Aroma Diffuser",
+    category: "scent-machine",
+    categoryLabel: "Aroma Diffuser",
+    subtitle: "Warm glowing ceramic & teakwood mist diffuser",
+    description: "Silent ambient scent diffuser with soft LED mood illumination and continuous mist diffusion.",
+    price: 2499,
+    originalPrice: 3299,
+    size: "300ml",
+    coverage: "Up to 600 sq ft",
+    image: "/images/spaces/aroma-diffuser.png",
+    notes: "Top: Italian Bergamot · Heart: White Tea & Neroli · Base: Pale Cedar",
+    mood: "Warm & relaxing ambiance",
+    badges: { newLaunch: true, featured: true },
+    roomSuitability: ["Bedrooms", "Spa Rooms", "Lounges", "Home Offices"],
+  },
+  {
+    id: "hume-commercial-scent-machine-pro",
+    name: "HUME Commercial Cold-Air Scent Machine",
+    category: "scent-machine",
+    categoryLabel: "Scent Machine",
+    subtitle: "High-performance waterless diffuser for concentrated spatial oils",
+    description: "Architectural cold-air micro-nebulizer designed for concentrated spatial oils, offering powerful 1,000 - 2,000 sq ft coverage for gyms, lobbies & commercial spaces.",
+    price: 4000,
+    originalPrice: 5999,
+    size: "500ml Capacity",
+    coverage: "1,000 - 2,000 sq ft",
+    image: "/images/spaces/commercial-scent-machine-pro.jpg",
+    notes: "Technology: Cold-Air Nebulization · Concentrated Oil Compatible · App Control",
+    mood: "High-capacity commercial scenting",
+    badges: { bestSeller: true, featured: true },
+    roomSuitability: ["Gyms & Fitness Centers", "Hotel Lobbies", "Showrooms", "Spas & Wellness"],
+  },
+  {
+    id: "hume-pro-commercial-tower",
+    name: "HUME Pro Commercial Tower Scent Machine",
+    category: "scent-machine",
+    categoryLabel: "Scent Machine",
+    subtitle: "App-controlled cold-air micro-nebulizer",
+    description: "Commercial-grade waterless nebulizing diffuser for hotel lobbies, showrooms & luxury boutiques.",
+    price: 4999,
+    originalPrice: 6999,
+    size: "500ml Capacity",
+    coverage: "Up to 1,500 sq ft",
+    image: "/images/spaces/commercial-diffuser.png",
+    notes: "Technology: Cold-Air Nebulization · Bluetooth App · Multi-Schedule",
+    mood: "Controlled professional coverage",
+    badges: { bestSeller: true, featured: true },
+    roomSuitability: ["Hotel Lobbies", "Showrooms", "Boutiques", "Spas"],
+  },
+  {
+    id: "hume-hvac-scenting-system",
+    name: "HUME HVAC Scenting Integration System",
+    category: "scent-machine",
+    categoryLabel: "HVAC System",
+    subtitle: "Discreet whole-building fragrance distribution",
+    description: "Connects directly into central air ducting for uniform, measurable spatial scenting across floors.",
+    price: 12999,
+    originalPrice: 15999,
+    size: "1000ml Capacity",
+    coverage: "Up to 5,000 sq ft",
+    image: "/images/spaces/hvac-diffuser-v2.png",
+    notes: "Technology: Duct Air Nebulization · Multi-Zone Support · HVAC Direct",
+    mood: "Whole-building signature fragrance",
+    badges: { featured: true },
+    roomSuitability: ["Commercial Towers", "Multi-Floor Offices", "Resorts"],
+  },
+];
+
+export function getSpacesProduct(id: string) {
+  return SPACES_PRODUCTS.find((product) => product.id === id);
+}
 
 const commonFaqs = [
   { question: "How is the correct diffuser selected?", answer: "HUME Spaces considers room volume, ceiling height, airflow, HVAC, operating hours and the number of scent zones. Square footage is only the starting point." },
@@ -27,22 +160,32 @@ const commonFaqs = [
 export const SPACE_PAGES: SpacePage[] = [
   {
     slug: "home", kind: "collection", eyebrow: "For the residence", title: "A signature atmosphere for every room",
-    summary: "Decorative reed diffusers and programmable waterless systems for apartments, villas and private residences.",
-    answer: "Use reeds in smaller, enclosed rooms and a programmable waterless diffuser in open-plan living areas, double-height entrances and larger residences.",
+    summary: "Decorative reed diffusers, ambient room sprays, and programmable waterless systems for apartments, villas and private residences.",
+    answer: "Use reed diffusers and room mists in smaller, enclosed rooms, and a programmable waterless diffuser in open-plan living areas and double-height foyers.",
     recommendations: [
-      { title: "Reed 100–150 ml", text: "Powder rooms, wardrobes, bedrooms and compact home offices." },
-      { title: "Statement Reed 250–500 ml", text: "Entrances, suites and modest living rooms where the vessel is part of the interior." },
-      { title: "Compact Waterless System", text: "Open-plan homes and spaces where intensity and operating hours need control." },
+      { title: "Reed Diffusers 150ml", text: "Powder rooms, wardrobes, bedrooms and compact home offices." },
+      { title: "Ambient Room Sprays 100ml", text: "Instant room & fabric refresh before guests arrive or after morning rituals." },
+      { title: "Statement Reeds & Waterless Systems", text: "Open-plan living areas, foyers and large master suites needing continuous diffusion." },
     ], faqs: commonFaqs,
   },
   {
     slug: "reed-diffusers", kind: "collection", eyebrow: "Passive scenting", title: "Reed diffusers, composed as objects",
-    summary: "Flameless, silent and decorative scenting for intimate spaces.",
-    answer: "Reed diffusers work beyond bathrooms: use them in bedrooms, entrances, wardrobes, cabins, treatment rooms and compact lounges where airflow is gentle.",
+    summary: "Two considered formats for a quiet, continuous signature in the rooms you inhabit most.",
+    answer: "Choose 50ml for a smaller, personal corner and 100ml when you want fragrance to hold a bedroom, entry or compact living space.",
     recommendations: [
-      { title: "Intimate spaces", text: "Begin with fewer reeds and add more only if needed." },
-      { title: "Placement", text: "Place on a stable surface with gentle air movement, away from direct sun, AC blasts and children or pets." },
-      { title: "Larger rooms", text: "Use multiple vessels for decorative zoning or select a programmable machine for consistent coverage." },
+      { title: "Start lightly", text: "Begin with four reeds. Add more only once the fragrance has settled into the room." },
+      { title: "Place with intention", text: "Choose a stable surface with gentle air movement, away from direct sun and AC vents." },
+      { title: "Refresh the ritual", text: "Turn the reeds every one to two weeks for a renewed, even diffusion." },
+    ], faqs: commonFaqs,
+  },
+  {
+    slug: "room-fresheners", kind: "collection", eyebrow: "Instant ambient mist", title: "Ambient room sprays for instant atmosphere",
+    summary: "Fine-mist room and fabric sprays crafted for fast, elegant scenting of living areas, linens, and curtains.",
+    answer: "Room fresheners provide instant olfactive transformation. Mist into the center of the room or gently onto fabrics from 30cm away.",
+    recommendations: [
+      { title: "Guest arrival", text: "Mist entrances and seating areas 5 minutes before entertaining." },
+      { title: "Linen refresh", text: "Lightly spray drapes, sofa cushions, and bed linen for lingering warmth." },
+      { title: "Travel & car", text: "Keep a 100ml bottle in cars or travel suites for clean, familiar ambiance." },
     ], faqs: commonFaqs,
   },
   {
@@ -87,6 +230,12 @@ export const SPACE_PAGES: SpacePage[] = [
 const industries: Array<[string, string, string, string, string[]]> = [
   ["luxury-homes", "Luxury residences", "A considered scent plan for entrances, living areas, suites and private retreats.", "Use a zoned combination: reeds for intimate rooms and programmable machines for open-plan or double-height areas.", ["Entrance and foyer", "Living and entertaining", "Private suites"]],
   ["hotels", "Hotels & hospitality", "A consistent arrival, stay and departure—expressed through scent.", "Prioritise the lobby and arrival sequence, then extend subtly to corridors, spas and selected guest areas without over-scenting.", ["Lobby and reception", "Guest corridors", "Spa and wellness"]],
+  ["resorts", "Resorts & retreats", "Immersive, open-air and landscape scenting for luxury resorts.", "Use weather-resistant cold-air machines and decorative reed vessels for outdoor-to-indoor transitions.", ["Arrival Pavilion", "Private Villas", "Wellness Spas"]],
+  ["gyms", "Gyms & fitness studios", "Odor-neutralising, energising spatial scenting for fitness environments.", "Use active dry-mist cold air diffusers combined with crisp eucalyptus and citrus oil formulas.", ["Workout Floors", "Locker Rooms", "Mindfulness Studios"]],
+  ["rooms", "Bedrooms & living suites", "Restful and restorative ambient scenting for residential rooms.", "Use passive rattan reed diffusers or quiet compact waterless machines.", ["Master Bedrooms", "Guest Suites", "Living Rooms"]],
+  ["bathrooms", "Bathrooms & powder rooms", "Continuous, flameless passive scenting for intimate spaces.", "Use 150ml - 300ml weighted glass reed diffusers for gentle, continuous freshness.", ["Powder Rooms", "En-suite Bathrooms", "Washroom Lounges"]],
+  ["receptions", "Receptions & lobby lounges", "The signature arrival touchpoint for corporate and hospitality properties.", "Program cold-air nebulizers calibrated to peak guest arrival hours.", ["Reception Desks", "Waiting Lounges", "Elevator Lobbies"]],
+  ["hvac-integration", "HVAC system integration", "Discreet whole-building spatial fragrance distribution through central ducting.", "Connect HVAC scent nebulizers directly to supply ducts for uniform distribution without visible hardware.", ["Central AHUs", "Multi-floor Offices", "Hotel Towers"]],
   ["corporate-offices", "Corporate offices", "A composed welcome for clients and a considerate atmosphere for teams.", "Start with reception and client-facing zones. Keep work areas subtle and provide a fragrance-sensitive policy and unscented alternatives.", ["Reception", "Boardrooms", "Client lounges"]],
   ["retail-stores", "Retail & showrooms", "A sensory identity that supports materials, merchandise and brand memory.", "Position controlled diffusion near the customer journey and entrance, away from direct product contamination or enclosed staff areas.", ["Fashion and jewellery", "Furniture galleries", "Automotive showrooms"]],
   ["restaurants", "Restaurants & clubs", "A memorable arrival without competing with taste.", "Scent the threshold, reception or washroom—not dining tables or food preparation areas—and keep intensity restrained.", ["Entrance", "Host desk", "Member lounges"]],

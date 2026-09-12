@@ -12,7 +12,7 @@ import { DETAIL_UPCOMING_PRODUCTS } from "@/lib/upcoming-products";
 import { PERFUME_MATURATION_PATH } from "@/lib/perfume-maturation";
 import { NATURALS_PRODUCTS } from "@/lib/naturals-data";
 import { getDiscoverySetSeoSlugs } from "@/lib/discovery-set-seo";
-import { SPACE_PAGES } from "@/lib/spaces";
+import { SPACE_PAGES, SPACES_PRODUCTS } from "@/lib/spaces";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = await getRequestSiteUrl();
@@ -83,6 +83,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: new Date(),
     changeFrequency: "monthly" as const,
     priority: slug ? 0.78 : 0.9,
+  }));
+  const spacesProductEntries = SPACES_PRODUCTS.map((product) => ({
+    url: `${baseUrl}/spaces/products/${product.id}`,
+    lastModified: new Date(),
+    changeFrequency: "monthly" as const,
+    priority: 0.72,
   }));
 
   const flyerCampaignCities = ["ahmedabad", "mumbai", "delhi", "bengaluru", "surat", "vadodara", "jaipur"];
@@ -292,6 +298,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...naturalsEntries,
     ...discoverySetSeoEntries,
     ...spacesEntries,
+    ...spacesProductEntries,
     ...flyerCampaignEntries,
   ];
 }

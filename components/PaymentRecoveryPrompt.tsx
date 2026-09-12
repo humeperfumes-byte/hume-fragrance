@@ -70,7 +70,14 @@ export default function PaymentRecoveryPrompt() {
     };
   }, [open, recovery]);
 
-  if (!recovery || pathname.startsWith("/admin") || pathname === "/checkout" || pathname.startsWith("/order-success")) return null;
+  if (
+    !recovery ||
+    pathname.startsWith("/admin") ||
+    pathname === "/checkout" ||
+    pathname.startsWith("/order-success") ||
+    pathname.startsWith("/spaces")
+  )
+    return null;
 
   const continueWith = (mode: RecoveryPaymentMode) => {
     window.localStorage.setItem(PAYMENT_RECOVERY_MODE_KEY, mode);

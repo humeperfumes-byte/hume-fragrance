@@ -433,23 +433,21 @@ const CartDrawer = () => {
   useEffect(() => {
     let active = true;
     const loadCoupons = async () => {
-      try {
-        const [visibleResponse, allResponse] = await Promise.all([
-          fetch("/api/coupons"),
-          fetch("/api/coupons?includeHidden=1"),
-        ]);
-        if (!visibleResponse.ok || !allResponse.ok)
-          throw new Error("Failed to fetch coupons");
+      const [visibleResult, allResult] = await Promise.allSettled([
+        fetch("/api/coupons"),
+        fetch("/api/coupons?includeHidden=1"),
+      ]);
 
-        const visibleData = (await visibleResponse.json()) as Coupon[];
-        const allData = (await allResponse.json()) as Coupon[];
+      if (!active) return;
 
-        if (active) {
-          setVisibleCoupons(Array.isArray(visibleData) ? visibleData : []);
-          setAllCoupons(Array.isArray(allData) ? allData : []);
-        }
-      } catch (error) {
-        console.error("Failed to load coupons:", error);
+      if (visibleResult.status === "fulfilled" && visibleResult.value.ok) {
+        const visibleData = (await visibleResult.value.json()) as Coupon[];
+        setVisibleCoupons(Array.isArray(visibleData) ? visibleData : []);
+      }
+
+      if (allResult.status === "fulfilled" && allResult.value.ok) {
+        const allData = (await allResult.value.json()) as Coupon[];
+        setAllCoupons(Array.isArray(allData) ? allData : []);
       }
     };
     loadCoupons();
