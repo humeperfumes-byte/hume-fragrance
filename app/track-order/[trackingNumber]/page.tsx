@@ -18,13 +18,36 @@ export async function generateMetadata({
 }: TrackOrderByIdPageProps): Promise<Metadata> {
   const { trackingNumber } = await params;
   const cleanNumber = cleanTrackingNumber(trackingNumber);
+  const title = cleanNumber
+    ? `Your Order (#${cleanNumber}) is On Its Way | HUME Fragrance`
+    : "Your Order is On Its Way | HUME Fragrance";
+  const description = "We've packed your order with care and it's now on its way to you. Track your shipment for real-time updates.";
 
   return {
-    title: cleanNumber ? `Track Order ${cleanNumber}` : "Track Your HUME Order",
-    description: "Track your HUME order shipped with our delivery partners.",
+    title,
+    description,
     robots: {
       index: false,
       follow: false,
+    },
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      images: [
+        {
+          url: "/images/track-order-og.jpg",
+          width: 1200,
+          height: 675,
+          alt: "HUME Fragrance - Your Order is On Its Way",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ["/images/track-order-og.jpg"],
     },
   };
 }

@@ -6,8 +6,27 @@ import TrackOrderClient from "./TrackOrderClient";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Track Your HUME Order",
-  description: "Track HUME orders shipped with our delivery partners.",
+  title: "Your Order is On Its Way | Track Your HUME Order",
+  description: "We've packed your order with care and it's now on its way to you. Track your shipment for real-time updates.",
+  openGraph: {
+    title: "Your Order is On Its Way | HUME Fragrance",
+    description: "We've packed your order with care and it's now on its way to you. Track your shipment for real-time updates.",
+    type: "website",
+    images: [
+      {
+        url: "/images/track-order-og.jpg",
+        width: 1200,
+        height: 675,
+        alt: "HUME Fragrance - Your Order is On Its Way",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Your Order is On Its Way | HUME Fragrance",
+    description: "We've packed your order with care and it's now on its way to you. Track your shipment for real-time updates.",
+    images: ["/images/track-order-og.jpg"],
+  },
 };
 
 type TrackOrderPageProps = {
