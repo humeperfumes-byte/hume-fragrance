@@ -172,6 +172,150 @@ function sectionTitle(label: string, count?: number) {
       {typeof count === "number" ? (
         <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] text-zinc-500">
           {count}
+import { buildPublicTrackingPath } from "@/lib/tracking-url";
+
+interface SearchOverlayProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+type AccountOrderItem = {
+  id: string;
+  name: string;
+  inspiration?: string;
+  size?: string;
+  quantity: number;
+  price: number;
+  isGift?: boolean;
+};
+
+type AccountOrder = {
+  id: string;
+  orderNumber: string;
+  status: string;
+  checkoutChannel: string;
+  paymentMethod: string | null;
+  fulfillmentCarrier: string | null;
+  trackingNumber: string | null;
+  trackingUrl: string | null;
+  trackingStatus: string | null;
+  grandTotal: number | null;
+  cartSnapshot: AccountOrderItem[];
+  createdAt: string;
+};
+
+type AccountSearchResponse = {
+  ok?: boolean;
+  orders?: AccountOrder[];
+};
+
+type QuickAction = {
+  label: string;
+  detail: string;
+  href: string;
+  icon: typeof Search;
+  tone: "dark" | "green" | "light";
+};
+
+function normalize(value: string) {
+  return value.toLowerCase().trim();
+}
+
+function isLikelyTrackingId(value: string) {
+  const normalized = value.trim().replace(/\s+/g, "").toUpperCase();
+  return /^[A-Z]{1,3}\d{8,14}[A-Z]{0,3}$/.test(normalized);
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return "Not available";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not available";
+  return new Intl.DateTimeFormat("en-IN", {
+    dateStyle: "medium",
+  }).format(date);
+}
+
+function titleStatus(status: string) {
+  return status
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function highlightMatch(text: string, query: string) {
+  const trimmed = query.trim();
+  if (!trimmed) return text;
+  const index = text.toLowerCase().indexOf(trimmed.toLowerCase());
+  if (index === -1) return text;
+  return (
+    <>
+      {text.slice(0, index)}
+      <span className="rounded bg-emerald-100 px-0.5 text-emerald-900">
+        {text.slice(index, index + trimmed.length)}
+      </span>
+      {text.slice(index + trimmed.length)}
+    </>
+  );
+}
+
+function actionMatches(action: QuickAction, query: string) {
+  if (!query) return true;
+  const searchable = normalize(`${action.label} ${action.detail}`);
+  return query
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((term) => searchable.includes(term));
+}
+
+function productMatches(product: PerfumeData, query: string) {
+  if (!query) return false;
+  const searchable = normalize(
+    [
+      product.name,
+      product.inspiration,
+      product.inspirationBrand,
+      product.category,
+      product.gender,
+    ].join(" "),
+  );
+
+  return query
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((term) => searchable.includes(term));
+}
+
+function orderMatches(order: AccountOrder, query: string) {
+  if (!query) return false;
+  const searchable = normalize(
+    [
+      order.orderNumber,
+      order.status,
+      order.checkoutChannel,
+      order.paymentMethod,
+      order.fulfillmentCarrier,
+      order.trackingNumber,
+      order.trackingStatus,
+      ...order.cartSnapshot.map((item) => item.name),
+    ]
+      .filter(Boolean)
+      .join(" "),
+  );
+
+  return query
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((term) => searchable.includes(term));
+}
+
+function sectionTitle(label: string, count?: number) {
+  return (
+    <div className="mb-2 flex items-center justify-between">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-400">
+        {label}
+      </p>
+      {typeof count === "number" ? (
+        <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] text-zinc-500">
+          {count}
         </span>
       ) : null}
     </div>
@@ -254,15 +398,6 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
     return () => document.removeEventListener("keydown", handleEsc);
   }, [isOpen, onClose]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [isOpen]);
-
   const normalizedQuery = normalize(query);
   const cleanTrackingQuery = query.trim().replace(/\s+/g, "").toUpperCase();
 
@@ -344,7 +479,6 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
       window.location.assign(`/track-order/${encodeURIComponent(cleanTrackingQuery)}`);
       return;
     }
-
 
     if (productResults.length > 0) {
       const href = getProductPath(productResults[0]);
@@ -551,6 +685,7 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
           </div>
         </motion.div>
       ) : null}
+    </AnimatePresence>
   );
 
   if (!mounted) return null;
