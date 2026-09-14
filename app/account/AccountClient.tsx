@@ -144,12 +144,12 @@ function titleStatus(status: string) {
 }
 
 function statusClass(status: string) {
-  if (status.includes("delivered")) return "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-[0_5px_18px_rgba(16,185,129,.08)]";
-  if (status.includes("failed")) return "bg-rose-50 text-rose-700 border-rose-200 shadow-[0_5px_18px_rgba(244,63,94,.08)]";
-  if (status.includes("pending")) return "bg-amber-50 text-amber-800 border-amber-200 shadow-[0_5px_18px_rgba(245,158,11,.08)]";
-  if (status.includes("whatsapp")) return "bg-sky-50 text-sky-700 border-sky-200";
-  if (status.includes("processing") || status.includes("confirmed")) return "bg-violet-50 text-violet-700 border-violet-200";
-  if (status.includes("shipped")) return "bg-blue-50 text-blue-700 border-blue-200";
+  if (status.includes("delivered")) return "bg-emerald-50 text-emerald-800 border-emerald-200/80 shadow-xs";
+  if (status.includes("failed")) return "bg-rose-50 text-rose-800 border-rose-200 shadow-xs";
+  if (status.includes("pending")) return "bg-[#fef8ee] text-[#93631c] border-[#f4e2c4] shadow-xs";
+  if (status.includes("whatsapp")) return "bg-sky-50 text-sky-800 border-sky-200";
+  if (status.includes("processing") || status.includes("confirmed")) return "bg-[#faf4ec] text-[#80583b] border-[#e8d7c5] shadow-xs";
+  if (status.includes("shipped")) return "bg-blue-50 text-blue-800 border-blue-200 shadow-xs";
   return "bg-stone-100 text-stone-700 border-stone-200";
 }
 
@@ -635,37 +635,55 @@ export default function AccountClient() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-4 sm:space-y-5">
                 {orders.map((order) => (
                   <article
                     key={order.id}
-                    className="relative overflow-hidden rounded-[1.5rem] border border-[#e3d9ce] bg-white p-4 shadow-[0_14px_42px_rgba(71,47,35,.055)] sm:p-5"
+                    className="relative overflow-hidden rounded-[1.75rem] border border-[#e3d9ce] bg-white p-4.5 sm:p-6 shadow-[0_16px_48px_rgba(71,47,35,.05)] transition-all duration-300 hover:border-[#d8caa7]/60"
                   >
-                    <div className="absolute inset-x-0 top-0 h-1 bg-[#eee5da]"><div className="h-full rounded-r-full bg-[linear-gradient(90deg,#9b6b4c,#d6b878)] transition-all duration-700" style={{ width: `${orderProgress(order)}%` }} /></div>
-                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-                      <div>
-                        <p className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#a29184]"><Clock3 className="h-3 w-3" />
-                          {formatDate(order.createdAt)}
-                        </p>
-                        <h3 className="mt-2 font-serif text-xl tracking-wide text-[#2a1d17]">{order.orderNumber}</h3>
-                        {!["payment_pending", "payment_failed"].includes(order.status) ? (
-                          <p className="mt-1 text-xs text-[#806f64]">
-                            {order.paymentMethod || (order.checkoutChannel === "razorpay" ? "Razorpay online payment" : "WhatsApp order")}
+                    <div className="absolute inset-x-0 top-0 h-1 bg-[#eee5da]">
+                      <div
+                        className="h-full rounded-r-full bg-[linear-gradient(90deg,#8a6045,#d6b878,#8a6045)] transition-all duration-700"
+                        style={{ width: `${orderProgress(order)}%` }}
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9a8779]">
+                            <Clock3 className="h-3 w-3 text-[#a08772]" />
+                            {formatDate(order.createdAt)}
                           </p>
-                        ) : null}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                        <span className={cn("rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em]", statusClass(order.status))}>
+                          <h3 className="mt-1 truncate font-serif text-xl font-semibold tracking-wide text-[#231711] sm:text-2xl">
+                            {order.orderNumber}
+                          </h3>
+                        </div>
+                        <span className={cn("shrink-0 rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.08em]", statusClass(order.status))}>
                           {titleStatus(order.status)}
                         </span>
-                        <span className="font-serif text-xl text-[#241813]">
-                          {order.grandTotal !== null ? formatINR(order.grandTotal) : "Saved"}
-                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#f4ede5] pt-3">
+                        <div className="flex flex-col">
+                          {!["payment_pending", "payment_failed"].includes(order.status) && (
+                            <span className="text-xs text-[#806f64]">
+                              {order.paymentMethod || (order.checkoutChannel === "razorpay" ? "Razorpay online payment" : "WhatsApp order")}
+                            </span>
+                          )}
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#a08f82]">Total</span>
+                            <span className="font-serif text-xl font-semibold text-[#241813] sm:text-2xl">
+                              {order.grandTotal !== null ? formatINR(order.grandTotal) : "Saved"}
+                            </span>
+                          </div>
+                        </div>
+
                         <Button
                           type="button"
                           variant="outline"
                           onClick={() => setSelectedOrder(order)}
-                          className="h-9 rounded-full border-[#ded3c7] bg-[#faf6f0] px-4 text-xs text-[#3a2921] hover:bg-[#2a1d17] hover:text-white"
+                          className="h-9.5 rounded-full border-[#ded3c7] bg-[#faf6f0] px-4 text-xs font-medium text-[#3a2921] shadow-2xs transition-all hover:bg-[#231711] hover:text-white"
                         >
                           <ReceiptText className="h-3.5 w-3.5" />
                           Details
@@ -674,9 +692,12 @@ export default function AccountClient() {
                       </div>
                     </div>
 
-                    <div className="relative mt-5 px-1 py-1">
-                      <div className="absolute left-[12.5%] right-[12.5%] top-[17px] h-[2px] overflow-hidden rounded-full bg-[#e8dfd5]">
-                        <div className="hume-order-progress-flow h-full rounded-full bg-[linear-gradient(90deg,#8a6045,#d6b878,#9d6b49)]" style={{ width: `${Math.min(100, (orderStage(order) / 3) * 100)}%` }} />
+                    <div className="relative mt-4.5 rounded-2xl border border-[#ebe0d4] bg-[#faf6f1]/80 p-3.5 sm:p-4">
+                      <div className="absolute left-[12.5%] right-[12.5%] top-[25px] h-[2.5px] overflow-hidden rounded-full bg-[#e8dfd5] sm:top-[27px]">
+                        <div
+                          className="hume-order-progress-flow h-full rounded-full bg-[linear-gradient(90deg,#8a6045,#d6b878,#9d6b49)]"
+                          style={{ width: `${Math.min(100, (orderStage(order) / 3) * 100)}%` }}
+                        />
                       </div>
                       <div className="relative grid grid-cols-4 gap-1">
                         {["Payment", "Confirmed", "Shipped", "Delivered"].map((step, index) => {
@@ -686,16 +707,16 @@ export default function AccountClient() {
                           return (
                             <div key={step} className="text-center">
                               <span className={cn(
-                                "relative mx-auto flex h-8 w-8 items-center justify-center rounded-full border text-[9px] font-semibold transition-all duration-500",
-                                complete && "border-[#8e6245] bg-[#2b1e18] text-[#ead3a8] shadow-[0_5px_14px_rgba(61,39,29,.18)]",
-                                current && "hume-order-current-step border-[#c49a5c] bg-[#f2dfba] text-[#3a271d] shadow-[0_0_0_4px_rgba(214,184,120,.16),0_8px_20px_rgba(125,86,52,.16)]",
-                                !complete && !current && "border-[#ded3c7] bg-[#f8f4ee] text-[#aa9b8f]",
+                                "relative mx-auto flex h-8 w-8 items-center justify-center rounded-full border text-[10px] font-bold transition-all duration-500 sm:h-9 sm:w-9",
+                                complete && "border-[#8e6245] bg-[#2b1e18] text-[#ead3a8] shadow-[0_4px_14px_rgba(43,30,24,.2)]",
+                                current && "hume-order-current-step border-[#c49a5c] bg-[#f2dfba] text-[#3a271d] shadow-[0_0_0_4px_rgba(214,184,120,.22),0_6px_16px_rgba(125,86,52,.18)]",
+                                !complete && !current && "border-[#ded3c7] bg-white text-[#aa9b8f]",
                               )}>
-                                {complete ? <Check className="h-3.5 w-3.5" /> : index + 1}
+                                {complete ? <Check className="h-4 w-4" /> : index + 1}
                               </span>
                               <p className={cn(
-                                "mt-2 text-[8px] font-semibold uppercase tracking-[0.09em] transition-colors",
-                                complete ? "text-[#604638]" : current ? "text-[#8a6045]" : "text-[#b2a59a]",
+                                "mt-2 text-[8px] font-bold uppercase tracking-[0.1em] transition-colors sm:text-[9px]",
+                                complete ? "text-[#553b2e]" : current ? "text-[#8a6045]" : "text-[#b2a59a]",
                               )}>{step}</p>
                             </div>
                           );
@@ -703,93 +724,130 @@ export default function AccountClient() {
                       </div>
                     </div>
 
-                    <div className="mt-5 space-y-2 border-t border-[#eee6dd] pt-4">
+                    <div className="mt-4 space-y-2.5">
                       {order.cartSnapshot.slice(0, 4).map((item) => (
-                        <div key={`${order.id}-${item.id}`} className="flex items-center justify-between gap-3 rounded-2xl bg-[#faf7f2] p-3 text-sm">
+                        <div key={`${order.id}-${item.id}`} className="flex items-center justify-between gap-3 rounded-2xl border border-[#ede3d8] bg-[#fffdfa] p-3 transition-colors hover:border-[#ded3c7]">
                           <div className="flex min-w-0 items-center gap-3">
-                            <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#e7ddd2] bg-white p-1.5 shadow-sm"><Image src={item.image || "/images/logo.png"} alt={item.name} fill sizes="48px" className="object-contain p-1.5" unoptimized /></span>
-                            <div className="min-w-0"><p className="truncate font-medium text-[#2d201a]">{item.name}</p>
-                            <p className="text-xs text-[#8c796c]">
-                              Qty {item.quantity}
-                              {!item.isGift && item.size ? ` - ${item.size}` : ""}
-                            </p>
-                            {item.sampleSelections?.length ? (
-                              <p className="mt-1 line-clamp-1 text-xs text-emerald-700">
-                                Samples: {item.sampleSelections.map((selection) => selection.name).join(", ")}
+                            <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#e7ddd2] bg-white p-1.5 shadow-2xs">
+                              <Image src={item.image || "/images/logo.png"} alt={item.name} fill sizes="48px" className="object-contain p-1.5" unoptimized />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="truncate font-medium text-xs text-[#271a15] sm:text-sm">{item.name}</p>
+                              <p className="text-[11px] text-[#8c796c]">
+                                Qty {item.quantity}
+                                {!item.isGift && item.size ? ` - ${item.size}` : ""}
                               </p>
-                            ) : null}</div>
+                              {item.sampleSelections?.length ? (
+                                <p className="mt-1 line-clamp-1 text-[11px] font-medium text-emerald-700">
+                                  Samples: {item.sampleSelections.map((s) => s.name).join(", ")}
+                                </p>
+                              ) : null}
+                            </div>
                           </div>
-                          <span className={cn("shrink-0 font-medium", item.isGift ? "text-emerald-600" : "text-[#3c2a22]")}>
+                          <span className={cn("shrink-0 font-serif text-sm font-semibold", item.isGift ? "font-sans text-xs font-semibold text-emerald-600" : "text-[#271a15]")}>
                             {item.isGift ? "FREE" : formatINR(item.price * item.quantity)}
                           </span>
                         </div>
                       ))}
-                      {order.cartSnapshot.length > 4 ? <p className="px-2 pt-1 text-xs text-[#8c796c]">+{order.cartSnapshot.length - 4} more item{order.cartSnapshot.length - 4 === 1 ? "" : "s"}</p> : null}
+                      {order.cartSnapshot.length > 4 ? (
+                        <p className="px-2 pt-1 text-xs text-[#8c796c]">
+                          +{order.cartSnapshot.length - 4} more item{order.cartSnapshot.length - 4 === 1 ? "" : "s"}
+                        </p>
+                      ) : null}
                     </div>
 
                     {["payment_pending", "payment_failed"].includes(order.status) ? (
-                      <div className="relative mt-4 min-w-0 overflow-hidden rounded-[1.4rem] border border-[#b99762]/30 bg-[radial-gradient(circle_at_100%_0%,rgba(203,167,105,.16),transparent_36%),linear-gradient(145deg,#251914,#15100e)] p-3.5 shadow-[0_18px_45px_rgba(42,27,20,.2)] sm:p-5">
+                      <div className="relative mt-4.5 min-w-0 overflow-hidden rounded-[1.4rem] border border-[#b99762]/35 bg-[radial-gradient(circle_at_100%_0%,rgba(203,167,105,.18),transparent_40%),linear-gradient(145deg,#251914,#15100e)] p-4 shadow-[0_18px_45px_rgba(42,27,20,.22)] sm:p-5">
                         <div className="absolute -right-10 -top-12 h-32 w-32 rounded-full border border-[#d3b47d]/10" />
                         <div className="absolute right-3 top-3 h-16 w-16 rounded-full border border-[#d3b47d]/[0.06]" />
                         <div className="relative mb-4 flex min-w-0 items-center justify-between gap-3">
                           <div className="flex min-w-0 items-center gap-3">
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#d7b979]/20 bg-[#d7b979]/10 text-[#e3c98f]"><CreditCard className="h-4 w-4" /></span>
-                            <div className="min-w-0"><p className="text-[8px] font-bold uppercase tracking-[0.22em] text-[#d8bd87]/65">Payment required</p><p className="mt-1 truncate font-serif text-lg text-white sm:text-xl">Complete this order</p></div>
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#d7b979]/20 bg-[#d7b979]/10 text-[#e3c98f]">
+                              <CreditCard className="h-4 w-4" />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-[8px] font-bold uppercase tracking-[0.22em] text-[#d8bd87]/70">Payment required</p>
+                              <p className="mt-0.5 truncate font-serif text-lg text-white sm:text-xl">Complete this order</p>
+                            </div>
                           </div>
-                          <p className="hidden shrink-0 font-serif text-lg text-[#ead7b0] sm:block">{order.grandTotal !== null ? formatINR(order.grandTotal) : null}</p>
+                          <p className="hidden shrink-0 font-serif text-lg font-semibold text-[#ead7b0] sm:block">
+                            {order.grandTotal !== null ? formatINR(order.grandTotal) : null}
+                          </p>
                         </div>
                         <div className="relative grid min-w-0 gap-2.5 sm:grid-cols-2">
-                          <Button type="button" onClick={() => resumeOrderPayment(order, "partial_cod")} variant="outline" className="group h-14 w-full min-w-0 justify-center overflow-hidden rounded-[14px] border-[#ead7ad]/70 bg-[linear-gradient(135deg,#f4e5c7,#e7cca0)] px-3 text-[11px] font-semibold text-[#2b1d17] shadow-[0_10px_24px_rgba(203,167,105,.16)] transition hover:-translate-y-0.5 hover:border-[#f3dfb6] hover:bg-[#f4e5c7] hover:text-[#211510] active:translate-y-0 sm:justify-between sm:text-xs">
-                            <span className="flex min-w-0 items-center gap-2"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border border-[#5c412f]/10 bg-[#2b1d17]/[0.07]"><WalletCards className="h-4 w-4" /></span><span className="truncate">Pay 20% now + COD</span></span>
-                            <ChevronRight className="hidden h-4 w-4 shrink-0 text-[#6d4f39] transition-transform group-hover:translate-x-0.5 sm:block" />
+                          <Button
+                            type="button"
+                            onClick={() => resumeOrderPayment(order, "partial_cod")}
+                            variant="outline"
+                            className="group h-13 w-full min-w-0 justify-between overflow-hidden rounded-[14px] border-[#ead7ad]/70 bg-[linear-gradient(135deg,#f4e5c7,#e7cca0)] px-3.5 text-xs font-semibold text-[#2b1d17] shadow-[0_10px_24px_rgba(203,167,105,.16)] transition hover:-translate-y-0.5 hover:border-[#f3dfb6] hover:bg-[#f4e5c7] active:translate-y-0"
+                          >
+                            <span className="flex min-w-0 items-center gap-2">
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] border border-[#5c412f]/10 bg-[#2b1d17]/[0.07]">
+                                <WalletCards className="h-3.5 w-3.5" />
+                              </span>
+                              <span className="truncate">Pay 20% now + COD</span>
+                            </span>
+                            <ChevronRight className="h-4 w-4 shrink-0 text-[#6d4f39] transition-transform group-hover:translate-x-0.5" />
                           </Button>
-                          <Button type="button" onClick={() => resumeOrderPayment(order, "full")} className="group h-14 w-full min-w-0 justify-center overflow-hidden rounded-[14px] border border-emerald-200/15 bg-[linear-gradient(135deg,#1b654d,#2b8063)] px-3 text-[11px] font-semibold text-white shadow-[0_12px_30px_rgba(10,65,46,.3)] transition hover:-translate-y-0.5 hover:bg-[#1b5d47] active:translate-y-0 sm:justify-between sm:text-xs">
-                            <span className="flex min-w-0 items-center gap-2"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-white/10"><CreditCard className="h-4 w-4" /></span><span className="truncate">Pay securely with Razorpay</span></span>
-                            <ChevronRight className="hidden h-4 w-4 shrink-0 text-emerald-100 transition-transform group-hover:translate-x-0.5 sm:block" />
+
+                          <Button
+                            type="button"
+                            onClick={() => resumeOrderPayment(order, "full")}
+                            className="group h-13 w-full min-w-0 justify-between overflow-hidden rounded-[14px] border border-emerald-200/15 bg-[linear-gradient(135deg,#1b654d,#2b8063)] px-3.5 text-xs font-semibold text-white shadow-[0_12px_30px_rgba(10,65,46,.3)] transition hover:-translate-y-0.5 hover:bg-[#1b5d47] active:translate-y-0"
+                          >
+                            <span className="flex min-w-0 items-center gap-2">
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] border border-white/10 bg-white/10">
+                                <CreditCard className="h-3.5 w-3.5" />
+                              </span>
+                              <span className="truncate">Pay securely with Razorpay</span>
+                            </span>
+                            <ChevronRight className="h-4 w-4 shrink-0 text-emerald-100 transition-transform group-hover:translate-x-0.5" />
                           </Button>
                         </div>
                       </div>
                     ) : null}
 
                     {!["payment_pending", "payment_failed", "whatsapp_initiated"].includes(order.status) ? (
-                    <div className="mt-4 rounded-2xl border border-[#e7ddd2] bg-[linear-gradient(135deg,#fffdf9,#f7f2eb)] p-4">
-                      {order.trackingNumber ? (
-                        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-                          <div className="flex items-start gap-3">
-                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><Truck className="h-4 w-4" /></span>
+                      <div className="mt-4 rounded-2xl border border-[#e7ddd2] bg-[linear-gradient(135deg,#fffdf9,#f7f2eb)] p-4">
+                        {order.trackingNumber ? (
+                          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                            <div className="flex items-start gap-3">
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                                <Truck className="h-4 w-4" />
+                              </span>
+                              <div>
+                                <p className="text-sm font-semibold text-[#231711]">
+                                  {order.fulfillmentCarrier || "Shipment"} / {order.trackingNumber}
+                                </p>
+                                <p className="mt-0.5 text-xs text-[#806f64]">
+                                  {order.trackingStatus ? titleStatus(order.trackingStatus) : "Tracking link is ready"}
+                                </p>
+                              </div>
+                            </div>
+                            <Button asChild className="h-9.5 rounded-full bg-[#241813] px-5 text-xs text-white hover:bg-[#3a2921]">
+                              <Link
+                                href={buildPublicTrackingPath(order.trackingNumber) || order.trackingUrl || "/track-order"}
+                                onClick={() => showNavigationLoadingToast()}
+                              >
+                                <PackageSearch className="h-3.5 w-3.5" />
+                                Track
+                              </Link>
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-start gap-3 text-sm text-[#806f64]">
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#e5dbcf] bg-white text-[#a78469]">
+                              <MapPin className="h-4 w-4" />
+                            </span>
                             <div>
-                              <p className="text-sm font-semibold">
-                                {order.fulfillmentCarrier || "Shipment"} / {order.trackingNumber}
-                              </p>
-                              <p className="mt-1 text-xs text-[#806f64]">
-                                {order.trackingStatus
-                                  ? titleStatus(order.trackingStatus)
-                                  : "Tracking link is ready"}
+                              <p className="font-medium text-[#32231c]">Preparing your delivery</p>
+                              <p className="mt-0.5 text-xs leading-5 text-[#8b796d]">
+                                Once your parcel is dispatched, the tracking ID and link will appear here automatically.
                               </p>
                             </div>
                           </div>
-                          <Button asChild className="h-10 rounded-full bg-[#241813] px-5 text-white hover:bg-[#3a2921]">
-                            <Link
-                              href={buildPublicTrackingPath(order.trackingNumber) || order.trackingUrl || "/track-order"}
-                              onClick={() => showNavigationLoadingToast()}
-                            >
-                              <PackageSearch className="h-4 w-4" />
-                              Track
-                            </Link>
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex items-start gap-3 text-sm text-[#806f64]">
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#e5dbcf] bg-white text-[#a78469]"><MapPin className="h-4 w-4" /></span>
-                          <div>
-                            <p className="font-medium text-[#32231c]">Preparing your delivery</p>
-                            <p className="mt-1 text-xs leading-5 text-[#8b796d]">
-                              Once your parcel is dispatched, the tracking ID and link will appear here automatically.
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
                     ) : null}
                   </article>
                 ))}
