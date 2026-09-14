@@ -592,27 +592,16 @@ export default function AccountClient() {
               </div>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={loadAccount}
-              disabled={isLoading}
-              className="h-10 rounded-full border-white/15 bg-white/[0.07] px-4 text-white hover:bg-white hover:text-[#1d1512]"
-            >
-              <RefreshCw className={cn("h-4 w-4", isLoading ? "animate-spin" : "")} />
-              Refresh
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={handleSignOut}
-              className="h-10 rounded-full text-white/45 hover:bg-white/[0.07] hover:text-white"
-            >
-              <LogOut className="h-4 w-4" />
-              Clear device
-            </Button>
-          </div>
+          <Button
+            asChild
+            variant="outline"
+            className="h-10 rounded-full border-white/15 bg-white/[0.07] px-4 text-white hover:bg-white hover:text-[#1d1512]"
+          >
+            <Link href="/track-order" onClick={() => showNavigationLoadingToast()}>
+              <PackageSearch className="h-4 w-4" />
+              Track Order
+            </Link>
+          </Button>
           </div>
         </div>
 
