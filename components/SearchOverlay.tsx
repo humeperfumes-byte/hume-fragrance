@@ -157,21 +157,6 @@ function orderMatches(order: AccountOrder, query: string) {
       .join(" "),
   );
 
-  return query
-    .split(/\s+/)
-    .filter(Boolean)
-    .every((term) => searchable.includes(term));
-}
-
-function sectionTitle(label: string, count?: number) {
-  return (
-    <div className="mb-2 flex items-center justify-between">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-400">
-        {label}
-      </p>
-      {typeof count === "number" ? (
-        <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] text-zinc-500">
-          {count}
 import { buildPublicTrackingPath } from "@/lib/tracking-url";
 
 interface SearchOverlayProps {
