@@ -38,7 +38,7 @@ export default async function TrackOrderPage({ searchParams }: TrackOrderPagePro
   const initialTrackingNumber = params?.trackingNumber || params?.tracking || params?.id || "";
 
   return (
-    <main className="min-h-screen bg-[#f7f7f5] text-foreground">
+    <main className="min-h-screen bg-[#FBF9F5] text-foreground">
       <Header />
       <TrackOrderClient initialTrackingNumber={initialTrackingNumber} />
       <Footer />

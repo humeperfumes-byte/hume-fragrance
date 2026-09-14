@@ -58,7 +58,7 @@ export default async function TrackOrderByIdPage({
   const { trackingNumber } = await params;
 
   return (
-    <main className="min-h-screen bg-[#f7f7f5] text-foreground">
+    <main className="min-h-screen bg-[#FBF9F5] text-foreground">
       <Header />
       <TrackOrderClient initialTrackingNumber={cleanTrackingNumber(trackingNumber)} />
       <Footer />
