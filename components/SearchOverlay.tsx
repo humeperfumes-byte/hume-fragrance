@@ -345,6 +345,7 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
       return;
     }
 
+
     if (productResults.length > 0) {
       const href = getProductPath(productResults[0]);
       prepareOverlayNavigation();
@@ -356,19 +357,6 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
     prepareOverlayNavigation();
     showNavigationLoadingToast();
     window.location.assign(`/search?q=${encodeURIComponent(query.trim())}`);
-  };
-
-  const handleClose = () => {
-    setQuery("");
-    onClose();
-  };
-
-  const overlay = (
-    <AnimatePresence>
-      {isOpen ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
   };
 
   const handleClose = () => {
@@ -563,8 +551,11 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
           </div>
         </motion.div>
       ) : null}
-    </AnimatePresence>
   );
+
+  if (!mounted) return null;
+  return createPortal(overlay, document.body);
+};
 
 function ActionResult({
   action,
