@@ -75,10 +75,10 @@ const PerfumeCard = ({
   const displayPrice = formatINR(price);
   const isPriorityCard = prioritizeImage ?? index === 0;
   const primaryBadge =
-    isDiscoverySet
-      ? { full: "Discovery Set", compact: "Set", className: "bg-[#2a2116] text-[#f7d79b]" }
-      : soldOut
-        ? { full: "Sold Out", compact: "Sold", className: "bg-red-600 text-white" }
+    soldOut
+      ? { full: "Sold Out", compact: "Sold", className: "bg-red-600 text-white" }
+      : isDiscoverySet
+        ? { full: "Discovery Set", compact: "Set", className: "bg-[#2a2116] text-[#f7d79b]" }
         : bestSeller
           ? { full: "Best Seller", compact: "Best Seller", className: "bg-foreground text-background" }
           : humeSpecial
@@ -119,14 +119,14 @@ const PerfumeCard = ({
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isDiscoverySet) {
-      router.push(DISCOVERY_SET_PATH);
-      return;
-    }
     if (soldOut) {
       toast({
         title: "Currently sold out",
       });
+      return;
+    }
+    if (isDiscoverySet) {
+      router.push(DISCOVERY_SET_PATH);
       return;
     }
     addItem({ id, name, inspiration, category, image, price, size: "50ml" });

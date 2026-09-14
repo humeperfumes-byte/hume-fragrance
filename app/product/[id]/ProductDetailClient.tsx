@@ -65,6 +65,7 @@ export default function ProductDetailClient({
   const productDescriptor = perfume.inspirationBrand?.trim()
     ? `${perfume.name} (${perfume.size}) inspired by ${perfume.inspirationBrand} ${perfume.inspiration}`
     : `${perfume.name} (${perfume.size})`;
+
   const whatsappMessage = encodeURIComponent(
     isComingSoon
       ? `Hello HUME Fragrance, I am interested in ${perfume.name} (${perfume.size}). Please notify me when it launches.`
@@ -72,6 +73,11 @@ export default function ProductDetailClient({
   );
 
   const handleAddToCart = () => {
+    if (isSoldOut) {
+      toast({ title: "Currently sold out" });
+      return;
+    }
+
     if (isDiscoverySet) {
       router.push(DISCOVERY_SET_PATH);
       return;
@@ -80,11 +86,6 @@ export default function ProductDetailClient({
     if (isComingSoon) {
       notifyRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       toast({ title: "Join the launch waitlist" });
-      return;
-    }
-
-    if (isSoldOut) {
-      toast({ title: "Currently sold out" });
       return;
     }
 
@@ -148,17 +149,18 @@ export default function ProductDetailClient({
       )}
       <motion.button
         onClick={handleAddToCart}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
+        disabled={isSoldOut && !isComingSoon}
+        whileHover={isSoldOut ? {} : { scale: 1.02 }}
+        whileTap={isSoldOut ? {} : { scale: 0.98 }}
         className={`w-full py-4 text-[11px] uppercase tracking-[0.28em] transition-opacity ${
           isSoldOut && !isComingSoon
-            ? "cursor-not-allowed bg-muted text-muted-foreground"
+            ? "cursor-not-allowed bg-muted text-muted-foreground opacity-60"
             : isComingSoon
             ? "bg-foreground text-background hover:opacity-90"
             : "bg-foreground text-background hover:opacity-90"
         }`}
       >
-        {isDiscoverySet ? "Join Waitlist" : isComingSoon ? "Coming Soon" : isSoldOut ? "Sold Out" : "Add to Bag"}
+        {isSoldOut ? "Sold Out" : isComingSoon ? "Coming Soon" : isDiscoverySet ? "Build Discovery Set" : "Add to Bag"}
       </motion.button>
 
       <a

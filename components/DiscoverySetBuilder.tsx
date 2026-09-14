@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { ShoppingBag, Sparkles, X, Plus } from "lucide-react";
+import { ShoppingBag, Sparkles, X, Plus, Bell } from "lucide-react";
 import { perfumes as localPerfumes, type PerfumeData } from "@/data/perfumes";
 import { toast } from "@/hooks/use-toast";
 import { formatINR } from "@/lib/currency";
@@ -133,9 +133,54 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
   const [selected, setSelected] = useState<PerfumeData[]>([]);
   const [activeHeroIndex, setActiveHeroIndex] = useState(0);
   const [showComingSoon, setShowComingSoon] = useState(false);
+  const [notifyContact, setNotifyContact] = useState("");
+  const [isNotifySaving, setIsNotifySaving] = useState(false);
   const sampleCount = DISCOVERY_SET_SAMPLE_COUNT;
   const activePrice = DISCOVERY_SET_PRICE;
   const activeSizeLabel = DISCOVERY_SET_SIZE;
+
+  const discoverySetProduct = useMemo(
+    () => allPerfumes.find((p) => isDiscoverySetProductId(p.id)),
+    [allPerfumes],
+  );
+  const isDiscoverySetSoldOut = Boolean(discoverySetProduct?.badges?.soldOut);
+
+  const handleNotifySubmit = async () => {
+    const contact = notifyContact.trim();
+    if (!contact) {
+      toast({ title: "Add email or mobile number" });
+      return;
+    }
+
+    setIsNotifySaving(true);
+    try {
+      const isEmail = contact.includes("@");
+      const response = await fetch("/api/stock-notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: "hume-discovery-set",
+          productName: "HUME Discovery Set",
+          email: isEmail ? contact : undefined,
+          phone: isEmail ? undefined : contact,
+          sourcePath: typeof window === "undefined" ? undefined : window.location.href,
+        }),
+      });
+      const data = (await response.json()) as { ok?: boolean; error?: string };
+      if (!response.ok || !data.ok) throw new Error(data.error || "Unable to save request.");
+
+      setNotifyContact("");
+      toast({ title: "We will notify you when Discovery Set is back in stock!" });
+    } catch (error) {
+      toast({
+        title: "Could not save notify request",
+        description: error instanceof Error ? error.message : "Please ask us on WhatsApp.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsNotifySaving(false);
+    }
+  };
 
   const formatSlotName = (name: string) => {
     return name
@@ -258,6 +303,15 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
   };
 
   const handleDiscoverySetCta = () => {
+    if (isDiscoverySetSoldOut) {
+      toast({
+        title: "Discovery Set is currently sold out",
+        description: "Please submit your email or mobile below to be notified when stock arrives.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (selected.length !== sampleCount) {
       toast({
         title: `Choose ${sampleCount} testers`,
@@ -313,7 +367,9 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
   };
 
   const isSelectionComplete = selected.length === sampleCount;
-  const discoveryCtaLabel = isSelectionComplete
+  const discoveryCtaLabel = isDiscoverySetSoldOut
+    ? "Currently Sold Out"
+    : isSelectionComplete
     ? `Pre-Order Now - ${formatINR(activePrice)}`
     : `${selected.length}/${sampleCount} selected`;
 
@@ -412,11 +468,42 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
 
             <div className="mt-5 border-y border-stone-200/40 py-4 flex items-center justify-center gap-6 sm:mt-6">
               <div className="text-center">
-                <span className="block text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400/90 font-sans leading-none">{DISCOVERY_SET_STATUS}</span>
+                <span className={`block text-[10px] font-bold uppercase tracking-[0.2em] font-sans leading-none ${isDiscoverySetSoldOut ? "text-red-600 font-extrabold" : "text-stone-400/90"}`}>
+                  {isDiscoverySetSoldOut ? "SOLD OUT" : DISCOVERY_SET_STATUS}
+                </span>
                 <MagicPrice />
                 <span className="block text-[12px] font-medium text-stone-500 font-sans mt-2">{DISCOVERY_SET_SIZE} Testers</span>
               </div>
             </div>
+
+            {isDiscoverySetSoldOut && (
+              <div className="mt-5 rounded-2xl border border-red-200 bg-red-50/70 p-4 shadow-sm">
+                <div className="flex items-center gap-2 mb-1.5 text-red-800 font-sans text-xs font-bold uppercase tracking-wider">
+                  <Bell className="h-4 w-4 text-red-600" />
+                  <span>Discovery Set is Sold Out - Notify Me</span>
+                </div>
+                <p className="text-xs text-stone-600 font-sans mb-3 leading-relaxed">
+                  Enter your email or mobile number below. We will notify you as soon as the Discovery Set is back in stock.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Email or mobile number"
+                    value={notifyContact}
+                    onChange={(e) => setNotifyContact(e.target.value)}
+                    className="flex-1 rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs font-sans text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleNotifySubmit}
+                    disabled={isNotifySaving}
+                    className="rounded-xl bg-stone-900 px-4 py-2 text-xs font-bold font-sans uppercase tracking-wider text-white hover:bg-stone-800 disabled:opacity-50"
+                  >
+                    {isNotifySaving ? "Saving..." : "Notify Me"}
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="mt-6 grid gap-3 sm:mt-8 sm:max-w-[28rem] sm:grid-cols-2">
               <a
@@ -813,15 +900,17 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
         <button
           type="button"
           onClick={handleDiscoverySetCta}
-          disabled={!isSelectionComplete}
+          disabled={isDiscoverySetSoldOut || !isSelectionComplete}
           className={`h-9 px-5 text-[9.5px] font-bold uppercase tracking-[0.15em] transition-all duration-200 rounded-full flex items-center justify-center gap-1.5 ${
-            isSelectionComplete
+            isDiscoverySetSoldOut
+              ? "bg-red-600 text-white cursor-not-allowed opacity-90"
+              : isSelectionComplete
               ? "bg-stone-900 hover:bg-stone-800 text-white active:scale-[0.97] shadow-sm"
               : "bg-stone-50 border border-stone-200/30 text-stone-300 cursor-not-allowed"
           }`}
         >
-          <span>PRE-ORDER</span>
-          <ShoppingBag className={`h-3.5 w-3.5 ${isSelectionComplete ? "text-white" : "text-stone-300"}`} />
+          <span>{isDiscoverySetSoldOut ? "SOLD OUT" : "PRE-ORDER"}</span>
+          <ShoppingBag className={`h-3.5 w-3.5 ${isDiscoverySetSoldOut || isSelectionComplete ? "text-white" : "text-stone-300"}`} />
         </button>
       </motion.div>
     </>
