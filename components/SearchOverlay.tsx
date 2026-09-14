@@ -369,6 +369,19 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
+  };
+
+  const handleClose = () => {
+    setQuery("");
+    onClose();
+  };
+
+  const overlay = (
+    <AnimatePresence>
+      {isOpen ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
           className="fixed inset-0 z-[120] bg-[#f7f7f8]"
@@ -398,67 +411,8 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
             </form>
 
             <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden py-3 sm:py-6">
-              <div className="grid min-w-0 gap-3 sm:gap-4 lg:grid-cols-[0.78fr_1.22fr]">
-                <aside className="space-y-4">
-                  <section className="rounded-[1.35rem] border border-zinc-200 bg-white p-4 shadow-[0_18px_60px_rgba(15,23,42,0.06)]">
-                    {sectionTitle("Quick actions")}
-                    <div className="space-y-2">
-                      {actionResults.map((action) => (
-                        <ActionResult
-                          key={`${action.label}-${action.href}`}
-                          action={action}
-                          onClose={onClose}
-                        />
-                      ))}
-                    </div>
-                  </section>
-
-                  <section className="rounded-[1.35rem] border border-zinc-200 bg-white p-4 shadow-[0_18px_60px_rgba(15,23,42,0.06)]">
-                    {sectionTitle("Try searching")}
-                    <div className="flex flex-wrap gap-2">
-                      {popularSearches.map((term) => (
-                        <button
-                          key={term}
-                          type="button"
-                          onClick={() => setQuery(term)}
-                          className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-white hover:text-zinc-950"
-                        >
-                          {term}
-                        </button>
-                      ))}
-                    </div>
-                  </section>
-                </aside>
-
+              {query.trim().length > 0 ? (
                 <div className="space-y-4">
-                  <section className="rounded-[1.35rem] border border-zinc-200 bg-white p-4 shadow-[0_18px_60px_rgba(15,23,42,0.06)]">
-                    {sectionTitle("My orders and tracking", orderResults.length)}
-                    {orders.length === 0 ? (
-                      <EmptyState
-                        icon={UserRound}
-                        title="No account orders yet"
-                        description="After checkout, your saved orders and tracking links will appear here."
-                      />
-                    ) : orderResults.length > 0 ? (
-                      <div className="space-y-2">
-                        {orderResults.map((order) => (
-                          <OrderResult
-                            key={order.id}
-                            order={order}
-                            query={query}
-                            onClose={onClose}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <EmptyState
-                        icon={PackageSearch}
-                        title="No matching orders"
-                        description="Try order number, product name, status, or tracking ID."
-                      />
-                    )}
-                  </section>
-
                   <section className="rounded-[1.35rem] border border-zinc-200 bg-white p-4 shadow-[0_18px_60px_rgba(15,23,42,0.06)]">
                     {sectionTitle("Perfumes", productResults.length)}
                     {productResults.length > 0 ? (
@@ -480,18 +434,137 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
                       />
                     )}
                   </section>
+
+                  {orderResults.length > 0 ? (
+                    <section className="rounded-[1.35rem] border border-zinc-200 bg-white p-4 shadow-[0_18px_60px_rgba(15,23,42,0.06)]">
+                      {sectionTitle("My orders and tracking", orderResults.length)}
+                      <div className="space-y-2">
+                        {orderResults.map((order) => (
+                          <OrderResult
+                            key={order.id}
+                            order={order}
+                            query={query}
+                            onClose={onClose}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  ) : null}
+
+                  <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
+                    {actionResults.length > 0 ? (
+                      <section className="rounded-[1.35rem] border border-zinc-200 bg-white p-4 shadow-[0_18px_60px_rgba(15,23,42,0.06)]">
+                        {sectionTitle("Quick actions")}
+                        <div className="space-y-2">
+                          {actionResults.map((action) => (
+                            <ActionResult
+                              key={`${action.label}-${action.href}`}
+                              action={action}
+                              onClose={onClose}
+                            />
+                          ))}
+                        </div>
+                      </section>
+                    ) : null}
+
+                    <section className="rounded-[1.35rem] border border-zinc-200 bg-white p-4 shadow-[0_18px_60px_rgba(15,23,42,0.06)]">
+                      {sectionTitle("Try searching")}
+                      <div className="flex flex-wrap gap-2">
+                        {popularSearches.map((term) => (
+                          <button
+                            key={term}
+                            type="button"
+                            onClick={() => setQuery(term)}
+                            className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-white hover:text-zinc-950"
+                          >
+                            {term}
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="grid min-w-0 gap-3 sm:gap-4 lg:grid-cols-[0.78fr_1.22fr]">
+                  <aside className="space-y-4">
+                    <section className="rounded-[1.35rem] border border-zinc-200 bg-white p-4 shadow-[0_18px_60px_rgba(15,23,42,0.06)]">
+                      {sectionTitle("Quick actions")}
+                      <div className="space-y-2">
+                        {actionResults.map((action) => (
+                          <ActionResult
+                            key={`${action.label}-${action.href}`}
+                            action={action}
+                            onClose={onClose}
+                          />
+                        ))}
+                      </div>
+                    </section>
+
+                    <section className="rounded-[1.35rem] border border-zinc-200 bg-white p-4 shadow-[0_18px_60px_rgba(15,23,42,0.06)]">
+                      {sectionTitle("Try searching")}
+                      <div className="flex flex-wrap gap-2">
+                        {popularSearches.map((term) => (
+                          <button
+                            key={term}
+                            type="button"
+                            onClick={() => setQuery(term)}
+                            className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-white hover:text-zinc-950"
+                          >
+                            {term}
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  </aside>
+
+                  <div className="space-y-4">
+                    <section className="rounded-[1.35rem] border border-zinc-200 bg-white p-4 shadow-[0_18px_60px_rgba(15,23,42,0.06)]">
+                      {sectionTitle("My orders and tracking", orderResults.length)}
+                      {orders.length === 0 ? (
+                        <EmptyState
+                          icon={UserRound}
+                          title="No account orders yet"
+                          description="After checkout, your saved orders and tracking links will appear here."
+                        />
+                      ) : (
+                        <EmptyState
+                          icon={PackageSearch}
+                          title="Search orders"
+                          description="Try order number, product name, status, or tracking ID."
+                        />
+                      )}
+                    </section>
+
+                    <section className="rounded-[1.35rem] border border-zinc-200 bg-white p-4 shadow-[0_18px_60px_rgba(15,23,42,0.06)]">
+                      {sectionTitle("Perfumes", productResults.length)}
+                      {productResults.length > 0 ? (
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {productResults.map((product) => (
+                            <ProductResultCard
+                              key={product.id}
+                              perfume={product}
+                              onClose={onClose}
+                              query={query}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <EmptyState
+                          icon={Sparkles}
+                          title="No perfume match"
+                          description="Search by perfume name, inspiration, brand direction, category, or gender."
+                        />
+                      )}
+                    </section>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </motion.div>
       ) : null}
     </AnimatePresence>
   );
-
-  if (!mounted) return null;
-  return createPortal(overlay, document.body);
-};
 
 function ActionResult({
   action,
