@@ -611,8 +611,8 @@ export default function AccountClient() {
           </div>
         ) : null}
 
-          <div className="rounded-[1.75rem] border border-[#ded4c8] bg-[#fffdf9] p-4 shadow-[0_18px_55px_rgba(74,51,38,.07)] sm:p-5">
-            <div className="mb-5 flex items-center justify-between gap-3 px-1">
+          <div className="space-y-5">
+            <div className="flex items-center justify-between gap-3 px-1">
               <div>
                 <p className="text-[9px] font-semibold uppercase tracking-[0.24em] text-[#a08772]">Your collection</p>
                 <h2 className="mt-1 font-serif text-2xl text-[#271a15]">Orders</h2>
@@ -639,7 +639,7 @@ export default function AccountClient() {
                 {orders.map((order) => (
                   <article
                     key={order.id}
-                    className="relative overflow-hidden rounded-[1.75rem] border border-[#e3d9ce] bg-white p-4.5 sm:p-6 shadow-[0_16px_48px_rgba(71,47,35,.05)] transition-all duration-300 hover:border-[#d8caa7]/60"
+                    className="relative overflow-hidden rounded-[1.5rem] border border-[#e3d9ce] bg-white p-3.5 sm:p-5 shadow-[0_14px_42px_rgba(71,47,35,.05)] transition-all duration-300 hover:border-[#d8caa7]/60"
                   >
                     <div className="absolute inset-x-0 top-0 h-1 bg-[#eee5da]">
                       <div
@@ -728,8 +728,8 @@ export default function AccountClient() {
                       {order.cartSnapshot.slice(0, 4).map((item) => (
                         <div key={`${order.id}-${item.id}`} className="flex items-center justify-between gap-3 rounded-2xl border border-[#ede3d8] bg-[#fffdfa] p-3 transition-colors hover:border-[#ded3c7]">
                           <div className="flex min-w-0 items-center gap-3">
-                            <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#e7ddd2] bg-white p-1.5 shadow-2xs">
-                              <Image src={item.image || "/images/logo.png"} alt={item.name} fill sizes="48px" className="object-contain p-1.5" unoptimized />
+                            <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#e7ddd2] bg-white shadow-2xs">
+                              <Image src={item.image || "/images/logo.png"} alt={item.name} fill sizes="48px" className="object-cover" unoptimized />
                             </span>
                             <div className="min-w-0">
                               <p className="truncate font-medium text-xs text-[#271a15] sm:text-sm">{item.name}</p>
@@ -909,7 +909,7 @@ export default function AccountClient() {
                     {selectedOrder.cartSnapshot.map((item) => (
                       <div key={`${selectedOrder.id}-${item.id}`} className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
                         <div className="flex min-w-0 gap-3">
-                          <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-[#e7ddd2] bg-white"><Image src={item.image || "/images/logo.png"} alt={item.name} fill sizes="48px" className="object-contain p-1.5" unoptimized /></span>
+                          <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-[#e7ddd2] bg-white"><Image src={item.image || "/images/logo.png"} alt={item.name} fill sizes="48px" className="object-cover" unoptimized /></span>
                           <div className="min-w-0">
                           <p className="font-medium text-zinc-950">{item.name}</p>
                           <p className="mt-1 text-xs text-zinc-500">

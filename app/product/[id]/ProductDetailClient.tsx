@@ -174,37 +174,54 @@ export default function ProductDetailClient({
       </a>
 
       {isUnavailable ? (
-        <div ref={notifyRef} className="rounded-xl border border-border bg-secondary/30 p-3">
-          <div className="flex items-start gap-3">
-            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
-              <Bell className="h-4 w-4" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-foreground">
-                {isComingSoon ? "Join launch waitlist" : "Notify when back"}
-              </p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                {isComingSoon
-                  ? "Leave email or mobile and we will message you before this product opens for checkout."
-                  : "Leave email or mobile and we will message you when this perfume is ready."}
-              </p>
-              <div className="mt-3 flex gap-2">
-                <input
-                  value={notifyContact}
-                  onChange={(event) => setNotifyContact(event.target.value)}
-                  placeholder="Email or mobile"
-                  className="min-h-10 flex-1 rounded-md border border-border bg-background px-3 text-sm outline-none focus:border-foreground"
-                />
-                <button
-                  type="button"
-                  onClick={handleNotifySubmit}
-                  disabled={isNotifySaving}
-                  className="min-h-10 rounded-md bg-foreground px-4 text-xs font-semibold text-background transition hover:opacity-90 disabled:opacity-60"
-                >
-                  {isNotifySaving ? "Saving" : "Notify"}
-                </button>
-              </div>
+        <div ref={notifyRef} className="rounded-[1.4rem] border border-[#25D366]/35 bg-[linear-gradient(135deg,#f6fcf8,#eef9f2)] p-4 text-stone-900 shadow-sm">
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-[#128C7E]">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#25D366]/20 text-[#128C7E]">
+                <WhatsAppIcon className="h-4 w-4" />
+              </span>
+              <span>{isComingSoon ? "Launch Updates on WhatsApp" : "WhatsApp Restock Alert"}</span>
             </div>
+            <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-800">
+              WhatsApp
+            </span>
+          </div>
+
+          <p className="text-xs text-stone-600 leading-relaxed mb-3">
+            {isComingSoon
+              ? `Get an instant WhatsApp notification as soon as ${perfume.name} is open for checkout.`
+              : `Get an instant WhatsApp notification as soon as ${perfume.name} is back in stock.`}
+          </p>
+
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              type="tel"
+              value={notifyContact}
+              onChange={(event) => setNotifyContact(event.target.value)}
+              placeholder="Enter WhatsApp mobile number"
+              className="min-h-10 flex-1 rounded-xl border border-emerald-600/25 bg-white px-3.5 text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#128C7E]"
+            />
+            <button
+              type="button"
+              onClick={handleNotifySubmit}
+              disabled={isNotifySaving}
+              className="min-h-10 rounded-xl bg-[#128C7E] px-4 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-[#0e6f64] disabled:opacity-60 shadow-xs"
+            >
+              {isNotifySaving ? "Saving..." : "Notify Me"}
+            </button>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between border-t border-emerald-600/15 pt-2.5 text-[11px] text-stone-600">
+            <span>Or message us directly:</span>
+            <a
+              href={`https://wa.me/919559024822?text=${encodeURIComponent(`Hi HUME, please notify me when ${perfume.name} is back in stock!`)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 font-bold text-[#128C7E] hover:underline"
+            >
+              <WhatsAppIcon className="h-4 w-4" />
+              Chat on WhatsApp
+            </a>
           </div>
         </div>
       ) : null}
