@@ -211,23 +211,23 @@ export default function TrackOrderClient({ initialTrackingNumber = "" }: TrackOr
           transition={{ delay: 0.15 }}
           className="mx-auto mt-8 max-w-2xl"
         >
-          <div className="relative rounded-3xl border border-[#e8dfd4] bg-white/80 p-3 shadow-[0_20px_60px_rgba(24,18,14,0.06)] backdrop-blur-xl sm:p-4">
-            <form onSubmit={handleSubmit} className="relative flex items-center">
-              <div className="relative flex flex-1 items-center">
-                <Search className="absolute left-4 h-5 w-5 text-stone-400" />
+          <div className="relative rounded-3xl border border-[#e8dfd4] bg-white/90 p-3 shadow-[0_20px_60px_rgba(24,18,14,0.06)] backdrop-blur-xl sm:p-4">
+            <form onSubmit={handleSubmit} className="relative flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-2">
+              <div className="relative flex flex-1 items-center rounded-2xl border border-stone-200/80 bg-stone-50/70 sm:border-0 sm:bg-transparent">
+                <Search className="absolute left-3.5 h-4.5 w-4.5 text-stone-400 sm:left-4 sm:h-5 sm:w-5" />
                 <input
                   type="text"
                   value={trackingNumber}
                   onChange={(e) => setTrackingNumber(e.target.value.toUpperCase())}
                   placeholder="Enter Tracking ID / AWB Number..."
                   autoComplete="off"
-                  className="h-14 w-full rounded-2xl border-0 bg-transparent pl-12 pr-10 text-base font-semibold uppercase tracking-wider text-stone-900 placeholder:normal-case placeholder:font-normal placeholder:tracking-normal placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+                  className="h-12 w-full rounded-2xl border-0 bg-transparent pl-10 pr-10 text-sm font-semibold uppercase tracking-wider text-stone-900 placeholder:normal-case placeholder:font-normal placeholder:tracking-normal placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10 sm:h-14 sm:pl-12 sm:text-base"
                 />
                 {trackingNumber && (
                   <button
                     type="button"
                     onClick={handleClearInput}
-                    className="absolute right-3 inline-flex h-8 w-8 items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+                    className="absolute right-3 inline-flex h-7 w-7 items-center justify-center rounded-full text-stone-400 hover:bg-stone-200/60 hover:text-stone-700 sm:h-8 sm:w-8"
                     aria-label="Clear input"
                   >
                     <X className="h-4 w-4" />
@@ -238,16 +238,16 @@ export default function TrackOrderClient({ initialTrackingNumber = "" }: TrackOr
               <button
                 type="submit"
                 disabled={isLoading || !trackingNumber.trim()}
-                className="ml-2 inline-flex h-14 shrink-0 items-center justify-center gap-2 rounded-2xl bg-stone-900 px-6 font-sans text-xs font-bold uppercase tracking-[0.18em] text-white shadow-md transition-all hover:bg-stone-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:px-8"
+                className="inline-flex h-12 w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-stone-900 px-6 font-sans text-xs font-bold uppercase tracking-[0.18em] text-white shadow-md transition-all hover:bg-stone-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:h-14 sm:w-auto sm:px-8"
               >
                 {isLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin text-white" />
-                    <span className="hidden sm:inline">Tracking...</span>
+                    <span>Tracking...</span>
                   </>
                 ) : (
                   <>
-                    <span>Track</span>
+                    <span>Track Order</span>
                     <ArrowRight className="h-4 w-4" />
                   </>
                 )}
@@ -255,13 +255,15 @@ export default function TrackOrderClient({ initialTrackingNumber = "" }: TrackOr
             </form>
 
             {/* Carrier badges row */}
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-stone-100 pt-3 px-1">
-              <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-stone-500 font-sans">
-                <span className="font-semibold text-stone-700">Supported:</span>
-                <span className="rounded-full bg-stone-100 px-2.5 py-0.5 font-medium text-stone-700">India Post Speed Post</span>
-                <span className="rounded-full bg-stone-100 px-2.5 py-0.5 font-medium text-stone-700">Delhivery</span>
-                <span className="rounded-full bg-stone-100 px-2.5 py-0.5 font-medium text-stone-700">Blue Dart</span>
-                <span className="rounded-full bg-stone-100 px-2.5 py-0.5 font-medium text-stone-700">Shiprocket</span>
+            <div className="mt-3.5 border-t border-stone-100/90 pt-3 px-0.5">
+              <p className="mb-2 font-sans text-[10px] font-bold uppercase tracking-[0.18em] text-stone-400">
+                Supported Logistics Carriers
+              </p>
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-sans">
+                <span className="rounded-full border border-stone-200/80 bg-stone-50 px-2.5 py-1 font-medium text-stone-700">India Post Speed Post</span>
+                <span className="rounded-full border border-stone-200/80 bg-stone-50 px-2.5 py-1 font-medium text-stone-700">Delhivery</span>
+                <span className="rounded-full border border-stone-200/80 bg-stone-50 px-2.5 py-1 font-medium text-stone-700">Blue Dart</span>
+                <span className="rounded-full border border-stone-200/80 bg-stone-50 px-2.5 py-1 font-medium text-stone-700">Shiprocket</span>
               </div>
             </div>
           </div>
