@@ -258,7 +258,12 @@ export async function buildAiAnalyticsSnapshot(now = new Date()) {
   const previousBehavior = safeBehavior.filter((row) => row.createdAt < periodStart);
 
   const funnel = (behavior: typeof safeBehavior, cart: typeof safeCart, drafts: typeof safeDrafts, orderData: SafeOrder[]) => {
-    const visitors = new Set(behavior.map((row) => row.sessionId)).size;
+    const visitors = new Set([
+      ...behavior.map((row) => row.sessionId),
+      ...cart.map((row) => row.sessionId),
+      ...drafts.map((row) => row.sessionId),
+      ...orderData.map((row) => row.sessionId),
+    ].filter(Boolean)).size;
     const cartVisitors = new Set(cart.map((row) => row.sessionId)).size;
     const addToCart = cart.filter((row) => row.eventType === "add_to_cart").length;
     const checkoutSessions = new Set(drafts.map((row) => row.sessionId)).size;

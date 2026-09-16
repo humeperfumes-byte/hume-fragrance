@@ -251,6 +251,28 @@ function buildOrderSuccessMessage(order: Order) {
     .filter(Boolean)
     .join("\n");
 }
+function buildPendingPaymentFollowupMessage(order: Order) {
+  const itemNames = (order.cartSnapshot || [])
+    .filter((item) => !item.isGift)
+    .map((item) => item.name)
+    .slice(0, 3)
+    .join(", ");
+
+  return [
+    `Hi ${order.fullName || "there"},`,
+    "",
+    `Your HUME Fragrance order #${order.orderNumber} is pending payment confirmation.`,
+    itemNames ? `Items: ${itemNames}` : null,
+    order.grandTotal ? `Pending Amount: ${formatINR(Number(order.grandTotal))}` : null,
+    "",
+    "Would you like us to re-send the payment link or help you complete it via UPI or Cash on Delivery?",
+    "Reply to this message and we will assist you immediately!",
+    "",
+    "Team HUME Fragrance",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
 
 export function OrdersTable({
   initialOrders,

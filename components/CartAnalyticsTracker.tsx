@@ -97,6 +97,32 @@ export default function CartAnalyticsTracker() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  // Track page_view behavioral events for site visitors
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sessionId = getSessionId();
+    const path = getCurrentCaptureUrl(pathname, searchParams);
+    const sectionName = pathname === "/" ? "home" : pathname.split("/")[1] || "home";
+
+    void fetch("/api/analytics/behavior", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify({
+        sessionId,
+        eventType: "page_view",
+        path,
+        sectionName,
+        payload: {
+          pathname,
+          search: searchParams?.toString() || "",
+          referrer: document.referrer || "",
+          siteHost: window.location.hostname,
+        },
+      }),
+    }).catch(() => {});
+  }, [pathname, searchParams]);
+
   useEffect(() => {
     const handler = (event: Event) => {
       const customEvent = event as CustomEvent<TrackingDetail>;

@@ -5,7 +5,8 @@ export type AdminLeadTemplate =
   | "cart_no_checkout"
   | "checkout_abandoned"
   | "high_value_cart"
-  | "repeat_customer";
+  | "repeat_customer"
+  | "pending_payment_followup";
 
 export type AdminLeadMessageInput = {
   template: AdminLeadTemplate;
@@ -121,6 +122,27 @@ export function buildAdminLeadMessage(input: AdminLeadMessageInput): { subject: 
           input.lastOrderNumber ? `Your last order was ${input.lastOrderNumber}.` : null,
           "We can help you pick your next perfume based on what you already liked.",
           "Would you like a recommendation for daily wear, office wear, date night, or gifting?",
+          "",
+          "Team HUME Fragrance",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      };
+
+    case "pending_payment_followup":
+      return {
+        subject: "Action Required: Complete your HUME order payment",
+        body: [
+          `Hi ${name},`,
+          "",
+          input.lastOrderNumber
+            ? `Your HUME Fragrance order #${input.lastOrderNumber} is pending payment confirmation.`
+            : "Your HUME Fragrance order is pending payment confirmation.",
+          products ? `Items: ${products}.` : null,
+          value ? `Pending amount: ${value}.` : null,
+          "",
+          "Would you like us to re-send the payment link or help you pay via UPI or Cash on Delivery?",
+          "Reply directly to this message and we will assist you immediately.",
           "",
           "Team HUME Fragrance",
         ]

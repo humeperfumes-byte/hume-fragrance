@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   AlertTriangle,
@@ -203,6 +204,29 @@ export function AdminAiInsightDock() {
   );
 }
 
+function getActionHref(title: string, actionText: string) {
+  const text = `${title} ${actionText}`.toLowerCase();
+  if (text.includes("payment") || text.includes("pending") || text.includes("order")) {
+    return "/admin/orders?status=payment_pending";
+  }
+  if (text.includes("cart") || text.includes("abandon")) {
+    return "/admin/cart";
+  }
+  if (text.includes("stock") || text.includes("inventory")) {
+    return "/admin/stock";
+  }
+  if (text.includes("coupon") || text.includes("discount")) {
+    return "/admin/coupon-leads";
+  }
+  if (text.includes("checkout")) {
+    return "/admin/checkouts";
+  }
+  if (text.includes("customer") || text.includes("feedback")) {
+    return "/admin/customers";
+  }
+  return "/admin/intelligence";
+}
+
 export function AdminAiExecutiveBrief() {
   const { state, loading, error, reload } = useAiReport(12);
   const [generating, setGenerating] = useState(false);
@@ -241,7 +265,7 @@ export function AdminAiExecutiveBrief() {
         {error ? <div className="rounded-2xl border border-rose-400/15 bg-rose-400/[0.05] p-5 text-sm text-rose-100">{error}</div> : null}
         {!loading && state && !state.ai.ready ? <div className="rounded-2xl border border-amber-300/15 bg-amber-300/[0.04] p-5"><p className="text-sm font-semibold text-amber-100">Add Gemini or OpenRouter credentials in Vercel to generate reports.</p></div> : null}
         {!loading && state?.ai.ready && !content ? <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center"><Sparkles className="mx-auto h-6 w-6 text-[#c9b3ff]/55" /><p className="mt-3 text-sm text-white/50">Ready for the first privacy-safe analysis.</p></div> : null}
-        {content ? <div className="grid gap-4 xl:grid-cols-[.9fr_1.1fr]"><div className="space-y-3">{content.executiveSummary.map((summary) => <div key={summary} className="flex gap-3 rounded-2xl border border-white/[0.07] bg-black/15 p-4"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#80f0b2]" /><p className="text-sm leading-6 text-white/60">{summary}</p></div>)}</div><div className="grid gap-3 md:grid-cols-3">{topActions.map((action) => <div key={action.title} className="flex min-h-40 flex-col rounded-2xl border border-[#c9b3ff]/10 bg-[#c9b3ff]/[0.035] p-4"><div className="flex items-center justify-between"><span className="rounded-full border border-white/8 px-2 py-1 text-[8px] font-bold uppercase tracking-[.13em] text-white/35">{action.priority}</span><ArrowUpRight className="h-4 w-4 text-white/25" /></div><p className="mt-4 text-sm font-semibold text-white">{action.title}</p><p className="mt-2 text-xs leading-5 text-white/40">{action.action}</p></div>)}</div></div> : null}
+        {content ? <div className="grid gap-4 xl:grid-cols-[.9fr_1.1fr]"><div className="space-y-3">{content.executiveSummary.map((summary) => <div key={summary} className="flex gap-3 rounded-2xl border border-white/[0.07] bg-black/15 p-4"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#80f0b2]" /><p className="text-sm leading-6 text-white/60">{summary}</p></div>)}</div><div className="grid gap-3 md:grid-cols-3">{topActions.map((action) => <Link key={action.title} href={getActionHref(action.title, action.action)} className="group flex min-h-40 flex-col rounded-2xl border border-[#c9b3ff]/10 bg-[#c9b3ff]/[0.035] p-4 transition hover:border-[#c9b3ff]/35 hover:bg-[#c9b3ff]/[0.09]"><div className="flex items-center justify-between"><span className="rounded-full border border-white/8 px-2 py-1 text-[8px] font-bold uppercase tracking-[.13em] text-white/35">{action.priority}</span><ArrowUpRight className="h-4 w-4 text-white/25 transition group-hover:text-white" /></div><p className="mt-4 text-sm font-semibold text-white">{action.title}</p><p className="mt-2 text-xs leading-5 text-white/40">{action.action}</p></Link>)}</div></div> : null}
         {state?.latestFailure ? <div className="mt-4 flex items-center gap-2 rounded-xl border border-amber-300/10 bg-amber-300/[0.035] px-4 py-3 text-xs text-amber-100/65"><AlertTriangle className="h-4 w-4" />The latest attempt failed, so the last successful report is still displayed.</div> : null}
         {state?.history?.length ? <div className="mt-5 flex items-center gap-2 overflow-x-auto border-t border-white/[0.07] pt-4"><Clock3 className="h-4 w-4 shrink-0 text-white/25" />{state.history.filter(Boolean).map((entry) => <span key={entry!.id} className="shrink-0 rounded-full border border-white/8 bg-black/15 px-3 py-1.5 text-[10px] text-white/35">{formatDate(entry!.completedAt)}</span>)}</div> : null}
       </div>
