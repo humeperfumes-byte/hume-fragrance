@@ -108,16 +108,16 @@ export default async function Home() {
         <BestsellerSection perfumes={homepagePerfumes} />
       </div>
       <div
-        style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }}
-        data-analytics-section="occasions"
-      >
-        <HomeOccasionSection perfumes={homepagePerfumes} />
-      </div>
-      <div
         style={{ contentVisibility: "auto", containIntrinsicSize: "1400px" }}
         data-analytics-section="hume_special"
       >
         <HumeSpecialSection perfumes={homepagePerfumes} />
+      </div>
+      <div
+        style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }}
+        data-analytics-section="occasions"
+      >
+        <HomeOccasionSection perfumes={homepagePerfumes} />
       </div>
       <div
         style={{ contentVisibility: "auto", containIntrinsicSize: "980px" }}

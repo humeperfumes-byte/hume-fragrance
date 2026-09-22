@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { ChevronRight, CreditCard, ShieldCheck, ShoppingBag, X } from "lucide-react";
 import ImageWithFallback from "@/components/ImageWithFallback";
 import { formatINR } from "@/lib/currency";
+import { useCart } from "@/context/CartContext";
 import {
   PAYMENT_RECOVERY_EVENT,
   PAYMENT_RECOVERY_MODE_KEY,
@@ -17,6 +18,7 @@ import {
 export default function PaymentRecoveryPrompt() {
   const router = useRouter();
   const pathname = usePathname();
+  const { isCartOpen } = useCart();
   const [recovery, setRecovery] = useState<PaymentRecovery | null>(null);
   const [open, setOpen] = useState(false);
   const [badgeHiddenUntilRefresh, setBadgeHiddenUntilRefresh] = useState(false);
@@ -72,6 +74,7 @@ export default function PaymentRecoveryPrompt() {
 
   if (
     !recovery ||
+    isCartOpen ||
     pathname.startsWith("/admin") ||
     pathname === "/checkout" ||
     pathname.startsWith("/order-success") ||

@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { AlertTriangle, Check, Clock3, ExternalLink, Eye, EyeOff, FlaskConical, MoreHorizontal, PackageX, Pencil, Plus, Search, Sparkles, Star, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ProductFormSheet } from "./ProductFormSheet";
+import { OccasionManagerModal } from "./OccasionManagerModal";
 
 export function ProductsTable({
   initialProducts,
@@ -21,12 +22,14 @@ export function ProductsTable({
 }) {
   const [products, setProducts] = useState(initialProducts);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isOccasionModalOpen, setIsOccasionModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [kitOutOfStock, setKitOutOfStock] = useState(initialKitOutOfStock);
   const [kitSaving, setKitSaving] = useState(false);
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [genderFilter, setGenderFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const router = useRouter();
 
@@ -53,13 +56,14 @@ export function ProductsTable({
       const matchesQuery = !normalizedQuery || [product.name, product.id, product.inspiration, product.inspirationBrand]
         .some((value) => value.toLowerCase().includes(normalizedQuery));
       const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
+      const matchesGender = genderFilter === "all" || (product.gender || "").toLowerCase() === genderFilter.toLowerCase();
       const matchesStatus = statusFilter === "all"
         || (statusFilter === "public" && product.visibility === "public")
         || (statusFilter === "seo_only" && product.visibility === "seo_only")
         || (statusFilter === "sold_out" && badges.soldOut)
         || (statusFilter === "limited_stock" && badges.limitedStock)
         || (statusFilter === "best_seller" && badges.bestSeller);
-      return matchesQuery && matchesCategory && matchesStatus;
+      return matchesQuery && matchesCategory && matchesGender && matchesStatus;
     });
 
     return filtered.sort((a, b) => {
@@ -207,22 +211,30 @@ export function ProductsTable({
           </div>
         </div>
         <div className="flex flex-wrap justify-end gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => window.open("/kit-pack", "_blank")}
-          className="rounded-xl"
-        >
-          15 ml kit
-        </Button>
-        <Button onClick={openCreateForm} className="rounded-xl">
-          <Plus className="mr-2 h-4 w-4" /> Add Product
-        </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsOccasionModalOpen(true)}
+            className="rounded-xl border-amber-500/40 text-amber-300 hover:bg-amber-500/10 hover:text-amber-200"
+          >
+            <Sparkles className="mr-2 h-4 w-4 text-amber-400" /> Occasions
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => window.open("/kit-pack", "_blank")}
+            className="rounded-xl"
+          >
+            15 ml kit
+          </Button>
+          <Button onClick={openCreateForm} className="rounded-xl">
+            <Plus className="mr-2 h-4 w-4" /> Add Product
+          </Button>
         </div>
       </div>
 
       <div className="rounded-2xl border border-white/[0.085] bg-[#18181b] p-3">
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_180px_180px_180px]">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[minmax(200px,1fr)_150px_150px_150px_150px]">
           <label className="relative block">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
             <input
@@ -235,6 +247,12 @@ export function ProductsTable({
           <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} aria-label="Filter by category" className="h-11 rounded-xl border border-white/10 bg-[#202024] px-3 text-sm text-white/70 outline-none focus:border-[#c5a9ff]/45">
             <option value="all">All categories</option>
             {categories.map((category) => <option key={category} value={category}>{category}</option>)}
+          </select>
+          <select value={genderFilter} onChange={(event) => setGenderFilter(event.target.value)} aria-label="Filter by gender" className="h-11 rounded-xl border border-white/10 bg-[#202024] px-3 text-sm text-white/70 outline-none focus:border-[#c5a9ff]/45">
+            <option value="all">All genders</option>
+            <option value="Men">Men</option>
+            <option value="Women">Women</option>
+            <option value="Unisex">Unisex</option>
           </select>
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter by status" className="h-11 rounded-xl border border-white/10 bg-[#202024] px-3 text-sm text-white/70 outline-none focus:border-[#c5a9ff]/45">
             <option value="all">All statuses</option>
@@ -405,6 +423,16 @@ export function ProductsTable({
           }
           router.refresh();
         }} 
+      />
+
+      <OccasionManagerModal
+        isOpen={isOccasionModalOpen}
+        onClose={() => setIsOccasionModalOpen(false)}
+        allProducts={products}
+        onProductsUpdated={(updatedProducts) => {
+          setProducts(updatedProducts);
+          router.refresh();
+        }}
       />
     </div>
   );

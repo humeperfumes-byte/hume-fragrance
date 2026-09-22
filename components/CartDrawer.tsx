@@ -43,6 +43,8 @@ import {
   DISCOVERY_SET_SAMPLE_COUNT,
   isDiscoverySetCartItem,
 } from "@/lib/discovery-set";
+import { coupons as fallbackCoupons } from "@/data/coupons";
+import { clearPaymentRecovery } from "@/lib/payment-recovery";
 
 interface Coupon {
   id: string;
@@ -195,8 +197,12 @@ const CartDrawer = () => {
   const firstGiftThreshold = settings.giftOneThreshold;
   const secondGiftThreshold = settings.giftTwoThreshold;
 
-  const [visibleCoupons, setVisibleCoupons] = useState<Coupon[]>([]);
-  const [allCoupons, setAllCoupons] = useState<Coupon[]>([]);
+  const [visibleCoupons, setVisibleCoupons] = useState<Coupon[]>(() =>
+    fallbackCoupons.filter((c) => c.displayInCart && c.active),
+  );
+  const [allCoupons, setAllCoupons] = useState<Coupon[]>(
+    () => fallbackCoupons,
+  );
   const [appliedCouponCode, setAppliedCouponCode] = useState<string | null>(
     null,
   );
@@ -675,7 +681,14 @@ const CartDrawer = () => {
       return;
     }
 
-    const coupon = allCoupons.find((c) => c.code.toUpperCase() === code);
+    let coupon = allCoupons.find((c) => c.code.toUpperCase() === code);
+    if (!coupon) {
+      coupon = fallbackCoupons.find((c) => c.code.toUpperCase() === code);
+      if (coupon) {
+        setAllCoupons((prev) => [...prev, coupon!]);
+      }
+    }
+
     if (!coupon) {
       toast({
         title: "Invalid coupon",
@@ -714,6 +727,7 @@ const CartDrawer = () => {
     setIsCartOpen(false);
     showNavigationLoadingToast("Opening checkout");
     if (typeof window !== "undefined") {
+      clearPaymentRecovery(window.localStorage);
       window.location.href = "/checkout";
     } else {
       router.push("/checkout");
@@ -1092,8 +1106,7 @@ const CartDrawer = () => {
               )}
             </section>
 
-            {(allCoupons.length > 0 || appliedCoupon) && (
-              <section className="mt-5 overflow-hidden border border-[#d8d0c8] bg-[#fbf7fb] text-black shadow-[0_12px_34px_rgba(24,18,14,0.04)]">
+            <section className="mt-5 overflow-hidden border border-[#d8d0c8] bg-[#fbf7fb] text-black shadow-[0_12px_34px_rgba(24,18,14,0.04)]">
                 {appliedCoupon ? (
                   <div className="border-b border-[#e4dde2] p-4">
                     <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4">
@@ -1236,7 +1249,6 @@ const CartDrawer = () => {
                   </div>
                 )}
               </section>
-            )}
 
             <section className="mt-5">
               <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-black/45">
@@ -1343,14 +1355,64 @@ const CartDrawer = () => {
             )}
           </div>
 
-          <Button
-            onClick={handleContinueCheckout}
-            disabled={isEmptyCart}
-            className="mt-4 h-12 w-full rounded-none bg-black text-sm font-semibold text-white hover:bg-black/85"
-          >
-            Checkout
-            <ArrowRight className="h-4 w-4" />
-          </Button>
+          <div className="relative mt-4 overflow-hidden rounded-full p-[1.5px] shadow-[0_14px_36px_rgba(0,0,0,0.5)]">
+            {/* Revolving Border Beam */}
+            {!isEmptyCart && (
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 3,
+                  ease: "linear",
+                }}
+                className="pointer-events-none absolute -inset-[300%] origin-center bg-[conic-gradient(from_0deg,transparent_0_300deg,rgba(255,255,255,0.95)_340deg,rgba(255,255,255,1)_360deg)]"
+              />
+            )}
+
+            <motion.button
+              type="button"
+              onClick={handleContinueCheckout}
+              disabled={isEmptyCart}
+              whileHover={{ scale: isEmptyCart ? 1 : 1.015 }}
+              whileTap={{ scale: isEmptyCart ? 1 : 0.98 }}
+              className="group relative flex h-13 w-full items-center justify-center gap-2.5 overflow-hidden rounded-full bg-black px-6 text-sm font-semibold tracking-[0.14em] text-white transition-all duration-300 disabled:opacity-50"
+            >
+              {/* Surface Light Sweep */}
+              {!isEmptyCart && (
+                <motion.div
+                  initial={{ x: "-120%" }}
+                  animate={{ x: "220%" }}
+                  transition={{
+                    repeat: Infinity,
+                    duration: 2.2,
+                    ease: "easeInOut",
+                    repeatDelay: 0.6,
+                  }}
+                  className="pointer-events-none absolute inset-y-0 w-32 -skew-x-12 bg-gradient-to-r from-transparent via-white/25 to-transparent"
+                />
+              )}
+
+              {/* Label */}
+              <span className="relative z-10 flex items-center gap-2 font-medium text-white/90 group-hover:text-white">
+                <Sparkles className="h-4 w-4 text-white/70 group-hover:text-white" />
+                <span>Checkout</span>
+              </span>
+
+              {/* Arrow */}
+              <span className="relative z-10 flex items-center font-medium text-white">
+                <motion.span
+                  animate={{ x: [0, 4, 0] }}
+                  transition={{
+                    duration: 1,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                >
+                  <ArrowRight className="h-4.5 w-4.5 text-white/80 group-hover:text-white" />
+                </motion.span>
+              </span>
+            </motion.button>
+          </div>
         </footer>
     </>
   );

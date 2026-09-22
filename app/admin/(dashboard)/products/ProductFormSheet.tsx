@@ -157,6 +157,15 @@ const badgeOptions = [
   ["recommendedSample", "Recommend in Discovery Set"],
 ] as const;
 
+const RECOMMENDED_OCCASIONS = [
+  "Date Night",
+  "College / School",
+  "GYM / Sports",
+  "Office / Daily Wear",
+  "Night Out",
+  "First Impression",
+] as const;
+
 type BadgeKey = (typeof badgeOptions)[number][0];
 
 const inputClassName =
@@ -448,6 +457,20 @@ export function ProductFormSheet({
 
   const handleCheckedChange = (id: BadgeKey, checked: boolean) => {
     setForm((current) => ({ ...current, [id]: checked }));
+  };
+
+  const toggleOccasionPill = (occasion: string) => {
+    const current = csvToArray(form.occasionCsv);
+    const exists = current.some(
+      (item) => item.toLowerCase() === occasion.toLowerCase(),
+    );
+    const next = exists
+      ? current.filter((item) => item.toLowerCase() !== occasion.toLowerCase())
+      : [...current, occasion];
+    setForm((curr) => ({
+      ...curr,
+      occasionCsv: uniqueValues(next).join(", "),
+    }));
   };
 
   const updateProductImages = (imageUrls: string[]) => {
@@ -1131,7 +1154,11 @@ export function ProductFormSheet({
                         className={inputClassName}
                       />
                     </Field>
-                    <Field htmlFor="occasionCsv" label="Occasions">
+                    <Field
+                      htmlFor="occasionCsv"
+                      label="Occasions"
+                      helper="Click quick tags below to toggle or type comma-separated values"
+                    >
                       <Input
                         id="occasionCsv"
                         value={form.occasionCsv}
@@ -1139,6 +1166,29 @@ export function ProductFormSheet({
                         placeholder="Daily Wear, Party"
                         className={inputClassName}
                       />
+                      <div className="mt-2.5 flex flex-wrap gap-1.5">
+                        {RECOMMENDED_OCCASIONS.map((occ) => {
+                          const active = csvToArray(form.occasionCsv).some(
+                            (o) => o.toLowerCase() === occ.toLowerCase(),
+                          );
+                          return (
+                            <button
+                              key={occ}
+                              type="button"
+                              onClick={() => toggleOccasionPill(occ)}
+                              className={cn(
+                                "flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition",
+                                active
+                                  ? "border-[#c9b3ff]/40 bg-[#c9b3ff]/20 text-[#e6deff]"
+                                  : "border-white/[0.08] bg-white/[0.03] text-white/50 hover:border-white/20 hover:text-white",
+                              )}
+                            >
+                              {active ? <Check className="h-3 w-3 text-[#c9b3ff]" /> : null}
+                              {occ}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </Field>
                   </div>
                 </FormSection>
