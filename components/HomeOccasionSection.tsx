@@ -7,6 +7,7 @@ import { ChevronRight } from "lucide-react";
 import type { HomepagePerfumeCardData } from "@/types/homepage";
 import { OCCASIONS_LIST, getOccasionIcon, type OccasionCardConfig } from "@/data/occasions";
 import { GenderToggleSwitch } from "@/components/GenderToggleSwitch";
+import { withCloudinaryTransforms } from "@/lib/cloudinary";
 
 export { OCCASIONS_LIST, type OccasionCardConfig };
 
@@ -61,8 +62,10 @@ export default function HomeOccasionSection({
                   {occ.bgImage ? (
                     <>
                       <img
-                        src={occ.bgImage}
+                        src={withCloudinaryTransforms(occ.bgImage, { width: 480 })}
                         alt={occ.occasionTitle}
+                        loading="lazy"
+                        decoding="async"
                         className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-85 transition-transform duration-500 group-hover:scale-105"
                       />
                       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20" />

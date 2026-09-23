@@ -70,7 +70,7 @@ const PerfumeCard = ({
   const blurDataURL =
     "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iNDIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjQyIiBmaWxsPSIjZWVlY2VjIi8+PC9zdmc+";
   const cardImage = withCloudinaryTransforms(image, {
-    width: upgradeImage ? 1200 : 720,
+    width: upgradeImage ? 640 : 420,
   });
   const displayPrice = formatINR(price);
   const isPriorityCard = prioritizeImage ?? index === 0;
@@ -193,8 +193,8 @@ const PerfumeCard = ({
               alt={name}
               width={400}
               height={533}
-              sizes="(max-width: 640px) 90vw, (max-width: 1200px) 33vw, 25vw"
-              quality={upgradeImage ? 92 : 75}
+              sizes="(max-width: 640px) 50vw, (max-width: 1200px) 33vw, 25vw"
+              quality={60}
               priority={isPriorityCard}
               fetchPriority={isPriorityCard ? "high" : "auto"}
               className="w-full aspect-[3/4] object-cover transition-transform duration-700 md:group-hover:scale-105"
