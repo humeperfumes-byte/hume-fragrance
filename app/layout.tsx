@@ -15,14 +15,12 @@ import { SITE_URL } from "@/lib/site";
 const geist = Geist({
   subsets: ["latin"],
   variable: "--font-sans",
-  weight: ["300", "400", "500", "600", "700", "800"],
   display: "swap",
 });
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
   variable: "--font-serif",
-  weight: ["300", "400", "500", "600"],
   style: ["normal", "italic"],
   display: "swap",
 });
@@ -30,7 +28,6 @@ const cormorant = Cormorant_Garamond({
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
-  weight: ["300", "400", "500", "700", "800"],
   display: "swap",
 });
 
