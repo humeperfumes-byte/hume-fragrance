@@ -20,7 +20,6 @@ import {
   type OccasionCardConfig,
 } from "@/data/occasions";
 import { GenderToggleSwitch } from "@/components/GenderToggleSwitch";
-import { withCloudinaryTransforms } from "@/lib/cloudinary";
 
 interface ProductData {
   id: string;
@@ -168,10 +167,8 @@ function UnifiedOccasionsInnerContent({
                 {occ.bgImage ? (
                   <>
                     <img
-                      src={withCloudinaryTransforms(occ.bgImage, { width: 480 })}
+                      src={occ.bgImage}
                       alt={occ.occasionTitle}
-                      loading="lazy"
-                      decoding="async"
                       className={`pointer-events-none absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 ${
                         isSelected ? "opacity-90" : "opacity-80"
                       }`}
@@ -225,10 +222,8 @@ function UnifiedOccasionsInnerContent({
           {activeOccasion.bgImage && (
             <>
               <img
-                src={withCloudinaryTransforms(activeOccasion.bgImage, { width: 800 })}
+                src={activeOccasion.bgImage}
                 alt={activeOccasion.occasionTitle}
-                loading="lazy"
-                decoding="async"
                 className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-30 mix-blend-overlay"
               />
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/30" />
