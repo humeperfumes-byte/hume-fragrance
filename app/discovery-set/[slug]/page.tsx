@@ -27,23 +27,18 @@ import { Playfair_Display, Inter, Cormorant_Garamond } from "next/font/google";
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-discovery-sans",
-  weight: ["300", "400", "500", "600", "700", "800"],
   display: "swap",
 });
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-discovery-serif",
-  weight: ["400", "500", "600", "700", "800", "900"],
-  style: ["normal", "italic"],
   display: "swap",
 });
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
   variable: "--font-discovery-cormorant",
-  weight: ["300", "400", "500", "600"],
-  style: ["normal", "italic"],
   display: "swap",
 });
 
