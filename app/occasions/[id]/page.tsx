@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -104,10 +105,18 @@ export default async function OccasionPage({ params }: OccasionPageProps) {
     <main className="min-h-screen bg-background text-foreground selection:bg-[#c9b3ff]/30 selection:text-white">
       <Header />
 
-      <UnifiedOccasionsClientView
-        products={formattedProducts}
-        initialSelectedSlug={occasion.slug}
-      />
+      <Suspense
+        fallback={
+          <div className="min-h-screen pt-24 pb-20 flex items-center justify-center text-center">
+            <p className="text-sm text-muted-foreground">Loading occasion...</p>
+          </div>
+        }
+      >
+        <UnifiedOccasionsClientView
+          products={formattedProducts}
+          initialSelectedSlug={occasion.slug}
+        />
+      </Suspense>
 
       <Footer />
     </main>

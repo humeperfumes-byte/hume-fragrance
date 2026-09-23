@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -51,7 +51,7 @@ interface UnifiedOccasionsClientViewProps {
   initialSelectedSlug?: string;
 }
 
-export default function UnifiedOccasionsClientView({
+function UnifiedOccasionsInnerContent({
   products,
   initialSelectedSlug = "date-night",
 }: UnifiedOccasionsClientViewProps) {
@@ -339,5 +339,21 @@ export default function UnifiedOccasionsClientView({
         )}
       </div>
     </div>
+  );
+}
+
+export default function UnifiedOccasionsClientView(
+  props: UnifiedOccasionsClientViewProps,
+) {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen pt-24 pb-20 flex items-center justify-center text-center">
+          <p className="text-sm text-muted-foreground">Loading scent guide...</p>
+        </div>
+      }
+    >
+      <UnifiedOccasionsInnerContent {...props} />
+    </Suspense>
   );
 }
