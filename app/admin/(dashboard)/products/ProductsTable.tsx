@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertTriangle, Check, Clock3, ExternalLink, Eye, EyeOff, FlaskConical, MoreHorizontal, PackageX, Pencil, Plus, Search, Sparkles, Star, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { ProductFormSheet } from "./ProductFormSheet";
 import { OccasionManagerModal } from "./OccasionManagerModal";
 
@@ -298,12 +299,12 @@ export function ProductsTable({
               <article key={product.id} className="group overflow-hidden rounded-[24px] border border-white/[0.085] bg-[#18181b] shadow-[inset_0_1px_rgba(255,255,255,.035),0_16px_45px_rgba(0,0,0,.12)] transition duration-300 hover:-translate-y-1 hover:border-[#c5a9ff]/25 hover:shadow-[inset_0_1px_rgba(255,255,255,.05),0_24px_60px_rgba(0,0,0,.28)]">
                 <div className="relative aspect-square overflow-hidden bg-[radial-gradient(circle_at_50%_25%,rgba(255,255,255,.08),transparent_38%),#111113]">
                   {product.images?.[0] ? (
-                    <Image
-                      src={product.images[0]}
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={withCloudinaryTransforms(product.images[0])}
                       alt={product.name}
-                      fill
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, (max-width: 1536px) 25vw, 20vw"
-                      className="object-cover transition duration-700 group-hover:scale-[1.035]"
+                      loading="lazy"
+                      className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.035]"
                     />
                   ) : (
                     <div className="flex h-full w-full flex-col items-center justify-center text-white/20">

@@ -13,6 +13,7 @@ import { CheckCircle2, Clock3, Copy, ExternalLink, History, MessageCircle, Packa
 import { buildPublicTrackingUrl } from "@/lib/tracking-url";
 import { displayPhoneNumber } from "@/lib/phone";
 import { toast } from "@/hooks/use-toast";
+import { withCloudinaryTransforms } from "@/lib/cloudinary";
 
 export function formatINR(amount: number | string): string {
   return new Intl.NumberFormat("en-IN", {
@@ -1441,7 +1442,7 @@ export function OrdersTable({
                                 {!item.sampleSelections?.length && !item.kitSelections?.length && !item.isGift ? (
                                   <div className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[82px_minmax(0,1fr)] sm:gap-4">
                                     <button type="button" disabled={!item.image && !productOptions.find((product) => product.id === item.id)?.images?.[0]} onClick={() => { const url = item.image || productOptions.find((product) => product.id === item.id)?.images?.[0]; if (url) setPreviewImage({ url, name: item.name }); }} className="group/image relative h-[72px] w-[72px] overflow-hidden rounded-xl border border-[#c5a9ff]/15 bg-[#c5a9ff]/[0.055] shadow-[inset_0_1px_rgba(255,255,255,.04)] transition hover:border-[#c5a9ff]/45 hover:shadow-[0_0_20px_rgba(197,169,255,.12)] disabled:cursor-default sm:h-[82px] sm:w-[82px]" aria-label={`View larger image of ${item.name}`}>
-                                      {item.image || productOptions.find((product) => product.id === item.id)?.images?.[0] ? <Image src={item.image || productOptions.find((product) => product.id === item.id)!.images[0]} alt={item.name} fill sizes="82px" className="object-cover transition duration-300 group-hover/image:scale-105" /> : <div className="flex h-full w-full items-center justify-center text-[9px] font-bold uppercase tracking-wider text-[#d8c8ff]/35">No image</div>}
+                                      {item.image || productOptions.find((product) => product.id === item.id)?.images?.[0] ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={withCloudinaryTransforms(item.image || productOptions.find((product) => product.id === item.id)!.images[0])} alt={item.name} loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover/image:scale-105" /> : <div className="flex h-full w-full items-center justify-center text-[9px] font-bold uppercase tracking-wider text-[#d8c8ff]/35">No image</div>}
                                       {(item.image || productOptions.find((product) => product.id === item.id)?.images?.[0]) ? <span className="absolute inset-x-1.5 bottom-1.5 rounded-md bg-black/65 px-1 py-0.5 text-[7px] font-bold uppercase tracking-wider text-white/70 opacity-0 backdrop-blur-sm transition group-hover/image:opacity-100">View</span> : null}
                                     </button>
                                     <div className="min-w-0">
@@ -1668,7 +1669,8 @@ export function OrdersTable({
         <div role="dialog" aria-modal="true" aria-label={`${previewImage.name} image preview`} className="pointer-events-auto fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4 backdrop-blur-md" onClick={() => setPreviewImage(null)}>
           <div className="relative w-full max-w-3xl" onClick={(event) => event.stopPropagation()}>
             <div className="relative aspect-square max-h-[82vh] w-full overflow-hidden rounded-3xl border border-white/15 bg-[#111113] shadow-[0_30px_100px_rgba(0,0,0,.7)]">
-              <Image src={previewImage.url} alt={previewImage.name} fill sizes="(max-width: 768px) 100vw, 768px" className="object-contain" priority />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={withCloudinaryTransforms(previewImage.url)} alt={previewImage.name} className="h-full w-full object-contain" />
             </div>
             <div className="mt-3 flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#19191c] px-4 py-3">
               <p className="truncate text-sm font-semibold text-white">{previewImage.name}</p>
