@@ -21,9 +21,6 @@ const nextConfig: NextConfig = {
         : false,
   },
   images: {
-    dangerouslyAllowSVG: true,
-    contentDispositionType: "inline",
-    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 2678400,
     qualities: [55, 60, 75, 92],
