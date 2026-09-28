@@ -27,13 +27,22 @@ export default async function Footer() {
     });
   });
 
-  const categoryLinks = Array.from(categoryMap.entries())
-    .map(([, label]) => ({
-      href: `/shop?filter=nature&value=${encodeURIComponent(label)}`,
-      label: `${label} Fragrances`,
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label))
-    .slice(0, 8);
+  const seenHrefs = new Set<string>();
+  const categoryLinks: Array<{ href: string; label: string }> = [];
+  Array.from(categoryMap.values()).forEach((label) => {
+    const cleanLabel = label.trim();
+    const href = `/shop?filter=nature&value=${encodeURIComponent(cleanLabel)}`;
+    if (!seenHrefs.has(href)) {
+      seenHrefs.add(href);
+      categoryLinks.push({
+        href,
+        label: `${cleanLabel} Fragrances`,
+      });
+    }
+  });
+
+  categoryLinks.sort((a, b) => a.label.localeCompare(b.label));
+  const displayCategoryLinks = categoryLinks.slice(0, 8);
 
   const shopLinks = [
     { href: "/shop", label: "Shop All Perfumes" },
@@ -157,8 +166,8 @@ export default async function Footer() {
           <div>
             <h4 className="text-caption mb-5">Categories</h4>
             <nav className="flex flex-col gap-2.5">
-              {categoryLinks.map((link) => (
-                <Link key={link.href} href={link.href} className="text-body opacity-70 hover:opacity-100 transition-opacity">
+              {displayCategoryLinks.map((link, idx) => (
+                <Link key={`${link.href}-${idx}`} href={link.href} className="text-body opacity-70 hover:opacity-100 transition-opacity">
                   {link.label}
                 </Link>
               ))}
