@@ -8,23 +8,22 @@ export function withCloudinaryTransforms(
   url: string,
   { width }: CloudinaryTransformOptions = {}
 ): string {
-  if (!url || !url.includes("res.cloudinary.com") || !url.includes("/image/upload/")) {
-    return url;
+  if (!url) return url;
+  const cleanUrl = url.trim().replace(/[\r\n\t]+/g, "");
+  if (!cleanUrl.includes("res.cloudinary.com") || !cleanUrl.includes("/image/upload/")) {
+    return cleanUrl;
   }
 
   const transforms = width ? `${BASE_TRANSFORMS},w_${width}` : BASE_TRANSFORMS;
   const marker = "/image/upload/";
 
-  if (url.includes(`${marker}${transforms}/`)) {
-    return url;
-  }
+  const [prefix, rest] = cleanUrl.split(marker);
+  if (!prefix || !rest) return cleanUrl;
 
-  const [prefix, suffix] = url.split(marker);
-  if (!prefix || !suffix) return url;
+  const versionOrPathIndex = rest.search(/(?:v\d+\/|[a-zA-Z0-9_-]+\.[a-zA-Z0-9]+)/);
+  const cleanSuffix = versionOrPathIndex !== -1 ? rest.slice(versionOrPathIndex) : rest;
 
-  // If URL already has transform segment, we prepend our baseline transforms
-  // so delivery optimization is always enforced.
-  return `${prefix}${marker}${transforms}/${suffix}`;
+  return `${prefix}${marker}${transforms}/${cleanSuffix}`;
 }
 
 export function getCloudinaryPublicIdFromUrl(imageUrl: string) {
