@@ -4,7 +4,7 @@ import { products, reviews, productCategories } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { requireAdminToken } from "@/lib/admin-auth";
-import { revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 const imageUrlSchema = z
   .array(
@@ -213,7 +213,14 @@ export async function PUT(
       console.error("Failed to sync product_categories:", error);
     }
 
-    revalidateTag("products", "max");
+    try {
+      revalidateTag("products", "max");
+      revalidateTag(`product:${id}`, "max");
+      revalidatePath("/", "layout");
+      revalidatePath(`/product/${id}`, "page");
+    } catch (err) {
+      console.warn("Revalidation warning:", err);
+    }
 
     let mappedCategoryIds: string[] = [updatedProduct.categoryId];
     try {
@@ -273,7 +280,12 @@ export async function DELETE(
       );
     }
 
-    revalidateTag("products", "max");
+    try {
+      revalidateTag("products", "max");
+      revalidatePath("/", "layout");
+    } catch (err) {
+      console.warn("Revalidation warning:", err);
+    }
 
     return NextResponse.json({ message: "Product deleted successfully" });
   } catch (error) {

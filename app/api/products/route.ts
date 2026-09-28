@@ -6,7 +6,7 @@ import { products, productCategories } from "@/db/schema";
 import { z } from "zod";
 import { requireAdminToken } from "@/lib/admin-auth";
 import { getAllProducts, getAllPublicProducts } from "@/lib/db/products";
-import { revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 const imageUrlSchema = z
   .array(
@@ -147,7 +147,12 @@ export async function POST(request: NextRequest) {
       console.error("Failed to save product_categories rows:", error);
     }
 
-    revalidateTag("products", "max");
+    try {
+      revalidateTag("products", "max");
+      revalidatePath("/", "layout");
+    } catch (err) {
+      console.warn("Revalidation warning:", err);
+    }
 
     return NextResponse.json(
       {
