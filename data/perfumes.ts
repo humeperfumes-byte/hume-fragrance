@@ -145,7 +145,7 @@ export const perfumes: PerfumeData[] = [
     categoryId: "fresh",
     gender: "Men",
     images: [p1, p2, p3, p4],
-    price: 45.0,
+    price: 799,
     description:
       "A bold reinterpretation of the iconic masculine freshness. Raw, noble, and undeniably magnetic with an irresistible blend of spicy bergamot and warm amber.",
     seoDescription:
@@ -184,7 +184,7 @@ export const perfumes: PerfumeData[] = [
     categoryId: "woody",
     gender: "Men",
     images: [p2, p1, p4, p3],
-    price: 48.0,
+    price: 799,
     description:
       "An intensely seductive fragrance that captures the essence of modern masculinity. Rich iris and warm woods create an unforgettable signature.",
     seoDescription:
@@ -223,7 +223,7 @@ export const perfumes: PerfumeData[] = [
     categoryId: "fresh",
     gender: "Men",
     images: [p3, p4, p1, p2],
-    price: 42.0,
+    price: 799,
     description:
       "Dynamic and invigorating, this fragrance embodies athletic elegance. A perfect balance of freshness and sensuality for the active gentleman.",
     seoDescription:
@@ -261,7 +261,7 @@ export const perfumes: PerfumeData[] = [
     categoryId: "fresh",
     gender: "Men",
     images: [p4, p3, p2, p1],
-    price: 44.0,
+    price: 799,
     description:
       "A contemporary aromatic fougère with an urban twist. Boldly unconventional yet irresistibly sophisticated for the modern rebel.",
     seoDescription:
@@ -299,7 +299,7 @@ export const perfumes: PerfumeData[] = [
     categoryId: "woody",
     gender: "Unisex",
     images: [p1, p3, p2, p4],
-    price: 46.0,
+    price: 799,
     description:
       "A deeply personal fragrance celebrating authenticity and self-expression. Elegant orange blossom meets powerful woody notes in perfect harmony.",
     seoDescription:
@@ -337,7 +337,7 @@ export const perfumes: PerfumeData[] = [
     categoryId: "fresh",
     gender: "Men",
     images: [p2, p4, p1, p3],
-    price: 44.0,
+    price: 799,
     description:
       "An intensely fresh and powerful fragrance for the generation that rewrites the rules. Bold yet refined with an addictive aromatic signature.",
     seoDescription:
@@ -375,7 +375,7 @@ export const perfumes: PerfumeData[] = [
     categoryId: "oud",
     gender: "Unisex",
     images: [p3, p1, p4, p2],
-    price: 58.0,
+    price: 799,
     description:
       "A masterpiece of oriental luxury. Rare oud wood meets exotic spices in a composition of unparalleled sophistication and depth.",
     seoDescription:
@@ -414,7 +414,7 @@ export const perfumes: PerfumeData[] = [
     categoryId: "oriental",
     gender: "Unisex",
     images: [p3, p1, p4, p2],
-    price: 58.0,
+    price: 799,
     description:
       "An intense journey into the depths of oud and rose. Dark, smoky, and luxurious — a bold statement fragrance crafted for those who command presence.",
     seoDescription:
@@ -452,7 +452,7 @@ export const perfumes: PerfumeData[] = [
     categoryId: "fresh",
     gender: "Men",
     images: [p4, p2, p1, p3],
-    price: 54.0,
+    price: 799,
     description:
       "Bright citrus blended with black tea and ambroxan creates a clean, uplifting, and modern signature scent full of energy and refinement.",
     seoDescription:
@@ -488,7 +488,7 @@ export const perfumes: PerfumeData[] = [
     categoryId: "leather",
     gender: "Unisex",
     images: [p1, p3, p2, p4],
-    price: 56.0,
+    price: 799,
     description:
       "Raw leather wrapped in soft florals and warm amber. A bold yet refined scent that captures the spirit of freedom and sophistication.",
     seoDescription:
@@ -525,7 +525,7 @@ export const perfumes: PerfumeData[] = [
     categoryId: "spicy",
     gender: "Men",
     images: [p2, p4, p1, p3],
-    price: 50.0,
+    price: 799,
     description:
       "An explosive blend of fiery spices and warm tobacco balanced with smooth vanilla. Powerful, seductive, and unforgettable.",
     seoDescription:
@@ -561,7 +561,7 @@ export const perfumes: PerfumeData[] = [
     categoryId: "woody",
     gender: "Men",
     images: [p3, p2, p4, p1],
-    price: 49.0,
+    price: 799,
     description:
       "A vibrant contrast of fresh citrus and warm vanilla woods. Passionate, confident, and designed for the modern romantic.",
     seoDescription:
@@ -597,7 +597,7 @@ export const perfumes: PerfumeData[] = [
     categoryId: "fresh",
     gender: "Men",
     images: [p4, p1, p3, p2],
-    price: 48.0,
+    price: 799,
     description:
       "A deep marine freshness fused with aromatic herbs and mineral amber. Clean, masculine, and effortlessly sophisticated.",
     seoDescription:
@@ -636,7 +636,7 @@ export const perfumes: PerfumeData[] = [
     categoryId: "woody",
     gender: "Men",
     images: [p1, p4, p3, p2],
-    price: 48.0,
+    price: 799,
     description:
       "The epitome of modern masculine elegance. A harmonious blend of fresh citrus, aromatic mint, and sensual woods that defies convention.",
     seoDescription:
@@ -674,7 +674,7 @@ export const perfumes: PerfumeData[] = [
     categoryId: "fresh",
     gender: "Men",
     images: [p2, p3, p4, p1],
-    price: 52.0,
+    price: 799,
     description:
       "A legendary fragrance celebrating strength, power, and success. Bold pineapple and birch create an iconic signature of the accomplished man.",
     seoDescription:
@@ -716,7 +716,7 @@ export const perfumes: PerfumeData[] = [
     categoryId: "woody",
     gender: "Men",
     images: [p2, p1, p4, p3],
-    price: 54.0,
+    price: 799,
     description:
       "A bold aromatic-woody composition with citrus, spice, and warm woods inspired by Creed Viking.",
     seoDescription:
@@ -753,7 +753,7 @@ export const perfumes: PerfumeData[] = [
     categoryId: "woody",
     gender: "Men",
     images: [p1, p2, p3, p4],
-    price: 56.0,
+    price: 799,
     description:
       "A unique combo profile blending Tam Dao style creamy sandalwood with the clean aromatic edge of Dunhill Icon.",
     seoDescription:
@@ -790,7 +790,7 @@ export const perfumes: PerfumeData[] = [
     categoryId: "fresh",
     gender: "Unisex",
     images: [p4, p3, p1, p2],
-    price: 53.0,
+    price: 799,
     description:
       "A clean woody-fresh scent inspired by Byredo Gypsy Water with citrus sparkle, soft woods, and light incense warmth.",
     seoDescription:
@@ -825,7 +825,7 @@ export const perfumes: PerfumeData[] = [
     categoryId: "sweet",
     gender: "Men",
     images: [p2, p4, p1, p3],
-    price: 55.0,
+    price: 799,
     description:
       "A sensual sweet-amber profile inspired by Born in Roma Intense, blending warm vanilla with rich aromatic depth.",
     seoDescription:
@@ -860,7 +860,7 @@ export const perfumes: PerfumeData[] = [
     categoryId: "sweet",
     gender: "Men",
     images: [p1, p3, p4, p2],
-    price: 54.0,
+    price: 799,
     description:
       "A rich sweet-spicy fragrance inspired by Stronger With You Intensely with warm toffee, cinnamon, and amber woods.",
     seoDescription:
