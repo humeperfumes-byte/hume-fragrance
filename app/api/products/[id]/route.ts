@@ -7,7 +7,12 @@ import { requireAdminToken } from "@/lib/admin-auth";
 import { revalidateTag } from "next/cache";
 
 const imageUrlSchema = z
-  .array(z.string().trim().url())
+  .array(
+    z.string().trim().refine(
+      (val) => val.length > 0 && (val.startsWith("/") || val.startsWith("http://") || val.startsWith("https://")),
+      { message: "Must be a valid URL or path" }
+    )
+  )
   .min(1, "At least one image URL is required");
 
 const productSchema = z.object({
@@ -15,7 +20,14 @@ const productSchema = z.object({
   inspiration: z.string().optional(),
   inspirationBrand: z.string().optional(),
   woreBy: z.string().optional().nullable(),
-  woreByImageUrl: z.string().trim().url().optional(),
+  woreByImageUrl: z
+    .string()
+    .trim()
+    .refine(
+      (val) => !val || val.startsWith("/") || val.startsWith("http://") || val.startsWith("https://"),
+      { message: "Must be a valid URL or path" }
+    )
+    .optional(),
   category: z.string().optional(),
   categoryId: z.string().optional(),
   categoryIds: z.array(z.string()).optional(),

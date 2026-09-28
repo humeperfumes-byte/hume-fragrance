@@ -9,7 +9,12 @@ import { getAllProducts, getAllPublicProducts } from "@/lib/db/products";
 import { revalidateTag } from "next/cache";
 
 const imageUrlSchema = z
-  .array(z.string().trim().url())
+  .array(
+    z.string().trim().refine(
+      (val) => val.length > 0 && (val.startsWith("/") || val.startsWith("http://") || val.startsWith("https://")),
+      { message: "Must be a valid URL or path" }
+    )
+  )
   .min(1, "At least one image URL is required");
 const defaultCelebImage = "https://placehold.co/600x600?text=Celeb";
 
