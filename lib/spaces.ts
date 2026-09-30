@@ -1,12 +1,16 @@
 export type SpacePage = {
   slug: string;
-  kind: "collection" | "industry" | "service";
+  kind: "collection" | "industry" | "service" | "seo";
   eyebrow: string;
   title: string;
+  metaTitle?: string;
+  metaDescription?: string;
   summary: string;
   answer: string;
+  keyTakeaways?: string[];
+  contentSections?: { heading: string; body: string }[];
   recommendations: { title: string; text: string }[];
-  faqs: { question: string; answer: string }[];
+  faqs: { question: string; answer: string; body?: string }[];
 };
 
 export type SpacesProductCategory = "reed-diffuser" | "room-freshener" | "scent-machine" | "fragrance-oil";
@@ -61,40 +65,6 @@ export const SPACES_PRODUCTS: SpacesProduct[] = [
     roomSuitability: ["Bedside Tables", "Powder Rooms", "Wardrobes", "Desks"],
   },
   {
-    id: "hume-signature-reed-diffuser-100ml",
-    name: "HUME Signature Reed Diffuser",
-    category: "reed-diffuser",
-    categoryLabel: "Reed Diffuser",
-    subtitle: "A considered vessel for daily living spaces",
-    description: "A longer-lasting reed diffuser that lends a measured signature to bedrooms, foyers and compact lounges.",
-    price: 1299,
-    originalPrice: 1599,
-    size: "100ml",
-    coverage: "Up to 250 sq ft",
-    image: "/images/spaces/decorative-diffuser.png",
-    notes: "Australian Sandalwood · Tuscan Iris · Amber & Cedar",
-    mood: "Composed, continuous atmosphere",
-    badges: { bestSeller: true, featured: true },
-    roomSuitability: ["Bedrooms", "Foyers", "Living Rooms", "Guest Suites"],
-  },
-  {
-    id: "hume-smart-aroma-diffuser",
-    name: "HUME Ambient Aroma Diffuser",
-    category: "scent-machine",
-    categoryLabel: "Aroma Diffuser",
-    subtitle: "Warm glowing ceramic & teakwood mist diffuser",
-    description: "Silent ambient scent diffuser with soft LED mood illumination and continuous mist diffusion.",
-    price: 2499,
-    originalPrice: 3299,
-    size: "300ml",
-    coverage: "Up to 600 sq ft",
-    image: "/images/spaces/aroma-diffuser.png",
-    notes: "Top: Italian Bergamot · Heart: White Tea & Neroli · Base: Pale Cedar",
-    mood: "Warm & relaxing ambiance",
-    badges: { newLaunch: true, featured: true },
-    roomSuitability: ["Bedrooms", "Spa Rooms", "Lounges", "Home Offices"],
-  },
-  {
     id: "hume-commercial-scent-machine-pro",
     name: "HUME Commercial Cold-Air Scent Machine",
     category: "scent-machine",
@@ -118,8 +88,8 @@ export const SPACES_PRODUCTS: SpacesProduct[] = [
     categoryLabel: "Scent Machine",
     subtitle: "App-controlled cold-air micro-nebulizer",
     description: "Commercial-grade waterless nebulizing diffuser for hotel lobbies, showrooms & luxury boutiques.",
-    price: 4999,
-    originalPrice: 6999,
+    price: 8990,
+    originalPrice: 11990,
     size: "500ml Capacity",
     coverage: "Up to 1,500 sq ft",
     image: "/images/spaces/commercial-diffuser.png",
@@ -170,8 +140,8 @@ export const SPACE_PAGES: SpacePage[] = [
   },
   {
     slug: "reed-diffusers", kind: "collection", eyebrow: "Passive scenting", title: "Reed diffusers, composed as objects",
-    summary: "Two considered formats for a quiet, continuous signature in the rooms you inhabit most.",
-    answer: "Choose 50ml for a smaller, personal corner and 100ml when you want fragrance to hold a bedroom, entry or compact living space.",
+    summary: "A compact 50ml format for a quiet, continuous signature in the intimate rooms you inhabit most.",
+    answer: "The 50ml format is designed for personal corners, bedside tables, and intimate living spaces.",
     recommendations: [
       { title: "Start lightly", text: "Begin with four reeds. Add more only once the fragrance has settled into the room." },
       { title: "Place with intention", text: "Choose a stable surface with gentle air movement, away from direct sun and AC vents." },
@@ -250,5 +220,78 @@ industries.forEach(([slug, title, summary, answer, zones]) => SPACE_PAGES.push({
   recommendations: zones.map((zone, index) => ({ title: `${String(index + 1).padStart(2, "0")} · ${zone}`, text: "System, fragrance and intensity selected after reviewing volume, airflow and the desired experience." })),
   faqs: commonFaqs,
 }));
+
+import { HOTEL_SEO_PAGES } from "./hotel-seo-pages";
+import { GYM_SEO_PAGES } from "./gym-seo-pages";
+import { OFFICE_SEO_PAGES } from "./office-seo-pages";
+import { AEO_PAGES } from "./aeo-pages";
+
+HOTEL_SEO_PAGES.forEach((p) => {
+  SPACE_PAGES.push({
+    slug: p.slug,
+    kind: "seo",
+    eyebrow: p.eyebrow,
+    title: p.title,
+    metaTitle: p.metaTitle,
+    metaDescription: p.metaDescription,
+    summary: p.summary,
+    answer: p.answer,
+    keyTakeaways: p.keyTakeaways,
+    contentSections: p.contentSections,
+    recommendations: p.recommendations,
+    faqs: p.faqs,
+  });
+});
+
+GYM_SEO_PAGES.forEach((p) => {
+  SPACE_PAGES.push({
+    slug: p.slug,
+    kind: "seo",
+    eyebrow: p.eyebrow,
+    title: p.title,
+    metaTitle: p.metaTitle,
+    metaDescription: p.metaDescription,
+    summary: p.summary,
+    answer: p.answer,
+    keyTakeaways: p.keyTakeaways,
+    contentSections: p.contentSections,
+    recommendations: p.recommendations,
+    faqs: p.faqs,
+  });
+});
+
+OFFICE_SEO_PAGES.forEach((p) => {
+  SPACE_PAGES.push({
+    slug: p.slug,
+    kind: "seo",
+    eyebrow: p.eyebrow,
+    title: p.title,
+    metaTitle: p.metaTitle,
+    metaDescription: p.metaDescription,
+    summary: p.summary,
+    answer: p.answer,
+    keyTakeaways: p.keyTakeaways,
+    contentSections: p.contentSections,
+    recommendations: p.recommendations,
+    faqs: p.faqs,
+  });
+});
+
+AEO_PAGES.forEach((p) => {
+  SPACE_PAGES.push({
+    slug: p.slug,
+    kind: "seo",
+    eyebrow: p.eyebrow,
+    title: p.title,
+    metaTitle: p.metaTitle,
+    metaDescription: p.metaDescription,
+    summary: p.summary,
+    answer: p.answer,
+    keyTakeaways: p.keyTakeaways,
+    contentSections: p.contentSections,
+    recommendations: p.recommendations,
+    faqs: p.faqs,
+  });
+});
 
 export const getSpacePage = (slug: string) => SPACE_PAGES.find((page) => page.slug === slug);

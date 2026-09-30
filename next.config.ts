@@ -143,8 +143,76 @@ const nextConfig: NextConfig = {
       source: `/${slug}`,
       destination: `/discovery-set/${slug}`,
     }));
+    const hotelSeoSlugs = [
+      "commercial-fragrance-for-hotels",
+      "hotel-scenting-solutions",
+      "hotel-lobby-fragrance",
+      "hotel-fragrance-diffuser",
+      "best-fragrance-for-hotel-lobby",
+      "hotel-scent-marketing",
+      "resort-scenting-solutions",
+      "resort-lobby-fragrance",
+      "signature-scent-for-hotels",
+      "how-to-make-a-hotel-smell-luxurious",
+    ];
+    const hotelRewrites = hotelSeoSlugs.map((slug) => ({
+      source: `/${slug}`,
+      destination: `/spaces/${slug}`,
+    }));
+    const gymSeoSlugs = [
+      "gym-fragrance-diffuser",
+      "best-fragrance-for-gym",
+      "gym-scenting-machine",
+      "commercial-diffuser-for-gym",
+      "how-to-make-a-gym-smell-good",
+      "fragrance-machine-for-2000-sq-ft-gym",
+      "gym-air-freshener-commercial",
+      "best-scent-for-fitness-center",
+    ];
+    const gymRewrites = gymSeoSlugs.map((slug) => ({
+      source: `/${slug}`,
+      destination: `/spaces/${slug}`,
+    }));
+    const officeSeoSlugs = [
+      "office-fragrance-machine",
+      "commercial-scenting-for-offices",
+      "office-scenting-solutions",
+      "best-fragrance-for-office-reception",
+      "office-lobby-fragrance",
+      "commercial-air-freshener-for-office",
+      "signature-scent-for-office",
+      "i-want-to-make-my-office-smell-good",
+      "how-to-make-my-whole-office-smell-good",
+      "luxury-fragrance-for-office",
+    ];
+    const officeRewrites = officeSeoSlugs.map((slug) => ({
+      source: `/${slug}`,
+      destination: `/spaces/${slug}`,
+    }));
+    const aeoSlugs = [
+      "what-is-commercial-scenting",
+      "how-does-a-commercial-fragrance-diffuser-work",
+      "how-do-hotels-make-their-lobbies-smell-good",
+      "what-fragrance-diffuser-is-best-for-a-hotel",
+      "what-is-hvac-scenting",
+      "how-much-does-commercial-scenting-cost",
+      "how-often-does-a-commercial-diffuser-need-fragrance-oil",
+      "what-is-the-best-diffuser-for-a-2000-sq-ft-space",
+      "what-fragrance-is-best-for-a-gym",
+      "what-is-the-difference-between-a-water-diffuser-and-an-oil-diffuser",
+      "how-do-businesses-create-a-signature-scent",
+      "is-scent-marketing-effective-for-businesses",
+    ];
+    const aeoRewrites = aeoSlugs.map((slug) => ({
+      source: `/${slug}`,
+      destination: `/spaces/${slug}`,
+    }));
     return [
       ...seoRewrites,
+      ...hotelRewrites,
+      ...gymRewrites,
+      ...officeRewrites,
+      ...aeoRewrites,
       {
         source: "/bill",
         destination: "/invoice",

@@ -27,8 +27,8 @@ export const gymZones = [
     title: "Locker Rooms & Washrooms",
     subtitle: "Continuous, high-intensity ambient fresh air for enclosed high-humidity zones.",
     coverage: "Up to 600 sq ft per unit",
-    recommendedMachine: "HUME Ambient Aroma Diffuser",
-    recommendedImage: "/images/spaces/aroma-diffuser.png",
+    recommendedMachine: "HUME Commercial Cold-Air Scent Machine",
+    recommendedImage: "/images/spaces/commercial-scent-machine-pro.jpg",
     scentNotes: "Peppermint · White Tea · Bergamot",
     benefits: [
       "Constant air refresh in high-humidity shower and locker areas",

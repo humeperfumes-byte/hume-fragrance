@@ -6,6 +6,10 @@ import { JsonLd } from "@/components/JsonLd";
 import { SpacesCta, SpacesShell } from "@/components/spaces/SpacesShell";
 import SpacesProductCard from "@/components/spaces/SpacesProductCard";
 import { SPACE_SCENTS, SPACES_PRODUCTS } from "@/lib/spaces";
+import { HOTEL_SEO_PAGES } from "@/lib/hotel-seo-pages";
+import { GYM_SEO_PAGES } from "@/lib/gym-seo-pages";
+import { OFFICE_SEO_PAGES } from "@/lib/office-seo-pages";
+import { AEO_PAGES } from "@/lib/aeo-pages";
 import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -156,10 +160,10 @@ export default function SpacesPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {[
               {
-                title: "Aroma Diffusers",
-                description: "For homes, offices & small spaces.",
+                title: "Cold-Air Scent Machines",
+                description: "Waterless micro-nebulizers for homes & offices.",
                 href: "/spaces/scent-machines",
-                image: "/images/spaces/aroma-diffuser.png",
+                image: "/images/spaces/commercial-scent-machine-pro.jpg",
               },
               {
                 title: "Commercial Diffusers",
@@ -489,7 +493,7 @@ export default function SpacesPage() {
             50+ Fragrance Oils for Every Machine &amp; Space
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-xs sm:text-sm leading-relaxed text-white/75 font-light">
-            Every HUME scent machine, aroma diffuser, and HVAC system can be customized with your choice from our collection of nearly 50 signature spatial fragrance oil refills.
+            Every HUME scent machine, cold-air nebulizer, and HVAC system can be customized with your choice from our collection of nearly 50 signature spatial fragrance oil refills.
           </p>
         </div>
       </section>
@@ -514,6 +518,158 @@ export default function SpacesPage() {
               <ArrowUpRight size={14} className="text-black/50" />
             </Link>
           ))}
+        </div>
+      </section>
+
+      {/* Hotel & Hospitality Scenting Guides (SEO Topic Cluster) */}
+      <section className="bg-[#FAF7F2] px-5 py-20 md:px-10 md:py-28 border-t border-black/10">
+        <div className="mx-auto max-w-7xl">
+          <div className="text-center mb-12">
+            <p className="text-[10px] uppercase tracking-[0.35em] text-[#8C7654] font-semibold">Specialized Industry Guides</p>
+            <h2 className="mt-3 font-serif text-4xl font-light md:text-6xl text-[#171713]">
+              Hotel &amp; Resort Scent Architecture
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-xs sm:text-sm text-black/60 font-light leading-relaxed">
+              Explore in-depth technical guides on hotel lobby scenting, commercial cold-air micro-nebulizers, sensory branding, and custom olfactory identity design.
+            </p>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {HOTEL_SEO_PAGES.map((guide) => (
+              <Link
+                key={guide.slug}
+                href={`/spaces/${guide.slug}`}
+                className="group flex flex-col justify-between rounded-2xl border border-black/10 bg-white p-6 md:p-8 shadow-[0_4px_20px_rgba(0,0,0,0.03)] transition-all hover:border-[#8C7654] hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)]"
+              >
+                <div>
+                  <span className="text-[9px] uppercase tracking-[0.2em] text-[#8C7654] font-semibold">{guide.eyebrow}</span>
+                  <h3 className="mt-2 font-serif text-xl text-[#171713] group-hover:text-[#8C7654] transition-colors leading-snug">
+                    {guide.title}
+                  </h3>
+                  <p className="mt-3 text-xs text-black/65 line-clamp-3 leading-relaxed">
+                    {guide.summary}
+                  </p>
+                </div>
+                <div className="mt-6 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-[#171713] group-hover:text-[#8C7654]">
+                  Read Guide <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Gym & Fitness Scenting Guides (SEO Topic Cluster) */}
+      <section className="bg-white px-5 py-20 md:px-10 md:py-28 border-t border-black/10">
+        <div className="mx-auto max-w-7xl">
+          <div className="text-center mb-12">
+            <p className="text-[10px] uppercase tracking-[0.35em] text-[#8C7654] font-semibold">Fitness &amp; Wellness Protocols</p>
+            <h2 className="mt-3 font-serif text-4xl font-light md:text-6xl text-[#171713]">
+              Gym &amp; Fitness Scent Architecture
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-xs sm:text-sm text-black/60 font-light leading-relaxed">
+              Engineering high-output cold-air micro-nebulization, active odor neutralization, and invigorating sensory zones for commercial gyms, pilates studios, and boutique athletic clubs.
+            </p>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {GYM_SEO_PAGES.map((guide) => (
+              <Link
+                key={guide.slug}
+                href={`/spaces/${guide.slug}`}
+                className="group flex flex-col justify-between rounded-2xl border border-black/10 bg-[#FAF8F5] p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all hover:border-[#8C7654] hover:bg-white hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)]"
+              >
+                <div>
+                  <span className="text-[9px] uppercase tracking-[0.2em] text-[#8C7654] font-semibold">{guide.eyebrow}</span>
+                  <h3 className="mt-2 font-serif text-lg text-[#171713] group-hover:text-[#8C7654] transition-colors leading-snug">
+                    {guide.title}
+                  </h3>
+                  <p className="mt-3 text-xs text-black/65 line-clamp-3 leading-relaxed">
+                    {guide.summary}
+                  </p>
+                </div>
+                <div className="mt-5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-[#171713] group-hover:text-[#8C7654]">
+                  Read Guide <ArrowRight size={13} className="transition-transform group-hover:translate-x-1" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Corporate & Office Scenting Guides (SEO Topic Cluster) */}
+      <section className="bg-[#FAF7F2] px-5 py-20 md:px-10 md:py-28 border-t border-black/10">
+        <div className="mx-auto max-w-7xl">
+          <div className="text-center mb-12">
+            <p className="text-[10px] uppercase tracking-[0.35em] text-[#8C7654] font-semibold">Corporate Workplace Protocols</p>
+            <h2 className="mt-3 font-serif text-4xl font-light md:text-6xl text-[#171713]">
+              Office &amp; Workplace Scent Architecture
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-xs sm:text-sm text-black/60 font-light leading-relaxed">
+              Explore specialized corporate scenting guides covering central HVAC integration, reception first impressions, cognitive focus research, and hypoallergenic air quality standards.
+            </p>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {OFFICE_SEO_PAGES.map((guide) => (
+              <Link
+                key={guide.slug}
+                href={`/spaces/${guide.slug}`}
+                className="group flex flex-col justify-between rounded-2xl border border-black/10 bg-white p-6 md:p-8 shadow-[0_4px_20px_rgba(0,0,0,0.03)] transition-all hover:border-[#8C7654] hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)]"
+              >
+                <div>
+                  <span className="text-[9px] uppercase tracking-[0.2em] text-[#8C7654] font-semibold">{guide.eyebrow}</span>
+                  <h3 className="mt-2 font-serif text-xl text-[#171713] group-hover:text-[#8C7654] transition-colors leading-snug">
+                    {guide.title}
+                  </h3>
+                  <p className="mt-3 text-xs text-black/65 line-clamp-3 leading-relaxed">
+                    {guide.summary}
+                  </p>
+                </div>
+                <div className="mt-6 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-[#171713] group-hover:text-[#8C7654]">
+                  Read Guide <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Scent Architecture & Engineering Answers (AEO Knowledge Base) */}
+      <section className="bg-white px-5 py-20 md:px-10 md:py-28 border-t border-black/10">
+        <div className="mx-auto max-w-7xl">
+          <div className="text-center mb-12">
+            <p className="text-[10px] uppercase tracking-[0.35em] text-[#8C7654] font-semibold">Engineering &amp; Science Answers</p>
+            <h2 className="mt-3 font-serif text-4xl font-light md:text-6xl text-[#171713]">
+              Scent Architecture Knowledge Base
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-xs sm:text-sm text-black/60 font-light leading-relaxed">
+              Clear, data-backed answers to the most critical technical questions regarding cold-air micro-nebulization, HVAC integration, hotel scenting secrets, pricing, and olfactory ROI.
+            </p>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {AEO_PAGES.map((guide) => (
+              <Link
+                key={guide.slug}
+                href={`/spaces/${guide.slug}`}
+                className="group flex flex-col justify-between rounded-2xl border border-black/10 bg-[#FAF8F5] p-6 md:p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all hover:border-[#8C7654] hover:bg-white hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)]"
+              >
+                <div>
+                  <span className="text-[9px] uppercase tracking-[0.2em] text-[#8C7654] font-semibold">{guide.eyebrow}</span>
+                  <h3 className="mt-2 font-serif text-lg text-[#171713] group-hover:text-[#8C7654] transition-colors leading-snug">
+                    {guide.title}
+                  </h3>
+                  <p className="mt-3 text-xs text-black/65 line-clamp-3 leading-relaxed">
+                    {guide.summary}
+                  </p>
+                </div>
+                <div className="mt-6 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-[#171713] group-hover:text-[#8C7654]">
+                  Read Answer <ArrowRight size={13} className="transition-transform group-hover:translate-x-1" />
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 
