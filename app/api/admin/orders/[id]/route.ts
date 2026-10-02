@@ -7,6 +7,8 @@ import { coupons, orderEditAudits, orders, products, razorpayWebhookEvents } fro
 import { requireAdminToken } from "@/lib/admin-auth";
 import { calculateCouponDiscount } from "@/lib/cart-discounts";
 import { displayPhoneNumber } from "@/lib/phone";
+import { MANUAL_LINK_CHANNEL, readManualPayment } from "@/lib/manual-order";
+import { cancelManualLink } from "@/lib/manual-order-payment";
 
 const itemSchema = z.object({
   id: z.string().min(1), name: z.string().min(1), image: z.string().optional(), inspiration: z.string().optional(), size: z.string().optional(),
@@ -46,6 +48,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       || (input.appliedCouponCode !== undefined && input.appliedCouponCode.trim().toUpperCase() !== (current.appliedCouponCode || "").trim().toUpperCase())
       || (input.shippingFee !== undefined && money(input.shippingFee) !== money(current.shippingFee))
       || (input.manualAdjustment !== undefined && money(input.manualAdjustment) !== money(current.manualAdjustment));
+    if (current.checkoutChannel === MANUAL_LINK_CHANNEL) {
+      if (financialChange || (input.paymentMethod !== undefined && input.paymentMethod !== current.paymentMethod)) return NextResponse.json({ error: "Payment-link totals and payment mode are locked. Cancel the unpaid order and create a corrected order." }, { status: 400 });
+      const payment = readManualPayment(current.whatsappMessage);
+      if (input.status && paidStatuses.has(input.status) && (!payment || Math.round(Number(current.capturedPaymentAmount || 0) * 100) < payment.advanceMinor)) return NextResponse.json({ error: "Check Razorpay payment before processing or shipping this order" }, { status: 400 });
+      if (input.status === "cancelled" && current.status !== "cancelled") await cancelManualLink(current);
+    }
     if (financialChange && paidStatuses.has(current.status) && !input.editReason?.trim()) return NextResponse.json({ error: "A reason is required when changing a paid order" }, { status: 400 });
 
     const nextItems = input.cartSnapshot ?? current.cartSnapshot;

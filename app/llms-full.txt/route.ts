@@ -1,3 +1,4 @@
+import { PERFUME_GUIDES } from "@/lib/perfume-guides";
 import { getAllPublicProducts } from "@/lib/db/products";
 import { homeFaqItems } from "@/lib/seo";
 import { getProductPath } from "@/lib/product-route";
@@ -105,6 +106,7 @@ export async function GET() {
     lines.push(`- Size: ${product.size.toUpperCase()} EDP`);
     lines.push(`- Category: ${product.category}`);
     lines.push(`- Gender: ${product.gender}`);
+    lines.push(`- Availability: ${product.badges?.soldOut || product.badges?.comingSoon ? "Out of stock; not available to order" : "In stock"}`);
     lines.push(
       `- Rating: ${avgRating}${product.reviews.length > 0 ? ` (${product.reviews.length} reviews)` : ""}`,
     );
@@ -264,6 +266,9 @@ export async function GET() {
   lines.push(`---`);
   lines.push(`Document generated: ${now.toISOString()}`);
   lines.push(`Next regeneration: within 1 hour`);
+
+  lines.push("\n## Perfume buying guides", `Browse: ${baseUrl}/guides`, "Canonical articles use root URLs; legacy /guides/article URLs permanently redirect.");
+  for (const guide of PERFUME_GUIDES) lines.push(`- ${guide.title}: ${baseUrl}/${guide.slug}`, guide.answer);
 
   const body = lines.join("\n");
 

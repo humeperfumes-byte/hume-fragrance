@@ -6,6 +6,7 @@ import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-
 import { parseAdminTimeWindow } from "@/lib/admin-time-window";
 import { parseAdminMarket, isIndiaCheckoutSignal } from "@/lib/admin-market";
 import { PackageCheck } from "lucide-react";
+import { ManualOrderCreator } from "@/components/admin/ManualOrderCreator";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -87,6 +88,7 @@ export default async function OrdersPage({ searchParams }: AdminPageProps) {
         </div>
       </div>
 
+      {tableExists && <ManualOrderCreator products={productOptions} />}
       {!tableExists ? (
         <div className="rounded-2xl border border-dashed border-border p-12 text-center bg-card shadow-sm">
           <div className="max-w-md mx-auto space-y-4">

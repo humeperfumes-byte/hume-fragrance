@@ -1,99 +1,43 @@
 import { config } from "dotenv";
-import { resolve } from "path";
+import { mkdir, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import postgres from "postgres";
+import { NIGHT_OUT_PRODUCT as product } from "../lib/night-out";
 
-config({ path: resolve(process.cwd(), ".env.local") });
+config({ path: ".env.local", quiet: true });
+const sql = postgres(process.env.DATABASE_URL!, { max: 1, prepare: false });
+const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
-async function run() {
-  const { db } = await import("../db/index");
-  const { products } = await import("../db/schema");
-
-  console.log("Inserting NIGHT OUT...");
-  try {
-    await db.insert(products).values({
-      id: "night-out",
-      name: "NIGHT OUT",
-      inspiration: "9 PM Night Out",
-      inspirationBrand: "Afnan",
-      woreBy: "Celebrities & Nightlife Icons",
-      woreByImageUrl: "https://placehold.co/600x600?text=Celeb",
-      category: "Oriental",
-      categoryId: "oriental",
-      gender: "Unisex",
-      images: ["https://placehold.co/600x600?text=Night+Out"],
-      price: "1499.00",
-      priceCurrency: "INR",
-      description: "An electric, intoxicating fragrance designed for unforgettable evenings. Open with exotic dragon fruit, rich cognac, and crisp apple, leading to a sophisticated heart of sweet toffee, suede, and warm cardamom. The deep, seductive base of tonka bean, patchouli, and radiating ambery notes leaves an irresistible, long-lasting trail of mystery.",
-      seoDescription: "Experience NIGHT OUT by HUME — a premium Afnan 9 PM Night Out inspired clone perfume. Long-lasting, rich, and seductive scent alternative with dragon fruit, cognac, and tonka bean. Affordable luxury for a perfect night out.",
-      seoKeywords: [
-        "afnan night out clone",
-        "9 pm night out dupe",
-        "afnan inspired perfume",
-        "afnan 9pm night out alternative",
-        "night out perfume",
-        "dragon fruit cognac perfume",
-        "affordable afnan clone",
-        "best clubbing fragrance",
-      ],
-      badges: { showInDiscoverySet: true },
-      notes: {
-        top: ["Dragon Fruit", "Lavender", "Cognac", "Apple", "Bergamot"],
-        heart: ["Toffee", "Suede", "Cardamom", "Cedar", "Mahonial"],
-        base: ["Tonka Bean", "Akigalawood", "Ambrofix", "Patchouli"],
-      },
-      longevity: {
-        duration: "8-10 hours",
-        sillage: "Strong & Enveloping",
-        season: ["Autumn", "Winter", "Spring"],
-        occasion: ["Night Out", "Clubbing", "Dates", "Party"],
-      },
-      size: "50ml",
-      visibility: "seo_only",
-    }).onConflictDoUpdate({
-      target: products.id,
-      set: {
-        name: "NIGHT OUT",
-        inspiration: "9 PM Night Out",
-        inspirationBrand: "Afnan",
-        woreBy: "Celebrities & Nightlife Icons",
-        woreByImageUrl: "https://placehold.co/600x600?text=Celeb",
-        category: "Oriental",
-        categoryId: "oriental",
-        gender: "Unisex",
-        images: ["https://placehold.co/600x600?text=Night+Out"],
-        price: "1499.00",
-        priceCurrency: "INR",
-        description: "An electric, intoxicating fragrance designed for unforgettable evenings. Open with exotic dragon fruit, rich cognac, and crisp apple, leading to a sophisticated heart of sweet toffee, suede, and warm cardamom. The deep, seductive base of tonka bean, patchouli, and radiating ambery notes leaves an irresistible, long-lasting trail of mystery.",
-        seoDescription: "Experience NIGHT OUT by HUME — a premium Afnan 9 PM Night Out inspired clone perfume. Long-lasting, rich, and seductive scent alternative with dragon fruit, cognac, and tonka bean. Affordable luxury for a perfect night out.",
-        seoKeywords: [
-          "afnan night out clone",
-          "9 pm night out dupe",
-          "afnan inspired perfume",
-          "afnan 9pm night out alternative",
-          "night out perfume",
-          "dragon fruit cognac perfume",
-          "affordable afnan clone",
-          "best clubbing fragrance",
-        ],
-        badges: { showInDiscoverySet: true },
-        notes: {
-          top: ["Dragon Fruit", "Lavender", "Cognac", "Apple", "Bergamot"],
-          heart: ["Toffee", "Suede", "Cardamom", "Cedar", "Mahonial"],
-          base: ["Tonka Bean", "Akigalawood", "Ambrofix", "Patchouli"],
-        },
-        longevity: {
-          duration: "8-10 hours",
-          sillage: "Strong & Enveloping",
-          season: ["Autumn", "Winter", "Spring"],
-          occasion: ["Night Out", "Clubbing", "Dates", "Party"],
-        },
-        size: "50ml",
-        visibility: "seo_only",
-      }
-    });
-    console.log("NIGHT OUT inserted/updated successfully!");
-  } catch (err) {
-    console.error("Failed to insert product:", err);
-  }
+async function main() {
+  await sql.begin(async (transaction) => {
+    const tx = transaction as unknown as typeof sql;
+    const before = await tx`select * from products order by id for update`;
+    if (before.some((row) => row.id === product.id)) {
+      console.log("Night Out already exists; no changes made. Edit its images in admin.");
+      return;
+    }
+    await mkdir("output/catalog-backups", { recursive: true });
+    const backup = `output/catalog-backups/before-night-out-${Date.now()}.json`;
+    await writeFile(backup, JSON.stringify(before, null, 2));
+    await tx`insert into products (id,name,inspiration,inspiration_brand,wore_by_image_url,
+      category,category_id,gender,images,price,price_currency,description,seo_description,
+      seo_keywords,badges,notes,longevity,size,visibility)
+      values (${product.id},${product.name},${product.inspiration},${product.inspirationBrand},
+      ${"/images/logo.png"},${product.category},${product.categoryId},${product.gender},
+      ${tx.json(product.images)},${String(product.price)},${"INR"},${product.description},
+      ${product.seoDescription},${tx.json(product.seoKeywords)},${tx.json(product.badges!)},
+      ${tx.json(product.notes)},${tx.json(product.longevity)},${product.size},${product.visibility!})`;
+    for (const category of [{ id: "fruity", label: "Fruity" }, { id: "spicy", label: "Spicy" }, { id: "amber", label: "Amber" }]) {
+      await tx`insert into product_categories (product_id,category_id,category_label)
+        values (${product.id},${category.id},${category.label})`;
+    }
+    const after = await tx`select * from products order by id`;
+    if (hash(before) !== hash(after.filter((row) => row.id !== product.id))) {
+      throw new Error("An existing product changed; rolling back");
+    }
+    console.log(JSON.stringify({ insertedId: product.id, soldOut: true, price: product.price,
+      size: product.size, protectedProductsUnchanged: before.length, backup }));
+  });
 }
-
-run();
+main().catch((error) => { console.error("Night Out insert failed:", error.code ?? error.message); process.exitCode = 1; })
+  .finally(() => sql.end());

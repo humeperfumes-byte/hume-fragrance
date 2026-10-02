@@ -4,6 +4,7 @@ import { eq, inArray, sql } from "drizzle-orm";
 import { perfumes as catalogueFallback, type PerfumeData } from "@/data/perfumes";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getProductSeoSlug } from "@/lib/product-route";
+import { PRODUCT_ID_ALIASES, PRODUCT_ROUTE_ALIASES } from "@/lib/product-route-aliases";
 import {
   DISCOVERY_SET_DESCRIPTION,
   DISCOVERY_SET_IMAGES,
@@ -350,9 +351,12 @@ export const getProductByRouteSegment = cache(async (segment: string): Promise<P
   // SEO routes use generated slugs rather than database IDs. Resolve them from
   // the shared catalogue cache instead of issuing a failed ID query first.
   const all = await getAllProducts();
-  return all.find(
-    (product) => product.id === segment || getProductSeoSlug(product) === segment,
-  ) ?? null;
+  const lookupId = PRODUCT_ID_ALIASES[segment] ?? PRODUCT_ROUTE_ALIASES[segment] ?? segment;
+  const match = all.find((product) => product.id === lookupId)
+    ?? all.find((product) => getProductSeoSlug(product) === segment);
+  if (!match) return null;
+  const canonicalId = PRODUCT_ID_ALIASES[match.id];
+  return canonicalId ? all.find((product) => product.id === canonicalId) ?? match : match;
 });
 
 // Get products by category

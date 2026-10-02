@@ -2,6 +2,7 @@ import { getAllPublicProducts } from "@/lib/db/products";
 import { isDiscoverySetProductId } from "@/lib/discovery-set";
 import { getProductPath } from "@/lib/product-route";
 import { SITE_URL, siteUrlForBase } from "@/lib/site";
+import { NIGHT_OUT_IMAGE_PLACEHOLDER } from "@/lib/night-out";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,8 @@ export async function GET() {
   const items = products
     // Google requires an availability date for preorder feed items. Re-add after launch timing is confirmed.
     .filter((product) => !isDiscoverySetProductId(product.id))
+    // Await real photographs for restored products using a temporary brand mark.
+    .filter((product) => !["night-out", "pacific-chill", "althair", "angels-share", "hugo-boss", "most-wanted", "her", "jadore", "eros", "1-million", "la-nuit", "tobacco-vanille", "noir-extreme", "bright-crystal", "goddess", "invictus"].includes(product.id) || product.images.some((image) => image !== NIGHT_OUT_IMAGE_PLACEHOLDER))
     .map((product) => {
       const link = siteUrlForBase(SITE_URL, getProductPath(product));
       const image = absoluteUrl(product.images[0]);

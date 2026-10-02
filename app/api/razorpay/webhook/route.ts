@@ -26,6 +26,7 @@ const EMAIL_RECOVERY_STATUSES = new Set([
   "payment_failed",
 ]);
 const SUPPORTED_EVENTS = new Set([
+  "payment_link.paid", "payment_link.expired", "payment_link.cancelled",
   "order.paid",
   "payment.authorized",
   "payment.captured",
@@ -498,7 +499,8 @@ export async function POST(request: NextRequest) {
     const dispute = getNestedEntity(payload, "dispute");
     const settlement = getNestedEntity(payload, "settlement");
     const downtime = getNestedEntity(payload, "payment.downtime");
-    const notes = getNotes(orderEntity, payment, refund, dispute);
+    const paymentLink = getNestedEntity(payload, "payment_link");
+    const notes = getNotes(orderEntity, payment, refund, dispute, paymentLink);
     const humeOrderId = getString(notes.humeOrderId);
     const humeOrderNumber =
       getString(notes.humeOrderNumber) ?? getString(orderEntity?.receipt);
@@ -602,6 +604,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const { isManualPaymentEvent } = await import("@/lib/manual-order");
+    if (existingOrder.checkoutChannel === "manual_payment_link" && isManualPaymentEvent(event)) {
+      const { reconcileManualPayment } = await import("@/lib/manual-order-payment");
+      const result = await reconcileManualPayment(existingOrder.id);
+      return NextResponse.json({ ok: true, matched: true, event, status: result.order.status });
+    }
     const nextStatus = resolveNextStatus({
       event,
       paymentStatus,

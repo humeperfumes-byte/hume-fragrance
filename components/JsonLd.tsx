@@ -1,5 +1,3 @@
-import Script from "next/script";
-
 function getJsonLdId(json: string) {
   let hash = 0;
   for (let index = 0; index < json.length; index += 1) {
@@ -12,7 +10,7 @@ export function JsonLd({ data }: { data: Record<string, unknown> | Record<string
   const json = JSON.stringify(data).replace(/</g, "\\u003c");
 
   return (
-    <Script
+    <script
       id={getJsonLdId(json)}
       type="application/ld+json"
       dangerouslySetInnerHTML={{

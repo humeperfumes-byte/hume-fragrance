@@ -1,9 +1,11 @@
 import type { MetadataRoute } from "next";
+import { PERFUME_GUIDES, CLUSTER_UPDATED } from "@/lib/perfume-guides";
 import { getAllProducts } from "@/lib/db/products";
 import { getAllBlogPosts } from "@/lib/db/blog";
 import { getAllAccessories } from "@/lib/db/accessories";
 import { getProgrammaticSitemapEntries } from "@/lib/programmatic-seo";
 import { getProductPath } from "@/lib/product-route";
+import { PRODUCT_ID_ALIASES } from "@/lib/product-route-aliases";
 import { getFestivalSeoSlugs } from "@/lib/festival-seo";
 import { getRequestSiteUrl } from "@/lib/request-site";
 import { AI_RECOMMENDATION_PAGES } from "@/lib/ai-recommendation-pages";
@@ -23,7 +25,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]);
 
   const productEntries = products
-    .filter((product) => !isDiscoverySetProductId(product.id))
+    .filter((product) => !isDiscoverySetProductId(product.id) && !PRODUCT_ID_ALIASES[product.id])
     .map((product) => ({
       url: `${baseUrl}${getProductPath(product)}`,
       lastModified: new Date(),
@@ -46,7 +48,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   const programmaticEntries = getProgrammaticSitemapEntries(baseUrl);
-  const festivalSeoEntries = getFestivalSeoSlugs().map((slug) => ({
+  const festivalSeoEntries = getFestivalSeoSlugs().filter(slug => !PERFUME_GUIDES.some(guide => guide.slug === slug)).map((slug) => ({
     url: `${baseUrl}/${slug}`,
     lastModified: new Date(),
     changeFrequency: "monthly" as const,
@@ -289,6 +291,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.5,
     },
     ...productEntries,
+    { url: `${baseUrl}/guides`, lastModified: new Date(CLUSTER_UPDATED), changeFrequency: "monthly", priority: 0.6 },
+    ...PERFUME_GUIDES.map(guide => ({ url: `${baseUrl}/${guide.slug}`, lastModified: new Date(CLUSTER_UPDATED), changeFrequency: "monthly" as const, priority: 0.6 })),
     ...accessoryEntries,
     ...blogEntries,
     ...programmaticEntries,

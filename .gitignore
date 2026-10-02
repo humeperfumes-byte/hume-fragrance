@@ -8,6 +8,7 @@
 
 # testing
 /coverage
+/output/catalog-backups/
 
 # next.js
 /.next/

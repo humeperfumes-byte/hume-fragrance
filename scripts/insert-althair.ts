@@ -1,99 +1,43 @@
 import { config } from "dotenv";
-import { resolve } from "path";
+import { mkdir, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import postgres from "postgres";
+import { ALTHAIR_PRODUCT as product } from "../lib/althair";
 
-config({ path: resolve(process.cwd(), ".env.local") });
+config({ path: ".env.local", quiet: true });
+const sql = postgres(process.env.DATABASE_URL!, { max: 1, prepare: false });
+const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
-async function run() {
-  const { db } = await import("../db/index");
-  const { products } = await import("../db/schema");
-
-  console.log("Inserting ALTHAIR...");
-  try {
-    await db.insert(products).values({
-      id: "althair",
-      name: "ALTHAIR",
-      inspiration: "Althaïr",
-      inspirationBrand: "Parfums de Marly",
-      woreBy: "Aristocrats & Connoisseurs",
-      woreByImageUrl: "https://placehold.co/600x600?text=Celeb",
-      category: "Oriental",
-      categoryId: "oriental",
-      gender: "Men",
-      images: ["https://placehold.co/600x600?text=Althair"],
-      price: "1499.00",
-      priceCurrency: "INR",
-      description: "A majestic, modern vanilla masterpiece that strikes a perfect balance between warmth and freshness. Open with warm cinnamon, cardamom, sweet orange blossom, and bergamot. The heart is defined by a luxurious, creamy Bourbon vanilla and balsamic elemi resin. The dry down is a rich gourmand blend of praline, candied almond, guaiac wood, musk, and clean ambroxan, creating a highly sophisticated and irresistible trail.",
-      seoDescription: "Buy ALTHAIR by HUME — a premium Parfums de Marly Althaïr inspired clone perfume. Long-lasting, warm vanilla gourmand cologne alternative with cinnamon, cardamom, and praline.",
-      seoKeywords: [
-        "parfums de marly althair clone",
-        "althair dupe",
-        "parfums de marly inspired perfume",
-        "althair alternative",
-        "bourbon vanilla praline fragrance",
-        "mens warm spicy perfume",
-        "best althair clone",
-        "affordable luxury clone",
-      ],
-      badges: { showInDiscoverySet: true },
-      notes: {
-        top: ["Cinnamon", "Cardamom", "Orange Blossom", "Bergamot"],
-        heart: ["Bourbon Vanilla", "Elemi Resin", "Spicy Accords"],
-        base: ["Praline", "Guaiac Wood", "Musk", "Ambroxan", "Tonka Bean", "Candied Almond"],
-      },
-      longevity: {
-        duration: "10-12 hours",
-        sillage: "Strong & Radiant",
-        season: ["Autumn", "Winter"],
-        occasion: ["Evening Wear", "Formal Events", "Date Night", "Casual Luxury"],
-      },
-      size: "50ml",
-      visibility: "seo_only",
-    }).onConflictDoUpdate({
-      target: products.id,
-      set: {
-        name: "ALTHAIR",
-        inspiration: "Althaïr",
-        inspirationBrand: "Parfums de Marly",
-        woreBy: "Aristocrats & Connoisseurs",
-        woreByImageUrl: "https://placehold.co/600x600?text=Celeb",
-        category: "Oriental",
-        categoryId: "oriental",
-        gender: "Men",
-        images: ["https://placehold.co/600x600?text=Althair"],
-        price: "1499.00",
-        priceCurrency: "INR",
-        description: "A majestic, modern vanilla masterpiece that strikes a perfect balance between warmth and freshness. Open with warm cinnamon, cardamom, sweet orange blossom, and bergamot. The heart is defined by a luxurious, creamy Bourbon vanilla and balsamic elemi resin. The dry down is a rich gourmand blend of praline, candied almond, guaiac wood, musk, and clean ambroxan, creating a highly sophisticated and irresistible trail.",
-        seoDescription: "Buy ALTHAIR by HUME — a premium Parfums de Marly Althaïr inspired clone perfume. Long-lasting, warm vanilla gourmand cologne alternative with cinnamon, cardamom, and praline.",
-        seoKeywords: [
-          "parfums de marly althair clone",
-          "althair dupe",
-          "parfums de marly inspired perfume",
-          "althair alternative",
-          "bourbon vanilla praline fragrance",
-          "mens warm spicy perfume",
-          "best althair clone",
-          "affordable luxury clone",
-        ],
-        badges: { showInDiscoverySet: true },
-        notes: {
-          top: ["Cinnamon", "Cardamom", "Orange Blossom", "Bergamot"],
-          heart: ["Bourbon Vanilla", "Elemi Resin", "Spicy Accords"],
-          base: ["Praline", "Guaiac Wood", "Musk", "Ambroxan", "Tonka Bean", "Candied Almond"],
-        },
-        longevity: {
-          duration: "10-12 hours",
-          sillage: "Strong & Radiant",
-          season: ["Autumn", "Winter"],
-          occasion: ["Evening Wear", "Formal Events", "Date Night", "Casual Luxury"],
-        },
-        size: "50ml",
-        visibility: "seo_only",
-      }
-    });
-    console.log("ALTHAIR inserted/updated successfully!");
-  } catch (err) {
-    console.error("Failed to insert product:", err);
-  }
+async function main() {
+  await sql.begin(async (transaction) => {
+    const tx = transaction as unknown as typeof sql;
+    const before = await tx`select * from products order by id for update`;
+    if (before.some((row) => row.id === product.id)) {
+      console.log("Althair already exists; no changes made. Edit its images in admin.");
+      return;
+    }
+    await mkdir("output/catalog-backups", { recursive: true });
+    const backup = `output/catalog-backups/before-althair-${Date.now()}.json`;
+    await writeFile(backup, JSON.stringify(before, null, 2));
+    await tx`insert into products (id,name,inspiration,inspiration_brand,wore_by_image_url,
+      category,category_id,gender,images,price,price_currency,description,seo_description,
+      seo_keywords,badges,notes,longevity,size,visibility)
+      values (${product.id},${product.name},${product.inspiration},${product.inspirationBrand},
+      ${"/images/logo.png"},${product.category},${product.categoryId},${product.gender},
+      ${tx.json(product.images)},${String(product.price)},${"INR"},${product.description},
+      ${product.seoDescription},${tx.json(product.seoKeywords)},${tx.json(product.badges!)},
+      ${tx.json(product.notes)},${tx.json(product.longevity)},${product.size},${product.visibility!})`;
+    for (const category of [{ id: "vanilla", label: "Vanilla" }, { id: "amber", label: "Amber" }, { id: "woody", label: "Woody" }]) {
+      await tx`insert into product_categories (product_id,category_id,category_label)
+        values (${product.id},${category.id},${category.label})`;
+    }
+    const after = await tx`select * from products order by id`;
+    if (hash(before) !== hash(after.filter((row) => row.id !== product.id))) {
+      throw new Error("An existing product changed; rolling back");
+    }
+    console.log(JSON.stringify({ insertedId: product.id, soldOut: true, price: product.price,
+      size: product.size, protectedProductsUnchanged: before.length, backup }));
+  });
 }
-
-run();
+main().catch((error) => { console.error("Althair insert failed:", error.code ?? error.message); process.exitCode = 1; })
+  .finally(() => sql.end());

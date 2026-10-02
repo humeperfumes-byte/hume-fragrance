@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import Razorpay from "razorpay";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { orderEditAudits, orders, razorpayWebhookEvents, type Order } from "@/db/schema";
@@ -158,14 +158,17 @@ export async function reconcileOrderPayment(orderId: string, actor = "admin") {
 
 export async function reconcilePendingRazorpayOrders(limit = 50) {
   const candidates = await db.select().from(orders)
-    .where(eq(orders.checkoutChannel, "razorpay"))
+    .where(inArray(orders.checkoutChannel, ["razorpay", "manual_payment_link"]))
     .orderBy(desc(orders.createdAt))
     .limit(limit);
   const pending = candidates.filter((order) => ["payment_pending", "payment_authorized", "payment_failed"].includes(order.status));
   const results: PaymentReconciliationResult[] = [];
   for (const order of pending) {
     try {
-      results.push(await reconcileOrderPayment(order.id, "system:razorpay_reconciliation"));
+      if (order.checkoutChannel === "manual_payment_link") {
+        const { reconcileManualPayment } = await import("./manual-order-payment");
+        results.push(await reconcileManualPayment(order.id));
+      } else results.push(await reconcileOrderPayment(order.id, "system:razorpay_reconciliation"));
     } catch (error) {
       console.error("Automatic Razorpay reconciliation failed", { orderId: order.id, error });
     }

@@ -1,3 +1,5 @@
+import PerfumeGuidePage, { generateMetadata as generateGuideMetadata } from "@/components/PerfumeGuidePage";
+import { getPerfumeGuide } from "@/lib/perfume-guides";
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
@@ -631,6 +633,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { festivalSlug } = await params;
+  if (getPerfumeGuide(festivalSlug)) return generateGuideMetadata({ params: Promise.resolve({ slug: festivalSlug }) });
   const page = getFestivalSeoEntry(festivalSlug);
   if (!page) return {};
 
@@ -651,6 +654,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function FestivalSeoPage({ params }: Props) {
   const { festivalSlug } = await params;
+  if (getPerfumeGuide(festivalSlug)) return PerfumeGuidePage({ params: Promise.resolve({ slug: festivalSlug }) });
 
   if (!ALLOWED_SLUGS.has(festivalSlug)) notFound();
 

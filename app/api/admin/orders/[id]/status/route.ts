@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { orderEditAudits, orders } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAdminToken } from "@/lib/admin-auth";
+import { MANUAL_LINK_CHANNEL, readManualPayment } from "@/lib/manual-order";
+import { cancelManualLink } from "@/lib/manual-order-payment";
 
 export async function PATCH(
   req: NextRequest,
@@ -57,6 +59,11 @@ export async function PATCH(
 
     const [current] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
     if (!current) return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    if (current.checkoutChannel === MANUAL_LINK_CHANNEL) {
+      const payment = readManualPayment(current.whatsappMessage);
+      if (["payment_authorized", "processing", "packed", "shipped", "delivered"].includes(status) && (!payment || Math.round(Number(current.capturedPaymentAmount || 0) * 100) < payment.advanceMinor)) return NextResponse.json({ error: "Check Razorpay payment before processing or shipping this order" }, { status: 400 });
+      if (status === "cancelled" && current.status !== "cancelled") await cancelManualLink(current);
+    }
     const updated = await db.transaction(async (tx) => {
       const [order] = await tx.update(orders).set({ status, ...statusTimestamps, updatedAt: now }).where(eq(orders.id, orderId)).returning();
       await tx.insert(orderEditAudits).values({ id: `order-audit-${randomUUID()}`, orderId, changeType: reason ? "status_reversal" : "status", reason: typeof reason === "string" && reason.trim() ? reason.trim() : `Status changed from ${current.status} to ${status}`, actor: "admin", beforeSnapshot: current, afterSnapshot: order });

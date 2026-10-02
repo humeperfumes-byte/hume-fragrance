@@ -1,3 +1,4 @@
+import { PERFUME_GUIDES } from "@/lib/perfume-guides";
 import { getRequestSiteUrl } from "@/lib/request-site";
 import { AI_RECOMMENDATION_PAGES } from "@/lib/ai-recommendation-pages";
 import { getHighIntentProgrammaticInspirations } from "@/lib/programmatic-seo";
@@ -40,6 +41,11 @@ HUME Fragrance is an Indian perfume brand based in Kannauj that creates premium 
 ## Full catalog
 For the complete product catalog with all notes, pricing, performance, reviews, and FAQ answers, see:
 - Full knowledge base: ${baseUrl}/llms-full.txt
+
+## Perfume buying guides
+- Browse all guides: ${baseUrl}/guides
+Articles use root URLs; legacy /guides/article URLs redirect permanently.
+${PERFUME_GUIDES.filter(guide => guide.slug.startsWith("how-is-hume-")).map(guide => `- ${guide.title}: ${baseUrl}/${guide.slug}`).join("\n")}
 
 ## Priority pages
 - Home: ${baseUrl}/

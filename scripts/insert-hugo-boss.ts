@@ -1,97 +1,43 @@
 import { config } from "dotenv";
-import { resolve } from "path";
+import { mkdir, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import postgres from "postgres";
+import { HUGO_BOSS_PRODUCT as product } from "../lib/hugo-boss";
 
-config({ path: resolve(process.cwd(), ".env.local") });
+config({ path: ".env.local", quiet: true });
+const sql = postgres(process.env.DATABASE_URL!, { max: 1, prepare: false });
+const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
-async function run() {
-  const { db } = await import("../db/index");
-  const { products } = await import("../db/schema");
-
-  console.log("Inserting HUGO BOSS...");
-  try {
-    await db.insert(products).values({
-      id: "hugo-boss",
-      name: "HUGO BOSS",
-      inspiration: "Hugo Man",
-      inspirationBrand: "Hugo Boss",
-      woreBy: "Dynamic Men & Urban Pioneers",
-      woreByImageUrl: "https://placehold.co/600x600?text=Celeb",
-      category: "Fresh",
-      categoryId: "fresh",
-      gender: "Men",
-      images: ["https://placehold.co/600x600?text=Hugo+Boss"],
-      price: "1499.00",
-      priceCurrency: "INR",
-      description: "A timeless, fresh, and aromatic classic that defines clean masculinity. Open with crisp green apple, fresh mint, lavender, zesty grapefruit, and herbaceous basil. The clean aromatic heart reveals clary sage, bright geranium, carnation, and jasmine, settling into a deep, earthy base of fir needle, warm cedarwood, and patchouli. An invigorating, clean, and confident signature scent.",
-      seoDescription: "Shop HUGO BOSS by HUME — a premium Hugo Boss Hugo Man inspired clone perfume. Long-lasting, aromatic fresh green apple and mint clone fragrance for men.",
-      seoKeywords: [
-        "hugo boss clone",
-        "hugo man inspired perfume",
-        "hugo boss inspired",
-        "hugo man alternative",
-        "green apple mint perfume men",
-        "clean fresh mens fragrance",
-        "affordable luxury clone",
-      ],
-      badges: { showInDiscoverySet: true },
-      notes: {
-        top: ["Green Apple", "Mint", "Lavender", "Grapefruit", "Basil"],
-        heart: ["Sage", "Geranium", "Carnation", "Jasmine"],
-        base: ["Fir Needle", "Cedarwood", "Patchouli"],
-      },
-      longevity: {
-        duration: "7-9 hours",
-        sillage: "Moderate & Fresh",
-        season: ["Spring", "Summer"],
-        occasion: ["Daily Wear", "Office", "Gym", "Casual Outing"],
-      },
-      size: "50ml",
-      visibility: "seo_only",
-    }).onConflictDoUpdate({
-      target: products.id,
-      set: {
-        name: "HUGO BOSS",
-        inspiration: "Hugo Man",
-        inspirationBrand: "Hugo Boss",
-        woreBy: "Dynamic Men & Urban Pioneers",
-        woreByImageUrl: "https://placehold.co/600x600?text=Celeb",
-        category: "Fresh",
-        categoryId: "fresh",
-        gender: "Men",
-        images: ["https://placehold.co/600x600?text=Hugo+Boss"],
-        price: "1499.00",
-        priceCurrency: "INR",
-        description: "A timeless, fresh, and aromatic classic that defines clean masculinity. Open with crisp green apple, fresh mint, lavender, zesty grapefruit, and herbaceous basil. The clean aromatic heart reveals clary sage, bright geranium, carnation, and jasmine, settling into a deep, earthy base of fir needle, warm cedarwood, and patchouli. An invigorating, clean, and confident signature scent.",
-        seoDescription: "Shop HUGO BOSS by HUME — a premium Hugo Boss Hugo Man inspired clone perfume. Long-lasting, aromatic fresh green apple and mint clone fragrance for men.",
-        seoKeywords: [
-          "hugo boss clone",
-          "hugo man inspired perfume",
-          "hugo boss inspired",
-          "hugo man alternative",
-          "green apple mint perfume men",
-          "clean fresh mens fragrance",
-          "affordable luxury clone",
-        ],
-        badges: { showInDiscoverySet: true },
-        notes: {
-          top: ["Green Apple", "Mint", "Lavender", "Grapefruit", "Basil"],
-          heart: ["Sage", "Geranium", "Carnation", "Jasmine"],
-          base: ["Fir Needle", "Cedarwood", "Patchouli"],
-        },
-        longevity: {
-          duration: "7-9 hours",
-          sillage: "Moderate & Fresh",
-          season: ["Spring", "Summer"],
-          occasion: ["Daily Wear", "Office", "Gym", "Casual Outing"],
-        },
-        size: "50ml",
-        visibility: "seo_only",
-      }
-    });
-    console.log("HUGO BOSS inserted/updated successfully!");
-  } catch (err) {
-    console.error("Failed to insert product:", err);
-  }
+async function main() {
+  await sql.begin(async (transaction) => {
+    const tx = transaction as unknown as typeof sql;
+    const before = await tx`select * from products order by id for update`;
+    if (before.some((row) => row.id === product.id)) {
+      console.log("Hugo Boss Man already exists; no changes made. Edit its images in admin.");
+      return;
+    }
+    await mkdir("output/catalog-backups", { recursive: true });
+    const backup = `output/catalog-backups/before-hugo-boss-${Date.now()}.json`;
+    await writeFile(backup, JSON.stringify(before, null, 2));
+    await tx`insert into products (id,name,inspiration,inspiration_brand,wore_by_image_url,
+      category,category_id,gender,images,price,price_currency,description,seo_description,
+      seo_keywords,badges,notes,longevity,size,visibility)
+      values (${product.id},${product.name},${product.inspiration},${product.inspirationBrand},
+      ${"/images/logo.png"},${product.category},${product.categoryId},${product.gender},
+      ${tx.json(product.images)},${String(product.price)},${"INR"},${product.description},
+      ${product.seoDescription},${tx.json(product.seoKeywords)},${tx.json(product.badges!)},
+      ${tx.json(product.notes)},${tx.json(product.longevity)},${product.size},${product.visibility!})`;
+    for (const category of [{ id: "fresh", label: "Fresh" }, { id: "aromatic", label: "Aromatic" }, { id: "woody", label: "Woody" }]) {
+      await tx`insert into product_categories (product_id,category_id,category_label)
+        values (${product.id},${category.id},${category.label})`;
+    }
+    const after = await tx`select * from products order by id`;
+    if (hash(before) !== hash(after.filter((row) => row.id !== product.id))) {
+      throw new Error("An existing product changed; rolling back");
+    }
+    console.log(JSON.stringify({ insertedId: product.id, soldOut: true, price: product.price,
+      size: product.size, protectedProductsUnchanged: before.length, backup }));
+  });
 }
-
-run();
+main().catch((error) => { console.error("Hugo Boss Man insert failed:", error.code ?? error.message); process.exitCode = 1; })
+  .finally(() => sql.end());

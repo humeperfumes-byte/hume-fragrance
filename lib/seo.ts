@@ -1,5 +1,21 @@
 import { getProductPath } from "@/lib/product-route";
 import { SITE_URL, siteUrlForBase } from "@/lib/site";
+import { getNightOutFaqItems, NIGHT_OUT_IMAGE_PLACEHOLDER } from "@/lib/night-out";
+import { getPacificChillFaqItems } from "@/lib/pacific-chill";
+import { getAlthairFaqItems } from "@/lib/althair";
+import { getAngelsShareFaqItems } from "@/lib/angels-share";
+import { getHugoBossFaqItems } from "@/lib/hugo-boss";
+import { getMostWantedFaqItems } from "@/lib/most-wanted";
+import { getHerFaqItems } from "@/lib/her";
+import { getJadoreFaqItems } from "@/lib/jadore";
+import { getErosFaqItems } from "@/lib/eros";
+import { getOneMillionFaqItems } from "@/lib/one-million";
+import { getLaNuitFaqItems } from "@/lib/la-nuit";
+import { getTobaccoVanilleFaqItems } from "@/lib/tobacco-vanille";
+import { getNoirExtremeFaqItems } from "@/lib/noir-extreme";
+import { getBrightCrystalFaqItems } from "@/lib/bright-crystal";
+import { getGoddessFaqItems } from "@/lib/goddess";
+import { getInvictusFaqItems } from "@/lib/invictus";
 
 function getSeoProductUrl(
   product: {
@@ -151,7 +167,8 @@ export const getProductSchema = (
     "@id": `${productUrl}#product`,
     name: product.name,
     description: product.description || product.seoDescription,
-    image: productImages,
+    image: ["night-out", "pacific-chill", "althair", "angels-share", "hugo-boss", "most-wanted", "her", "jadore", "eros", "1-million", "la-nuit", "tobacco-vanille", "noir-extreme", "bright-crystal", "goddess", "invictus"].includes(product.id) && product.images.every((image) => image === NIGHT_OUT_IMAGE_PLACEHOLDER)
+      ? undefined : productImages,
     sku: `HUME-${product.id}`,
     mpn: `HUME-${product.id}`,
     brand: { "@type": "Brand", name: "HUME Fragrance" },
@@ -447,6 +464,9 @@ export const getFAQSchema = () => ({
 });
 
 type ProductFaqInput = {
+  id?: string;
+  price?: number;
+  badges?: { soldOut?: boolean };
   name: string;
   size: string;
   notes: {
@@ -458,6 +478,22 @@ type ProductFaqInput = {
 };
 
 export const getProductFaqItems = (product: ProductFaqInput) => {
+  if (product.id === "night-out") return getNightOutFaqItems(product);
+  if (product.id === "pacific-chill") return getPacificChillFaqItems(product);
+  if (product.id === "althair") return getAlthairFaqItems(product);
+  if (product.id === "angels-share") return getAngelsShareFaqItems(product);
+  if (product.id === "hugo-boss") return getHugoBossFaqItems(product);
+  if (product.id === "most-wanted") return getMostWantedFaqItems(product);
+  if (product.id === "her") return getHerFaqItems(product);
+  if (product.id === "jadore") return getJadoreFaqItems(product);
+  if (product.id === "eros") return getErosFaqItems(product);
+  if (product.id === "1-million") return getOneMillionFaqItems(product);
+  if (product.id === "la-nuit") return getLaNuitFaqItems(product);
+  if (product.id === "tobacco-vanille") return getTobaccoVanilleFaqItems(product);
+  if (product.id === "noir-extreme") return getNoirExtremeFaqItems(product);
+  if (product.id === "bright-crystal") return getBrightCrystalFaqItems(product);
+  if (product.id === "goddess") return getGoddessFaqItems(product);
+  if (product.id === "invictus") return getInvictusFaqItems(product);
   const isAquaMarine = product.name.toLowerCase().includes("aqua marine");
   const top1 = product.notes.top[0] ?? "citrus";
   const top2 = product.notes.top[1] ?? "fresh accords";

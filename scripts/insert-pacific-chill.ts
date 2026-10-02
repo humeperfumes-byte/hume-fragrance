@@ -1,97 +1,43 @@
 import { config } from "dotenv";
-import { resolve } from "path";
+import { mkdir, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import postgres from "postgres";
+import { PACIFIC_CHILL_PRODUCT as product } from "../lib/pacific-chill";
 
-config({ path: resolve(process.cwd(), ".env.local") });
+config({ path: ".env.local", quiet: true });
+const sql = postgres(process.env.DATABASE_URL!, { max: 1, prepare: false });
+const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
-async function run() {
-  const { db } = await import("../db/index");
-  const { products } = await import("../db/schema");
-
-  console.log("Inserting PACIFIC CHILL...");
-  try {
-    await db.insert(products).values({
-      id: "pacific-chill",
-      name: "PACIFIC CHILL",
-      inspiration: "Pacific Chill",
-      inspirationBrand: "Louis Vuitton",
-      woreBy: "Celebrities & Coastal Adventurers",
-      woreByImageUrl: "https://placehold.co/600x600?text=Celeb",
-      category: "Fresh",
-      categoryId: "fresh",
-      gender: "Unisex",
-      images: ["https://placehold.co/600x600?text=Pacific+Chill"],
-      price: "1499.00",
-      priceCurrency: "INR",
-      description: "A revitalizing, wellness-inspired fragrance that captures the energy of the ocean. Open with a burst of crisp blackcurrant, zesty citron, lemon, sweet orange, and refreshing mint. The heart blooms with succulent apricot, green basil, and a touch of delicate May rose, resting on a warm base of sweet fig, dates, and ambrette seed. An uplifting scent that brings coastal serenity to life.",
-      seoDescription: "Buy PACIFIC CHILL by HUME — a premium Louis Vuitton Pacific Chill inspired clone perfume. Long-lasting fresh perfume alternative with black currant, mint, and apricot. Affordable luxury unisex fragrance.",
-      seoKeywords: [
-        "louis vuitton pacific chill clone",
-        "pacific chill dupe",
-        "louis vuitton inspired perfume",
-        "pacific chill alternative",
-        "best fresh summer perfume",
-        "blackcurrant mint fragrance",
-        "affordable luxury clone",
-      ],
-      badges: { showInDiscoverySet: true },
-      notes: {
-        top: ["Black Currant", "Citron", "Mint", "Lemon", "Orange", "Coriander"],
-        heart: ["Apricot", "Basil", "Carrot Seeds", "May Rose"],
-        base: ["Fig", "Dates", "Ambrette"],
-      },
-      longevity: {
-        duration: "7-9 hours",
-        sillage: "Moderate & Refreshing",
-        season: ["Spring", "Summer"],
-        occasion: ["Daily Wear", "Sporty", "Vacation", "Casual"],
-      },
-      size: "50ml",
-      visibility: "seo_only",
-    }).onConflictDoUpdate({
-      target: products.id,
-      set: {
-        name: "PACIFIC CHILL",
-        inspiration: "Pacific Chill",
-        inspirationBrand: "Louis Vuitton",
-        woreBy: "Celebrities & Coastal Adventurers",
-        woreByImageUrl: "https://placehold.co/600x600?text=Celeb",
-        category: "Fresh",
-        categoryId: "fresh",
-        gender: "Unisex",
-        images: ["https://placehold.co/600x600?text=Pacific+Chill"],
-        price: "1499.00",
-        priceCurrency: "INR",
-        description: "A revitalizing, wellness-inspired fragrance that captures the energy of the ocean. Open with a burst of crisp blackcurrant, zesty citron, lemon, sweet orange, and refreshing mint. The heart blooms with succulent apricot, green basil, and a touch of delicate May rose, resting on a warm base of sweet fig, dates, and ambrette seed. An uplifting scent that brings coastal serenity to life.",
-        seoDescription: "Buy PACIFIC CHILL by HUME — a premium Louis Vuitton Pacific Chill inspired clone perfume. Long-lasting fresh perfume alternative with black currant, mint, and apricot. Affordable luxury unisex fragrance.",
-        seoKeywords: [
-          "louis vuitton pacific chill clone",
-          "pacific chill dupe",
-          "louis vuitton inspired perfume",
-          "pacific chill alternative",
-          "best fresh summer perfume",
-          "blackcurrant mint fragrance",
-          "affordable luxury clone",
-        ],
-        badges: { showInDiscoverySet: true },
-        notes: {
-          top: ["Black Currant", "Citron", "Mint", "Lemon", "Orange", "Coriander"],
-          heart: ["Apricot", "Basil", "Carrot Seeds", "May Rose"],
-          base: ["Fig", "Dates", "Ambrette"],
-        },
-        longevity: {
-          duration: "7-9 hours",
-          sillage: "Moderate & Refreshing",
-          season: ["Spring", "Summer"],
-          occasion: ["Daily Wear", "Sporty", "Vacation", "Casual"],
-        },
-        size: "50ml",
-        visibility: "seo_only",
-      }
-    });
-    console.log("PACIFIC CHILL inserted/updated successfully!");
-  } catch (err) {
-    console.error("Failed to insert product:", err);
-  }
+async function main() {
+  await sql.begin(async (transaction) => {
+    const tx = transaction as unknown as typeof sql;
+    const before = await tx`select * from products order by id for update`;
+    if (before.some((row) => row.id === product.id)) {
+      console.log("Pacific Chill already exists; no changes made. Edit its images in admin.");
+      return;
+    }
+    await mkdir("output/catalog-backups", { recursive: true });
+    const backup = `output/catalog-backups/before-pacific-chill-${Date.now()}.json`;
+    await writeFile(backup, JSON.stringify(before, null, 2));
+    await tx`insert into products (id,name,inspiration,inspiration_brand,wore_by_image_url,
+      category,category_id,gender,images,price,price_currency,description,seo_description,
+      seo_keywords,badges,notes,longevity,size,visibility)
+      values (${product.id},${product.name},${product.inspiration},${product.inspirationBrand},
+      ${"/images/logo.png"},${product.category},${product.categoryId},${product.gender},
+      ${tx.json(product.images)},${String(product.price)},${"INR"},${product.description},
+      ${product.seoDescription},${tx.json(product.seoKeywords)},${tx.json(product.badges!)},
+      ${tx.json(product.notes)},${tx.json(product.longevity)},${product.size},${product.visibility!})`;
+    for (const category of [{ id: "fresh", label: "Fresh" }, { id: "citrus", label: "Citrus" }, { id: "fruity", label: "Fruity" }]) {
+      await tx`insert into product_categories (product_id,category_id,category_label)
+        values (${product.id},${category.id},${category.label})`;
+    }
+    const after = await tx`select * from products order by id`;
+    if (hash(before) !== hash(after.filter((row) => row.id !== product.id))) {
+      throw new Error("An existing product changed; rolling back");
+    }
+    console.log(JSON.stringify({ insertedId: product.id, soldOut: true, price: product.price,
+      size: product.size, protectedProductsUnchanged: before.length, backup }));
+  });
 }
-
-run();
+main().catch((error) => { console.error("Pacific Chill insert failed:", error.code ?? error.message); process.exitCode = 1; })
+  .finally(() => sql.end());

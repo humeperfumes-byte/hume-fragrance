@@ -9,6 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { ManualPaymentPanel } from "@/components/admin/ManualOrderCreator";
+import { MANUAL_LINK_CHANNEL, readManualPayment } from "@/lib/manual-order";
 import { CheckCircle2, Clock3, Copy, ExternalLink, History, MessageCircle, Package, Plus, RefreshCw, ShoppingCart, Trash2, Truck, Undo2, WalletCards } from "lucide-react";
 import { buildPublicTrackingUrl } from "@/lib/tracking-url";
 import { displayPhoneNumber } from "@/lib/phone";
@@ -86,8 +88,12 @@ function isPartialCodOrder(order: Pick<Order, "paymentMethod">) {
   return Boolean(order.paymentMethod?.includes("Prepaid") && order.paymentMethod.includes("Cash on Delivery"));
 }
 
-function getPartialCodBreakdown(order: Pick<Order, "paymentMethod" | "grandTotal" | "status">) {
+function getPartialCodBreakdown(order: Order) {
   if (!isPartialCodOrder(order)) return null;
+  if (order.checkoutChannel === MANUAL_LINK_CHANNEL) {
+    const payment = readManualPayment(order.whatsappMessage);
+    if (payment) return { total: payment.totalMinor / 100, prepaid: payment.advanceMinor / 100, codBalance: payment.codMinor / 100, prepaidPercent: 20, codPercent: 80, advanceReceived: Math.round(Number(order.capturedPaymentAmount || 0) * 100) >= payment.advanceMinor, codCollected: false };
+  }
   const total = toOrderMoney(order.grandTotal);
   const savedPercent = Number(order.paymentMethod?.match(/(\d+)%\s*Prepaid/i)?.[1] ?? 20);
   const prepaidPercent = Number.isFinite(savedPercent) ? savedPercent : 20;
@@ -968,6 +974,7 @@ export function OrdersTable({
               </SheetHeader>
 
               <div className="space-y-5 px-4 py-5 sm:px-7 sm:py-7">
+                <ManualPaymentPanel order={selectedOrder} onUpdate={(order) => { setSelectedOrder(order); setOrderRows(rows => rows.map(row => row.id === order.id ? order : row)); }} />
                 {(() => {
                   const partialCod = getPartialCodBreakdown(selectedOrder);
                   if (!partialCod) return null;
