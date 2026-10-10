@@ -1,5 +1,8 @@
 "use client";
+import { CustomerLinkButton } from "@/components/admin/CustomerLinkButton";
 
+
+import { buildOrderSuccessMessage } from "@/lib/order-confirmation-message";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { format } from "date-fns";
@@ -9,9 +12,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { OrderProductPicker } from "@/components/admin/OrderProductPicker";
+import { DISCOVERY_SET_CART_ITEM_PREFIX, DISCOVERY_SET_IMAGES, isDiscoverySetProductId } from "@/lib/discovery-set";
 import { ManualPaymentPanel } from "@/components/admin/ManualOrderCreator";
 import { MANUAL_LINK_CHANNEL, readManualPayment } from "@/lib/manual-order";
-import { CheckCircle2, Clock3, Copy, ExternalLink, History, MessageCircle, Package, Plus, RefreshCw, ShoppingCart, Trash2, Truck, Undo2, WalletCards } from "lucide-react";
+import { CheckCircle2, Clock3, Copy, ExternalLink, History, MessageCircle, Package, RefreshCw, ShoppingCart, Trash2, Truck, Undo2, WalletCards } from "lucide-react";
 import { buildPublicTrackingUrl } from "@/lib/tracking-url";
 import { displayPhoneNumber } from "@/lib/phone";
 import { toast } from "@/hooks/use-toast";
@@ -158,14 +163,6 @@ function CopyableOrderValue({
   );
 }
 
-function getProductOptionLabel(product: Product) {
-  const status = product.badges?.soldOut
-    ? " - Sold out"
-    : product.badges?.comingSoon
-      ? " - Coming soon"
-      : "";
-  return `${product.name} - Inspired by ${product.inspiration} - ${formatINR(product.price)}${status}`;
-}
 
 function getOrderRowTone(status: string) {
   switch (status) {
@@ -235,29 +232,6 @@ function buildDeliveredMessage(order: Order) {
   ].join("\n");
 }
 
-function buildOrderSuccessMessage(order: Order) {
-  const itemLines = (order.cartSnapshot || [])
-    .filter((item) => !item.isGift)
-    .slice(0, 4)
-    .map((item) => `- ${item.name}${item.size ? ` (${item.size})` : ""} x${item.quantity}`);
-
-  return [
-    `Hi ${order.fullName || "there"},`,
-    "",
-    "Order Success",
-    `Your HUME Fragrance order #${order.orderNumber} has been placed successfully.`,
-    "",
-    order.grandTotal ? `Order total: ${formatINR(Number(order.grandTotal))}` : null,
-    "",
-    itemLines.length ? "Items:" : null,
-    ...itemLines,
-    "",
-    "We will start preparing your order and share the tracking details once it is dispatched.",
-    "Team HUME Fragrance",
-  ]
-    .filter(Boolean)
-    .join("\n");
-}
 function buildPendingPaymentFollowupMessage(order: Order) {
   const itemNames = (order.cartSnapshot || [])
     .filter((item) => !item.isGift)
@@ -295,7 +269,7 @@ export function OrdersTable({
   const [isUpdating, setIsUpdating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<OrderEditForm>({});
-  const [addProductId, setAddProductId] = useState("");
+
   const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null);
 
   useEffect(() => {
@@ -475,6 +449,8 @@ export function OrdersTable({
   };
 
   const openOrderDetails = (order: Order) => {
+    setIsEditing(false);
+
     setSelectedOrder(order);
     setEditForm({
       ...order,
@@ -538,12 +514,21 @@ export function OrdersTable({
 
   const handleSaveEdit = async () => {
     if (!selectedOrder) return;
-    const payload = {
+    const candidate = {
       fullName: editForm.fullName || "", phone: editForm.phone || "", alternatePhone: editForm.alternatePhone || "", email: editForm.email || "",
       addressLine1: editForm.addressLine1 || "", addressLine2: editForm.addressLine2 || "", city: editForm.city || "", state: editForm.state || "", pincode: editForm.pincode || "", notes: editForm.notes || "",
       cartSnapshot: editForm.cartSnapshot || [], appliedCouponCode: editForm.appliedCouponCode || "", shippingFee: Number(editForm.shippingFee || 0), manualAdjustment: Number(editForm.manualAdjustment || 0), adjustmentReason: editForm.adjustmentReason || "", editReason: editForm.editReason || "",
       shippingMethod: editForm.shippingMethod || "", paymentMethod: editForm.paymentMethod || "", fulfillmentCarrier: editForm.fulfillmentCarrier || "", trackingNumber: editForm.trackingNumber || "", trackingUrl: editForm.trackingUrl || "", trackingStatus: editForm.trackingStatus || "", status: editForm.status,
     };
+    const payload = Object.fromEntries(Object.entries(candidate).filter(([key, value]) => {
+      if (key === "editReason") return Boolean(value);
+      const original = selectedOrder[key as keyof Order];
+      if (key === "shippingFee" || key === "manualAdjustment") return Number(value) !== Number(original || 0);
+      if (key === "cartSnapshot") return JSON.stringify(value) !== JSON.stringify(original);
+      return value !== (original ?? "");
+    }));
+    if (!Object.keys(payload).length) { setIsEditing(false); return; }
+    payload.expectedUpdatedAt = new Date(selectedOrder.updatedAt).toISOString();
     setIsUpdating(true);
     try {
       const res = await fetch(`/api/admin/orders/${selectedOrder.id}`, {
@@ -556,13 +541,13 @@ export function OrdersTable({
       setSelectedOrder(data.order);
       setOrderRows((current) => current.map((order) => order.id === data.order.id ? data.order : order));
       setEditForm({ ...data.order, fulfillmentCarrier: data.order.fulfillmentCarrier || "shiprocket" });
+      setIsEditing(false);
       toast({ title: "Order updated", description: data.reconciliation?.capturedAmount ? `Payment difference: ${formatINR(data.reconciliation.difference)}` : undefined });
       void loadCustomerActivity(data.order.id);
     } catch (error) {
       console.error(error); toast({ title: error instanceof Error ? error.message : "Could not update order", variant: "destructive" });
     } finally {
       setIsUpdating(false);
-      setIsEditing(false);
     }
   };
 
@@ -574,10 +559,13 @@ export function OrdersTable({
     setEditForm((current) => ({ ...current, cartSnapshot: (current.cartSnapshot || []).filter((_, itemIndex) => itemIndex !== index) }));
   };
 
-  const addEditProduct = () => {
-    const product = productOptions.find((item) => item.id === addProductId); if (!product) return;
-    setEditForm((current) => ({ ...current, cartSnapshot: [...(current.cartSnapshot || []), { id: product.id, name: product.name, inspiration: product.inspiration, image: product.images?.[0], size: product.size, price: Number(product.price), quantity: 1 }] }));
-    setAddProductId("");
+  const addEditProduct = (product: Product, samples: Product[]) => {
+    setEditForm((current) => {
+      const items = current.cartSnapshot || [];
+      const existing = isDiscoverySetProductId(product.id) ? -1 : items.findIndex(item => item.id === product.id && !item.isGift && !item.kitSelections?.length && !item.sampleSelections?.length);
+      return { ...current, cartSnapshot: existing >= 0 ? items.map((item, index) => index === existing ? { ...item, quantity: Math.min(100, item.quantity + 1) } : item) : [...items, { id: isDiscoverySetProductId(product.id) ? `${DISCOVERY_SET_CART_ITEM_PREFIX}${crypto.randomUUID()}` : product.id, name: product.name, inspiration: product.inspiration, image: isDiscoverySetProductId(product.id) ? DISCOVERY_SET_IMAGES[0] : product.images?.[0], size: product.size, price: Number(product.price), quantity: 1, ...(samples.length ? { sampleSelections: samples.map(sample => ({ id: sample.id, name: sample.name, inspiration: sample.inspiration })) } : {}) }] };
+    });
+
   };
 
   const handleSaveTracking = async () => {
@@ -848,10 +836,10 @@ export function OrdersTable({
               orderRows.map((order) => {
                 const isSelected = selectedOrderIds.includes(order.id);
                 const partialCod = getPartialCodBreakdown(order);
-                
+
                 return (
-                  <TableRow 
-                    key={order.id} 
+                  <TableRow
+                    key={order.id}
                     className={`group cursor-pointer overflow-hidden rounded-2xl border-y border-white/[0.075] bg-[linear-gradient(145deg,rgba(197,169,255,.055),rgba(24,24,27,.98)_38%)] shadow-[inset_0_1px_rgba(255,255,255,.045),0_10px_24px_rgba(0,0,0,.15)] outline outline-1 outline-white/[0.035] transition-[transform,filter,box-shadow] duration-200 hover:-translate-y-px hover:brightness-110 hover:shadow-[inset_0_1px_rgba(255,255,255,.065),0_15px_32px_rgba(0,0,0,.22)] [&>td:first-child]:rounded-l-2xl [&>td:last-child]:rounded-r-2xl ${
                       isSelected ? "border-l-2 border-l-emerald-300 bg-emerald-400/[0.10] hover:bg-emerald-400/[0.13]" : getOrderRowTone(order.status)
                     }`}
@@ -938,10 +926,10 @@ export function OrdersTable({
           setIsActivityLoading(false);
         }
       }}>
-        <SheetContent className="w-full overflow-y-auto border-l border-white/[0.08] bg-[radial-gradient(circle_at_top_right,rgba(139,92,246,.10),transparent_28%),linear-gradient(180deg,#17171a_0%,#111113_100%)] p-0 text-white shadow-[-36px_0_100px_rgba(0,0,0,.58)] sm:max-w-2xl lg:max-w-3xl [&>button]:right-5 [&>button]:top-5 [&>button]:z-30 [&>button]:rounded-full [&>button]:border [&>button]:border-white/25 [&>button]:bg-[#29292e] [&>button]:p-3 [&>button]:text-white [&>button]:opacity-100 [&>button]:shadow-[0_8px_24px_rgba(0,0,0,.45)] [&>button]:backdrop-blur-xl [&>button]:transition [&>button]:hover:border-[#c5a9ff]/45 [&>button]:hover:bg-[#3a3545] [&>button]:hover:text-white [&>button>svg]:h-5 [&>button>svg]:w-5 [&>button>svg]:stroke-[2.5]">
+        <SheetContent className="admin-shell w-full overflow-y-auto border-l border-white/[0.08] bg-[radial-gradient(circle_at_top_right,rgba(139,92,246,.10),transparent_28%),linear-gradient(180deg,#17171a_0%,#111113_100%)] p-0 text-white shadow-[-36px_0_100px_rgba(0,0,0,.58)] sm:max-w-2xl lg:max-w-3xl [&>button]:right-5 [&>button]:top-5 [&>button]:z-30 [&>button]:rounded-full [&>button]:border [&>button]:border-white/25 [&>button]:bg-[#29292e] [&>button]:p-3 [&>button]:text-white [&>button]:opacity-100 [&>button]:shadow-[0_8px_24px_rgba(0,0,0,.45)] [&>button]:backdrop-blur-xl [&>button]:transition [&>button]:hover:border-[#c5a9ff]/45 [&>button]:hover:bg-[#3a3545] [&>button]:hover:text-white [&>button>svg]:h-5 [&>button>svg]:w-5 [&>button>svg]:stroke-[2.5]">
           {selectedOrder && (
             <>
-              <SheetHeader className="border-b border-white/[0.07] bg-[#151518]/90 px-4 py-4 pr-16 text-left sm:px-6 sm:py-5 sm:pr-20">
+              <SheetHeader className="sticky top-0 z-20 border-b border-white/[0.07] bg-[#151518]/90 px-4 py-4 pr-16 text-left sm:px-6 sm:py-5 sm:pr-20">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <div className="mb-2 flex items-center gap-2 text-[8px] font-bold uppercase tracking-[0.22em] text-[#c9b3ff]/65">
@@ -964,7 +952,7 @@ export function OrdersTable({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setIsEditing(!isEditing)}
+                      disabled={isUpdating} onClick={() => { setEditForm({ ...selectedOrder, fulfillmentCarrier: selectedOrder.fulfillmentCarrier || "shiprocket" });  setIsEditing(!isEditing); }}
                       className={`h-10 rounded-lg px-3.5 text-[9px] font-bold uppercase tracking-[0.15em] transition ${isEditing ? "border-white/10 bg-white/[0.04] text-white/60 hover:bg-white/[0.08] hover:text-white" : "border-[#c9b3ff]/25 bg-[#c9b3ff]/10 text-[#ddceff] hover:bg-[#c9b3ff]/15 hover:text-white"}`}
                     >
                       {isEditing ? "Cancel edit" : "Edit order"}
@@ -974,6 +962,7 @@ export function OrdersTable({
               </SheetHeader>
 
               <div className="space-y-5 px-4 py-5 sm:px-7 sm:py-7">
+                <CustomerLinkButton key={selectedOrder.id} scope="order" resourceId={selectedOrder.id} />
                 <ManualPaymentPanel order={selectedOrder} onUpdate={(order) => { setSelectedOrder(order); setOrderRows(rows => rows.map(row => row.id === order.id ? order : row)); }} />
                 {(() => {
                   const partialCod = getPartialCodBreakdown(selectedOrder);
@@ -1005,30 +994,30 @@ export function OrdersTable({
                 </div>
 
                 {isEditing ? (
-                  <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <form onSubmit={(event) => { event.preventDefault(); void handleSaveEdit(); }} className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300"><fieldset disabled={isUpdating} className="min-w-0">
                     <div className="space-y-5 rounded-2xl border border-primary/20 bg-primary/[0.03] p-4 sm:rounded-3xl sm:p-6">
-                      <h4 className="font-bold text-[10px] uppercase tracking-[0.2em] text-primary/60">Modify Logistics</h4>
-                      <div className="space-y-4">
+                      <h4 className="font-bold text-[10px] uppercase tracking-[0.2em] text-primary/60">Edit customer & delivery</h4>
+                      <div className="grid gap-4 sm:grid-cols-2 [&>div]:sm:col-span-2 [&>label]:sm:col-span-2 [&>fieldset]:sm:col-span-2">
                         <div className="space-y-2">
-                          <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">Full Name</label>
-                          <input 
+                          <label htmlFor="order-edit-1" className="text-[9px] uppercase font-bold text-white/60 ml-1 tracking-widest">Full Name</label>
+                          <input id="order-edit-1"
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 text-white placeholder:text-white/20"
-                            value={editForm.fullName || ""}
+                            required value={editForm.fullName || ""}
                             onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
                           />
                         </div>
                         <div className="grid gap-4 sm:grid-cols-2">
                           <div className="space-y-2">
-                            <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">Primary Phone</label>
-                            <input 
+                            <label htmlFor="order-edit-2" className="text-[9px] uppercase font-bold text-white/60 ml-1 tracking-widest">Primary Phone</label>
+                            <input id="order-edit-2"
                               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 text-white"
-                              value={displayPhoneNumber(editForm.phone)}
+                              required type="tel" value={displayPhoneNumber(editForm.phone)}
                               onChange={(e) => setEditForm({ ...editForm, phone: displayPhoneNumber(e.target.value) })}
                             />
                           </div>
                           <div className="space-y-2">
-                            <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">Alternate Phone</label>
-                            <input
+                            <label htmlFor="order-edit-3" className="text-[9px] uppercase font-bold text-white/60 ml-1 tracking-widest">Alternate Phone</label>
+                            <input id="order-edit-3"
                               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 text-white"
                               value={displayPhoneNumber(editForm.alternatePhone)}
                               placeholder="Optional"
@@ -1037,25 +1026,25 @@ export function OrdersTable({
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">Email</label>
-                          <input
+                          <label htmlFor="order-edit-4" className="text-[9px] uppercase font-bold text-white/60 ml-1 tracking-widest">Email</label>
+                          <input id="order-edit-4"
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 text-white"
-                            value={editForm.email || ""}
+                            type="email" value={editForm.email || ""}
                             onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">Address Line 1</label>
-                          <input
+                          <label htmlFor="order-edit-5" className="text-[9px] uppercase font-bold text-white/60 ml-1 tracking-widest">Address Line 1</label>
+                          <input id="order-edit-5"
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 text-white"
-                            value={editForm.addressLine1 || ""}
+                            required value={editForm.addressLine1 || ""}
                             placeholder="House / street / area"
                             onChange={(e) => setEditForm({ ...editForm, addressLine1: e.target.value })}
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">Address Line 2</label>
-                          <input
+                          <label htmlFor="order-edit-6" className="text-[9px] uppercase font-bold text-white/60 ml-1 tracking-widest">Address Line 2</label>
+                          <input id="order-edit-6"
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 text-white"
                             value={editForm.addressLine2 || ""}
                             placeholder="Landmark / apartment / optional"
@@ -1064,67 +1053,68 @@ export function OrdersTable({
                         </div>
                         <div className="grid gap-4 sm:grid-cols-3">
                           <div className="space-y-2">
-                            <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">City</label>
-                            <input
+                            <label htmlFor="order-edit-7" className="text-[9px] uppercase font-bold text-white/60 ml-1 tracking-widest">City</label>
+                            <input id="order-edit-7"
                               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 text-white"
-                              value={editForm.city || ""}
+                              required value={editForm.city || ""}
                               onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
                             />
                           </div>
                           <div className="space-y-2">
-                            <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">State</label>
-                            <input
+                            <label htmlFor="order-edit-8" className="text-[9px] uppercase font-bold text-white/60 ml-1 tracking-widest">State</label>
+                            <input id="order-edit-8"
                               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 text-white"
-                              value={editForm.state || ""}
+                              required value={editForm.state || ""}
                               onChange={(e) => setEditForm({ ...editForm, state: e.target.value })}
                             />
                           </div>
                           <div className="space-y-2">
-                            <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">Pincode</label>
-                            <input
+                            <label htmlFor="order-edit-9" className="text-[9px] uppercase font-bold text-white/60 ml-1 tracking-widest">Pincode</label>
+                            <input id="order-edit-9"
                               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 text-white"
-                              value={editForm.pincode || ""}
+                              required inputMode="numeric" pattern="[0-9]{6}" value={editForm.pincode || ""}
                               onChange={(e) => setEditForm({ ...editForm, pincode: e.target.value.replace(/\D/g, "").slice(0, 6) })}
                             />
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[9px] uppercase font-bold text-white/30 ml-1 tracking-widest">Order Notes</label>
-                          <textarea
+                          <label htmlFor="order-edit-10" className="text-[9px] uppercase font-bold text-white/60 ml-1 tracking-widest">Order Notes</label>
+                          <textarea id="order-edit-10"
                             className="min-h-24 w-full resize-y bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 text-white placeholder:text-white/20"
                             value={editForm.notes || ""}
                             placeholder="Delivery instruction or customer change request"
                             onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
                           />
                         </div>
-                        <div className="space-y-3 border-t border-white/10 pt-5">
-                          <div><h5 className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary/60">Order items</h5><p className="mt-1 text-xs text-white/30">Prices and discounts are recalculated from the current catalogue when saved.</p></div>
+                        <fieldset disabled={selectedOrder.checkoutChannel === MANUAL_LINK_CHANNEL} className="space-y-3 border-t border-white/10 pt-5 disabled:opacity-60">
+                          <div><h5 className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary/60">Order items</h5><p className="mt-1 text-xs text-white/30">Existing items keep their order price. New products use the current catalogue price.</p></div>
                           {(editForm.cartSnapshot || []).map((item, index) => (
-                            <div key={`${item.id}-${index}`} className="grid grid-cols-[1fr_72px_38px] items-center gap-2 rounded-xl border border-white/8 bg-black/20 p-2.5">
-                              <div className="min-w-0"><p className="truncate text-xs font-medium text-white">{item.name}</p><p className="mt-0.5 text-[10px] text-white/30">{item.isGift ? "Complimentary gift" : `${formatINR(item.price)} each`}</p></div>
-                              <input type="number" min="1" max="100" value={item.quantity} onChange={(event) => updateEditItem(index, { quantity: Math.max(1, Number(event.target.value) || 1) })} disabled={item.isGift} aria-label={`Quantity for ${item.name}`} className="h-9 rounded-lg border border-white/10 bg-white/5 px-2 text-center text-xs text-white outline-none" />
+                            <div key={`${item.id}-${index}`} className="grid grid-cols-[48px_1fr_64px_38px] items-center gap-2 rounded-xl border border-white/8 bg-black/20 p-2.5">
+                              <span className="relative h-12 w-12 overflow-hidden rounded-lg bg-white/5">{item.image ? <Image src={item.image} alt={item.name} fill unoptimized sizes="48px" className="object-cover" /> : <span className="flex h-full items-center justify-center text-[9px] text-white/50">No image</span>}</span><div className="min-w-0"><p className="text-sm font-medium text-white">{item.name}</p><p className="mt-0.5 text-[10px] text-white/30">{item.isGift ? "Complimentary gift" : `${formatINR(item.price)} each`}</p>{item.sampleSelections?.length ? <p className="mt-1 text-xs leading-5 text-white/60">{item.sampleSelections.map(sample => sample.name).join(", ")}</p> : null}</div>
+                              <input type="number" min="1" max="100" value={item.quantity} onChange={(event) => updateEditItem(index, { quantity: Math.min(100, Math.max(1, Math.trunc(Number(event.target.value)) || 1)) })} disabled={item.isGift} aria-label={`Quantity for ${item.name}`} className="h-9 rounded-lg border border-white/10 bg-white/5 px-2 text-center text-xs text-white outline-none" />
                               <Button type="button" size="icon" variant="ghost" onClick={() => removeEditItem(index)} disabled={(editForm.cartSnapshot || []).length <= 1} aria-label={`Remove ${item.name}`} className="h-9 w-9 text-rose-300"><Trash2 className="h-4 w-4" /></Button>
                             </div>
                           ))}
-                          <div className="grid gap-2 sm:grid-cols-[1fr_auto]"><select value={addProductId} onChange={(event) => setAddProductId(event.target.value)} className="h-10 min-w-0 rounded-xl border border-white/10 bg-black/30 px-3 text-xs text-white outline-none"><option value="">Add a product</option>{productOptions.filter((product) => !product.badges?.soldOut && !product.badges?.comingSoon).map((product) => <option key={product.id} value={product.id}>{getProductOptionLabel(product)}</option>)}</select><Button type="button" onClick={addEditProduct} disabled={!addProductId} className="h-10 bg-white text-black hover:bg-white/90"><Plus className="mr-1 h-4 w-4" /> Add</Button></div>
-                        </div>
+                          <OrderProductPicker products={productOptions} onAdd={addEditProduct} />
+                        </fieldset>
+                        {selectedOrder.checkoutChannel === MANUAL_LINK_CHANNEL && <p className="rounded-xl border border-amber-300/20 bg-amber-300/5 p-3 text-sm text-amber-100">Products, totals and payment mode are locked to the Razorpay link. You can still edit customer and delivery details.</p>}
                         <div className="grid gap-4 border-t border-white/10 pt-5 sm:grid-cols-2">
-                          <label className="space-y-2"><span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Coupon code</span><input value={editForm.appliedCouponCode || ""} onChange={(e) => setEditForm({ ...editForm, appliedCouponCode: e.target.value.toUpperCase() })} placeholder="No coupon" className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none" /></label>
-                          <label className="space-y-2"><span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Shipping fee</span><input type="number" min="0" step="0.01" value={editForm.shippingFee || "0"} onChange={(e) => setEditForm({ ...editForm, shippingFee: e.target.value })} className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none" /></label>
+                          <label className="space-y-2"><span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Coupon code</span><input disabled={selectedOrder.checkoutChannel === MANUAL_LINK_CHANNEL} value={editForm.appliedCouponCode || ""} onChange={(e) => setEditForm({ ...editForm, appliedCouponCode: e.target.value.toUpperCase() })} placeholder="No coupon" className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none" /></label>
+                          <label className="space-y-2"><span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Shipping fee</span><input type="number" min="0" step="0.01" disabled={selectedOrder.checkoutChannel === MANUAL_LINK_CHANNEL} value={editForm.shippingFee || "0"} onChange={(e) => setEditForm({ ...editForm, shippingFee: e.target.value })} className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none" /></label>
                           <label className="space-y-2"><span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Shipping method</span><input value={editForm.shippingMethod || ""} onChange={(e) => setEditForm({ ...editForm, shippingMethod: e.target.value })} placeholder="Standard delivery" className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none" /></label>
-                          <label className="space-y-2"><span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Payment method</span><input value={editForm.paymentMethod || ""} onChange={(e) => setEditForm({ ...editForm, paymentMethod: e.target.value })} placeholder="Payment method" className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none" /></label>
-                          <label className="space-y-2"><span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Status</span><select value={editForm.status || "whatsapp_initiated"} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} className="w-full rounded-xl border border-white/10 bg-[#1c1c20] px-4 py-3 text-sm text-white outline-none"><option value="whatsapp_initiated">WhatsApp initiated</option><option value="payment_pending">Payment pending</option><option value="payment_authorized">Payment authorized</option><option value="processing">Confirmed</option><option value="packed">Packed</option><option value="shipped">Shipped</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></label>
-                          <label className="space-y-2"><span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Manual adjustment</span><input type="number" step="0.01" value={editForm.manualAdjustment || "0"} onChange={(e) => setEditForm({ ...editForm, manualAdjustment: e.target.value })} className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none" /></label>
+                          <label className="space-y-2"><span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Payment method</span><input disabled={selectedOrder.checkoutChannel === MANUAL_LINK_CHANNEL} value={editForm.paymentMethod || ""} onChange={(e) => setEditForm({ ...editForm, paymentMethod: e.target.value })} placeholder="Payment method" className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none" /></label>
+                          <label className="space-y-2"><span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Status</span><select value={editForm.status || "whatsapp_initiated"} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} className="w-full rounded-xl border border-white/10 bg-[#1c1c20] px-4 py-3 text-sm text-white outline-none"><option value="whatsapp_initiated">WhatsApp initiated</option><option value="payment_pending">Payment pending</option><option value="payment_failed">Payment failed</option><option value="payment_authorized">Payment authorized</option><option value="processing">Confirmed</option><option value="packed">Packed</option><option value="shipped">Shipped</option><option value="delivered">Delivered</option><option value="complete">Complete</option><option value="cancelled">Cancelled</option></select></label>
+                          <label className="space-y-2"><span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Manual adjustment</span><input type="number" step="0.01" disabled={selectedOrder.checkoutChannel === MANUAL_LINK_CHANNEL} value={editForm.manualAdjustment || "0"} onChange={(e) => setEditForm({ ...editForm, manualAdjustment: e.target.value })} className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none" /></label>
                         </div>
                         {Number(editForm.manualAdjustment || 0) !== 0 ? <label className="block space-y-2"><span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Adjustment reason</span><input required value={editForm.adjustmentReason || ""} onChange={(e) => setEditForm({ ...editForm, adjustmentReason: e.target.value })} placeholder="Why is this adjustment needed?" className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none" /></label> : null}
                         {capturedAmounts[selectedOrder.id] > 0 ? <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.05] p-4 text-xs text-amber-100/70"><p className="font-semibold text-amber-200">Paid order reconciliation</p><div className="mt-2 flex justify-between"><span>Captured payment</span><span>{formatINR(capturedAmounts[selectedOrder.id])}</span></div><div className="mt-1 flex justify-between"><span>Current order total</span><span>{formatINR(Number(selectedOrder.grandTotal || 0))}</span></div><p className="mt-2 text-[10px] text-amber-100/45">Saving does not refund or collect money automatically.</p></div> : null}
                         <label className="block space-y-2"><span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Reason for change</span><textarea value={editForm.editReason || ""} onChange={(e) => setEditForm({ ...editForm, editReason: e.target.value })} placeholder="Required for financial changes to paid orders" className="min-h-20 w-full resize-y rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none" /></label>
                       </div>
-                      <Button onClick={handleSaveEdit} disabled={isUpdating} className="w-full rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground h-12 font-bold text-[11px] tracking-[0.2em] uppercase shadow-lg shadow-primary/10">
-                        CONFIRM CHANGES
+                      <Button type="submit" disabled={isUpdating} className="w-full rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground h-12 font-bold text-[11px] tracking-[0.2em] uppercase shadow-lg shadow-primary/10">
+                        {isUpdating ? "Saving changes…" : "Save changes"}
                       </Button>
                     </div>
-                  </div>
+                  </fieldset></form>
                 ) : (
                   <>
                     <div className="space-y-5 rounded-2xl border border-white/5 bg-white/[0.02] p-4 sm:rounded-3xl sm:p-6">
@@ -1285,9 +1275,9 @@ export function OrdersTable({
                             <p className="text-sm text-white/40 italic">No destination address added</p>
                           )}
                           {selectedOrder.notes ? (
-                            <div className="mt-2 text-xs text-white/45 bg-amber-500/[0.02] border border-amber-500/5 rounded-xl p-3">
+                            <div className="mt-4 rounded-xl border border-amber-300/25 bg-amber-300/10 p-4 text-sm text-white/90">
                               <span className="font-bold text-[9px] uppercase tracking-widest text-amber-300/80 block mb-1">Order Notes:</span>
-                              <p>{selectedOrder.notes}</p>
+                              <p className="whitespace-pre-wrap break-words leading-7">{selectedOrder.notes}</p>
                             </div>
                           ) : null}
                         </div>
@@ -1531,8 +1521,8 @@ export function OrdersTable({
                   <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d7c5ff]/75">Order management</h4>
                   <div className="grid gap-2.5 sm:grid-cols-2">
                     {/* Confirm Order / Processing */}
-                    <Button 
-                      onClick={() => handleUpdateStatus(selectedOrder.id, "processing")} 
+                    <Button
+                      onClick={() => handleUpdateStatus(selectedOrder.id, "processing")}
                       disabled={isUpdating || selectedOrder.status === "processing"}
                       className={`h-11 w-full min-w-0 overflow-hidden whitespace-nowrap rounded-xl border px-2 text-[9px] font-bold uppercase tracking-[0.12em] transition sm:text-[10px] ${
                         selectedOrder.status === "processing"
@@ -1545,8 +1535,8 @@ export function OrdersTable({
                     </Button>
 
                     {/* Mark Shipped */}
-                    <Button 
-                      onClick={() => handleUpdateStatus(selectedOrder.id, "shipped")} 
+                    <Button
+                      onClick={() => handleUpdateStatus(selectedOrder.id, "shipped")}
                       disabled={isUpdating || selectedOrder.status === "shipped"}
                       className={`h-11 w-full min-w-0 overflow-hidden whitespace-nowrap rounded-xl border px-2 text-[9px] font-bold uppercase tracking-[0.12em] transition sm:text-[10px] ${
                         selectedOrder.status === "shipped"
@@ -1559,8 +1549,8 @@ export function OrdersTable({
                     </Button>
 
                     {/* Fulfill Order / Delivered */}
-                    <Button 
-                      onClick={() => handleUpdateStatus(selectedOrder.id, "delivered")} 
+                    <Button
+                      onClick={() => handleUpdateStatus(selectedOrder.id, "delivered")}
                       disabled={isUpdating || selectedOrder.status === "delivered"}
                       className={`h-11 w-full min-w-0 overflow-hidden whitespace-nowrap rounded-xl border px-2 text-[9px] font-bold uppercase tracking-[0.12em] transition sm:text-[10px] ${
                         selectedOrder.status === "delivered"
@@ -1573,8 +1563,8 @@ export function OrdersTable({
                     </Button>
 
                     {/* Cancel Order */}
-                    <Button 
-                      onClick={() => handleUpdateStatus(selectedOrder.id, "cancelled")} 
+                    <Button
+                      onClick={() => handleUpdateStatus(selectedOrder.id, "cancelled")}
                       disabled={isUpdating || selectedOrder.status === "cancelled"}
                       className={`h-11 w-full min-w-0 overflow-hidden whitespace-nowrap rounded-xl border px-2 text-[9px] font-bold uppercase tracking-[0.12em] transition sm:text-[10px] ${
                         selectedOrder.status === "cancelled"

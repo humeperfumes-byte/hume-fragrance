@@ -23,11 +23,13 @@ export interface CartItem {
 }
 
 interface CartContextType {
+  hydrated: boolean;
   items: CartItem[];
   addItem: (item: Omit<CartItem, "quantity">) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
+  restoreItems: (items: CartItem[]) => void;
   totalItems: number;
   totalPrice: number;
   isCartOpen: boolean;
@@ -116,6 +118,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const clearCart = () => setItems([]);
+  const restoreItems = (nextItems: CartItem[]) => {
+    const restored = nextItems.map(item => ({ ...item }));
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(restored));
+    setItems(restored);
+  };
 
   // Keep gift eligibility consistent with spend tiers:
       // 1 gift above the first threshold, 2 gifts above the second threshold.
@@ -176,11 +183,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   return (
     <CartContext.Provider
       value={{
+        hydrated,
         items,
         addItem,
         removeItem,
         updateQuantity,
         clearCart,
+        restoreItems,
         totalItems,
         totalPrice,
         isCartOpen,

@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     const includeHidden = searchParams.get("includeHidden") === "1";
 
     // Auto-seed missing static coupons into PostgreSQL DB
-    for (const c of couponsData) {
+    for (const c of process.env.NODE_ENV === "development" ? [] : couponsData) {
       try {
         await db
           .insert(couponsTable)

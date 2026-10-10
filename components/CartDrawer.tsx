@@ -370,12 +370,11 @@ const CartDrawer = () => {
       .toUpperCase();
     if (storedCode === SPECIAL5_CODE) {
       window.localStorage.removeItem(APPLIED_COUPON_STORAGE_KEY);
-      setCouponInput("");
+      queueMicrotask(() => setCouponInput(""));
       return;
     }
     if (!storedCode) return;
-    setAppliedCouponCode(storedCode);
-    setCouponInput(storedCode);
+    queueMicrotask(() => { setAppliedCouponCode(storedCode); setCouponInput(storedCode); });
   }, []);
 
   useEffect(() => {
@@ -396,11 +395,12 @@ const CartDrawer = () => {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!settings.welcomeBackEnabled) {
-      setWelcomeBackReward(null);
+      queueMicrotask(() => setWelcomeBackReward(null));
       return;
     }
+    const applyLegacyVisit = () => {
     const result = trackWelcomeBackVisit(window.localStorage);
-    setWelcomeBackReward(result.reward);
+    queueMicrotask(() => setWelcomeBackReward(result.reward));
     if (result.reward) {
       window.dispatchEvent(new CustomEvent("hume:welcome-back-reward-sync"));
     }
@@ -422,6 +422,19 @@ const CartDrawer = () => {
         }),
       );
     }
+    };
+    let active = true;
+    void fetch("/api/visit-reward", { method: "POST", signal: AbortSignal.timeout(15000) }).then(async response => {
+      if (!response.ok) throw new Error("Rewards unavailable");
+      const state = await response.json();
+      if (!active) return;
+      if (!state.enabled) { applyLegacyVisit(); return; }
+      if (state.reward) window.localStorage.setItem("hume_welcome_back_reward_v1", JSON.stringify(state.reward));
+      else window.localStorage.removeItem("hume_welcome_back_reward_v1");
+      setWelcomeBackReward(state.reward || null);
+      window.dispatchEvent(new CustomEvent("hume:welcome-back-reward-sync"));
+    }).catch(() => { if (active) setWelcomeBackReward(null); });
+    return () => { active = false; };
   }, [settings.welcomeBackEnabled]);
 
   useEffect(() => {
@@ -562,14 +575,14 @@ const CartDrawer = () => {
     if (!appliedCouponCode) return;
     if (allCoupons.length === 0) return;
     if (!appliedCoupon) {
-      setAppliedCouponCode(null);
+      queueMicrotask(() => setAppliedCouponCode(null));
       return;
     }
     if (
       subtotal < appliedCoupon.minSubtotal ||
       !isCouponEligible(appliedCoupon)
     ) {
-      setAppliedCouponCode(null);
+      queueMicrotask(() => setAppliedCouponCode(null));
     }
   }, [
     allCoupons.length,
@@ -587,7 +600,7 @@ const CartDrawer = () => {
     if (!justOpened || items.length === 0 || !welcomeBackReward) return;
     if (welcomeBackReward.expiresAt <= Date.now()) return;
 
-    setRewardUnlockOpen(true);
+    queueMicrotask(() => setRewardUnlockOpen(true));
   }, [isCartOpen, items.length, welcomeBackReward]);
 
   useEffect(() => {
@@ -608,14 +621,13 @@ const CartDrawer = () => {
   useEffect(() => {
     if (rewardUnlockOpen) {
       wasRewardUnlockOpenRef.current = true;
-      setPriceMagicActive(false);
+      queueMicrotask(() => setPriceMagicActive(false));
       return;
     }
 
     if (!wasRewardUnlockOpenRef.current) return;
     wasRewardUnlockOpenRef.current = false;
-    setPriceMagicActive(true);
-    setPriceMagicStage("old");
+    queueMicrotask(() => { setPriceMagicActive(true); setPriceMagicStage("old"); });
 
     const strikeTimeout = window.setTimeout(
       () => setPriceMagicStage("strike"),

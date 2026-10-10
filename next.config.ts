@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Keep the native PostgreSQL driver outside development bundles/HMR.
+  ...(process.env.NODE_ENV === "development" ? { serverExternalPackages: ["postgres"] } : {}),
   turbopack: {},
   experimental: {
     // Supabase is quota-limited. Keep static generation serial so parallel

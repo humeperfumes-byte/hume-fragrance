@@ -15,3 +15,11 @@ export function toTenDigitPhone(value: string | null | undefined): string {
 export function displayPhoneNumber(value: string | null | undefined): string {
   return toTenDigitPhone(value) || String(value ?? "").trim();
 }
+export function normalizeIndianMobile(value: string): string {
+  const compact = value.trim().replace(/[\s().\-\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, "");
+  if (/^\+91\d{10}$/.test(compact)) return compact.slice(3);
+  if (/^0091\d{10}$/.test(compact)) return compact.slice(4);
+  if (/^91\d{10}$/.test(compact)) return compact.slice(2);
+  if (/^0\d{10}$/.test(compact)) return compact.slice(1);
+  return compact;
+}

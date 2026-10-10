@@ -1,6 +1,8 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CheckoutClient from "@/components/CheckoutClient";
+import SecureCheckoutEntry from "@/components/SecureCheckoutEntry";
+import { secureCheckoutEnabled } from "@/lib/secure-checkout";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +16,7 @@ export default function CheckoutPage() {
   return (
     <main className="min-h-screen bg-background">
       <Header />
-      <CheckoutClient />
+      {secureCheckoutEnabled() ? <SecureCheckoutEntry /> : <CheckoutClient />}
       <Footer />
     </main>
   );

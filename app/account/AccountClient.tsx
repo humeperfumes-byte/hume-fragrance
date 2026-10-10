@@ -53,9 +53,12 @@ import { cn } from "@/lib/utils";
 import type { FragranceSelection } from "@/lib/discovery-set";
 import { displayPhoneNumber } from "@/lib/phone";
 import { useCart } from "@/context/CartContext";
+import PendingCheckoutCard from "@/components/PendingCheckoutCard";
 import {
   PAYMENT_RECOVERY_MODE_KEY,
   savePaymentRecovery,
+  readPaymentRecovery,
+  shouldBlockAnotherPayment,
   type RecoveryPaymentMode,
 } from "@/lib/payment-recovery";
 
@@ -74,6 +77,7 @@ type AccountOrderItem = {
 
 type AccountOrder = {
   id: string;
+  secureCheckout?: boolean;
   orderNumber: string;
   status: string;
   checkoutChannel: string;
@@ -196,6 +200,7 @@ export default function AccountClient() {
   const [resendSeconds, setResendSeconds] = useState(0);
   const [otpShakeKey, setOtpShakeKey] = useState(0);
   const [selectedOrder, setSelectedOrder] = useState<AccountOrder | null>(null);
+  const [resumingOrder, setResumingOrder] = useState<string | null>(null);
 
   const profileAddress = useMemo(() => compactAddress(account), [account]);
   const activeOrders = useMemo(
@@ -208,6 +213,19 @@ export default function AccountClient() {
   );
 
   const resumeOrderPayment = (order: AccountOrder, mode: RecoveryPaymentMode) => {
+    if (order.secureCheckout) {
+      if (resumingOrder) return;
+      setResumingOrder(order.id);
+      void fetch("/api/account/checkout/resume", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: order.id, accountToken: getStoredAccountLoginToken(window.localStorage) || undefined }) })
+        .then(async response => { const result = await response.json(); if (!response.ok || !result.path) throw new Error(result.error || "Could not resume your order"); router.push(result.path); })
+        .catch(error => setError(error instanceof Error ? error.message : "Could not resume your order"))
+        .finally(() => setResumingOrder(null));
+      return;
+    }
+    if (shouldBlockAnotherPayment(readPaymentRecovery(window.localStorage))) {
+      router.push("/checkout");
+      return;
+    }
     if (order.grandTotal === null) return;
     clearCart();
     order.cartSnapshot.forEach((item) => {
@@ -265,12 +283,6 @@ export default function AccountClient() {
 
     setAccount(hydratedAccount);
 
-    if (!sessionId && !accountToken) {
-      setOrders([]);
-      setIsLoading(false);
-      return;
-    }
-
     try {
       const response = await fetch("/api/account", {
         method: "POST",
@@ -281,6 +293,7 @@ export default function AccountClient() {
         }),
       });
       const data = (await response.json()) as AccountResponse;
+      if (response.status === 401 && !accountToken) { setOrders([]); return; }
       if (!response.ok || !data.ok) {
         throw new Error(data.error || "Unable to load account.");
       }
@@ -326,6 +339,12 @@ export default function AccountClient() {
           },
         );
         setAccount(restoredAccount);
+      } else if (!hydratedAccount && serverProfile?.sessionId && serverProfile.fullName && serverProfile.phone) {
+        setAccount(persistCustomerAccountFromCheckout(storage, serverProfile.sessionId, {
+          fullName: serverProfile.fullName, phone: serverProfile.phone, email: serverProfile.email || "",
+          addressLine1: serverProfile.addressLine1 || "", addressLine2: serverProfile.addressLine2 || "",
+          city: serverProfile.city || "", state: serverProfile.state || "", pincode: serverProfile.pincode || "", notes: serverProfile.notes || "",
+        }));
       }
       setOrders(data.orders ?? []);
     } catch (loadError) {
@@ -445,6 +464,7 @@ export default function AccountClient() {
   if (!account && !isLoading) {
     return (
       <section className="px-4 pb-16 pt-28 sm:px-6 md:pt-32">
+        <div className="mx-auto max-w-3xl"><PendingCheckoutCard /></div>
         <div className="mx-auto max-w-3xl overflow-hidden rounded-[2rem] border border-zinc-200 bg-white p-7 text-center shadow-[0_24px_80px_rgba(15,23,42,0.08)] sm:p-10">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-zinc-950 text-white">
             <UserRound className="h-6 w-6" />
@@ -564,6 +584,7 @@ export default function AccountClient() {
       <div className="pointer-events-none absolute left-[-8rem] top-24 h-72 w-72 rounded-full bg-[#d6b77a]/15 blur-3xl" />
       <div className="pointer-events-none absolute right-[-7rem] top-[28rem] h-80 w-80 rounded-full bg-[#8d5a45]/10 blur-3xl" />
       <div className="relative mx-auto max-w-6xl">
+        <PendingCheckoutCard />
         <div className="relative mb-6 overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_85%_10%,rgba(207,171,103,.2),transparent_34%),linear-gradient(135deg,#241813,#130f0d)] p-6 text-white shadow-[0_30px_90px_rgba(46,30,22,.2)] sm:p-8">
           <div className="absolute -right-10 -top-14 h-40 w-40 rounded-full border border-white/[0.06]" />
           <div className="absolute -right-2 -top-6 h-24 w-24 rounded-full border border-[#d7b979]/15" />
@@ -775,7 +796,7 @@ export default function AccountClient() {
                           </p>
                         </div>
                         <div className="relative grid min-w-0 gap-2.5 sm:grid-cols-2">
-                          <Button
+                          {!order.secureCheckout && <Button
                             type="button"
                             onClick={() => resumeOrderPayment(order, "partial_cod")}
                             variant="outline"
@@ -788,18 +809,19 @@ export default function AccountClient() {
                               <span className="truncate">Pay 20% now + COD</span>
                             </span>
                             <ChevronRight className="h-4 w-4 shrink-0 text-[#6d4f39] transition-transform group-hover:translate-x-0.5" />
-                          </Button>
+                          </Button>}
 
                           <Button
                             type="button"
                             onClick={() => resumeOrderPayment(order, "full")}
+                            disabled={resumingOrder !== null}
                             className="group h-13 w-full min-w-0 justify-between overflow-hidden rounded-[14px] border border-emerald-200/15 bg-[linear-gradient(135deg,#1b654d,#2b8063)] px-3.5 text-xs font-semibold text-white shadow-[0_12px_30px_rgba(10,65,46,.3)] transition hover:-translate-y-0.5 hover:bg-[#1b5d47] active:translate-y-0"
                           >
                             <span className="flex min-w-0 items-center gap-2">
                               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] border border-white/10 bg-white/10">
                                 <CreditCard className="h-3.5 w-3.5" />
                               </span>
-                              <span className="truncate">Pay securely with Razorpay</span>
+                              <span className="truncate">{resumingOrder === order.id ? "Opening saved checkout…" : order.secureCheckout ? "Continue saved payment" : "Pay securely with Razorpay"}</span>
                             </span>
                             <ChevronRight className="h-4 w-4 shrink-0 text-emerald-100 transition-transform group-hover:translate-x-0.5" />
                           </Button>

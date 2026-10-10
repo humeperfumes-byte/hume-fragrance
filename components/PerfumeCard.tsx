@@ -147,7 +147,6 @@ const PerfumeCard = ({
       return;
     }
 
-    event.preventDefault();
     showNavigationLoadingToast();
 
     if (typeof window === "undefined") return;
@@ -165,7 +164,6 @@ const PerfumeCard = ({
       }),
     );
 
-    router.push(productPath);
   };
 
   return (
@@ -185,7 +183,6 @@ const PerfumeCard = ({
           <Link
             href={productPath}
             className="block"
-            onMouseEnter={() => router.prefetch(productPath)}
             onClick={handleProductClick}
           >
             <Image
@@ -257,7 +254,6 @@ const PerfumeCard = ({
           <Link
             href={productPath}
             className="block min-h-[6.6rem] sm:min-h-[8.45rem]"
-            onMouseEnter={() => router.prefetch(productPath)}
             onClick={handleProductClick}
           >
             <p className="mb-2 min-h-[2rem] text-[9px] uppercase leading-[1.45] tracking-[0.18em] text-muted-foreground/75 sm:text-[10px]">

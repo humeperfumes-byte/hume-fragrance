@@ -12,6 +12,10 @@
 
 # next.js
 /.next/
+/localhost.stdout.log
+/localhost.stderr.log
+/release-build.log
+/release-lint.log
 /out/
 
 # production

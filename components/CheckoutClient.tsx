@@ -1,4 +1,5 @@
 "use client";
+import { checkoutFetch } from "@/lib/checkout-fetch";
 
 import {
   type KeyboardEvent,
@@ -39,7 +40,9 @@ import { isRazorpayAllowedHost } from "@/lib/razorpay-domain";
 import { useSiteControls } from "@/hooks/use-site-controls";
 import { displayPhoneNumber, toPhoneDigits, toTenDigitPhone } from "@/lib/phone";
 import { isDiscoverySetCartItem } from "@/lib/discovery-set";
+import { reportCheckoutError } from "@/lib/client-error-monitoring";
 import {
+  shouldBlockAnotherPayment,
   PAYMENT_RECOVERY_MODE_KEY,
   clearPaymentRecovery,
   readPaymentRecovery,
@@ -309,9 +312,9 @@ function WhatsAppIcon({ className = "" }: { className?: string }) {
   );
 }
 
-function OrderButtonContent({ processing }: { processing: boolean }) {
+function OrderButtonContent({ processing, stage }: { processing: boolean; stage: string }) {
   if (processing) {
-    return <span className="hume-order-text">Opening Payment...</span>;
+    return <span className="hume-order-text" role="status">{stage}</span>;
   }
 
   return (
@@ -402,7 +405,7 @@ function createOrderNumber() {
 
 function getCheckoutUrl(pathname: string) {
   if (typeof window === "undefined") return pathname;
-  return `${window.location.origin}${pathname}`;
+  return `${window.location.origin}${pathname.startsWith("/checkout/") ? "/checkout" : pathname}`;
 }
 
 function isRazorpayAvailableForCurrentHost() {
@@ -505,16 +508,23 @@ async function ensureRazorpayScriptLoaded() {
 function waitForButtonPaint() {
   if (typeof window === "undefined") return Promise.resolve();
   return new Promise<void>((resolve) => {
-    window.requestAnimationFrame(() => resolve());
+    const fallback = window.setTimeout(resolve, 100);
+    window.requestAnimationFrame(() => { window.clearTimeout(fallback); resolve(); });
   });
 }
 
-export default function CheckoutClient() {
+function PaymentStartNotice({ message, path }: { message: string; path: string }) {
+  if (!message) return null;
+  return <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950"><p>{message}</p><a href={path} referrerPolicy="no-referrer" className="mt-2 inline-block font-semibold underline">Check saved payment</a></div>;
+}
+
+export default function CheckoutClient({ secureSession }: { secureSession?: { token: string; id: string; orderId: string; orderNumber: string; savedTotal?: number; savedShippingFee?: number; expectedPaymentMinor?: number } } = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const { items, totalPrice, clearCart } = useCart();
   const settings = useSiteControls();
-  const checkoutSessionIdRef = useRef<string | null>(null);
+  const checkoutSessionIdRef = useRef<string | null>(secureSession?.id || null);
+  const secureOrderPathRef = useRef<string | null>(null);
   const autosaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedSignatureRef = useRef<string>("");
   const fieldRefs = useRef<
@@ -526,6 +536,24 @@ export default function CheckoutClient() {
     useState<WelcomeBackReward | null>(null);
   const [isRazorpayAvailable, setIsRazorpayAvailable] = useState(false);
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+  const [paymentStage, setPaymentStage] = useState("Preparing checkout…");
+  const [paymentStartProblem, setPaymentStartProblem] = useState("");
+  useEffect(() => {
+    if (!isPaymentProcessing || paymentStage !== "Complete payment in secure window") return;
+    const timer = window.setTimeout(() => {
+      const visibleWindow = Array.from(document.querySelectorAll<HTMLIFrameElement>('iframe[src*="razorpay"]')).some(frame => {
+        const bounds = frame.getBoundingClientRect();
+        return bounds.width > 0 && bounds.height > 0 && window.getComputedStyle(frame).visibility !== "hidden";
+      });
+      if (!visibleWindow) {
+        setPaymentStage("Payment window did not open");
+        setPaymentStartProblem("The secure payment window did not appear. Check your saved payment before trying again. Do not place another order if you already paid.");
+      }
+    }, 20000);
+    return () => window.clearTimeout(timer);
+  }, [isPaymentProcessing, paymentStage]);
+  const [paidSavePending, setPaidSavePending] = useState(false);
+  useEffect(() => { setPaidSavePending(shouldBlockAnotherPayment(readPaymentRecovery(window.localStorage))); }, []);
   const [recoveryPaymentMode] = useState<RecoveryPaymentMode>(() => {
     if (typeof window === "undefined") return "full";
     return window.localStorage.getItem(PAYMENT_RECOVERY_MODE_KEY) === "partial_cod"
@@ -650,12 +678,12 @@ export default function CheckoutClient() {
     totalPrice > 0 && totalPrice < freeDeliveryThreshold
       ? deliveryFeeBelowThreshold
       : 0;
-  const shippingFee = hasWelcomeBackBenefit ? 0 : regularShippingFee;
+  const shippingFee = secureSession?.savedShippingFee ?? (hasWelcomeBackBenefit ? 0 : regularShippingFee);
   const shippingSavings = Math.max(0, regularShippingFee - shippingFee);
   const rawGrandTotal =
     Math.max(0, totalPrice - couponDiscount - welcomeBackDiscount) +
     shippingFee;
-  const grandTotal = adminOverrideTotal !== null ? adminOverrideTotal : rawGrandTotal;
+  const grandTotal = secureSession?.savedTotal ?? (adminOverrideTotal !== null ? adminOverrideTotal : rawGrandTotal);
   const appliedOfferCodes = [appliedCouponCode, hasWelcomeBackBenefit ? effectiveWelcomeBackCode : null]
     .filter(Boolean)
     .join(" + ");
@@ -770,7 +798,7 @@ export default function CheckoutClient() {
       const sessionId = checkoutSessionIdRef.current || getOrCreateCheckoutSessionId();
       if (!sessionId) return;
       try {
-        const response = await fetch(`/api/checkout-override?sessionId=${sessionId}`);
+        const response = await fetch(`/api/checkout-override?sessionId=${sessionId}`, { headers: secureSession ? { "x-hume-checkout-token": secureSession.token } : {} });
         if (!response.ok) return;
         const data = await response.json();
         if (active && typeof data.overrideTotal === "number") {
@@ -794,7 +822,7 @@ export default function CheckoutClient() {
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", checkOverrideWhileVisible);
     };
-  }, []);
+  }, [secureSession]);
 
   useEffect(() => {
     if (didAutoFocusRef.current || items.length === 0) return;
@@ -860,6 +888,7 @@ export default function CheckoutClient() {
         shippingFee,
         grandTotal,
         pricingBreakdown,
+        appliedCouponCode: appliedOfferCodes || undefined,
         cartSnapshot: items.map((item) => ({
           id: item.id,
           name: item.name,
@@ -875,7 +904,7 @@ export default function CheckoutClient() {
         details,
       };
     },
-    [details, grandTotal, items, pathname, pricingBreakdown, shippingFee, totalPrice],
+    [details, grandTotal, items, pathname, pricingBreakdown, shippingFee, totalPrice, appliedOfferCodes],
   );
 
   const persistDraft = useCallback(
@@ -900,9 +929,9 @@ export default function CheckoutClient() {
       if (!force && signature === lastSavedSignatureRef.current) return;
 
       try {
-        const response = await fetch("/api/checkout-drafts", {
+        const response = await checkoutFetch("/api/checkout-drafts", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...(secureSession ? { "x-hume-checkout-token": secureSession.token } : {}) },
           keepalive: true,
           body: JSON.stringify(payload),
         });
@@ -914,7 +943,7 @@ export default function CheckoutClient() {
         console.error("Checkout draft save failed:", error);
       }
     },
-    [buildDraftPayload],
+    [buildDraftPayload, secureSession],
   );
 
   const captureCheckoutAction = useCallback(
@@ -1126,6 +1155,7 @@ export default function CheckoutClient() {
   };
 
   const getOrderIdentity = () => {
+    if (secureSession) return { id: secureSession.orderId, orderNumber: secureSession.orderNumber, signature: secureSession.id };
     const signature = JSON.stringify({
       details,
       items: items.map((item) => ({
@@ -1214,9 +1244,9 @@ export default function CheckoutClient() {
     const identity = getOrderIdentity();
 
     try {
-      const response = await fetch("/api/orders", {
+      const response = await checkoutFetch("/api/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(secureSession ? { "x-hume-checkout-token": secureSession.token } : {}) },
         keepalive: true,
         body: JSON.stringify({
           id: identity.id,
@@ -1263,9 +1293,15 @@ export default function CheckoutClient() {
         }),
       });
 
+      const result = await response.json().catch(() => null);
+      if (response.ok && result?.orderPath) secureOrderPathRef.current = result.orderPath;
+      if (!response.ok) {
+        reportCheckoutError("ORDER_SAVE_FAILED");
+        if (result?.error) toast({ title: "Please review your checkout", description: result.error, variant: "destructive" });
+      }
       return response.ok;
-    } catch (error) {
-      console.error("Order save failed:", error);
+    } catch {
+      reportCheckoutError("ORDER_SAVE_FAILED");
       return false;
     }
   };
@@ -1297,7 +1333,7 @@ export default function CheckoutClient() {
     if (stockItems.length === 0) return true;
 
     try {
-      const response = await fetch("/api/products/availability", {
+      const response = await checkoutFetch("/api/products/availability", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items: stockItems }),
@@ -1331,6 +1367,11 @@ export default function CheckoutClient() {
   };
 
   const handleRazorpayPayment = async () => {
+    if (isPaymentProcessing) return;
+    if (paidSavePending || shouldBlockAnotherPayment(readPaymentRecovery(window.localStorage))) {
+      toast({ title: "Payment verification is being completed", description: "Please contact HUME support before paying again.", variant: "destructive" });
+      return;
+    }
     if (!isOnlinePaymentAvailable) {
       toast({
         title: "Online payment is not available here",
@@ -1353,6 +1394,8 @@ export default function CheckoutClient() {
       razorpayAvailable: isOnlinePaymentAvailable,
     });
     setIsPaymentProcessing(true);
+    setPaymentStartProblem("");
+    setPaymentStage("Checking your selection…");
     await waitForButtonPaint();
 
     if (!validate()) {
@@ -1377,8 +1420,11 @@ export default function CheckoutClient() {
     }
 
     try {
+      setPaymentStage("Loading secure payment…");
       const scriptLoadPromise = ensureRazorpayScriptLoaded();
-      await persistDraft(undefined, "complete", true);
+      // Secure order preparation saves the full details itself; draft autosave
+      // must not delay opening payment or race with the order write.
+      if (!secureSession) await persistDraft(undefined, "complete", true);
 
       const scriptLoaded = await scriptLoadPromise;
       if (!scriptLoaded || !window.Razorpay) {
@@ -1391,7 +1437,7 @@ export default function CheckoutClient() {
       const sessionId =
         checkoutSessionIdRef.current ?? getOrCreateCheckoutSessionId();
       const isPartialCod = recoveryPaymentMode === "partial_cod";
-      const paymentTotal = isPartialCod
+      const paymentTotal = secureSession?.expectedPaymentMinor ? secureSession.expectedPaymentMinor / 100 : isPartialCod
         ? Math.max(1, Math.round(grandTotal * 0.2))
         : grandTotal;
       const codBalance = Math.max(0, grandTotal - paymentTotal);
@@ -1399,9 +1445,15 @@ export default function CheckoutClient() {
       const recoveryPaymentMethod = isPartialCod
         ? "20% Prepaid + 80% Cash on Delivery"
         : "Razorpay Online Payment";
-      const createOrderResponse = await fetch("/api/create-order", {
+      if (secureSession) {
+        setPaymentStage("Saving your order…");
+        const prepared = await persistOrder({ checkoutChannel: "razorpay", paymentMethod: recoveryPaymentMethod, status: "payment_pending", orderMessage: buildOrderMessage() });
+        if (!prepared) throw new Error("Your order could not be prepared safely. Please review the checkout details before paying.");
+      }
+      setPaymentStage("Preparing secure payment…");
+      const createOrderResponse = await checkoutFetch("/api/create-order", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(secureSession ? { "x-hume-checkout-token": secureSession.token } : {}) },
         body: JSON.stringify({
           amount,
           currency: "INR",
@@ -1436,7 +1488,7 @@ export default function CheckoutClient() {
         amount,
       });
 
-      await persistOrder({
+      if (!secureSession) await persistOrder({
         checkoutChannel: "razorpay",
         paymentMethod: recoveryPaymentMethod,
         status: "payment_pending",
@@ -1506,10 +1558,11 @@ export default function CheckoutClient() {
           },
         },
         handler: async (response) => {
+          setPaymentStage("Verifying your payment…");
           try {
-            const verifyResponse = await fetch("/api/verify-payment", {
+            const verifyResponse = await checkoutFetch("/api/verify-payment", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json", ...(secureSession ? { "x-hume-checkout-token": secureSession.token } : {}) },
               body: JSON.stringify(response),
             });
 
@@ -1547,6 +1600,8 @@ export default function CheckoutClient() {
               isPartialCod ? `Cash on Delivery Balance: ${formatINR(codBalance)}` : null,
             ].filter(Boolean).join("\n");
 
+            setPaidSavePending(true);
+            try { savePaymentRecovery(window.localStorage, { orderId: identity.id, orderNumber: identity.orderNumber, grandTotal, createdAt: new Date().toISOString(), status: "verified_pending_save" }); } catch { reportCheckoutError("PAID_ORDER_SAVE_FAILED"); }
             const orderSaved = await persistOrder({
               checkoutChannel: "razorpay",
               paymentMethod: recoveryPaymentMethod,
@@ -1555,6 +1610,13 @@ export default function CheckoutClient() {
               razorpayPaymentId: response.razorpay_payment_id,
               orderMessage: paymentMessage,
             });
+
+            if (!orderSaved) {
+              reportCheckoutError("PAID_ORDER_SAVE_FAILED");
+              toast({ title: "Payment verified — order confirmation pending", description: "Your cart and recovery details are preserved. Please contact HUME support with order " + identity.orderNumber + ". Do not pay again.", variant: "destructive" });
+              return;
+            }
+            setPaidSavePending(false);
 
             // Log order completion for Flyer QR Campaign Funnel
             if (typeof window !== "undefined") {
@@ -1592,7 +1654,7 @@ export default function CheckoutClient() {
             clearPaymentRecovery(window.localStorage);
             showNavigationLoadingToast();
             router.push(
-              `/order-success?order=${encodeURIComponent(identity.orderNumber)}&channel=razorpay`,
+              secureOrderPathRef.current || `/order-success?order=${encodeURIComponent(identity.orderNumber)}&channel=razorpay`,
             );
           } catch (error) {
             toast({
@@ -1633,8 +1695,10 @@ export default function CheckoutClient() {
         razorpayOrderId: orderData.order_id,
       });
       razorpay.open();
+      setPaymentStage("Complete payment in secure window");
     } catch (error) {
       setIsPaymentProcessing(false);
+      setPaymentStartProblem(error instanceof Error ? error.message : "Payment could not open. Check your saved payment before retrying.");
       toast({
         title: "Payment could not start",
         description:
@@ -1645,6 +1709,10 @@ export default function CheckoutClient() {
   };
 
   const handleWhatsAppOrder = async () => {
+    if (paidSavePending || shouldBlockAnotherPayment(readPaymentRecovery(window.localStorage))) {
+      toast({ title: "Your payment needs order confirmation", description: "Contact HUME support; do not place another order.", variant: "destructive" });
+      return;
+    }
     if (!settings.whatsappCheckoutEnabled) {
       toast({
         title: "WhatsApp checkout is disabled",
@@ -1679,6 +1747,7 @@ export default function CheckoutClient() {
       status: "whatsapp_initiated",
       orderMessage: whatsappMessage,
     });
+    if (secureSession && !orderSaved) return;
 
     const encodedMessage = encodeURIComponent(whatsappMessage);
     window.open(`https://wa.me/${settings.whatsappNumber}?text=${encodedMessage}`, "_blank");
@@ -1696,7 +1765,7 @@ export default function CheckoutClient() {
           eventType: "sent",
           couponCode: appliedOfferCodes,
           destination: settings.whatsappNumber,
-          path: pathname,
+          path: pathname.startsWith("/checkout/") ? "/checkout" : pathname,
           referrer:
             typeof document !== "undefined" ? document.referrer : undefined,
           payload: {
@@ -1719,7 +1788,7 @@ export default function CheckoutClient() {
     });
     showNavigationLoadingToast();
     router.push(
-      `/order-success?order=${encodeURIComponent(identity.orderNumber)}&channel=whatsapp`,
+      secureOrderPathRef.current || `/order-success?order=${encodeURIComponent(identity.orderNumber)}&channel=whatsapp`,
     );
   };
 
@@ -1765,6 +1834,7 @@ export default function CheckoutClient() {
           </h1>
         </div>
 
+        {paidSavePending && <div role="alert" className="mb-5 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950"><strong>Payment verified — order confirmation pending</strong><p className="mt-2 text-sm">Please do not pay again. Your checkout is preserved while we confirm the order.</p><a href="https://wa.me/919559024822" target="_blank" rel="noreferrer" className="mt-3 inline-block font-semibold underline">Contact HUME support</a></div>}
         {isRecoveryCheckout ? (
           <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 md:mb-6">
             <strong>{recoveryPaymentMode === "partial_cod" ? "20% prepaid + COD selected" : "Completing your pending order"}</strong>
@@ -2140,19 +2210,20 @@ export default function CheckoutClient() {
             </div>
 
             <div className="mt-4 flex flex-col gap-4 lg:hidden">
+              <PaymentStartNotice message={paymentStartProblem} path={pathname} />
               {isOnlinePaymentAvailable ? (
                 <Button
                   onClick={handleRazorpayPayment}
-                  disabled={isPaymentProcessing}
+                  disabled={isPaymentProcessing || paidSavePending}
                   className={orderButtonClassName}
                 >
-                  <OrderButtonContent processing={isPaymentProcessing} />
+                  <OrderButtonContent processing={isPaymentProcessing} stage={paymentStage} />
                 </Button>
               ) : null}
               {settings.whatsappCheckoutEnabled ? (
                 <Button
                   onClick={handleWhatsAppOrder}
-                  disabled={isPaymentProcessing}
+                  disabled={isPaymentProcessing || paidSavePending}
                   className={whatsappButtonClassName}
                 >
                   <WhatsAppIcon className="mr-3 h-11 w-11 scale-150" />
@@ -2313,19 +2384,20 @@ export default function CheckoutClient() {
             </div>
 
             <div className="mt-5 hidden flex-col gap-4 lg:flex">
+              <PaymentStartNotice message={paymentStartProblem} path={pathname} />
               {isOnlinePaymentAvailable ? (
                 <Button
                   onClick={handleRazorpayPayment}
-                  disabled={isPaymentProcessing}
+                  disabled={isPaymentProcessing || paidSavePending}
                   className={orderButtonClassName}
                 >
-                  <OrderButtonContent processing={isPaymentProcessing} />
+                  <OrderButtonContent processing={isPaymentProcessing} stage={paymentStage} />
                 </Button>
               ) : null}
               {settings.whatsappCheckoutEnabled ? (
                 <Button
                   onClick={handleWhatsAppOrder}
-                  disabled={isPaymentProcessing}
+                  disabled={isPaymentProcessing || paidSavePending}
                   className={whatsappButtonClassName}
                 >
                   <WhatsAppIcon className="mr-3 h-11 w-11 scale-150" />

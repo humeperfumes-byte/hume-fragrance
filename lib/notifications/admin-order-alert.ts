@@ -113,6 +113,7 @@ function getAlertTitle(order: AdminOrderAlertData) {
   if (order.checkoutChannel === "whatsapp" || order.status.includes("whatsapp")) {
     return "New WhatsApp HUME order";
   }
+  if (["payment_pending", "payment_failed", "payment_authorized"].includes(order.status)) return "HUME order awaiting payment";
 
   return "New paid HUME order";
 }

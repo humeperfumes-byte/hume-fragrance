@@ -10,7 +10,7 @@ function loadSettings() {
   if (cachedSettings) return Promise.resolve(cachedSettings);
   if (settingsPromise) return settingsPromise;
 
-  settingsPromise = fetch("/api/settings", { cache: "no-store" })
+  settingsPromise = fetch("/api/settings", { cache: "no-store", signal: AbortSignal.timeout(10000) })
     .then(async (response) => {
       if (!response.ok) return defaultAdminControls;
       return normalizeAdminControls(await response.json());
@@ -19,7 +19,7 @@ function loadSettings() {
       cachedSettings = settings;
       return settings;
     })
-    .catch(() => defaultAdminControls);
+    .catch(() => { settingsPromise = null; return defaultAdminControls; });
 
   return settingsPromise;
 }

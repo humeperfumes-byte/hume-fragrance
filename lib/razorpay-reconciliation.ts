@@ -3,7 +3,8 @@ import Razorpay from "razorpay";
 import { desc, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
-import { orderEditAudits, orders, razorpayWebhookEvents, type Order } from "@/db/schema";
+import { orderEditAudits, orders, razorpayWebhookEvents, secureCheckoutSessions, type Order } from "@/db/schema";
+import { storedPaymentMinor } from "./secure-checkout-pricing";
 
 type ProviderOrder = {
   id: string;
@@ -81,12 +82,15 @@ export async function reconcileOrderPayment(orderId: string, actor = "admin") {
   const captured = payments.filter((payment) => payment.captured || payment.status === "captured");
   const capturedMinor = captured.reduce((total, payment) => total + Number(payment.amount || 0), 0);
   const capturedAmount = capturedMinor / 100;
-  const expectedAmount = Number(current.grandTotal || 0);
+  const [ownedCheckout] = process.env.ENABLE_SECURE_CHECKOUT === "true" ? await db.select({ expectedMinor: secureCheckoutSessions.expectedPaymentMinor }).from(secureCheckoutSessions).where(eq(secureCheckoutSessions.orderId, current.id)).limit(1) : [];
+  const expectedAmount = storedPaymentMinor(ownedCheckout?.expectedMinor, Number(current.grandTotal || 0), /Prepaid.*Cash on Delivery/i.test(current.paymentMethod || "")) / 100;
   const difference = expectedAmount - capturedAmount;
   const syncStatus = captured.length > 1
     ? "multiple_captures"
     : captured.length === 0
       ? "unpaid"
+      : captured.some(payment => payment.currency !== "INR" || current.razorpayOrderId && payment.order_id !== current.razorpayOrderId)
+        ? "payment_mismatch"
       : Math.abs(difference) > 0.009
         ? "amount_mismatch"
         : "captured";
@@ -94,8 +98,8 @@ export async function reconcileOrderPayment(orderId: string, actor = "admin") {
   const paidProviderOrder = primaryPayment
     ? providerOrders.find((providerOrder) => providerOrder.id === primaryPayment.order_id) ?? null
     : null;
-  const protectedStatus = new Set(["processing", "packed", "shipped", "delivered", "complete", "cancelled"]);
-  const nextStatus = captured.length && !protectedStatus.has(current.status) ? "processing" : current.status;
+  const protectedStatus = new Set(["processing", "packed", "shipped", "delivered", "complete", "cancelled", "refunded", "partially_refunded", "disputed"]);
+  const nextStatus = syncStatus === "captured" && !protectedStatus.has(current.status) ? "processing" : current.status;
   const now = new Date();
 
   const updated = await db.transaction(async (tx) => {
@@ -124,7 +128,7 @@ export async function reconcileOrderPayment(orderId: string, actor = "admin") {
       razorpayOrderId: paidProviderOrder?.id ?? current.razorpayOrderId ?? providerOrders.at(-1)?.id ?? null,
       razorpayPaymentId: primaryPayment?.id ?? current.razorpayPaymentId,
       capturedPaymentAmount: captured.length ? capturedAmount.toFixed(2) : current.capturedPaymentAmount,
-      paymentCapturedAt: primaryPayment?.created_at ? new Date(primaryPayment.created_at * 1000) : current.paymentCapturedAt,
+      paymentCapturedAt: syncStatus === "captured" && primaryPayment?.created_at ? new Date(primaryPayment.created_at * 1000) : current.paymentCapturedAt,
       paymentReconciledAt: now,
       paymentSyncStatus: syncStatus,
       paymentAttemptCount: providerOrders.length,

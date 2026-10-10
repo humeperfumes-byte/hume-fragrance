@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import ProductJournal from "@/components/ProductJournal";
 import Link from "next/link";
 import { getUnavailableProduct } from "@/lib/unavailable-products";
 import { NIGHT_OUT_IMAGE_PLACEHOLDER, NIGHT_OUT_REFERENCE_URL } from "@/lib/night-out";
@@ -22,7 +24,6 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { JsonLd } from "@/components/JsonLd";
 import ProductDetailView from "./ProductDetailView";
-import { getRelatedBlogPostsByProductId } from "@/lib/db/blog";
 import { getAllPublicProducts, getProductByRouteSegment } from "@/lib/db/products";
 import {
   getProductSchema,
@@ -162,7 +163,6 @@ export default async function ProductPage({
     permanentRedirect(getProductPath(perfume));
   }
 
-  const relatedBlogs = await getRelatedBlogPostsByProductId(perfume.id, 3);
   const baseUrl = SITE_URL;
 
   const productJsonLd = [
@@ -180,7 +180,7 @@ export default async function ProductPage({
     <main className="bg-background min-h-screen">
       <JsonLd data={productJsonLd} />
       <Header />
-      <ProductDetailView perfume={perfume} relatedBlogs={relatedBlogs} />
+      <ProductDetailView perfume={perfume} relatedJournal={<Suspense fallback={null}><ProductJournal productId={perfume.id} /></Suspense>} />
       {perfume.id === "stronger-with-you-intensely" && <section className="mx-auto max-w-4xl px-6 pb-16"><h2 className="text-xl mb-3">Explore Strong With You guides</h2><p className="mb-4">Compare the inspiration, understand the scent direction and plan your own wear test.</p><Link href="/guides" className="underline">Read the Strong With You buying guides and comparisons</Link></section>}
       {perfume.id === "acqua-di-gio-profondo" && <section className="mx-auto max-w-4xl px-6 pb-16"><h2 className="text-xl mb-3">Explore Acqua di Gio guides</h2><p className="mb-4">Explore the Profondo inspiration, marine scent direction, everyday wear and buying comparisons.</p><Link href="/guides#acqua-di-gio" className="underline">Read the Acqua di Gio buying guides and comparisons</Link></section>}
       {perfume.id === "creed-aventus" && <section className="mx-auto max-w-4xl px-6 pb-16"><h2 className="text-xl mb-3">Explore Aventus guides</h2><p className="mb-4">Explore the Creed inspiration, fruity-smoky-woody direction, everyday wear and buying comparisons.</p><Link href="/guides#aventus" className="underline">Read the Aventus buying guides and comparisons</Link></section>}

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -29,11 +29,13 @@ import { withCloudinaryTransforms } from "@/lib/cloudinary";
 export default function ProductDetailView({
   perfume,
   relatedBlogs = [],
+  relatedJournal,
   priceLabel,
   faqItems: customFaqItems,
 }: {
   perfume: PerfumeData;
   relatedBlogs?: BlogPost[];
+  relatedJournal?: ReactNode;
   priceLabel?: string;
   faqItems?: Array<{ question: string; answer: string }>;
 }) {
@@ -599,6 +601,7 @@ export default function ProductDetailView({
         productName={perfume.name}
         inspiration={productSubtitle}
       />
+      {relatedJournal}
       {relatedBlogs.length > 0 && (
         <section className="pb-16 md:pb-24">
           <div className="container-luxury">

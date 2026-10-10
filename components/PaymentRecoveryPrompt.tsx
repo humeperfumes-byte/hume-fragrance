@@ -7,10 +7,12 @@ import { ChevronRight, CreditCard, ShieldCheck, ShoppingBag, X } from "lucide-re
 import ImageWithFallback from "@/components/ImageWithFallback";
 import { formatINR } from "@/lib/currency";
 import { useCart } from "@/context/CartContext";
+import { useActiveCheckout } from "@/hooks/use-active-checkout";
 import {
   PAYMENT_RECOVERY_EVENT,
   PAYMENT_RECOVERY_MODE_KEY,
   readPaymentRecovery,
+  shouldBlockAnotherPayment,
   type PaymentRecovery,
   type RecoveryPaymentMode,
 } from "@/lib/payment-recovery";
@@ -19,6 +21,7 @@ export default function PaymentRecoveryPrompt() {
   const router = useRouter();
   const pathname = usePathname();
   const { isCartOpen } = useCart();
+  const { checkout } = useActiveCheckout();
   const [recovery, setRecovery] = useState<PaymentRecovery | null>(null);
   const [open, setOpen] = useState(false);
   const [badgeHiddenUntilRefresh, setBadgeHiddenUntilRefresh] = useState(false);
@@ -73,19 +76,33 @@ export default function PaymentRecoveryPrompt() {
   }, [open, recovery]);
 
   if (
-    !recovery ||
     isCartOpen ||
     pathname.startsWith("/admin") ||
-    pathname === "/checkout" ||
+    pathname.startsWith("/checkout") ||
+    pathname.startsWith("/order/") ||
     pathname.startsWith("/order-success") ||
     pathname.startsWith("/spaces")
   )
     return null;
 
+  if (checkout && !shouldBlockAnotherPayment(recovery)) return (
+    <button type="button" onClick={() => router.push(checkout.path)} aria-label="Complete pending order" className="fixed bottom-24 right-3 z-[60] flex items-center gap-3 rounded-2xl border border-[#d9b866]/80 bg-[#10533b] px-4 py-3 text-left text-white shadow-xl sm:bottom-8 sm:right-6">
+      <ShoppingBag className="h-5 w-5 text-[#e7c47e]" /><span><span className="block text-[9px] uppercase tracking-widest text-[#e7c47e]">{checkout.status === "draft" ? "Checkout saved" : "Payment pending"}</span><span className="block font-serif text-lg">Complete your order</span></span><ChevronRight className="h-4 w-4" />
+    </button>
+  );
+  if (!recovery) return null;
+
   const continueWith = (mode: RecoveryPaymentMode) => {
+    if (shouldBlockAnotherPayment(recovery)) { router.push("/checkout"); return; }
     window.localStorage.setItem(PAYMENT_RECOVERY_MODE_KEY, mode);
     router.push("/checkout");
   };
+
+  if (shouldBlockAnotherPayment(recovery)) return (
+    <button type="button" onClick={() => router.push("/checkout")} className="fixed bottom-8 right-6 z-[60] rounded-2xl bg-[#082c21] px-5 py-4 text-sm text-white shadow-xl">
+      Payment verified · Check order confirmation
+    </button>
+  );
 
   const recoveryItems = (() => {
     if (recovery.items?.length) return recovery.items;

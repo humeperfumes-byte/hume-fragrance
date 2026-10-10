@@ -57,6 +57,7 @@ const navItems = [
   { title: "Stock Requests", url: "/admin/stock-notify", icon: Bell },
   { title: "Stock", url: "/admin/stock", icon: Warehouse },
   { title: "Checkouts", url: "/admin/checkouts", icon: ShoppingCart },
+  { title: "Diagnostics", url: "/admin/diagnostics", icon: ShoppingCart },
   { title: "Cart Leads", url: "/admin/cart", icon: ShoppingBasket },
   { title: "Coupons", url: "/admin/coupon-leads", icon: Ticket },
   { title: "Customers", url: "/admin/customers", icon: Users },
@@ -104,7 +105,7 @@ const navGroups = [
   {
     label: "People & system",
     items: navItems.filter((item) =>
-      ["Customers", "Feedback", "Login Activity", "Settings", "Data Export"].includes(item.title),
+      ["Customers", "Feedback", "Login Activity", "Settings", "Data Export", "Diagnostics"].includes(item.title),
     ),
   },
 ];

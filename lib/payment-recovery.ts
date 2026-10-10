@@ -9,7 +9,7 @@ export type PaymentRecovery = {
   orderNumber: string;
   grandTotal: number;
   createdAt: string;
-  status: "payment_pending" | "payment_failed";
+  status: "payment_pending" | "payment_failed" | "verified_pending_save";
   items?: Array<{
     id: string;
     name: string;
@@ -32,7 +32,13 @@ export function readPaymentRecovery(storage: Storage): PaymentRecovery | null {
   }
 }
 
+export function shouldBlockAnotherPayment(recovery: PaymentRecovery | null): boolean {
+  return recovery?.status === "verified_pending_save";
+}
+
 export function savePaymentRecovery(storage: Storage, recovery: PaymentRecovery) {
+  // A stale failure/cancel callback or account retry must not overwrite verified-payment recovery.
+  if (shouldBlockAnotherPayment(readPaymentRecovery(storage)) && recovery.status !== "verified_pending_save") return;
   storage.setItem(PAYMENT_RECOVERY_KEY, JSON.stringify(recovery));
   window.dispatchEvent(new Event(PAYMENT_RECOVERY_EVENT));
 }

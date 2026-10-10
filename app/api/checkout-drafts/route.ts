@@ -1,3 +1,5 @@
+import { reportServerError } from "@/lib/server-error-monitoring";
+import { secureCheckoutEnabled, saveSecureDraft } from "@/lib/secure-checkout";
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -84,6 +86,7 @@ function getCapturedPath(request: NextRequest, path?: string) {
 }
 
 export async function POST(request: NextRequest) {
+  if (secureCheckoutEnabled()) return saveSecureDraft(request);
   try {
     const body = await request.json();
     const data = checkoutDraftSchema.parse(body);
@@ -229,7 +232,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("checkout-drafts capture error:", error);
+    await reportServerError("DRAFT_SAVE_FAILED");
     return NextResponse.json({ ok: false }, { status: 500 });
   }
 }

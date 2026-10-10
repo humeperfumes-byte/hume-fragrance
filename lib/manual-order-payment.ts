@@ -1,4 +1,5 @@
 import "server-only";
+import { DISCOVERY_SET_PRODUCT_ID, DISCOVERY_SET_PRICE, DISCOVERY_SET_IMAGES, DISCOVERY_SET_SIZE } from "./discovery-set";
 import { randomUUID, createHash } from "node:crypto";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
@@ -7,7 +8,7 @@ import { MANUAL_LINK_CHANNEL, manualOrderSchema, manualPaymentAmounts, readManua
 
 type Link = { id: string; short_url: string; reference_id: string; amount: number; amount_paid: number; currency: string; status: string; order_id?: string; payments?: { payment_id: string }[] };
 export class ManualOrderError extends Error {}
-class ProviderError extends ManualOrderError { constructor(public status: number) { super("Razorpay could not complete this request. Retry to recover the existing link; do not create another order."); } }
+class ProviderError extends ManualOrderError { constructor(public status: number) { super(status >= 400 && status < 500 && status !== 429 ? `Razorpay rejected the payment-link request (${status}). Check customer details and Razorpay credentials, then retry on this saved order.` : "Razorpay could not complete this request. Retry to recover the existing link; do not create another order."); } }
 async function provider(path: string, body?: unknown): Promise<Link> {
   const { RAZORPAY_KEY_ID: key, RAZORPAY_KEY_SECRET: secret } = process.env;
   if (!key || !secret) throw new ManualOrderError("Razorpay credentials are not configured");
@@ -27,18 +28,23 @@ export async function createManualOrder(raw: unknown) {
   if (existing) {
     if (existing.checkoutChannel !== MANUAL_LINK_CHANNEL || existing.sessionId !== `manual-${input.requestId}`) throw new ManualOrderError("Request ID is already in use");
     if (readManualPayment(existing.whatsappMessage)?.requestFingerprint !== requestFingerprint) throw new ManualOrderError("This request already created an order. Open that order before changing details or creating another.");
-    if (existing.fullName !== input.fullName || existing.phone !== input.phone || existing.addressLine1 !== input.addressLine1 || JSON.stringify(existing.cartSnapshot.map(item => ({ id: item.id, quantity: item.quantity }))) !== JSON.stringify(input.items)) throw new ManualOrderError("This request already created an order with different details. Open the existing order before creating another.");
     return existing;
   }
   if (new Set(input.items.map(item => item.id)).size !== input.items.length) throw new ManualOrderError("Select each perfume once and use its quantity field");
   if (input.discount && !input.adjustmentReason) throw new ManualOrderError("Add a reason for the discount");
-  const catalogue = await db.select().from(products).where(inArray(products.id, input.items.map(item => item.id)));
+  const catalogue = await db.select().from(products).where(inArray(products.id, [...new Set(input.items.flatMap(item => [item.id, ...(item.sampleSelections || [])]))]));
   const cartSnapshot = input.items.map(item => {
     const product = catalogue.find(p => p.id === item.id);
-    if (!product || product.visibility !== "public" || product.badges.soldOut || product.badges.comingSoon || /discovery|kit|sample set/i.test(`${product.id} ${product.name}`) || product.priceCurrency !== "INR") throw new ManualOrderError("One of the selected perfumes is unavailable for a manual order");
-    const price = Number(product.price);
+    if (!product || product.priceCurrency !== "INR") throw new ManualOrderError("One of the selected products is unavailable for an INR manual order");
+    const discovery = product.id === DISCOVERY_SET_PRODUCT_ID;
+    const sampleSelections = discovery ? (item.sampleSelections || []).map(id => {
+      const sample = catalogue.find(p => p.id === id);
+      if (!sample || sample.id === DISCOVERY_SET_PRODUCT_ID) throw new ManualOrderError("A discovery sample is missing from the catalogue");
+      return { id: sample.id, name: sample.name, inspiration: sample.inspiration };
+    }) : undefined;
+    const price = discovery ? DISCOVERY_SET_PRICE : Number(product.price);
     if (!Number.isFinite(price) || price <= 0) throw new ManualOrderError("Product price is invalid");
-    return { id: product.id, name: product.name, price, quantity: item.quantity, image: product.images[0], inspiration: product.inspiration, size: product.size };
+    return { id: product.id, name: product.name, price, quantity: item.quantity, image: discovery ? DISCOVERY_SET_IMAGES[0] : product.images[0], inspiration: product.inspiration, size: discovery ? DISCOVERY_SET_SIZE : product.size, ...(sampleSelections ? { sampleSelections } : {}) };
   });
   const subtotalMinor = cartSnapshot.reduce((sum, item) => sum + Math.round(item.price * 100) * item.quantity, 0);
   const shippingMinor = Math.round(input.shippingFee * 100), discountMinor = Math.round(input.discount * 100);
@@ -66,8 +72,8 @@ export async function ensureManualPaymentLink(id: string) {
     try {
       link = await provider("payment_links", { amount: payment.advanceMinor, currency: "INR", accept_partial: false, reference_id: id, description: `HUME ${order.orderNumber}${payment.mode === "partial_cod" ? " — 20% advance" : ""}`, customer: { name: order.fullName, contact: order.phone, ...(order.email ? { email: order.email } : {}) }, notify: { sms: false, email: false }, reminder_enable: false, notes: { humeOrderId: id, humeOrderNumber: order.orderNumber, paymentMode: payment.mode } });
     } catch (error) {
-      // Authentication rejection cannot have created a link. Unknown responses remain claimed for recovery.
-      if (error instanceof ProviderError && [401, 403].includes(error.status)) await db.update(orders).set({ paymentSyncStatus: "link_pending" }).where(and(eq(orders.id, id), eq(orders.paymentSyncStatus, "link_creating")));
+      // Explicit client rejections cannot create a link. Unknown outcomes stay claimed for recovery.
+      if (error instanceof ProviderError && error.status >= 400 && error.status < 500 && error.status !== 429) await db.update(orders).set({ paymentSyncStatus: "link_pending" }).where(and(eq(orders.id, id), eq(orders.paymentSyncStatus, "link_creating")));
       throw error;
     }
   } else {

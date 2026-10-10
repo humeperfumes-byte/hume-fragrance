@@ -1,4 +1,7 @@
 import crypto from "crypto";
+import { secureCheckoutSessions } from "@/db/schema";
+import { storedPaymentMinor } from "@/lib/secure-checkout-pricing";
+import { reportServerError } from "@/lib/server-error-monitoring";
 import { NextRequest, NextResponse } from "next/server";
 import { eq, ilike, or } from "drizzle-orm";
 
@@ -619,6 +622,17 @@ export async function POST(request: NextRequest) {
       paymentRefundStatus,
       currentStatus: existingOrder.status,
     });
+    if (["payment.captured", "order.paid"].includes(event)) {
+      const [ownedSession] = process.env.ENABLE_SECURE_CHECKOUT === "true" ? await db.select({ expectedMinor: secureCheckoutSessions.expectedPaymentMinor }).from(secureCheckoutSessions).where(eq(secureCheckoutSessions.orderId, existingOrder.id)).limit(1) : [];
+      if (ownedSession) {
+        const expected = storedPaymentMinor(ownedSession.expectedMinor, Number(existingOrder.grandTotal), /Prepaid.*Cash on Delivery/i.test(existingOrder.paymentMethod || ""));
+        if (razorpayOrderId !== existingOrder.razorpayOrderId || Number(paymentAmount) !== expected || getString(payment?.currency) !== "INR" || !razorpayPaymentId) {
+          await db.update(orders).set({ paymentSyncStatus: "payment_mismatch", paymentReconciledAt: new Date() }).where(eq(orders.id, existingOrder.id));
+          await reportServerError("PAYMENT_VERIFY_FAILED");
+          return NextResponse.json({ ok: true, matched: true, reviewRequired: true });
+        }
+      }
+    }
     const isPartialCodOrder = existingOrder.paymentMethod?.includes("Cash on Delivery");
     const nextPaymentMethod = isPartialCodOrder
       ? existingOrder.paymentMethod

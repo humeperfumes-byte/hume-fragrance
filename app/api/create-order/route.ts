@@ -1,3 +1,5 @@
+import { reportServerError } from "@/lib/server-error-monitoring";
+import { secureCheckoutEnabled, createSecurePayment } from "@/lib/secure-checkout";
 import { NextRequest, NextResponse } from "next/server";
 import Razorpay from "razorpay";
 import { z } from "zod";
@@ -57,6 +59,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (secureCheckoutEnabled()) return createSecurePayment(request);
     const body = await request.json();
     const data = createOrderSchema.parse(body);
     const razorpay = getRazorpayClient();
@@ -82,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     const status = getErrorStatus(error);
-    console.error("Razorpay create order error:", error);
+    await reportServerError("PAYMENT_PROVIDER_FAILED");
     return NextResponse.json(
       {
         error:

@@ -89,6 +89,7 @@ export default function LiveChatWidget() {
 
   useEffect(() => {
     lastReadAt.current = Number(localStorage.getItem(LAST_READ_KEY) || 0);
+    if (process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_ENABLE_LOCAL_TELEMETRY !== "true") return;
     if (localStorage.getItem(SESSION_KEY) || localStorage.getItem(CART_SESSION_KEY)) void activateChat();
     const activateForCart = (event: Event) => {
       const detail = (event as CustomEvent<{ eventType?: string; payload?: Record<string, unknown> }>).detail;
@@ -101,6 +102,7 @@ export default function LiveChatWidget() {
   }, [activateChat]);
 
   useEffect(() => {
+    if (!open && process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_ENABLE_LOCAL_TELEMETRY !== "true") return;
     if (!open && !chatReady) return;
     if (open) openedAt.current = Date.now();
     const auth = identity();

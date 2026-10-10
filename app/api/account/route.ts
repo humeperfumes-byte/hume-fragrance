@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { desc, eq, or } from "drizzle-orm";
+import { desc, eq, or, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { checkoutDrafts, orders, products } from "@/db/schema";
+import { checkoutDrafts, orders, products, secureCheckoutSessions } from "@/db/schema";
+import { CHECKOUT_OWNER_COOKIE, ownsCheckout } from "@/lib/secure-checkout-capability";
+import { hashCustomerToken } from "@/lib/customer-access-token";
 import {
   accountDraftWhere,
   accountOrderWhere,
@@ -39,25 +41,34 @@ export async function POST(request: NextRequest) {
     const { sessionId, accountToken } = accountRequestSchema.parse(body);
     const accountSession = accountToken ? await findAccountSession(accountToken) : null;
     const identity = accountSession ? identityFromSession(accountSession) : null;
+    const owner = request.cookies.get(CHECKOUT_OWNER_COOKIE)?.value;
+    const ownerHash = owner ? hashCustomerToken(owner) : null;
+    const secureEnabled = process.env.ENABLE_SECURE_CHECKOUT === "true";
+    const ownedSessions = secureEnabled && ownerHash ? await db.select({ id: secureCheckoutSessions.id }).from(secureCheckoutSessions).where(eq(secureCheckoutSessions.ownerHash, ownerHash)) : [];
+    const sessionIds = ownedSessions.map(session => session.id);
+    if (sessionId) {
+      const [secure] = secureEnabled ? await db.select({ ownerHash: secureCheckoutSessions.ownerHash }).from(secureCheckoutSessions).where(eq(secureCheckoutSessions.id, sessionId)).limit(1) : [];
+      if (secure ? ownsCheckout(owner, secure.ownerHash) : secureEnabled || !/^[a-f0-9-]{36}$/i.test(sessionId)) sessionIds.push(sessionId);
+    }
 
-    if (!sessionId && !identity) {
+    if (!sessionIds.length && !identity) {
       return NextResponse.json(
         { ok: false, error: "Account session not found" },
         { status: 401 },
       );
     }
 
-    const draftWhere = identity && sessionId
-      ? or(eq(checkoutDrafts.sessionId, sessionId), accountDraftWhere(identity))
+    const draftWhere = identity && sessionIds.length
+      ? or(inArray(checkoutDrafts.sessionId, sessionIds), accountDraftWhere(identity))
       : identity
         ? accountDraftWhere(identity)
-        : eq(checkoutDrafts.sessionId, sessionId as string);
+        : inArray(checkoutDrafts.sessionId, sessionIds);
 
-    const orderWhere = identity && sessionId
-      ? or(eq(orders.sessionId, sessionId), accountOrderWhere(identity))
+    const orderWhere = identity && sessionIds.length
+      ? or(inArray(orders.sessionId, sessionIds), accountOrderWhere(identity))
       : identity
         ? accountOrderWhere(identity)
-        : eq(orders.sessionId, sessionId as string);
+        : inArray(orders.sessionId, sessionIds);
 
     const [latestDraft, accountOrders, productImages] = await Promise.all([
       db
@@ -81,6 +92,8 @@ export async function POST(request: NextRequest) {
     const imageByName = new Map(productImages.map((product) => [productNameKey(product.name), product.images[0]]));
 
     const newestOrder = accountOrders[0];
+    const secureOrderIds = secureEnabled && accountOrders.length ? await db.select({ orderId: secureCheckoutSessions.orderId }).from(secureCheckoutSessions).where(inArray(secureCheckoutSessions.orderId, accountOrders.map(order => order.id))) : [];
+    const secureIds = new Set(secureOrderIds.map(session => session.orderId));
     const profileSource = newestOrder || latestDraft[0] || null;
 
     return NextResponse.json({
@@ -101,6 +114,7 @@ export async function POST(request: NextRequest) {
         : null,
       orders: accountOrders.map((order) => ({
         id: order.id,
+        secureCheckout: secureIds.has(order.id),
         orderNumber: order.orderNumber,
         status: order.status,
         checkoutChannel: order.checkoutChannel,
@@ -129,7 +143,7 @@ export async function POST(request: NextRequest) {
         shippedAt: order.shippedAt?.toISOString() ?? null,
         deliveredAt: order.deliveredAt?.toISOString() ?? null,
       })),
-    });
+    }, { headers: { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer" } });
   } catch (error) {
     console.error("account lookup error:", error);
     return NextResponse.json(

@@ -1,6 +1,41 @@
 import { pgTable, text, varchar, decimal, jsonb, boolean, timestamp, pgEnum, integer, serial, index } from "drizzle-orm/pg-core";
 
 // Enums
+export const secureCheckoutSessions = pgTable("secure_checkout_sessions", {
+  id: varchar("id", { length: 100 }).primaryKey(),
+  tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+  ownerHash: varchar("owner_hash", { length: 64 }).notNull(),
+  orderId: varchar("order_id", { length: 100 }).notNull().unique(),
+  orderNumber: varchar("order_number", { length: 50 }).notNull().unique(),
+  expectedPaymentMinor: integer("expected_payment_minor"),
+  cart: jsonb("cart").$type<import("@/context/CartContext").CartItem[]>().notNull().default([]),
+  details: jsonb("details").$type<Record<string, string>>().notNull().default({}),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+export const safeDiagnostics = pgTable("safe_diagnostics", {
+  reference: varchar("reference", { length: 100 }).primaryKey(),
+  code: varchar("code", { length: 60 }).notNull(),
+  occurredAt: timestamp("occurred_at").defaultNow().notNull(),
+});
+export const customerAccessLinks = pgTable("customer_access_links", {
+  id: varchar("id", { length: 100 }).primaryKey(),
+  tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+  scope: varchar("scope", { length: 20 }).notNull(),
+  resourceId: varchar("resource_id", { length: 255 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  revokedAt: timestamp("revoked_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export const savedInvoices = pgTable("saved_invoices", {
+  id: varchar("id", { length: 100 }).primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  document: jsonb("document").$type<import("@/lib/invoice-document").InvoiceDocument>().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const genderEnum = pgEnum("gender", ["Men", "Women", "Unisex"]);
 export const productVisibilityEnum = pgEnum("product_visibility", ["public", "seo_only"]);
 

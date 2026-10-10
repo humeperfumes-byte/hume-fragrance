@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import HumeSpecialSection from "@/components/HumeSpecialSection";
@@ -171,7 +172,9 @@ export default async function Home() {
         style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }}
         data-analytics-section="journal"
       >
+      <Suspense fallback={<section className="container-luxury py-16" aria-busy="true" aria-label="Loading latest articles"><div className="h-8 w-48 animate-pulse rounded bg-muted" /></section>}>
         <LatestJournal />
+      </Suspense>
       </div>
       <div
         style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }}

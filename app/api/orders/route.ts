@@ -1,3 +1,5 @@
+import { reportServerError } from "@/lib/server-error-monitoring";
+import { secureCheckoutEnabled, saveSecureOrder } from "@/lib/secure-checkout";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
@@ -104,6 +106,7 @@ function shouldSendOrderConfirmation(status: string, previousStatus?: string) {
 }
 
 export async function POST(request: NextRequest) {
+  if (secureCheckoutEnabled()) return saveSecureOrder(request);
   try {
     const body = await request.json();
     const data = orderSchema.parse(body);
@@ -265,7 +268,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ok: true, orderId: data.id, orderNumber: data.orderNumber });
   } catch (error) {
-    console.error("orders capture error:", error);
+    await reportServerError("ORDER_SAVE_FAILED");
     return NextResponse.json({ ok: false }, { status: 500 });
   }
 }

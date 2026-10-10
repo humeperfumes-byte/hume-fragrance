@@ -6,6 +6,7 @@ export async function POST(request: NextRequest) {
   const unauthorized = requireAdminToken(request); if (unauthorized) return unauthorized;
   try {
     const order = await createManualOrder(await request.json());
+    if (request.nextUrl.searchParams.get("saveOnly") === "1") return NextResponse.json({ ok: true, order });
     try { return NextResponse.json({ ok: true, ...await ensureManualPaymentLink(order.id) }); }
     catch (error) { return NextResponse.json({ ok: true, order, linkError: error instanceof ManualOrderError ? error.message : "Order saved, but the payment link could not be confirmed. Use Generate / recover link on this order." }); }
   } catch (error) {

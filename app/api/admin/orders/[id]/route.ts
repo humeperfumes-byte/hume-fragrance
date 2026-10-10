@@ -1,9 +1,12 @@
+import { getStoredOrderDiscount, preserveOrderItem } from "@/lib/order-edit-pricing";
+import { DISCOVERY_SET_PRODUCT_ID, DISCOVERY_SET_SAMPLE_COUNT, DISCOVERY_SET_PRICE, DISCOVERY_SET_IMAGES, DISCOVERY_SET_SIZE, isDiscoverySetCartItemId } from "@/lib/discovery-set";
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { coupons, orderEditAudits, orders, products, razorpayWebhookEvents } from "@/db/schema";
+import { coupons, orderEditAudits, orders, products, razorpayWebhookEvents, secureCheckoutSessions } from "@/db/schema";
+import { expectedPaymentMinor } from "@/lib/secure-checkout-pricing";
 import { requireAdminToken } from "@/lib/admin-auth";
 import { calculateCouponDiscount } from "@/lib/cart-discounts";
 import { displayPhoneNumber } from "@/lib/phone";
@@ -18,6 +21,7 @@ const itemSchema = z.object({
 });
 
 const patchSchema = z.object({
+  expectedUpdatedAt: z.string().datetime().optional(),
   fullName: z.string().trim().max(255).optional(), phone: z.string().trim().max(50).optional(), alternatePhone: z.string().trim().max(50).optional(),
   email: z.union([z.string().trim().email(), z.literal("")]).optional(), addressLine1: z.string().trim().max(1000).optional(), addressLine2: z.string().trim().max(1000).optional(),
   city: z.string().trim().max(255).optional(), state: z.string().trim().max(255).optional(), pincode: z.union([z.string().regex(/^\d{6}$/, "Pincode must contain 6 digits"), z.literal("")]).optional(),
@@ -42,8 +46,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const unauthorized = requireAdminToken(req); if (unauthorized) return unauthorized;
   try {
     const { id } = await params; const input = patchSchema.parse(await req.json());
+    for (const field of ["fullName", "phone", "addressLine1", "city", "state", "pincode"] as const) {
+      if (input[field] !== undefined && !input[field]?.trim()) return NextResponse.json({ error: `${field} cannot be empty` }, { status: 400 });
+    }
+    if (input.phone && !/^\d{10,15}$/.test(input.phone.replace(/\D/g, ""))) return NextResponse.json({ error: "Enter a valid phone number" }, { status: 400 });
     const [current] = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
     if (!current) return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    if (input.expectedUpdatedAt && input.expectedUpdatedAt !== current.updatedAt.toISOString()) return NextResponse.json({ error: "This order changed in another session. Refresh and try again." }, { status: 409 });
     const financialChange = (input.cartSnapshot !== undefined && JSON.stringify(input.cartSnapshot) !== JSON.stringify(current.cartSnapshot))
       || (input.appliedCouponCode !== undefined && input.appliedCouponCode.trim().toUpperCase() !== (current.appliedCouponCode || "").trim().toUpperCase())
       || (input.shippingFee !== undefined && money(input.shippingFee) !== money(current.shippingFee))
@@ -55,23 +64,37 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (input.status === "cancelled" && current.status !== "cancelled") await cancelManualLink(current);
     }
     if (financialChange && paidStatuses.has(current.status) && !input.editReason?.trim()) return NextResponse.json({ error: "A reason is required when changing a paid order" }, { status: 400 });
+    if (process.env.ENABLE_SECURE_CHECKOUT === "true" && current.checkoutChannel === "razorpay" && input.paymentMethod !== undefined && input.paymentMethod !== current.paymentMethod && (current.razorpayOrderId || current.paymentCapturedAt || current.paymentSyncStatus === "creating")) return NextResponse.json({ error: "Payment mode is locked after a payment request starts" }, { status: 409 });
 
+    const itemsOrCouponChanged = (input.cartSnapshot !== undefined && JSON.stringify(input.cartSnapshot) !== JSON.stringify(current.cartSnapshot)) || (input.appliedCouponCode !== undefined && input.appliedCouponCode.trim().toUpperCase() !== (current.appliedCouponCode || "").trim().toUpperCase());
     const nextItems = input.cartSnapshot ?? current.cartSnapshot;
-    const ids = [...new Set(nextItems.filter((item) => !item.isGift && !item.kitSelections?.length && !item.sampleSelections?.length).map((item) => item.id))];
+    const ids = [...new Set(nextItems.flatMap(item => isDiscoverySetCartItemId(item.id) ? [DISCOVERY_SET_PRODUCT_ID, ...(item.sampleSelections || []).map(sample => sample.id)] : [item.id]))];
     const catalogue = ids.length ? await db.select().from(products).where(inArray(products.id, ids)) : [];
     const productMap = new Map(catalogue.map((product) => [product.id, product]));
     const currentIds = new Set(current.cartSnapshot.map((item) => item.id));
     const repricedItems = financialChange ? nextItems.map((item) => {
+      if (isDiscoverySetCartItemId(item.id) && !current.cartSnapshot.some(saved => saved.id === item.id)) {
+        const samples = item.sampleSelections || [];
+        if (samples.length !== DISCOVERY_SET_SAMPLE_COUNT || new Set(samples.map(sample => sample.id)).size !== DISCOVERY_SET_SAMPLE_COUNT) throw new Error(`Choose ${DISCOVERY_SET_SAMPLE_COUNT} different discovery samples`);
+        const verifiedSamples = samples.map(sample => {
+          const perfume = productMap.get(sample.id);
+          if (!perfume || perfume.id === DISCOVERY_SET_PRODUCT_ID) throw new Error("A selected discovery sample is unavailable in the catalogue");
+          return { id: perfume.id, name: perfume.name, inspiration: perfume.inspiration };
+        });
+        return { ...item, name: "HUME Discovery Set", price: DISCOVERY_SET_PRICE, size: DISCOVERY_SET_SIZE, image: DISCOVERY_SET_IMAGES[0], sampleSelections: verifiedSamples };
+      }
       if (item.isGift || item.kitSelections?.length || item.sampleSelections?.length) return item;
+      const original = preserveOrderItem(item, current.cartSnapshot);
+      if (original) return original;
       const product = productMap.get(item.id);
       if (!product) { if (currentIds.has(item.id)) return item; throw new Error(`Product ${item.name} is no longer available`); }
-      if ((product.badges?.soldOut || product.badges?.comingSoon) && !currentIds.has(item.id)) throw new Error(`${product.name} is unavailable`);
       return { ...item, name: product.name, inspiration: product.inspiration, size: product.size, image: product.images?.[0], price: money(product.price) };
     }) : current.cartSnapshot;
-    const subtotal = financialChange ? repricedItems.filter((item) => !item.isGift).reduce((sum, item) => sum + money(item.price) * item.quantity, 0) : money(current.subtotal);
+    const subtotal = itemsOrCouponChanged ? repricedItems.filter((item) => !item.isGift).reduce((sum, item) => sum + money(item.price) * item.quantity, 0) : money(current.subtotal);
     const couponCode = (input.appliedCouponCode ?? current.appliedCouponCode ?? "").split(",")[0].trim().toUpperCase();
-    let couponDiscount = 0;
-    if (financialChange && couponCode) {
+    let couponDiscount = getStoredOrderDiscount(current);
+    if (itemsOrCouponChanged) couponDiscount = 0;
+    if (itemsOrCouponChanged && couponCode) {
       const [coupon] = await db.select().from(coupons).where(and(eq(coupons.code, couponCode), eq(coupons.active, true), sql`${coupons.archivedAt} is null`)).limit(1);
       if (!coupon) return NextResponse.json({ error: `Coupon ${couponCode} is invalid or archived` }, { status: 400 });
       couponDiscount = calculateCouponDiscount({ ...coupon, value: money(coupon.value), minSubtotal: money(coupon.minSubtotal) }, repricedItems, subtotal).discount;
@@ -80,13 +103,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (financialChange && manualAdjustment !== 0 && !(input.adjustmentReason ?? current.adjustmentReason)?.trim()) return NextResponse.json({ error: "Manual adjustments require a reason" }, { status: 400 });
     const grandTotal = financialChange ? Math.max(0, subtotal - Math.min(subtotal, couponDiscount) + shippingFee + manualAdjustment) : money(current.grandTotal);
     const patch = {
-      ...input, cartSnapshot: financialChange ? repricedItems : undefined, appliedCouponCode: financialChange ? couponCode || null : undefined, subtotal: financialChange ? subtotal.toFixed(2) : undefined, shippingFee: financialChange ? shippingFee.toFixed(2) : undefined, manualAdjustment: financialChange ? manualAdjustment.toFixed(2) : undefined, grandTotal: financialChange ? grandTotal.toFixed(2) : undefined, updatedAt: new Date(),
+      ...input, cartSnapshot: financialChange ? repricedItems : undefined, appliedCouponCode: itemsOrCouponChanged ? couponCode || null : undefined, subtotal: financialChange ? subtotal.toFixed(2) : undefined, shippingFee: financialChange ? shippingFee.toFixed(2) : undefined, manualAdjustment: financialChange ? manualAdjustment.toFixed(2) : undefined, grandTotal: financialChange ? grandTotal.toFixed(2) : undefined, updatedAt: new Date(),
       phone: input.phone === undefined ? undefined : (displayPhoneNumber(input.phone) || null), alternatePhone: input.alternatePhone === undefined ? undefined : (displayPhoneNumber(input.alternatePhone) || null), email: input.email === undefined ? undefined : (input.email || null),
-      editReason: undefined, shippedAt: input.shippedAt ? new Date(input.shippedAt) : undefined, deliveredAt: input.deliveredAt ? new Date(input.deliveredAt) : undefined, trackingLastCheckedAt: input.trackingLastCheckedAt ? new Date(input.trackingLastCheckedAt) : undefined,
+      expectedUpdatedAt: undefined, editReason: undefined, shippedAt: input.shippedAt ? new Date(input.shippedAt) : undefined, deliveredAt: input.deliveredAt ? new Date(input.deliveredAt) : undefined, trackingLastCheckedAt: input.trackingLastCheckedAt ? new Date(input.trackingLastCheckedAt) : undefined,
     };
     const updated = await db.transaction(async (tx) => {
+      if (current.sessionId) await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${current.sessionId}))`);
       const [order] = await tx.update(orders).set(patch).where(and(eq(orders.id, id), eq(orders.updatedAt, current.updatedAt))).returning();
       if (!order) throw new Error("This order changed in another session. Refresh and try again.");
+      // Keep resume data aligned with authenticated edits. Once a provider request
+      // starts, its amount stays frozen even when the order total is adjusted.
+      if (process.env.ENABLE_SECURE_CHECKOUT === "true") await tx.update(secureCheckoutSessions).set({
+        cart: order.cartSnapshot.filter(item => !item.isGift).map(item => ({ ...item, image: item.image || "", inspiration: item.inspiration || "", category: "Perfume" })),
+        details: Object.fromEntries(["fullName", "phone", "alternatePhone", "email", "addressLine1", "addressLine2", "city", "state", "pincode", "notes"].map(key => [key, String(order[key as keyof typeof order] || "")])),
+        ...((financialChange || input.paymentMethod !== undefined) && order.checkoutChannel === "razorpay" && !order.razorpayOrderId && !order.paymentCapturedAt && order.paymentSyncStatus !== "creating" ? { expectedPaymentMinor: expectedPaymentMinor(Number(order.grandTotal), /Prepaid.*Cash on Delivery/i.test(order.paymentMethod || "")) } : {}),
+        updatedAt: new Date(),
+      }).where(eq(secureCheckoutSessions.orderId, id));
       await tx.insert(orderEditAudits).values({ id: `order-audit-${randomUUID()}`, orderId: id, changeType: financialChange ? "financial_and_operational" : "operational", reason: input.editReason || input.adjustmentReason || null, actor: "admin", beforeSnapshot: current, afterSnapshot: order });
       return order;
     });

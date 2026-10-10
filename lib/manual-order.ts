@@ -1,16 +1,21 @@
 import { z } from "zod";
+import { normalizeIndianMobile } from "./phone";
+import { DISCOVERY_SET_PRODUCT_ID, DISCOVERY_SET_SAMPLE_COUNT } from "./discovery-set";
 
 export const MANUAL_LINK_CHANNEL = "manual_payment_link";
 export const manualOrderSchema = z.object({
   requestId: z.string().uuid(),
   fullName: z.string().trim().min(2).max(255),
-  phone: z.string().trim().regex(/^(?:\+91|91)?[6-9]\d{9}$/, "Enter a valid Indian mobile number"),
+  phone: z.string().transform(normalizeIndianMobile).pipe(z.string().regex(/^[6-9]\d{9}$/, "Enter a 10-digit Indian mobile number, for example 9876543210. +91 is also accepted.")),
   email: z.union([z.string().trim().email(), z.literal("")]).optional(),
   addressLine1: z.string().trim().min(5).max(1000),
   addressLine2: z.string().trim().max(1000).optional(),
   city: z.string().trim().min(2).max(255), state: z.string().trim().min(2).max(255),
   pincode: z.string().regex(/^[1-9]\d{5}$/), notes: z.string().trim().max(2000).optional(),
-  items: z.array(z.object({ id: z.string().min(1).max(255), quantity: z.number().int().min(1).max(20) })).min(1).max(20),
+  items: z.array(z.object({ id: z.string().min(1).max(255), quantity: z.number().int().min(1).max(20), sampleSelections: z.array(z.string().min(1).max(255)).optional() }).superRefine((item, context) => {
+    if (item.id === DISCOVERY_SET_PRODUCT_ID && (item.sampleSelections?.length !== DISCOVERY_SET_SAMPLE_COUNT || new Set(item.sampleSelections).size !== DISCOVERY_SET_SAMPLE_COUNT)) context.addIssue({ code: "custom", message: `Choose ${DISCOVERY_SET_SAMPLE_COUNT} different discovery samples` });
+    if (item.id !== DISCOVERY_SET_PRODUCT_ID && item.sampleSelections?.length) context.addIssue({ code: "custom", message: "Sample selections are only supported for discovery sets" });
+  })).min(1).max(20),
   shippingFee: z.number().min(0).max(10000).default(0),
   discount: z.number().min(0).max(100000).default(0),
   adjustmentReason: z.string().trim().max(500).optional(),

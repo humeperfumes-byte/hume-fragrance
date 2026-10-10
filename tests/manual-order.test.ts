@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { normalizeIndianMobile } from "../lib/phone";
 import { manualPaymentAmounts, readManualPayment, writeManualPayment, validateManualLink, manualOrderSchema, manualPaymentNextStatus, isManualPaymentEvent } from "../lib/manual-order";
 
 test("20% advance and remaining COD preserve paise and the complete order total", () => {
@@ -37,6 +38,23 @@ test("admin inputs reject negative quantities, invalid addresses and supplied cl
   assert.equal(manualOrderSchema.safeParse({ ...input, price: 1 }).success, false);
   assert.equal(manualOrderSchema.safeParse({ ...input, pincode: "123" }).success, false);
   assert.equal(manualOrderSchema.safeParse({ ...input, items: [{ id: "perfume", quantity: -1 }] }).success, false);
+});
+
+test("formatted Indian mobile numbers normalize without accepting malformed numbers", () => {
+  for (const value of ["9876543210", "+91 98765 43210", "91-98765-43210", "09876543210", "0091 9876543210", "\u200e+91 (98765) 43210\u200f"]) {
+    assert.equal(normalizeIndianMobile(value), "9876543210");
+  }
+  const phoneSchema = manualOrderSchema.shape.phone;
+  assert.equal(phoneSchema.parse("+91 98765 43210"), "9876543210");
+  for (const value of ["123", "1234567890", "+44 9876543210", "abc9876543210", "987654321099"]) assert.equal(phoneSchema.safeParse(value).success, false);
+});
+
+test("manual discovery sets require 15 distinct sample choices", () => {
+  const input = { requestId: "8f60fb40-bd37-4b77-beda-7a88f8ca3a03", fullName: "Customer", phone: "9876543210", addressLine1: "123 Main Road", city: "Mumbai", state: "Maharashtra", pincode: "400001", paymentMode: "full" };
+  const samples = Array.from({ length: 15 }, (_, index) => `perfume-${index}`);
+  assert.equal(manualOrderSchema.safeParse({ ...input, items: [{ id: "hume-discovery-set", quantity: 1, sampleSelections: samples }] }).success, true);
+  assert.equal(manualOrderSchema.safeParse({ ...input, items: [{ id: "hume-discovery-set", quantity: 1 }] }).success, false);
+  assert.equal(manualOrderSchema.safeParse({ ...input, items: [{ id: "hume-discovery-set", quantity: 1, sampleSelections: Array(15).fill("same-perfume") }] }).success, false);
 });
 test("duplicate payment checks preserve fulfillment, cancellation and refund statuses", () => {
   assert.equal(manualPaymentNextStatus("payment_pending", true), "processing");

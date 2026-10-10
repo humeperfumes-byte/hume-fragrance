@@ -1,3 +1,5 @@
+import { reportServerError } from "@/lib/server-error-monitoring";
+import { secureCheckoutEnabled, verifySecurePayment } from "@/lib/secure-checkout";
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { z } from "zod";
@@ -28,6 +30,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (secureCheckoutEnabled()) return verifySecurePayment(request);
     const body = await request.json();
     const data = verifyPaymentSchema.parse(body);
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
@@ -64,7 +67,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error("Razorpay verify payment error:", error);
+    await reportServerError("PAYMENT_VERIFY_FAILED");
     return NextResponse.json(
       { success: false, error: "Failed to verify payment" },
       { status: 500 },

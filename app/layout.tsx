@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import PrivateCustomerGate from "@/components/PrivateCustomerGate";
 import { Suspense } from "react";
 import Script from "next/script";
 import { Cormorant_Garamond, Geist, JetBrains_Mono } from "next/font/google";
@@ -108,26 +109,28 @@ export default async function RootLayout({
         <Providers>
           <BrowserRecoveryGuard />
           {children}
+          <PrivateCustomerGate>
           <ClientGlobalOverlays />
           <ConsentCaptureBanner />
-          <Suspense fallback={null}>
+          {(process.env.NODE_ENV !== "development" || process.env.NEXT_PUBLIC_ENABLE_LOCAL_TELEMETRY === "true") && <Suspense fallback={null}>
             <ConsentTimelineTracker />
-          </Suspense>
-          <Suspense fallback={null}>
+          </Suspense>}
+          {(process.env.NODE_ENV !== "development" || process.env.NEXT_PUBLIC_ENABLE_LOCAL_TELEMETRY === "true") && <Suspense fallback={null}>
             <CartAnalyticsTracker />
-          </Suspense>
+          </Suspense>}
           <Suspense fallback={null}>
             <ScrollRestoration />
           </Suspense>
+          </PrivateCustomerGate>
         </Providers>
-        {cloudflareBeaconToken ? (
-          <Script
+        {cloudflareBeaconToken && (process.env.NODE_ENV !== "development" || process.env.NEXT_PUBLIC_ENABLE_LOCAL_TELEMETRY === "true") ? (
+          <PrivateCustomerGate><Script
             id="cloudflare-web-analytics"
             defer
             strategy="afterInteractive"
             src="https://static.cloudflareinsights.com/beacon.min.js"
             data-cf-beacon={JSON.stringify({ token: cloudflareBeaconToken })}
-          />
+          /></PrivateCustomerGate>
         ) : null}
       </body>
     </html>

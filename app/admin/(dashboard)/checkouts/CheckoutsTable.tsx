@@ -1,4 +1,6 @@
 "use client";
+import { CustomerLinkButton } from "@/components/admin/CustomerLinkButton";
+
 
 import { useMemo, useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
@@ -292,6 +294,7 @@ function CheckoutDetailSheet({
             </div>
           </SheetHeader>
 
+          <CustomerLinkButton key={draft.id} scope="checkout" resourceId={draft.id} />
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-4">
               <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-200/60">
