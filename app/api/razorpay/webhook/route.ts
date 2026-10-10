@@ -1,3 +1,4 @@
+import { secureCheckoutConfigured } from "@/lib/checkout-settings";
 import crypto from "crypto";
 import { secureCheckoutSessions } from "@/db/schema";
 import { storedPaymentMinor } from "@/lib/secure-checkout-pricing";
@@ -623,7 +624,7 @@ export async function POST(request: NextRequest) {
       currentStatus: existingOrder.status,
     });
     if (["payment.captured", "order.paid"].includes(event)) {
-      const [ownedSession] = process.env.ENABLE_SECURE_CHECKOUT === "true" ? await db.select({ expectedMinor: secureCheckoutSessions.expectedPaymentMinor }).from(secureCheckoutSessions).where(eq(secureCheckoutSessions.orderId, existingOrder.id)).limit(1) : [];
+      const [ownedSession] = secureCheckoutConfigured() ? await db.select({ expectedMinor: secureCheckoutSessions.expectedPaymentMinor }).from(secureCheckoutSessions).where(eq(secureCheckoutSessions.orderId, existingOrder.id)).limit(1) : [];
       if (ownedSession) {
         const expected = storedPaymentMinor(ownedSession.expectedMinor, Number(existingOrder.grandTotal), /Prepaid.*Cash on Delivery/i.test(existingOrder.paymentMethod || ""));
         if (razorpayOrderId !== existingOrder.razorpayOrderId || Number(paymentAmount) !== expected || getString(payment?.currency) !== "INR" || !razorpayPaymentId) {

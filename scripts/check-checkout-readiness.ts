@@ -6,9 +6,9 @@ config({ path: ".env", quiet: true });
 async function main() {
   let incomplete = false;
   const check = (name: string, ok: boolean) => { console.log(`${ok ? "PASS" : "MISSING"}: ${name}`); if (!ok) incomplete = true; };
-  check("Secure checkout enabled", process.env.ENABLE_SECURE_CHECKOUT === "true");
-  check("Error monitoring enabled", process.env.ENABLE_ERROR_MONITORING === "true");
-  check("Stable server signing secret (at least 32 characters)", (process.env.CHECKOUT_SESSION_SIGNING_SECRET?.length || 0) >= 32);
+  check("Secure checkout enabled (default on)", process.env.ENABLE_SECURE_CHECKOUT !== "false");
+  check("Error monitoring enabled (default on)", process.env.ENABLE_ERROR_MONITORING !== "false");
+  check("Stable signing source: dedicated secret or existing server payment secret", process.env.CHECKOUT_SESSION_SIGNING_SECRET ? process.env.CHECKOUT_SESSION_SIGNING_SECRET.length >= 32 : !!process.env.RAZORPAY_KEY_SECRET);
   check("Razorpay private key and secret present", !!process.env.RAZORPAY_KEY_ID && !!process.env.RAZORPAY_KEY_SECRET);
   check("Browser Razorpay key matches server key", !!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID && process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID === process.env.RAZORPAY_KEY_ID);
   check("Webhook signing secret present", !!process.env.RAZORPAY_WEBHOOK_SECRET);

@@ -1,5 +1,7 @@
 # Secure checkout and customer order flow
 
+> Updated configuration: checkout and monitoring default to enabled; a separate signing secret is optional. See [current configuration](checkout-default-configuration.md).
+
 The new flow is implemented and enabled in `.env.local` for local review. Production settings have not been changed and code has not been pushed or deployed.
 
 ## Buying flow

@@ -1,10 +1,11 @@
+import { secureCheckoutConfigured } from "@/lib/checkout-settings";
 import "server-only";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { customerAccessLinks } from "@/db/schema";
 import { hashCustomerToken, isUsableCustomerLink, type CustomerLinkScope } from "./customer-access-token";
 export function customerLinksEnabled(scope: CustomerLinkScope) {
-  return process.env.ENABLE_SECURE_CHECKOUT === "true" || process.env[scope === "order" ? "ENABLE_CUSTOMER_ORDER_LINKS" : "ENABLE_CHECKOUT_RESUME_LINKS"] === "true";
+  return secureCheckoutConfigured() || process.env[scope === "order" ? "ENABLE_CUSTOMER_ORDER_LINKS" : "ENABLE_CHECKOUT_RESUME_LINKS"] === "true";
 }
 export async function resolveCustomerLink(token: string, scope: CustomerLinkScope) {
   if (!customerLinksEnabled(scope)) return null;

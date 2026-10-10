@@ -1,3 +1,4 @@
+import { secureCheckoutConfigured } from "@/lib/checkout-settings";
 import { randomUUID } from "node:crypto";
 import Razorpay from "razorpay";
 import { desc, eq, inArray } from "drizzle-orm";
@@ -82,7 +83,7 @@ export async function reconcileOrderPayment(orderId: string, actor = "admin") {
   const captured = payments.filter((payment) => payment.captured || payment.status === "captured");
   const capturedMinor = captured.reduce((total, payment) => total + Number(payment.amount || 0), 0);
   const capturedAmount = capturedMinor / 100;
-  const [ownedCheckout] = process.env.ENABLE_SECURE_CHECKOUT === "true" ? await db.select({ expectedMinor: secureCheckoutSessions.expectedPaymentMinor }).from(secureCheckoutSessions).where(eq(secureCheckoutSessions.orderId, current.id)).limit(1) : [];
+  const [ownedCheckout] = secureCheckoutConfigured() ? await db.select({ expectedMinor: secureCheckoutSessions.expectedPaymentMinor }).from(secureCheckoutSessions).where(eq(secureCheckoutSessions.orderId, current.id)).limit(1) : [];
   const expectedAmount = storedPaymentMinor(ownedCheckout?.expectedMinor, Number(current.grandTotal || 0), /Prepaid.*Cash on Delivery/i.test(current.paymentMethod || "")) / 100;
   const difference = expectedAmount - capturedAmount;
   const syncStatus = captured.length > 1

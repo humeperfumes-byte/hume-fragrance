@@ -1,5 +1,7 @@
 # Checkout preview release verification
 
+> Updated configuration: checkout and monitoring default to enabled; a separate signing secret is optional. See [current configuration](checkout-default-configuration.md).
+
 Verified locally on 2026-10-11:
 
 - `npm run build` completed successfully, including TypeScript and static generation.

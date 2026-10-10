@@ -1,3 +1,4 @@
+import { errorMonitoringConfigured } from "@/lib/checkout-settings";
 import "server-only";
 import { deliverSafeError, type SafeErrorCode, type SafeErrorEvent } from "./safe-error-monitoring";
 import { db } from "@/db";
@@ -10,7 +11,7 @@ let lastCleanup = 0;
 export function reportServerError(code: SafeErrorCode) {
   if (Date.now() - (lastReport.get(code) || 0) < 5000) return;
   lastReport.set(code, Date.now());
-  return deliverSafeError(code, process.env.ENABLE_ERROR_MONITORING === "true", async event => {
+  return deliverSafeError(code, errorMonitoringConfigured(), async event => {
     recent.push(event);
     if (recent.length > 100) recent.shift();
     console.error("HUME_SAFE_ERROR", JSON.stringify(event));

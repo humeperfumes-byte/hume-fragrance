@@ -1,3 +1,5 @@
+import { checkoutSigningSecret } from "@/lib/checkout-signing-secret";
+import { secureCheckoutConfigured } from "@/lib/checkout-settings";
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
@@ -26,7 +28,7 @@ import { sendAdminCheckoutDraftAlert } from "./notifications/admin-order-alert";
 import { displayPhoneNumber } from "./phone";
 import { resolveIndiaAwareCountry } from "./admin-market";
 
-export const secureCheckoutEnabled = () => process.env.ENABLE_SECURE_CHECKOUT === "true";
+export const secureCheckoutEnabled = () => secureCheckoutConfigured();
 export class CheckoutRequestError extends Error { constructor(message: string, public status = 400) { super(message); } }
 const privateHeaders = { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer" };
 export async function checkoutFailure(error: unknown, code: SafeErrorCode = "CHECKOUT_RESUME_FAILED") {
@@ -119,7 +121,7 @@ async function persistJourneyDraft(request: NextRequest, session: typeof secureC
   const normalCode = codes.find(code => !/^WELCOME-BACK-(5|10)$/.test(code));
   const [couponRow] = normalCode ? await db.select().from(coupons).where(eq(coupons.code, normalCode.toUpperCase())).limit(1) : [];
   const coupon = couponRow?.active && !couponRow.archivedAt ? { ...couponRow, value: Number(couponRow.value), minSubtotal: Number(couponRow.minSubtotal) } : !couponRow && normalCode === "SPECIAL-5" ? { code: "SPECIAL-5", description: "Special 5% discount", type: "percent", value: 5, minSubtotal: 0, welcomeBackMode: "cap_5" } : null;
-  const reward = readVisitReward(request.cookies.get(VISIT_REWARD_COOKIE)?.value, process.env.CHECKOUT_SESSION_SIGNING_SECRET);
+  const reward = readVisitReward(request.cookies.get(VISIT_REWARD_COOKIE)?.value, checkoutSigningSecret());
   const requestedWelcome = codes.includes("WELCOME-BACK-10") ? 10 : codes.includes("WELCOME-BACK-5") ? 5 : 0;
   const welcome = Math.min(requestedWelcome, reward?.tier || 0) as 0 | 5 | 10;
   const quote = priceSecureCart(cart, coupon, welcome, config);
@@ -203,7 +205,7 @@ export async function saveSecureOrder(request: NextRequest) {
     const coupon = couponRow && couponRow.active && !couponRow.archivedAt ? { ...couponRow, value: Number(couponRow.value), minSubtotal: Number(couponRow.minSubtotal) } : !couponRow && normalCodes[0] === "SPECIAL-5" ? { code: "SPECIAL-5", description: "Private cart recovery offer", type: "percent", value: 5, minSubtotal: 0, welcomeBackMode: "cap_5" } : null;
     if (normalCodes[0] && !coupon) throw new CheckoutRequestError("This coupon is no longer available");
     const welcome = welcomeCodes[0]?.endsWith("10") ? 10 : welcomeCodes.length ? 5 : 0;
-    const visitReward = readVisitReward(request.cookies.get(VISIT_REWARD_COOKIE)?.value, process.env.CHECKOUT_SESSION_SIGNING_SECRET);
+    const visitReward = readVisitReward(request.cookies.get(VISIT_REWARD_COOKIE)?.value, checkoutSigningSecret());
     if (welcome > (visitReward?.tier || 0)) throw new CheckoutRequestError("Your welcome offer has expired. Reopen your bag to refresh available offers.", 409);
     const quote = priceSecureCart(cart, coupon, welcome, config);
     return { cart, config, codes, quote };

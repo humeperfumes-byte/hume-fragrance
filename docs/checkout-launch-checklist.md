@@ -1,5 +1,7 @@
 # Checkout launch checklist
 
+> Updated configuration: checkout and monitoring default to enabled; a separate signing secret is optional. See [current configuration](checkout-default-configuration.md).
+
 The new flow is enabled locally. Nothing in this checklist authorizes a live charge or enables production automatically.
 
 ## Account settings the owner supplies

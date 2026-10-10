@@ -1,3 +1,4 @@
+import { errorMonitoringConfigured } from "@/lib/checkout-settings";
 import { readBoundedJson } from "@/lib/bounded-request-body";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -7,7 +8,7 @@ const inputSchema = z.object({ code: z.enum(SAFE_ERROR_CODES) }).strict();
 let windowStart = 0;
 let reports = 0;
 export async function POST(request: NextRequest) {
-  if (process.env.ENABLE_ERROR_MONITORING !== "true") return new NextResponse(null, { status: 204 });
+  if (!errorMonitoringConfigured()) return new NextResponse(null, { status: 204 });
   // Reject other origins and cap the process-wide report volume without storing IPs.
   if (request.headers.get("origin") !== request.nextUrl.origin) return new NextResponse(null, { status: 403 });
   if (Date.now() - windowStart > 60000) { windowStart = Date.now(); reports = 0; }

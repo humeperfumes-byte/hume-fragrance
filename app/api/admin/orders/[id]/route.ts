@@ -1,3 +1,4 @@
+import { secureCheckoutConfigured } from "@/lib/checkout-settings";
 import { getStoredOrderDiscount, preserveOrderItem } from "@/lib/order-edit-pricing";
 import { DISCOVERY_SET_PRODUCT_ID, DISCOVERY_SET_SAMPLE_COUNT, DISCOVERY_SET_PRICE, DISCOVERY_SET_IMAGES, DISCOVERY_SET_SIZE, isDiscoverySetCartItemId } from "@/lib/discovery-set";
 import { randomUUID } from "node:crypto";
@@ -64,7 +65,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (input.status === "cancelled" && current.status !== "cancelled") await cancelManualLink(current);
     }
     if (financialChange && paidStatuses.has(current.status) && !input.editReason?.trim()) return NextResponse.json({ error: "A reason is required when changing a paid order" }, { status: 400 });
-    if (process.env.ENABLE_SECURE_CHECKOUT === "true" && current.checkoutChannel === "razorpay" && input.paymentMethod !== undefined && input.paymentMethod !== current.paymentMethod && (current.razorpayOrderId || current.paymentCapturedAt || current.paymentSyncStatus === "creating")) return NextResponse.json({ error: "Payment mode is locked after a payment request starts" }, { status: 409 });
+    if (secureCheckoutConfigured() && current.checkoutChannel === "razorpay" && input.paymentMethod !== undefined && input.paymentMethod !== current.paymentMethod && (current.razorpayOrderId || current.paymentCapturedAt || current.paymentSyncStatus === "creating")) return NextResponse.json({ error: "Payment mode is locked after a payment request starts" }, { status: 409 });
 
     const itemsOrCouponChanged = (input.cartSnapshot !== undefined && JSON.stringify(input.cartSnapshot) !== JSON.stringify(current.cartSnapshot)) || (input.appliedCouponCode !== undefined && input.appliedCouponCode.trim().toUpperCase() !== (current.appliedCouponCode || "").trim().toUpperCase());
     const nextItems = input.cartSnapshot ?? current.cartSnapshot;
@@ -113,7 +114,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (!order) throw new Error("This order changed in another session. Refresh and try again.");
       // Keep resume data aligned with authenticated edits. Once a provider request
       // starts, its amount stays frozen even when the order total is adjusted.
-      if (process.env.ENABLE_SECURE_CHECKOUT === "true") await tx.update(secureCheckoutSessions).set({
+      if (secureCheckoutConfigured()) await tx.update(secureCheckoutSessions).set({
         cart: order.cartSnapshot.filter(item => !item.isGift).map(item => ({ ...item, image: item.image || "", inspiration: item.inspiration || "", category: "Perfume" })),
         details: Object.fromEntries(["fullName", "phone", "alternatePhone", "email", "addressLine1", "addressLine2", "city", "state", "pincode", "notes"].map(key => [key, String(order[key as keyof typeof order] || "")])),
         ...((financialChange || input.paymentMethod !== undefined) && order.checkoutChannel === "razorpay" && !order.razorpayOrderId && !order.paymentCapturedAt && order.paymentSyncStatus !== "creating" ? { expectedPaymentMinor: expectedPaymentMinor(Number(order.grandTotal), /Prepaid.*Cash on Delivery/i.test(order.paymentMethod || "")) } : {}),

@@ -1,3 +1,4 @@
+import { secureCheckoutConfigured } from "@/lib/checkout-settings";
 import { NextRequest, NextResponse } from "next/server";
 import { desc, eq, or, inArray } from "drizzle-orm";
 import { z } from "zod";
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
     const identity = accountSession ? identityFromSession(accountSession) : null;
     const owner = request.cookies.get(CHECKOUT_OWNER_COOKIE)?.value;
     const ownerHash = owner ? hashCustomerToken(owner) : null;
-    const secureEnabled = process.env.ENABLE_SECURE_CHECKOUT === "true";
+    const secureEnabled = secureCheckoutConfigured();
     const ownedSessions = secureEnabled && ownerHash ? await db.select({ id: secureCheckoutSessions.id }).from(secureCheckoutSessions).where(eq(secureCheckoutSessions.ownerHash, ownerHash)) : [];
     const sessionIds = ownedSessions.map(session => session.id);
     if (sessionId) {
