@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import CheckoutLoading from "./CheckoutLoading";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 export default function SecureCheckoutEntry() {
@@ -22,5 +23,7 @@ export default function SecureCheckoutEntry() {
       .then(async response => { const result = await response.json(); if (!response.ok || !result.path) throw new Error(result.error || "Could not open checkout"); router.replace(result.path); })
       .catch(error => { setError(error instanceof Error && ["TimeoutError", "AbortError"].includes(error.name) ? "Opening checkout took too long. Your bag is preserved. Please retry safely." : error instanceof Error ? error.message : "Could not open checkout"); });
   }, [hydrated, items, router, attempt]);
-  return <section className="mx-auto min-h-[50vh] max-w-xl px-5 py-20 text-center"><h1 className="text-3xl font-serif">Checkout</h1>{error ? <><p role="alert" className="mt-5">{error}</p><button type="button" className="mt-5 rounded-full bg-black px-6 py-3 text-white" onClick={() => { started.current = false; setError(""); setAttempt(value => value + 1); }}>Retry safely</button></> : <p className="mt-5">{hydrated && !items.some(item => !item.isGift) ? "Your bag is empty." : "Opening your secure checkout…"}</p>}<Link href="/shop" className="mt-6 inline-block underline">Continue shopping</Link></section>;
+  const empty = hydrated && !items.some(item => !item.isGift);
+  if (!error && !empty) return <CheckoutLoading />;
+  return <section className="flex min-h-[65vh] items-center justify-center bg-[#faf9f6] px-5 py-16"><div className="w-full max-w-lg rounded-[28px] border border-[#e8e4dc] bg-white p-8 text-center shadow-sm"><p className="text-[10px] uppercase tracking-[0.3em] text-[#8e8272]">HUME · CHECKOUT</p><h1 className="mt-5 font-serif text-3xl">{error ? "Let’s try that again" : "Your bag is waiting"}</h1><p role={error ? "alert" : undefined} className="mt-4 text-sm leading-6 text-muted-foreground">{error || "Add a fragrance to your bag to begin checkout."}</p>{error && <button type="button" className="mt-6 rounded-full bg-[#302b24] px-7 py-3 text-sm font-semibold text-white" onClick={() => { started.current = false; setError(""); setAttempt(value => value + 1); }}>Retry checkout</button>}<Link href="/shop" className="mt-6 block text-sm text-[#80786e] underline underline-offset-4">{error ? "Continue shopping" : "Explore fragrances"}</Link></div></section>;
 }

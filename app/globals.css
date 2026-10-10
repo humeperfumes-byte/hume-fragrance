@@ -859,3 +859,11 @@ a, button, select, input[type="submit"], input[type="button"], [role="button"], 
     animation: none;
   }
 }
+@keyframes hume-checkout-shimmer {
+  from { transform: translateX(-90px); }
+  to { transform: translateX(180px); }
+}
+.hume-checkout-loading-bar { animation: hume-checkout-shimmer 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .hume-checkout-loading-bar { animation: none; left: 30%; }
+}

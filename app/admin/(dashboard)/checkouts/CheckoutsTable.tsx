@@ -484,7 +484,7 @@ function CheckoutDetailSheet({
             </div>
 
             <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-              <h3 className="text-sm font-semibold text-white">Checkout trail</h3>
+              <h3 className="mt-4 text-sm font-semibold text-white">Checkout trail</h3>
               <div className="mt-3 space-y-3 text-sm">
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-white/45">Status</span>

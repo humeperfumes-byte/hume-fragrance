@@ -28,6 +28,7 @@ async function main() {
   const { startSecureCheckout, saveSecureDraft, saveSecureOrder, createSecurePayment, verifySecurePayment, recoverSecurePayment, activeSecureCheckout } = await import("../lib/secure-checkout");
   const { POST: accountLookup } = await import("../app/api/account/route");
   const { POST: resumeAccountCheckout } = await import("../app/api/account/checkout/resume/route");
+  const { POST: recordCheckoutActivity } = await import("../app/api/checkout-session/activity/route");
   const { freshResumeCatalogue } = await import("../lib/fresh-resume-catalogue");
   const { normalizeAdminControls, ADMIN_CONTROLS_KEY } = await import("../lib/admin-settings");
   const { expectedPaymentMinor, priceSecureCart } = await import("../lib/secure-checkout-pricing");
@@ -68,6 +69,11 @@ async function main() {
       assert.equal(startedDraft.status, "started", "Opening token checkout creates the admin draft");
       assert.equal(Number(startedDraft.grandTotal), quote.grandTotal);
       assert.ok(!startedDraft.path?.includes(token), "Admin records must not store capability URLs");
+      assert.equal((await recordCheckoutActivity(request("/api/checkout-session/activity", { event: "opened" }, "", token))).status, 401);
+      assert.equal((await recordCheckoutActivity(request("/api/checkout-session/activity", { event: "opened", phone: "private" }, cookie, token))).status, 400);
+      assert.equal((await recordCheckoutActivity(request("/api/checkout-session/activity", { event: "reason_given", reason: "full_cod" }, cookie, token))).status, 204);
+      assert.equal((await recordCheckoutActivity(request("/api/checkout-session/activity", { events: [{ event: "place_order_clicked" }, { event: "payment_prepared" }] }, cookie, token))).status, 204, "Payment activity is saved in one batch");
+      assert.equal((await recordCheckoutActivity(request("/api/checkout-session/activity", { events: [{ event: "opened", phone: "private" }] }, cookie, token))).status, 400, "Batched activity rejects personal data");
       assert.equal((await (await activeSecureCheckout(activeRequest())).json()).checkout.path, `/checkout/${token}`);
       assert.equal((await (await activeSecureCheckout(activeRequest(`hume_checkout_active=${token}`))).json()).checkout, null);
       assert.equal((await accountLookup(request("/api/account", { sessionId: session.id }))).status, 401, "Secure UUID alone cannot authorize account access");
@@ -77,6 +83,8 @@ async function main() {
       assert.equal((await saveSecureOrder(request("/api/orders", { ...body, grandTotal: 1 }, cookie, token))).status, 409);
       assert.equal((await db.select().from(orders).where(eq(orders.id, session.orderId))).length, 0);
       assert.equal((await saveSecureDraft(request("/api/checkout-drafts", { cartSnapshot: cart, details }, cookie, token))).status, 200);
+      const [activityDraft] = await db.select().from(checkoutDrafts).where(eq(checkoutDrafts.sessionId, session.id));
+      assert.equal((activityDraft.pricingBreakdown.checkoutActivity as Array<{ reason: string }>)[0].reason, "full_cod", "Autosave preserves activity and customer reasons");
       const [contactDraft] = await db.select().from(checkoutDrafts).where(eq(checkoutDrafts.sessionId, session.id));
       assert.equal(contactDraft.fullName, details.fullName);
       assert.equal(contactDraft.city, details.city);
@@ -89,6 +97,10 @@ async function main() {
       const resumed = await resumeAccountCheckout(request("/api/account/checkout/resume", { orderId: session.orderId }, cookie));
       assert.equal(resumed.status, 200);
       assert.equal((await resumed.json()).path, `/checkout/${token}`, "Same browser resumes the same capability, session and order");
+      const alternateMode = partial ? "full" : "partial_cod";
+      assert.equal((await resumeAccountCheckout(request("/api/account/checkout/resume", { orderId: session.orderId, paymentMode: alternateMode }, cookie))).status, 200);
+      assert.equal((await db.select().from(secureCheckoutSessions).where(eq(secureCheckoutSessions.id, session.id)))[0].expectedPaymentMinor, expectedPaymentMinor(quote.grandTotal, !partial), "Changing an unstarted payment freezes the chosen amount");
+      assert.equal((await resumeAccountCheckout(request("/api/account/checkout/resume", { orderId: session.orderId, paymentMode: partial ? "partial_cod" : "full" }, cookie))).status, 200);
       assert.equal((await accountLookup(request("/api/account", { sessionId: session.id }, cookie))).status, 200);
       assert.equal((await accountLookup(request("/api/account", {}, cookie))).status, 200, "Owner cookie restores account without local profile storage");
       assert.equal((await saveSecureOrder(request("/api/orders", { ...body, status: "processing" }, cookie, token))).status, 409);
@@ -97,6 +109,7 @@ async function main() {
       assert.equal((await createSecurePayment(request("/api/create-order", {}, cookie, token))).status, 200);
       assert.equal(providerCreates, countBefore + 1, "Retries reuse the provider order");
       assert.equal(providerAmount, expectedPaymentMinor(quote.grandTotal, partial));
+      assert.equal((await resumeAccountCheckout(request("/api/account/checkout/resume", { orderId: session.orderId, paymentMode: alternateMode }, cookie))).status, 409, "An existing provider payment cannot be silently changed");
       await db.update(orders).set({ razorpayOrderId: null, paymentSyncStatus: "creating" }).where(eq(orders.id, session.orderId));
       const restoredRequest = await recoverSecurePayment(request("/api/checkout-session/recover", undefined, cookie, token));
       assert.equal(restoredRequest.status, 200);

@@ -1,3 +1,4 @@
+import SiteLoading from "@/components/SiteLoading";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Header from "@/components/Header";
@@ -59,7 +60,7 @@ export default async function FlyerPerfumesPage({
       <Suspense
         fallback={
           <div className="min-h-[50vh] bg-background flex items-center justify-center">
-            <p className="text-muted-foreground">Loading perfumes catalog...</p>
+            <SiteLoading  title="Opening the collection" description="Getting your fragrance selection ready." />
           </div>
         }
       >

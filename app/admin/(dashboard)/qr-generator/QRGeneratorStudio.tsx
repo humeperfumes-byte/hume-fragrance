@@ -1,5 +1,6 @@
 "use client";
 
+import SiteLoading from "@/components/SiteLoading";
 import { useState, useMemo, useRef, useEffect } from "react";
 import qrcode from "qrcode-generator";
 import { 
@@ -863,7 +864,7 @@ export default function QRGeneratorStudio() {
             <tbody className="divide-y divide-stone-800/60">
               {loadingCampaigns ? (
                 <tr>
-                  <td colSpan={6} className="py-6 text-center text-stone-400">Loading registered QR campaigns...</td>
+                  <td colSpan={6} className="py-6 text-center text-stone-400"><SiteLoading compact dark title="Opening QR campaigns" description="Gathering your registered campaigns." /></td>
                 </tr>
               ) : savedCampaigns.length === 0 ? (
                 <tr>

@@ -1,3 +1,4 @@
+import SiteLoading from "@/components/SiteLoading";
 import { Suspense } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -29,7 +30,7 @@ export default async function ShopPage() {
       <Suspense
         fallback={
           <div className="min-h-screen bg-background flex items-center justify-center">
-            <p className="text-muted-foreground">Loading...</p>
+            <SiteLoading  title="Discover your next fragrance" description="Preparing the HUME collection for you." />
           </div>
         }
       >

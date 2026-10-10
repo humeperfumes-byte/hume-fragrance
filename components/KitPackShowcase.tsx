@@ -1,5 +1,6 @@
 "use client";
 
+import SiteLoading from "@/components/SiteLoading";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
@@ -432,7 +433,7 @@ export default function KitPackShowcase() {
 
             <div id="kit-grid" className="mt-5 scroll-mt-20 md:mt-6 md:scroll-mt-24">
               {loadingPerfumes ? (
-                <div className="py-16 text-center text-sm text-muted-foreground">Loading perfumes...</div>
+                <SiteLoading compact title="Build your fragrance collection" description="Getting your perfume choices ready." />
               ) : filteredPerfumes.length === 0 ? (
                 <div className="py-16 text-center text-sm text-muted-foreground">No perfumes found.</div>
               ) : (

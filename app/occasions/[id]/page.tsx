@@ -1,3 +1,4 @@
+import SiteLoading from "@/components/SiteLoading";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
@@ -108,7 +109,7 @@ export default async function OccasionPage({ params }: OccasionPageProps) {
       <Suspense
         fallback={
           <div className="min-h-screen pt-24 pb-20 flex items-center justify-center text-center">
-            <p className="text-sm text-muted-foreground">Loading occasion...</p>
+            <SiteLoading  title="Find your occasion scent" description="Preparing fragrances for your next moment." />
           </div>
         }
       >

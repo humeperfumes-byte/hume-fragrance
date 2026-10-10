@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import SiteLoading from "@/components/SiteLoading";
 import {
   Check,
   ChevronRight,
@@ -53,7 +54,6 @@ import { cn } from "@/lib/utils";
 import type { FragranceSelection } from "@/lib/discovery-set";
 import { displayPhoneNumber } from "@/lib/phone";
 import { useCart } from "@/context/CartContext";
-import PendingCheckoutCard from "@/components/PendingCheckoutCard";
 import {
   PAYMENT_RECOVERY_MODE_KEY,
   savePaymentRecovery,
@@ -201,6 +201,7 @@ export default function AccountClient() {
   const [otpShakeKey, setOtpShakeKey] = useState(0);
   const [selectedOrder, setSelectedOrder] = useState<AccountOrder | null>(null);
   const [resumingOrder, setResumingOrder] = useState<string | null>(null);
+  const [paymentResumeError, setPaymentResumeError] = useState<{ orderId: string; message: string } | null>(null);
 
   const profileAddress = useMemo(() => compactAddress(account), [account]);
   const activeOrders = useMemo(
@@ -216,9 +217,10 @@ export default function AccountClient() {
     if (order.secureCheckout) {
       if (resumingOrder) return;
       setResumingOrder(order.id);
-      void fetch("/api/account/checkout/resume", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: order.id, accountToken: getStoredAccountLoginToken(window.localStorage) || undefined }) })
+      setPaymentResumeError(null);
+      void fetch("/api/account/checkout/resume", { method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(20000), body: JSON.stringify({ orderId: order.id, paymentMode: mode, accountToken: getStoredAccountLoginToken(window.localStorage) || undefined }) })
         .then(async response => { const result = await response.json(); if (!response.ok || !result.path) throw new Error(result.error || "Could not resume your order"); router.push(result.path); })
-        .catch(error => setError(error instanceof Error ? error.message : "Could not resume your order"))
+        .catch(error => setPaymentResumeError({ orderId: order.id, message: error instanceof Error ? error.message : "Could not resume your order" }))
         .finally(() => setResumingOrder(null));
       return;
     }
@@ -464,7 +466,6 @@ export default function AccountClient() {
   if (!account && !isLoading) {
     return (
       <section className="px-4 pb-16 pt-28 sm:px-6 md:pt-32">
-        <div className="mx-auto max-w-3xl"><PendingCheckoutCard /></div>
         <div className="mx-auto max-w-3xl overflow-hidden rounded-[2rem] border border-zinc-200 bg-white p-7 text-center shadow-[0_24px_80px_rgba(15,23,42,0.08)] sm:p-10">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-zinc-950 text-white">
             <UserRound className="h-6 w-6" />
@@ -584,7 +585,6 @@ export default function AccountClient() {
       <div className="pointer-events-none absolute left-[-8rem] top-24 h-72 w-72 rounded-full bg-[#d6b77a]/15 blur-3xl" />
       <div className="pointer-events-none absolute right-[-7rem] top-[28rem] h-80 w-80 rounded-full bg-[#8d5a45]/10 blur-3xl" />
       <div className="relative mx-auto max-w-6xl">
-        <PendingCheckoutCard />
         <div className="relative mb-6 overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_85%_10%,rgba(207,171,103,.2),transparent_34%),linear-gradient(135deg,#241813,#130f0d)] p-6 text-white shadow-[0_30px_90px_rgba(46,30,22,.2)] sm:p-8">
           <div className="absolute -right-10 -top-14 h-40 w-40 rounded-full border border-white/[0.06]" />
           <div className="absolute -right-2 -top-6 h-24 w-24 rounded-full border border-[#d7b979]/15" />
@@ -644,9 +644,7 @@ export default function AccountClient() {
             </div>
 
             {isLoading ? (
-              <div className="flex min-h-[260px] items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 text-sm text-zinc-500">
-                Loading your account...
-              </div>
+              <SiteLoading compact title="Opening your account" description="Bringing your orders and account details together." />
             ) : orders.length === 0 ? (
               <div className="flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 px-6 text-center">
                 <ShoppingBag className="h-9 w-9 text-zinc-300" />
@@ -670,17 +668,19 @@ export default function AccountClient() {
                     </div>
 
                     <div className="flex flex-col gap-3">
-                      <div className="flex items-center justify-between gap-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="min-w-0">
                           <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9a8779]">
                             <Clock3 className="h-3 w-3 text-[#a08772]" />
                             {formatDate(order.createdAt)}
                           </p>
-                          <h3 className="mt-1 truncate font-serif text-xl font-semibold tracking-wide text-[#231711] sm:text-2xl">
+                          <p className="mt-4 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#a08f82]">Order reference</p>
+                          <h3 className="mt-1 break-all font-serif text-xl leading-relaxed text-[#231711] sm:text-2xl">
                             {order.orderNumber}
                           </h3>
                         </div>
-                        <span className={cn("shrink-0 rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.08em]", statusClass(order.status))}>
+                        <span className={cn("inline-flex w-fit shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.08em]", statusClass(order.status))}>
+                          <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
                           {titleStatus(order.status)}
                         </span>
                       </div>
@@ -713,8 +713,8 @@ export default function AccountClient() {
                       </div>
                     </div>
 
-                    <div className="relative mt-4.5 rounded-2xl border border-[#ebe0d4] bg-[#faf6f1]/80 p-3.5 sm:p-4">
-                      <div className="absolute left-[12.5%] right-[12.5%] top-[25px] h-[2.5px] overflow-hidden rounded-full bg-[#e8dfd5] sm:top-[27px]">
+                    <div className="relative mt-5 rounded-2xl bg-[#f6f5f1] px-2 py-5 sm:px-4">
+                      <div className="absolute left-[12.5%] right-[12.5%] top-[38px] h-px overflow-hidden rounded-full bg-[#deddd5]">
                         <div
                           className="hume-order-progress-flow h-full rounded-full bg-[linear-gradient(90deg,#8a6045,#d6b878,#9d6b49)]"
                           style={{ width: `${Math.min(100, (orderStage(order) / 3) * 100)}%` }}
@@ -728,16 +728,16 @@ export default function AccountClient() {
                           return (
                             <div key={step} className="text-center">
                               <span className={cn(
-                                "relative mx-auto flex h-8 w-8 items-center justify-center rounded-full border text-[10px] font-bold transition-all duration-500 sm:h-9 sm:w-9",
-                                complete && "border-[#8e6245] bg-[#2b1e18] text-[#ead3a8] shadow-[0_4px_14px_rgba(43,30,24,.2)]",
-                                current && "hume-order-current-step border-[#c49a5c] bg-[#f2dfba] text-[#3a271d] shadow-[0_0_0_4px_rgba(214,184,120,.22),0_6px_16px_rgba(125,86,52,.18)]",
+                                "relative mx-auto flex h-9 w-9 items-center justify-center rounded-full border text-[11px] font-semibold transition-all duration-500",
+                                complete && "border-[#183e30] bg-[#183e30] text-white",
+                                current && "border-[#183e30] bg-[#183e30] text-white shadow-[0_0_0_4px_rgba(24,62,48,0.08)]",
                                 !complete && !current && "border-[#ded3c7] bg-white text-[#aa9b8f]",
                               )}>
                                 {complete ? <Check className="h-4 w-4" /> : index + 1}
                               </span>
                               <p className={cn(
-                                "mt-2 text-[8px] font-bold uppercase tracking-[0.1em] transition-colors sm:text-[9px]",
-                                complete ? "text-[#553b2e]" : current ? "text-[#8a6045]" : "text-[#b2a59a]",
+                                "mt-3 text-[9px] font-medium transition-colors sm:text-[11px]",
+                                complete || current ? "text-[#183e30]" : "text-[#96948b]",
                               )}>{step}</p>
                             </div>
                           );
@@ -747,13 +747,13 @@ export default function AccountClient() {
 
                     <div className="mt-4 space-y-2.5">
                       {order.cartSnapshot.slice(0, 4).map((item) => (
-                        <div key={`${order.id}-${item.id}`} className="flex items-center justify-between gap-3 rounded-2xl border border-[#ede3d8] bg-[#fffdfa] p-3 transition-colors hover:border-[#ded3c7]">
+                        <div key={`${order.id}-${item.id}`} className="flex items-center justify-between gap-3 rounded-2xl border border-[#eeeae4] bg-white p-3 sm:p-4">
                           <div className="flex min-w-0 items-center gap-3">
-                            <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#e7ddd2] bg-white shadow-2xs">
-                              <Image src={item.image || "/images/logo.png"} alt={item.name} fill sizes="48px" className="object-cover" unoptimized />
+                            <span className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#f6f5f1]">
+                              <Image src={item.image || "/images/logo.png"} alt={item.name} fill sizes="64px" className="object-cover" unoptimized />
                             </span>
                             <div className="min-w-0">
-                              <p className="truncate font-medium text-xs text-[#271a15] sm:text-sm">{item.name}</p>
+                              <p className="break-words text-sm font-semibold leading-5 text-[#271a15]">{item.name}</p>
                               <p className="text-[11px] text-[#8c796c]">
                                 Qty {item.quantity}
                                 {!item.isGift && item.size ? ` - ${item.size}` : ""}
@@ -765,7 +765,7 @@ export default function AccountClient() {
                               ) : null}
                             </div>
                           </div>
-                          <span className={cn("shrink-0 font-serif text-sm font-semibold", item.isGift ? "font-sans text-xs font-semibold text-emerald-600" : "text-[#271a15]")}>
+                          <span className={cn("shrink-0 text-xs font-semibold sm:text-sm", item.isGift ? "text-emerald-600" : "text-[#271a15]")}>
                             {item.isGift ? "FREE" : formatINR(item.price * item.quantity)}
                           </span>
                         </div>
@@ -778,54 +778,31 @@ export default function AccountClient() {
                     </div>
 
                     {["payment_pending", "payment_failed"].includes(order.status) ? (
-                      <div className="relative mt-4.5 min-w-0 overflow-hidden rounded-[1.4rem] border border-[#b99762]/35 bg-[radial-gradient(circle_at_100%_0%,rgba(203,167,105,.18),transparent_40%),linear-gradient(145deg,#251914,#15100e)] p-4 shadow-[0_18px_45px_rgba(42,27,20,.22)] sm:p-5">
-                        <div className="absolute -right-10 -top-12 h-32 w-32 rounded-full border border-[#d3b47d]/10" />
-                        <div className="absolute right-3 top-3 h-16 w-16 rounded-full border border-[#d3b47d]/[0.06]" />
-                        <div className="relative mb-4 flex min-w-0 items-center justify-between gap-3">
-                          <div className="flex min-w-0 items-center gap-3">
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#d7b979]/20 bg-[#d7b979]/10 text-[#e3c98f]">
-                              <CreditCard className="h-4 w-4" />
-                            </span>
-                            <div className="min-w-0">
-                              <p className="text-[8px] font-bold uppercase tracking-[0.22em] text-[#d8bd87]/70">Payment required</p>
-                              <p className="mt-0.5 truncate font-serif text-lg text-white sm:text-xl">Complete this order</p>
-                            </div>
+                      <div className="relative mt-5 overflow-hidden rounded-[24px] bg-[#102e25] p-5 text-white shadow-[0_16px_35px_-18px_rgba(16,46,37,0.55)] sm:p-7">
+                        <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-32 h-80 w-80 rounded-full border-[40px] border-[#b79b65]/10" />
+                        <div className="relative mb-6 flex flex-wrap items-end justify-between gap-4">
+                          <div>
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#c9b17e]">One step from your next scent</p>
+                            <h3 className="mt-2 font-serif text-3xl leading-tight sm:text-4xl">Make it yours.</h3>
+                            <p className="mt-2 text-sm text-white/60">Your order is saved. Continue securely below.</p>
                           </div>
-                          <p className="hidden shrink-0 font-serif text-lg font-semibold text-[#ead7b0] sm:block">
-                            {order.grandTotal !== null ? formatINR(order.grandTotal) : null}
-                          </p>
+                          <div className="text-left sm:text-right"><p className="text-[10px] uppercase tracking-[0.16em] text-white/50">Order total</p><p className="mt-1 font-serif text-3xl text-[#f1dfb5]">{order.grandTotal !== null ? formatINR(order.grandTotal) : "—"}</p></div>
                         </div>
-                        <div className="relative grid min-w-0 gap-2.5 sm:grid-cols-2">
-                          {!order.secureCheckout && <Button
-                            type="button"
-                            onClick={() => resumeOrderPayment(order, "partial_cod")}
-                            variant="outline"
-                            className="group h-13 w-full min-w-0 justify-between overflow-hidden rounded-[14px] border-[#ead7ad]/70 bg-[linear-gradient(135deg,#f4e5c7,#e7cca0)] px-3.5 text-xs font-semibold text-[#2b1d17] shadow-[0_10px_24px_rgba(203,167,105,.16)] transition hover:-translate-y-0.5 hover:border-[#f3dfb6] hover:bg-[#f4e5c7] active:translate-y-0"
-                          >
-                            <span className="flex min-w-0 items-center gap-2">
-                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] border border-[#5c412f]/10 bg-[#2b1d17]/[0.07]">
-                                <WalletCards className="h-3.5 w-3.5" />
-                              </span>
-                              <span className="truncate">Pay 20% now + COD</span>
-                            </span>
-                            <ChevronRight className="h-4 w-4 shrink-0 text-[#6d4f39] transition-transform group-hover:translate-x-0.5" />
-                          </Button>}
-
-                          <Button
-                            type="button"
-                            onClick={() => resumeOrderPayment(order, "full")}
-                            disabled={resumingOrder !== null}
-                            className="group h-13 w-full min-w-0 justify-between overflow-hidden rounded-[14px] border border-emerald-200/15 bg-[linear-gradient(135deg,#1b654d,#2b8063)] px-3.5 text-xs font-semibold text-white shadow-[0_12px_30px_rgba(10,65,46,.3)] transition hover:-translate-y-0.5 hover:bg-[#1b5d47] active:translate-y-0"
-                          >
-                            <span className="flex min-w-0 items-center gap-2">
-                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] border border-white/10 bg-white/10">
-                                <CreditCard className="h-3.5 w-3.5" />
-                              </span>
-                              <span className="truncate">{resumingOrder === order.id ? "Opening saved checkout…" : order.secureCheckout ? "Continue saved payment" : "Pay securely with Razorpay"}</span>
-                            </span>
-                            <ChevronRight className="h-4 w-4 shrink-0 text-emerald-100 transition-transform group-hover:translate-x-0.5" />
-                          </Button>
+                        <div className="relative grid gap-3 sm:grid-cols-2">
+                          <button type="button" onClick={() => resumeOrderPayment(order, "partial_cod")} disabled={resumingOrder !== null} className="group flex w-full flex-col items-start rounded-[18px] border border-[#dfc89e] bg-[#f8efdf] p-3.5 text-left text-[#30271e] transition hover:bg-[#fff7e8] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#e5c68e] disabled:cursor-wait disabled:opacity-60">
+                            <span className="flex w-full items-center justify-between"><WalletCards className="h-4 w-4 text-[#927044]" aria-hidden="true" /><span className="rounded-full border border-[#b49a6d]/30 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider">80% on delivery</span></span>
+                            <span className="mt-2 text-sm font-semibold">20% advance + COD</span>
+                            <span className="mt-1 text-xs text-[#806d54]">{order.grandTotal !== null ? formatINR(Math.max(1, Math.round(order.grandTotal * 0.2))) + " due now" : "Pay 20% now"}</span>
+                            <span className="mt-3 flex w-full items-center justify-between text-[11px] font-semibold">{resumingOrder === order.id ? "Opening checkout…" : "Choose advance COD"}<ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" /></span>
+                          </button>
+                          <button type="button" onClick={() => resumeOrderPayment(order, order.secureCheckout && /Prepaid.*Cash on Delivery/i.test(order.paymentMethod || "") ? "partial_cod" : "full")} disabled={resumingOrder !== null} className="group flex w-full flex-col items-start rounded-[18px] border border-white/20 bg-white/[0.07] p-3.5 text-left text-white transition hover:border-white/35 hover:bg-white/[0.12] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#e5c68e] disabled:cursor-wait disabled:opacity-60">
+                            <span className="flex w-full items-center justify-between"><CreditCard className="h-4 w-4 text-[#dec794]" aria-hidden="true" /><span className="rounded-full border border-white/15 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-white/65">Razorpay</span></span>
+                            <span className="mt-2 text-sm font-semibold">{order.secureCheckout ? "Continue saved payment" : "Pay in full"}</span>
+                            <span className="mt-1 text-xs text-white/55">UPI, cards & netbanking</span>
+                            <span className="mt-3 flex w-full items-center justify-between text-[11px] font-semibold">{resumingOrder === order.id ? "Opening checkout…" : "Continue securely"}<ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" /></span>
+                          </button>
                         </div>
+                        {paymentResumeError?.orderId === order.id ? <p role="alert" className="relative mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">{paymentResumeError.message}</p> : null}
                       </div>
                     ) : null}
 

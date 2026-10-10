@@ -1,5 +1,6 @@
 "use client";
 
+import SiteLoading from "@/components/SiteLoading";
 import { useState, useEffect } from "react";
 import { 
   BarChart3, 
@@ -745,7 +746,7 @@ export default function FlyerAnalyticsView() {
                   </h4>
 
                   {loadingDetails ? (
-                    <p className="text-xs text-stone-400 py-4 text-center">Loading scan activity...</p>
+                    <SiteLoading compact dark title="Gathering scan activity" description="Preparing campaign insights." />
                   ) : campaignEvents.length === 0 ? (
                     <p className="text-xs text-stone-400 py-4 text-center">No specific events logged for this campaign ID yet.</p>
                   ) : (

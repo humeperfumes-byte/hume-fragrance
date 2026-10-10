@@ -29,7 +29,7 @@ export default function InvoicePage() {
   const [sellerAddress, setSellerAddress] = useState("house no 8, Pansarian Area, Kannauj, Uttar Pradesh - 209725");
   const [sellerEmail, setSellerEmail] = useState("support@humefragrance.com");
   const [sellerPhone, setSellerPhone] = useState("+91 95590 24822");
-  const [sellerGstin, setSellerGstin] = useState("09AABCH1234F1Z5"); // Placeholder GSTIN
+  const [sellerGstin, setSellerGstin] = useState("");
 
   // 2. Buyer Information
   const [buyerName, setBuyerName] = useState("");
@@ -87,6 +87,12 @@ export default function InvoicePage() {
     setSavedSnapshot(asNew ? "" : JSON.stringify({ document: data, title: invoice.title })); pendingSaveId.current = null; setLibraryOpen(false);
     toast({ title: asNew ? "New invoice from saved details" : "Saved invoice opened", description: asNew ? "A new invoice number was created. Edit the details and save." : "Make your changes, then choose Update saved invoice." });
   }
+  function startNewInvoice() {
+    if (saving || (dirty && !window.confirm("Start a new invoice? Unsaved changes will be lost."))) return;
+    applyInvoice({ ...invoiceData, ...newInvoiceIdentity(), buyerName: "", buyerAddress: "", buyerEmail: "", buyerPhone: "", buyerGstin: "", paymentStatus: "Unpaid", items: [{ id: crypto.randomUUID(), name: "", category: "other", unit: "pcs", quantity: 1, price: 0, gstPercent: 18 }], shippingFee: 0, targetGrandTotal: "" });
+    setSavedId(null); setSavedAt(null); setSavedSnapshot(""); setSaveTitle(""); pendingSaveId.current = null; setLibraryOpen(false);
+    toast({ title: "New invoice ready", description: "Your seller, bank and terms details have been kept." });
+  }
   async function saveInvoice(asCopy = false) {
     const data = asCopy ? duplicateInvoice(invoiceData) : invoiceData;
     const parsed = invoiceDocumentSchema.safeParse(data);
@@ -96,7 +102,7 @@ export default function InvoicePage() {
     const title = saveTitle.trim() || `${data.buyerName} · ${data.invoiceNumber}`;
     setSaving(true);
     try {
-      const response = await fetch("/api/admin/invoices", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, title, document: parsed.data, ...(!asCopy && savedAt ? { expectedUpdatedAt: savedAt } : {}) }) });
+      const response = await fetch("/api/admin/invoices", { method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(30000), body: JSON.stringify({ id, title, document: parsed.data, ...(!asCopy && savedAt ? { expectedUpdatedAt: savedAt } : {}) }) });
       const result = await response.json(); if (!response.ok) throw new Error(result.error || "Could not save invoice");
       const invoice: SavedInvoice = result.invoice;
       if (asCopy) applyInvoice(invoice.document);
@@ -200,8 +206,8 @@ export default function InvoicePage() {
             <ArrowLeft className="h-4 w-4 text-white/65" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold tracking-tight">HUME Fragrance</h1>
-            <p className="text-xs text-white/35">Invoice Engine</p>
+            <h1 className="text-lg font-semibold tracking-tight">Invoice workspace</h1>
+            <p className="text-xs text-white/35">HUME Fragrance · Create, save and reuse</p>
           </div>
         </div>
 
@@ -240,11 +246,13 @@ export default function InvoicePage() {
       </header>
 
       <div className="sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b border-white/10 bg-[#191a21] px-6 py-4 print:hidden">
+        <button type="button" disabled={saving} className="invoice-small-button" onClick={startNewInvoice}>+ New invoice</button>
         <label className="min-w-0 flex-1 text-xs text-white/60">Save name<input disabled={saving} className="mt-1 block w-full min-w-[200px] rounded-lg border border-white/20 bg-black/20 px-3 py-2.5 text-sm text-white" placeholder="e.g. Hotel samples / machine quotation" value={saveTitle} maxLength={255} onChange={e => setSaveTitle(e.target.value)} /></label>
         <button disabled={saving} className="rounded-lg bg-[#c4aeec] px-4 py-3 text-sm font-semibold text-black disabled:opacity-50" onClick={() => saveInvoice()}>{saving ? "Saving…" : savedId ? "Update saved invoice" : "Save invoice"}</button>
         {savedId && <button disabled={saving} className="invoice-small-button" onClick={() => saveInvoice(true)}>Save as copy</button>}
         <button disabled={saving} className="invoice-small-button" onClick={() => setLibraryOpen(!libraryOpen)}>Saved invoices</button>
         <span className="text-xs text-white/45">{savedId ? dirty ? "Unsaved changes" : "All changes saved" : "Not saved yet"}</span>
+        <div className="flex w-full flex-wrap items-center gap-3 border-t border-white/10 pt-3 text-xs text-white/45"><span className="rounded-full bg-white/5 px-3 py-1">{savedId ? "Editing saved invoice" : "New document"}</span><span>{invoiceNumber || "Preparing invoice number…"}</span><span>{items.length} line item{items.length === 1 ? "" : "s"}</span><span className="ml-auto font-semibold text-[#c4aeec]">Total ₹{totals.grandTotal.toFixed(2)}</span></div>
       </div>
       {libraryOpen && <SavedInvoiceLibrary onOpen={invoice => openSaved(invoice, false)} onDuplicate={invoice => openSaved(invoice, true)} onClose={() => setLibraryOpen(false)} />}
 

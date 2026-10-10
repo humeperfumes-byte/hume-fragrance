@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart, type CartItem } from "@/context/CartContext";
 import CheckoutClient from "./CheckoutClient";
+import CheckoutLoading from "./CheckoutLoading";
 import { clearPaymentRecovery } from "@/lib/payment-recovery";
 export type OwnedCheckoutData = { token: string; id: string; orderId: string; orderNumber: string; cart: CartItem[]; details: Record<string, string>; paymentPending: boolean; savedTotal?: number; savedShippingFee?: number; expectedPaymentMinor?: number; paymentMode?: "full" | "partial_cod" };
 export default function OwnedCheckout({ session }: { session: OwnedCheckoutData }) {
@@ -33,6 +34,6 @@ export default function OwnedCheckout({ session }: { session: OwnedCheckoutData 
     finally { setChecking(false); }
   };
   useEffect(() => { if (session.paymentPending) void recover(); /* One server check on opening an unresolved order. */ }, [session.token]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (!ready || checking) return <p className="mx-auto max-w-xl px-6 py-24">{checking ? "Checking your existing payment…" : "Restoring your checkout…"}</p>;
+  if (!ready || checking) return <CheckoutLoading title={checking ? "Checking your saved payment" : "Welcome back to checkout"} description={checking ? "Confirming the status of your existing payment. Please wait before trying again." : "Restoring your bag and saved details."} />;
   return <>{session.paymentPending && <aside className="mx-auto mt-6 max-w-3xl rounded-2xl border border-amber-300 bg-amber-50 p-5"><p>{message}</p><button type="button" onClick={() => void recover()} className="mt-3 underline">Check payment again</button></aside>}<CheckoutClient secureSession={{ token: session.token, id: session.id, orderId: session.orderId, orderNumber: session.orderNumber, savedTotal: session.savedTotal, savedShippingFee: session.savedShippingFee, expectedPaymentMinor: session.expectedPaymentMinor }} /></>;
 }

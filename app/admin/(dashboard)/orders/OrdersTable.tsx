@@ -1,4 +1,5 @@
 "use client";
+import CheckoutActivityTimeline from "@/components/admin/CheckoutActivityTimeline";
 import { CustomerLinkButton } from "@/components/admin/CustomerLinkButton";
 
 
@@ -1615,6 +1616,7 @@ export function OrdersTable({
                 </div>
 
                 <div className="space-y-4 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5 sm:p-6">
+                  <CheckoutActivityTimeline sessionId={selectedOrder.sessionId} />
                   <div><h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/45">Customer updates</h4><p className="mt-1 text-xs text-white/30">Copy a ready-to-send update for this customer.</p></div>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <Button

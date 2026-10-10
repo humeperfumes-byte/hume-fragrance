@@ -1,5 +1,6 @@
 "use client";
 
+import SiteLoading from "@/components/SiteLoading";
 import {
   useEffect,
   useRef,
@@ -834,7 +835,7 @@ export function ProductFormSheet({
           <div className="min-h-0 flex-1 overflow-y-auto bg-[radial-gradient(circle_at_100%_0%,rgba(201,179,255,.035),transparent_28%)] px-4 py-4 sm:px-7 sm:py-6">
             {detailLoading ? (
               <div className="mb-4 rounded-lg border border-sky-400/20 bg-sky-400/10 px-4 py-3 text-sm text-sky-100">
-                Loading full product details before edit...
+                <SiteLoading compact dark title="Preparing product details" description="Loading the full product before you edit." />
               </div>
             ) : null}
             {detailError ? (

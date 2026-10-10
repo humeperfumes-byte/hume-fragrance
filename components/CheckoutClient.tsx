@@ -1,4 +1,6 @@
 "use client";
+import { useCheckoutActivity } from "@/hooks/use-checkout-activity";
+import type { CheckoutEvent } from "@/lib/checkout-activity";
 import { checkoutFetch } from "@/lib/checkout-fetch";
 
 import {
@@ -538,6 +540,8 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [paymentStage, setPaymentStage] = useState("Preparing checkout…");
   const [paymentStartProblem, setPaymentStartProblem] = useState("");
+  const recordActivity = useCheckoutActivity(secureSession?.token, isPaymentProcessing && paymentStage !== "Complete payment in secure window");
+
   useEffect(() => {
     if (!isPaymentProcessing || paymentStage !== "Complete payment in secure window") return;
     const timer = window.setTimeout(() => {
@@ -546,12 +550,14 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
         return bounds.width > 0 && bounds.height > 0 && window.getComputedStyle(frame).visibility !== "hidden";
       });
       if (!visibleWindow) {
+        recordActivity("payment_window_missing");
+
         setPaymentStage("Payment window did not open");
         setPaymentStartProblem("The secure payment window did not appear. Check your saved payment before trying again. Do not place another order if you already paid.");
       }
     }, 20000);
     return () => window.clearTimeout(timer);
-  }, [isPaymentProcessing, paymentStage]);
+  }, [isPaymentProcessing, paymentStage, recordActivity]);
   const [paidSavePending, setPaidSavePending] = useState(false);
   useEffect(() => { setPaidSavePending(shouldBlockAnotherPayment(readPaymentRecovery(window.localStorage))); }, []);
   const [recoveryPaymentMode] = useState<RecoveryPaymentMode>(() => {
@@ -793,6 +799,7 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
   }, []);
 
   useEffect(() => {
+    if (isPaymentProcessing) return;
     let active = true;
     const checkOverride = async () => {
       const sessionId = checkoutSessionIdRef.current || getOrCreateCheckoutSessionId();
@@ -822,7 +829,7 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", checkOverrideWhileVisible);
     };
-  }, [secureSession]);
+  }, [secureSession, isPaymentProcessing]);
 
   useEffect(() => {
     if (didAutoFocusRef.current || items.length === 0) return;
@@ -960,6 +967,9 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
       payload: Record<string, unknown> = {},
     ) => {
       if (typeof window === "undefined") return;
+      const activityMap: Record<string, CheckoutEvent> = { checkout_razorpay_clicked: "place_order_clicked", checkout_razorpay_order_created: "payment_prepared", checkout_razorpay_popup_opened: "payment_window_opened", checkout_razorpay_dismissed: "payment_window_closed", checkout_razorpay_payment_failed: "payment_failed", checkout_razorpay_verified: "payment_callback_verified", checkout_razorpay_verify_failed: "verification_failed" };
+      if (activityMap[eventType]) recordActivity(activityMap[eventType]);
+      if (eventType === "checkout_razorpay_clicked") recordActivity(recoveryPaymentMode === "partial_cod" ? "partial_cod_selected" : "full_selected");
 
       const sessionId = checkoutSessionIdRef.current ?? getOrCreateCheckoutSessionId();
       checkoutSessionIdRef.current = sessionId;
@@ -984,7 +994,7 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
         }),
       });
     },
-    [grandTotal, items.length, pathname, shippingFee, totalPrice],
+    [grandTotal, items.length, pathname, shippingFee, totalPrice, recordActivity, recoveryPaymentMode],
   );
 
   const updateField = (field: keyof CheckoutDetails, value: string) => {
@@ -1005,11 +1015,21 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
   };
 
   const handleFieldBlur = (field: keyof CheckoutDetails) => {
+    if (isPaymentProcessing) return;
+    // Clicking Pay blurs the last input first. Let payment startup cancel this
+    // background save rather than putting it ahead of the authoritative order save.
+    if (secureSession) {
+      if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current);
+      autosaveTimeoutRef.current = setTimeout(() => {
+        void persistDraft(field, undefined, true);
+      }, 700);
+      return;
+    }
     void persistDraft(field, undefined, true);
   };
 
   useEffect(() => {
-    if (typeof window === "undefined" || items.length === 0) return;
+    if (typeof window === "undefined" || items.length === 0 || isPaymentProcessing) return;
 
     if (!checkoutSessionIdRef.current) {
       checkoutSessionIdRef.current = getOrCreateCheckoutSessionId();
@@ -1028,12 +1048,13 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
         clearTimeout(autosaveTimeoutRef.current);
       }
     };
-  }, [details, items, persistDraft, totalPrice, shippingFee, grandTotal]);
+  }, [details, items, persistDraft, totalPrice, shippingFee, grandTotal, isPaymentProcessing]);
 
   useEffect(() => {
     if (typeof window === "undefined" || items.length === 0) return;
 
     const flushDraft = () => {
+      if (isPaymentProcessing) return;
       void persistDraft(undefined, undefined, true);
     };
 
@@ -1050,7 +1071,7 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
       window.removeEventListener("pagehide", flushDraft);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [items.length, persistDraft]);
+  }, [items.length, persistDraft, isPaymentProcessing]);
 
   const validate = () => {
     const requiredFields: Array<{ key: keyof CheckoutDetails; label: string }> =
@@ -1337,7 +1358,7 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items: stockItems }),
-      });
+      }, process.env.NODE_ENV === "development" ? 60000 : 30000);
       const data = (await response.json()) as {
         ok?: boolean;
         issues?: Array<{ message?: string }>;
@@ -1347,8 +1368,8 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
       if (!response.ok || !data.ok) {
         const firstIssue = data.issues?.[0]?.message;
         toast({
-          title: firstIssue || data.error || "A cart item is unavailable",
-          description: "Please remove it from your bag or ask us on WhatsApp.",
+          title: firstIssue || "Availability could not be confirmed",
+          description: firstIssue ? "Please update your bag or ask us on WhatsApp." : "Your bag is saved. Please try checking again when the connection is ready.",
           variant: "destructive",
         });
         return false;
@@ -1358,8 +1379,8 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
     } catch (error) {
       console.error("Availability check failed:", error);
       toast({
-        title: "Stock check failed",
-        description: "Please retry before placing the order.",
+        title: "Availability check could not finish",
+        description: "Your bag is saved. Please retry; payment has not been started by this attempt.",
         variant: "destructive",
       });
       return false;
@@ -1399,11 +1420,13 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
     await waitForButtonPaint();
 
     if (!validate()) {
+      recordActivity("validation_failed");
       setIsPaymentProcessing(false);
       return;
     }
 
     if (!(await ensureCartAvailability())) {
+      recordActivity("validation_failed");
       setIsPaymentProcessing(false);
       return;
     }
@@ -1545,6 +1568,7 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
         },
         modal: {
           ondismiss: () => {
+
             captureCheckoutAction("checkout_razorpay_dismissed", {
               orderNumber: identity.orderNumber,
               localOrderId: identity.id,
@@ -1698,6 +1722,8 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
       setPaymentStage("Complete payment in secure window");
     } catch (error) {
       setIsPaymentProcessing(false);
+      recordActivity("payment_start_failed");
+
       setPaymentStartProblem(error instanceof Error ? error.message : "Payment could not open. Check your saved payment before retrying.");
       toast({
         title: "Payment could not start",

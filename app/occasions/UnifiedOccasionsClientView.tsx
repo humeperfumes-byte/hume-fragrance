@@ -1,5 +1,6 @@
 "use client";
 
+import SiteLoading from "@/components/SiteLoading";
 import { useMemo, useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -349,7 +350,7 @@ export default function UnifiedOccasionsClientView(
     <Suspense
       fallback={
         <div className="min-h-screen pt-24 pb-20 flex items-center justify-center text-center">
-          <p className="text-sm text-muted-foreground">Loading scent guide...</p>
+          <SiteLoading  title="Finding your fragrance" description="Preparing your scent guide." />
         </div>
       }
     >
