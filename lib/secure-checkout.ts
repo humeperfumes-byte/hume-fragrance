@@ -286,13 +286,32 @@ async function earlierPaymentRequests(sessionId: string): Promise<string[]> {
   return Array.isArray(value) ? value.filter((id): id is string => typeof id === "string" && /^order_[a-zA-Z0-9_]+$/.test(id)).slice(0, 5) : [];
 }
 async function checkEarlierPayments(sessionId: string, orderId: string) {
-  for (const id of await earlierPaymentRequests(sessionId)) {
+  const history = await earlierPaymentRequests(sessionId);
+  let onlyFailedAttempts = true;
+  for (const id of history) {
     const result = await razorpay<{ items: ProviderPayment[] }>(`orders/${encodeURIComponent(id)}/payments`);
+    if (result.items.some(p => p.status !== "failed")) onlyFailedAttempts = false;
     if (result.items.some(p => !["failed", "refunded"].includes(p.status))) {
-      await db.update(orders).set({ paymentSyncStatus: "payment_review", paymentReconciledAt: new Date() }).where(eq(orders.id, orderId));
-      throw new CheckoutRequestError("An earlier payment needs checking. Please contact HUME before paying again.", 409);
+      // An initiated/authorized attempt can still fail. Block a second payment
+      // while it is active without permanently marking the order for review.
+      if (result.items.some(p => p.status === "captured")) {
+        await db.update(orders).set({ paymentSyncStatus: "payment_review", paymentReconciledAt: new Date() }).where(eq(orders.id, orderId));
+        throw new CheckoutRequestError("An earlier payment was received and needs checking. Please contact HUME before paying again.", 409);
+      }
+      throw new CheckoutRequestError("An earlier payment is still processing. Please check its status again shortly.", 409);
     }
   }
+  // Repair the old sticky review flag only when EVERY retained request and the
+  // current request have been checked. Genuine mismatches/refunds stay protected.
+  if (!history.length || !onlyFailedAttempts) return;
+  const [snapshot] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+  if (!snapshot || snapshot.paymentSyncStatus !== "payment_review" || !snapshot.paymentReconciledAt || snapshot.paymentCapturedAt || !["payment_pending", "payment_failed"].includes(snapshot.status) || !snapshot.razorpayOrderId) return;
+  const current = await razorpay<{ items: ProviderPayment[] }>(`orders/${encodeURIComponent(snapshot.razorpayOrderId)}/payments`);
+  if (current.items.some(p => p.status !== "failed")) return;
+  await db.transaction(async tx => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${sessionId}))`);
+    await tx.update(orders).set({ paymentSyncStatus: "pending", paymentReconciledAt: new Date() }).where(and(eq(orders.id, orderId), eq(orders.paymentSyncStatus, "payment_review"), eq(orders.razorpayOrderId, snapshot.razorpayOrderId!), eq(orders.updatedAt, snapshot.updatedAt), eq(orders.paymentReconciledAt, snapshot.paymentReconciledAt!)));
+  });
 }
 // Called only after owner/account authorization. Keep the same customer order;
 // retain previous provider references for late-payment checks and reconciliation.
@@ -437,6 +456,8 @@ export async function recoverSecurePayment(request: NextRequest) {
       if (!order) throw new CheckoutRequestError("Saved order unavailable", 404);
     }
     await checkEarlierPayments(session.id, session.orderId);
+    [order] = await db.select().from(orders).where(eq(orders.id, session.orderId)).limit(1);
+    if (!order) throw new CheckoutRequestError("Saved order unavailable", 404);
     if (["switching", "payment_review", "payment_mismatch", "multiple_captures"].includes(order.paymentSyncStatus || "")) return NextResponse.json({ confirmed: false, state: "processing", canPay: false }, { headers: privateHeaders });
     if (order.paymentCapturedAt && Math.round(Number(order.capturedPaymentAmount) * 100) !== storedPaymentMinor(session.expectedPaymentMinor, Number(order.grandTotal), /Prepaid.*Cash on Delivery/i.test(order.paymentMethod || ""))) throw new CheckoutRequestError("The recorded payment needs review. Contact HUME; do not pay again.", 409);
     if (order.checkoutChannel === "razorpay" && !order.razorpayOrderId && order.paymentSyncStatus === "creating") {

@@ -185,6 +185,16 @@ async function main() {
     assert.equal(interruptedSwitch.status, 200);
     assert.equal((await interruptedSwitch.json()).canPay, true, "An interrupted mode-change claim can be checked and recovered");
     assert.equal((await db.select().from(orders).where(eq(orders.id, session.orderId)))[0].razorpayOrderId, providerId, "Recovering a stale claim never changes the provider request");
+    paymentOverrides.set(previousId, [{ id: "pay_transient_fixture", order_id: previousId, amount: expectedPaymentMinor(quote.grandTotal, false), currency: "INR", status: "created" }]);
+    assert.equal((await recoverSecurePayment(request("/api/checkout-session/recover", undefined, cookie, token))).status, 409, "An active earlier attempt blocks repayment");
+    assert.notEqual((await db.select().from(orders).where(eq(orders.id, session.orderId)))[0].paymentSyncStatus, "payment_review", "A transient attempt does not permanently mark the order for review");
+    paymentOverrides.set(previousId, [{ id: "pay_transient_fixture", order_id: previousId, amount: expectedPaymentMinor(quote.grandTotal, false), currency: "INR", status: "failed" }]);
+    await db.update(orders).set({ paymentSyncStatus: "payment_review", paymentReconciledAt: new Date() }).where(eq(orders.id, session.orderId));
+    const resolvedReview = await recoverSecurePayment(request("/api/checkout-session/recover", undefined, cookie, token));
+    assert.equal(resolvedReview.status, 200);
+    assert.equal((await resolvedReview.json()).canPay, true, "A legacy review clears after all prior and current attempts are verified unpaid");
+    assert.equal((await createSecurePayment(request("/api/create-order", {}, cookie, token))).status, 200, "The customer can resume the existing COD payment after a failed earlier attempt");
+    assert.equal(providerCreates, createsBeforeRetry, "Resolving a stale review creates no duplicate provider request");
     paymentOverrides.set(previousId, [{ id: "pay_late_fixture", order_id: previousId, amount: expectedPaymentMinor(quote.grandTotal, false), currency: "INR", status: "captured" }]);
     assert.equal((await recoverSecurePayment(request("/api/checkout-session/recover", undefined, cookie, token))).status, 409, "A late earlier payment is held for review");
     assert.equal((await createSecurePayment(request("/api/create-order", {}, cookie, token))).status, 409, "A late earlier payment blocks another payment");
