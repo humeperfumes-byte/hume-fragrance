@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 config({ path: ".env.local", quiet: true }); config({ path: ".env", quiet: true });
 // This is a persistent local verification process, not a serverless deployment.
-if (process.env.DATABASE_URL) {
+if (process.env.DATABASE_URL && process.env.CHECKOUT_VERIFY_TRANSACTION_POOL !== "true") {
   const databaseUrl = new URL(process.env.DATABASE_URL);
   if (databaseUrl.port === "6543" && databaseUrl.hostname.endsWith(".pooler.supabase.com")) { databaseUrl.port = "5432"; process.env.DATABASE_URL = databaseUrl.toString(); }
 }
@@ -143,4 +143,9 @@ async function main() {
     console.log("Generated verification rows removed; existing customer orders were untouched.");
   }
 }
-main().then(() => process.exit(0)).catch(error => { console.error(error instanceof Error ? error.message : "Verification failed"); process.exit(1); });
+main().then(() => process.exit(0)).catch(error => {
+  console.error(error instanceof Error ? error.message : "Verification failed");
+  const cause = error?.cause;
+  if (cause) console.error("Database failure type:", cause.name, "code:", cause.code || "unavailable");
+  process.exit(1);
+});

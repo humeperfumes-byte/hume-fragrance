@@ -540,6 +540,11 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [paymentStage, setPaymentStage] = useState("Preparing checkout…");
   const [paymentStartProblem, setPaymentStartProblem] = useState("");
+  const pendingDraftSaveRef = useRef<string | null>(null);
+  const activeDraftSaveRef = useRef<Promise<void> | null>(null);
+  useEffect(() => {
+    if (secureSession && isPaymentProcessing) pendingDraftSaveRef.current = null;
+  }, [secureSession, isPaymentProcessing]);
   const recordActivity = useCheckoutActivity(secureSession?.token, isPaymentProcessing && paymentStage !== "Complete payment in secure window");
 
   useEffect(() => {
@@ -934,21 +939,32 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
       const signature = JSON.stringify(payload);
 
       if (!force && signature === lastSavedSignatureRef.current) return;
-
-      try {
-        const response = await checkoutFetch("/api/checkout-drafts", {
+      // Keep one draft request in flight and only the latest queued snapshot.
+      // Field blurs must not queue many transactions ahead of payment startup.
+      pendingDraftSaveRef.current = signature;
+      if (activeDraftSaveRef.current) return activeDraftSaveRef.current;
+      const drain = async () => {
+        while (pendingDraftSaveRef.current) {
+          const body = pendingDraftSaveRef.current;
+          pendingDraftSaveRef.current = null;
+          try {
+            const response = await checkoutFetch("/api/checkout-drafts", {
           method: "POST",
           headers: { "Content-Type": "application/json", ...(secureSession ? { "x-hume-checkout-token": secureSession.token } : {}) },
           keepalive: true,
-          body: JSON.stringify(payload),
+          body,
         });
 
         if (response.ok) {
-          lastSavedSignatureRef.current = signature;
+          lastSavedSignatureRef.current = body;
         }
       } catch (error) {
         console.error("Checkout draft save failed:", error);
       }
+        }
+      };
+      activeDraftSaveRef.current = drain().finally(() => { activeDraftSaveRef.current = null; });
+      return activeDraftSaveRef.current;
     },
     [buildDraftPayload, secureSession],
   );
@@ -1244,6 +1260,7 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
     orderMessage,
     razorpayOrderId,
     razorpayPaymentId,
+    throwOnFailure = false,
   }: {
     checkoutChannel: "whatsapp" | "razorpay";
     paymentMethod: string;
@@ -1256,6 +1273,7 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
     orderMessage: string;
     razorpayOrderId?: string;
     razorpayPaymentId?: string;
+    throwOnFailure?: boolean;
   }) => {
     if (typeof window === "undefined") return false;
 
@@ -1319,10 +1337,12 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
       if (!response.ok) {
         reportCheckoutError("ORDER_SAVE_FAILED");
         if (result?.error) toast({ title: "Please review your checkout", description: result.error, variant: "destructive" });
+        if (throwOnFailure) throw new Error(result?.error || "Your order could not be saved. Please check its payment status before retrying.");
       }
       return response.ok;
-    } catch {
+    } catch (error) {
       reportCheckoutError("ORDER_SAVE_FAILED");
+      if (throwOnFailure) throw error;
       return false;
     }
   };
@@ -1470,7 +1490,7 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
         : "Razorpay Online Payment";
       if (secureSession) {
         setPaymentStage("Saving your order…");
-        const prepared = await persistOrder({ checkoutChannel: "razorpay", paymentMethod: recoveryPaymentMethod, status: "payment_pending", orderMessage: buildOrderMessage() });
+        const prepared = await persistOrder({ checkoutChannel: "razorpay", paymentMethod: recoveryPaymentMethod, status: "payment_pending", orderMessage: buildOrderMessage(), throwOnFailure: true });
         if (!prepared) throw new Error("Your order could not be prepared safely. Please review the checkout details before paying.");
       }
       setPaymentStage("Preparing secure payment…");

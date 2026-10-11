@@ -33,11 +33,11 @@ export class CheckoutRequestError extends Error { constructor(message: string, p
 const privateHeaders = { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer" };
 export async function checkoutFailure(error: unknown, code: SafeErrorCode = "CHECKOUT_RESUME_FAILED") {
   if (error instanceof CheckoutRequestError) {
-    if (error.status >= 500) await reportServerError(code);
+    if (error.status >= 500) after(() => reportServerError(code));
     return NextResponse.json({ error: error.message, success: false, ok: false }, { status: error.status, headers: privateHeaders });
   }
   if (error instanceof z.ZodError) return NextResponse.json({ error: "Please check the checkout details", success: false, ok: false }, { status: 400, headers: privateHeaders });
-  await reportServerError(code);
+  after(() => reportServerError(code));
   return NextResponse.json({ error: "Checkout is temporarily unavailable. Your bag is preserved; please retry.", success: false, ok: false }, { status: 503, headers: privateHeaders });
 }
 export async function secureSessionByToken(token: string) {
@@ -199,8 +199,7 @@ export async function saveSecureOrder(request: NextRequest) {
     const body = z.object({ cartSnapshot: z.unknown(), details: detailsSchema, checkoutChannel: z.enum(["razorpay", "whatsapp"]), paymentMethod: z.string().max(100), status: z.enum(["payment_pending", "payment_authorized", "payment_failed", "processing", "whatsapp_initiated"]), appliedCouponCode: z.string().max(100).optional(), grandTotal: z.number().positive(), shippingFee: z.number().nonnegative(), whatsappMessage: z.string().max(20000).optional() }).parse(await readBoundedJson(request, 64000));
     const [alreadySaved] = await db.select({ id: orders.id }).from(orders).where(eq(orders.id, session.orderId)).limit(1);
     const prepared = alreadySaved ? null : await (async () => {
-    const cart = await canonicalCart(body.cartSnapshot);
-    const config = await controls();
+    const [cart, config] = await Promise.all([canonicalCart(body.cartSnapshot), controls()]);
     const codes = (body.appliedCouponCode || "").split(/\s*\+\s*/).filter(Boolean);
     const welcomeCodes = codes.filter(code => /^WELCOME-BACK-(5|10)$/.test(code));
     const normalCodes = codes.filter(code => !/^WELCOME-BACK-(5|10)$/.test(code));
