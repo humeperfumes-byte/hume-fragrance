@@ -27,6 +27,7 @@ import { checkoutCanContinue, checkoutDraftAlert, hasCheckoutContact } from "./c
 import { sendAdminCheckoutDraftAlert } from "./notifications/admin-order-alert";
 import { displayPhoneNumber } from "./phone";
 import { resolveIndiaAwareCountry } from "./admin-market";
+import { checkoutRequestTiming } from "./checkout-request-timing";
 
 export const secureCheckoutEnabled = () => secureCheckoutConfigured();
 export class CheckoutRequestError extends Error { constructor(message: string, public status = 400) { super(message); } }
@@ -37,7 +38,13 @@ export async function checkoutFailure(error: unknown, code: SafeErrorCode = "CHE
     return NextResponse.json({ error: error.message, success: false, ok: false }, { status: error.status, headers: privateHeaders });
   }
   if (error instanceof z.ZodError) return NextResponse.json({ error: "Please check the checkout details", success: false, ok: false }, { status: 400, headers: privateHeaders });
+  const cause = error instanceof Error ? (error as Error & { cause?: unknown }).cause : undefined;
+  const databaseCode = [error, cause].map(value => value && typeof value === "object" && "code" in value ? String(value.code) : "").find(value => /^[0-9A-Z]{5}$/.test(value));
+  // SQLSTATE is safe diagnostic metadata; query text and error messages can
+  // contain personal information and must never be included here.
+  if (databaseCode) console.warn("checkout_database_failure", { operation: code, databaseCode, region: process.env.VERCEL_REGION || "local" });
   after(() => reportServerError(code));
+  if (databaseCode === "55P03" || databaseCode === "57014") return NextResponse.json({ error: "Checkout is busy. Check your saved order before trying payment again.", success: false, ok: false }, { status: 503, headers: privateHeaders });
   return NextResponse.json({ error: "Checkout is temporarily unavailable. Your bag is preserved; please retry.", success: false, ok: false }, { status: 503, headers: privateHeaders });
 }
 export async function secureSessionByToken(token: string) {
@@ -127,6 +134,9 @@ async function persistJourneyDraft(request: NextRequest, session: typeof secureC
   const quote = priceSecureCart(cart, coupon, welcome, config);
   const normalizedDetails = { ...details, phone: displayPhoneNumber(details.phone), alternatePhone: displayPhoneNumber(details.alternatePhone) };
   const alert = await db.transaction(async tx => {
+    // Transaction-local settings also work with the transaction pooler. An
+    // expired lock/query aborts and rolls back the entire write atomically.
+    await tx.execute(sql`SELECT set_config('lock_timeout', '5s', true), set_config('statement_timeout', '10s', true)`);
     // A new random session is not visible until this transaction commits. Only
     // existing sessions need the shared lock and late-autosave/order checks.
     if (create) await tx.insert(secureCheckoutSessions).values({ ...session, cart, details: normalizedDetails });
@@ -157,6 +167,7 @@ async function persistJourneyDraft(request: NextRequest, session: typeof secureC
   if (alert && notificationsEnabled()) after(async () => { await sendAdminCheckoutDraftAlert(alert); });
 }
 export async function startSecureCheckout(request: NextRequest) {
+  const timing = checkoutRequestTiming("start");
   try {
     if (!secureCheckoutEnabled()) throw new CheckoutRequestError("Secure checkout is unavailable", 503);
     if (request.headers.get("origin") !== request.nextUrl.origin) throw new CheckoutRequestError("Invalid request origin", 403);
@@ -168,35 +179,47 @@ export async function startSecureCheckout(request: NextRequest) {
       const [order] = await db.select().from(orders).where(eq(orders.id, previous.orderId)).limit(1);
       if (!checkoutCanContinue(order || null)) { /* A completed order must not capture a new purchase. */ } else {
       // Reusing the same identity protects an unresolved payment from a second order.
-      if (!order) await persistJourneyDraft(request, previous, await canonicalCart(raw.cart), detailsSchema.parse(previous.details), raw);
-      return NextResponse.json({ path: `/checkout/${existingToken}` }, { headers: privateHeaders });
+      timing.mark("prepare");
+      if (!order) {
+        const cart = await canonicalCart(raw.cart);
+        timing.mark("persist");
+        await persistJourneyDraft(request, previous, cart, detailsSchema.parse(previous.details), raw);
+      }
+      return timing.finish(NextResponse.json({ path: `/checkout/${existingToken}` }, { headers: privateHeaders }));
       }
     }
+    timing.mark("prepare");
     const cart = await canonicalCart(raw.cart);
     const capability = createCustomerToken();
     const ownerCapability = owner && hashCustomerToken(owner) ? { token: owner, hash: hashCustomerToken(owner)! } : createCustomerToken();
     const id = randomUUID();
+    timing.mark("persist");
     await persistJourneyDraft(request, { id, tokenHash: capability.hash, ownerHash: ownerCapability.hash, orderId: randomUUID(), orderNumber: `HF-${new Date().getUTCFullYear()}-${randomUUID().slice(0, 12).toUpperCase()}`, expectedPaymentMinor: null, details: {}, cart, expiresAt: new Date(Date.now() + 7 * 86400000), createdAt: new Date(), updatedAt: new Date() }, cart, detailsSchema.parse({}), raw, true);
     const response = NextResponse.json({ path: `/checkout/${capability.token}` }, { headers: privateHeaders });
     const cookieOptions = { httpOnly: true, sameSite: "lax" as const, secure: request.nextUrl.protocol === "https:", path: "/", maxAge: 30 * 86400 };
     response.cookies.set(CHECKOUT_OWNER_COOKIE, ownerCapability.token, cookieOptions);
     response.cookies.set(CHECKOUT_ACTIVE_COOKIE, capability.token, { ...cookieOptions, maxAge: 7 * 86400 });
-    return response;
-  } catch (error) { return checkoutFailure(error); }
+    return timing.finish(response);
+  } catch (error) { return timing.finish(await checkoutFailure(error)); }
 }
 export async function saveSecureDraft(request: NextRequest) {
+  const timing = checkoutRequestTiming("draft");
   try {
     const { session } = await requireCheckoutSession(request);
     const body = journeyMetadataSchema.extend({ cartSnapshot: z.unknown(), details: detailsSchema }).parse(await readBoundedJson(request, 64000));
+    timing.mark("prepare");
     const cart = await canonicalCart(body.cartSnapshot);
+    timing.mark("persist");
     await persistJourneyDraft(request, session, cart, body.details, body);
-    return NextResponse.json({ ok: true }, { headers: privateHeaders });
-  } catch (error) { return checkoutFailure(error, "DRAFT_SAVE_FAILED"); }
+    return timing.finish(NextResponse.json({ ok: true }, { headers: privateHeaders }));
+  } catch (error) { return timing.finish(await checkoutFailure(error, "DRAFT_SAVE_FAILED")); }
 }
 export async function saveSecureOrder(request: NextRequest) {
+  const timing = checkoutRequestTiming("order");
   try {
     const { session, token } = await requireCheckoutSession(request);
     const body = z.object({ cartSnapshot: z.unknown(), details: detailsSchema, checkoutChannel: z.enum(["razorpay", "whatsapp"]), paymentMethod: z.string().max(100), status: z.enum(["payment_pending", "payment_authorized", "payment_failed", "processing", "whatsapp_initiated"]), appliedCouponCode: z.string().max(100).optional(), grandTotal: z.number().positive(), shippingFee: z.number().nonnegative(), whatsappMessage: z.string().max(20000).optional() }).parse(await readBoundedJson(request, 64000));
+    timing.mark("prepare");
     const [alreadySaved] = await db.select({ id: orders.id }).from(orders).where(eq(orders.id, session.orderId)).limit(1);
     const prepared = alreadySaved ? null : await (async () => {
     const [cart, config] = await Promise.all([canonicalCart(body.cartSnapshot), controls()]);
@@ -215,7 +238,9 @@ export async function saveSecureOrder(request: NextRequest) {
     })();
     const orderToken = deriveOrderToken(token);
     let created = false;
+    timing.mark("transaction");
     const result = await db.transaction(async tx => {
+      await tx.execute(sql`SELECT set_config('lock_timeout', '5s', true), set_config('statement_timeout', '10s', true)`);
       await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${session.id}))`);
       const [existing] = await tx.select().from(orders).where(eq(orders.id, session.orderId)).limit(1);
       if (existing) {
@@ -248,8 +273,9 @@ export async function saveSecureOrder(request: NextRequest) {
       return order;
     });
     if (created) scheduleOrderNotification(result, result.checkoutChannel === "whatsapp");
-    return NextResponse.json({ ok: true, orderId: result.id, orderNumber: result.orderNumber, orderPath: `/order/${orderToken}` }, { headers: privateHeaders });
-  } catch (error) { return checkoutFailure(error, "ORDER_SAVE_FAILED"); }
+    timing.mark("response");
+    return timing.finish(NextResponse.json({ ok: true, orderId: result.id, orderNumber: result.orderNumber, orderPath: `/order/${orderToken}` }, { headers: privateHeaders }));
+  } catch (error) { return timing.finish(await checkoutFailure(error, "ORDER_SAVE_FAILED")); }
 }
 
 type ProviderOrder = { id: string; amount: number | string; currency: string; status: string; receipt?: string };
