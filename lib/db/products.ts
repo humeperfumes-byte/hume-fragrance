@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { products, reviews, productCategories } from "@/db/schema";
-import { eq, inArray, sql } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 import { perfumes as catalogueFallback, type PerfumeData } from "@/data/perfumes";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getProductSeoSlug } from "@/lib/product-route";
@@ -106,10 +106,6 @@ async function fetchReviewsByProductIds(productIds: string[]): Promise<ReviewRow
     `);
     return readExecuteRows<ReviewRow>(result);
   }
-}
-
-async function fetchReviewsByProductId(productId: string): Promise<ReviewRow[]> {
-  return fetchReviewsByProductIds([productId]);
 }
 
 function getStringArray(value: unknown): string[] {
@@ -295,56 +291,12 @@ export const getAllPublicProducts = cache(async (): Promise<PerfumeData[]> => {
   return visible.length > 0 ? visible : all;
 });
 
-// Get product by ID
-async function getProductByIdRaw(id: string): Promise<PerfumeData | null> {
-  try {
-    const [product] = await db
-      .select()
-      .from(products)
-      .where(eq(products.id, id))
-      .limit(1);
-
-    if (!product) {
-      return null;
-    }
-
-    const productReviews = await fetchReviewsByProductId(id);
-
-    let mappedCategories: Array<{ id: string; label?: string }> = [];
-    try {
-      const rows = await db
-        .select({
-          categoryId: productCategories.categoryId,
-          categoryLabel: productCategories.categoryLabel,
-        })
-        .from(productCategories)
-        .where(eq(productCategories.productId, id));
-      mappedCategories = rows.map((row) => ({
-        id: row.categoryId,
-        label: row.categoryLabel ?? undefined,
-      }));
-    } catch {
-      mappedCategories = [{ id: product.categoryId, label: product.category }];
-    }
-
-    return transformProduct(product, productReviews, mappedCategories);
-  } catch (error) {
-    console.error(`Error loading product ${id} from DB:`, error);
-    return null;
-  }
-}
-
+// Use the shared catalogue for guides as well as product routes. A failed
+// individual database/review query must not become a cached six-hour 404.
 export const getProductById = cache(async (id: string): Promise<PerfumeData | null> => {
-  const getCachedProduct = unstable_cache(
-    () => getProductByIdRaw(id),
-    ["product:by-id", id],
-    {
-      revalidate: STOREFRONT_CACHE_SECONDS,
-      tags: ["products", getProductCacheTag(id)],
-    },
-  );
-
-  return getCachedProduct();
+  const all = await getAllProducts();
+  const canonicalId = PRODUCT_ID_ALIASES[id] ?? id;
+  return all.find(product => product.id === canonicalId) ?? null;
 });
 
 export const getProductByRouteSegment = cache(async (segment: string): Promise<PerfumeData | null> => {
