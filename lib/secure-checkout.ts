@@ -127,11 +127,15 @@ async function persistJourneyDraft(request: NextRequest, session: typeof secureC
   const quote = priceSecureCart(cart, coupon, welcome, config);
   const normalizedDetails = { ...details, phone: displayPhoneNumber(details.phone), alternatePhone: displayPhoneNumber(details.alternatePhone) };
   const alert = await db.transaction(async tx => {
-    if (create) await tx.insert(secureCheckoutSessions).values(session);
-    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${session.id}))`);
-    const [order] = await tx.select({ id: orders.id }).from(orders).where(eq(orders.id, session.orderId)).limit(1);
-    if (order) return null; // Saved/paid orders must never be overwritten by a late autosave.
-    const [previous] = await tx.select().from(checkoutDrafts).where(eq(checkoutDrafts.sessionId, session.id)).limit(1);
+    // A new random session is not visible until this transaction commits. Only
+    // existing sessions need the shared lock and late-autosave/order checks.
+    if (create) await tx.insert(secureCheckoutSessions).values({ ...session, cart, details: normalizedDetails });
+    if (!create) {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${session.id}))`);
+      const [order] = await tx.select({ id: orders.id }).from(orders).where(eq(orders.id, session.orderId)).limit(1);
+      if (order) return null;
+    }
+    const previous = create ? undefined : (await tx.select().from(checkoutDrafts).where(eq(checkoutDrafts.sessionId, session.id)).limit(1))[0];
     const override = previous?.pricingBreakdown?.overrideTotal;
     const finalTotal = typeof override === "number" && Number.isFinite(override) && override > 0 ? override : quote.grandTotal;
     const status = Object.values(normalizedDetails).some(value => value.trim()) ? "partial" : "started";
@@ -145,7 +149,7 @@ async function persistJourneyDraft(request: NextRequest, session: typeof secureC
       ...Object.fromEntries(Object.entries(sourceMetadata).filter(([key, value]) => key !== "appliedCouponCode" && value !== undefined)),
       updatedAt: new Date(),
     };
-    await tx.update(secureCheckoutSessions).set({ cart, details: normalizedDetails, updatedAt: new Date() }).where(eq(secureCheckoutSessions.id, session.id));
+    if (!create) await tx.update(secureCheckoutSessions).set({ cart, details: normalizedDetails, updatedAt: new Date() }).where(eq(secureCheckoutSessions.id, session.id));
     await tx.insert(checkoutDrafts).values({ id: randomUUID(), sessionId: session.id, ...fields }).onConflictDoUpdate({ target: checkoutDrafts.sessionId, set: fields });
     const type = previous?.pricingBreakdown?.contactAlertQueued ? null : checkoutDraftAlert(previous || null, normalizedDetails);
     return type ? { sessionId: session.id, fullName: details.fullName, phone: normalizedDetails.phone, email: details.email, grandTotal: finalTotal, cartSnapshot: cart, type } : null;

@@ -9,7 +9,7 @@ import { freshResumeCatalogue } from "@/lib/fresh-resume-catalogue";
 import { buildResumeCart } from "@/lib/checkout-resume-cart";
 import CheckoutResumePreview from "@/components/CheckoutResumePreview";
 import { reportServerError } from "@/lib/server-error-monitoring";
-import { secureSessionByToken, ownsPageSession, canonicalCart } from "@/lib/secure-checkout";
+import { secureSessionByToken, ownsPageSession } from "@/lib/secure-checkout";
 import { deriveOrderToken } from "@/lib/secure-checkout-capability";
 import OwnedCheckout from "@/components/OwnedCheckout";
 import SharedCheckoutSelection from "@/components/SharedCheckoutSelection";
@@ -27,7 +27,9 @@ export default async function ResumeCheckoutPage({ params }: { params: Promise<{
       const [savedOrder] = await db.select().from(orders).where(eq(orders.id, automatic.orderId)).limit(1);
       const captured = savedOrder?.paymentCapturedAt && Math.round(Number(savedOrder.capturedPaymentAmount) * 100) === storedPaymentMinor(automatic.expectedPaymentMinor, Number(savedOrder.grandTotal), /Prepaid.*Cash on Delivery/i.test(savedOrder.paymentMethod || ""));
       if (savedOrder && (captured || savedOrder.checkoutChannel === "whatsapp")) redirect(`/order/${deriveOrderToken(token)}`);
-      const cart = savedOrder ? automatic.cart : await canonicalCart(automatic.cart).catch(() => null);
+      // Stored carts were canonicalized when saved. Render them immediately;
+      // availability and authoritative pricing are checked again before payment.
+      const cart = automatic.cart;
       if (!cart) return <main className="mx-auto max-w-xl space-y-5 px-5 py-20"><h1 className="text-2xl font-semibold">Please update your saved selection</h1><p>A saved product is unavailable or needs updated selections. Your bag is preserved.</p><Link href="/shop" className="inline-block underline">Return to the collection</Link></main>;
       return <main className="min-h-screen bg-background"><Header /><OwnedCheckout session={{ token, id: automatic.id, orderId: automatic.orderId, orderNumber: automatic.orderNumber, cart, details: automatic.details, paymentPending: !!savedOrder, ...(savedOrder ? { expectedPaymentMinor: storedPaymentMinor(automatic.expectedPaymentMinor, Number(savedOrder.grandTotal), /Prepaid.*Cash on Delivery/i.test(savedOrder.paymentMethod || "")), savedTotal: Number(savedOrder.grandTotal), savedShippingFee: Number(savedOrder.shippingFee), paymentMode: /Prepaid.*Cash on Delivery/i.test(savedOrder.paymentMethod || "") ? "partial_cod" as const : "full" as const } : {}) }} /><Footer /></main>;
     }
