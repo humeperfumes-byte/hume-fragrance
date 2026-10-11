@@ -9,7 +9,7 @@ if (process.env.DATABASE_URL && process.env.CHECKOUT_VERIFY_TRANSACTION_POOL !==
   const databaseUrl = new URL(process.env.DATABASE_URL);
   if (databaseUrl.port === "6543" && databaseUrl.hostname.endsWith(".pooler.supabase.com")) { databaseUrl.port = "5432"; process.env.DATABASE_URL = databaseUrl.toString(); }
 }
-Object.assign(process.env, { ENABLE_SECURE_CHECKOUT: "true", ENABLE_ERROR_MONITORING: "false", RAZORPAY_KEY_ID: "test_local_only", RAZORPAY_KEY_SECRET: "test_local_only_secret", NODE_ENV: "test" });
+Object.assign(process.env, { ENABLE_SECURE_CHECKOUT: "true", ENABLE_ERROR_MONITORING: "false", RAZORPAY_KEY_ID: "test_local_only", RAZORPAY_KEY_SECRET: "test_local_only_secret", RAZORPAY_WEBHOOK_SECRET: "test_local_webhook_secret", NODE_ENV: "test" });
 async function main() {
   const { NextRequest } = await import("next/server");
   const { GET: reconcileCron } = await import("../app/api/cron/razorpay-reconciliation/route");
@@ -23,7 +23,8 @@ async function main() {
     if (originalCronSecret === undefined) delete process.env.CRON_SECRET; else process.env.CRON_SECRET = originalCronSecret;
   }
   const { db } = await import("../db");
-  const { orders, secureCheckoutSessions, customerAccessLinks, checkoutDrafts, siteSettings } = await import("../db/schema");
+  const { orders, secureCheckoutSessions, customerAccessLinks, checkoutDrafts, siteSettings, razorpayWebhookEvents } = await import("../db/schema");
+  const { POST: paymentWebhook } = await import("../app/api/razorpay/webhook/route");
   const { eq, inArray } = await import("drizzle-orm");
   const { startSecureCheckout, saveSecureDraft, saveSecureOrder, createSecurePayment, verifySecurePayment, recoverSecurePayment, activeSecureCheckout } = await import("../lib/secure-checkout");
   const { POST: accountLookup } = await import("../app/api/account/route");
@@ -40,18 +41,21 @@ async function main() {
   const fixtureSessionIds: string[] = [], fixtureOrderIds: string[] = [];
   const originalFetch = globalThis.fetch;
   let providerCreates = 0, providerAmount = 0, providerReceipt = "", wrongAmount = false, capturedAtProvider = false;
+  let uniqueProviderIds = false, providerId = "order_local_fixture";
+  const paymentOverrides = new Map<string, { id: string; order_id: string; amount: number; currency: string; status: string }[]>();
   globalThis.fetch = async (url, init) => {
     const path = String(url);
     assert.ok(path.startsWith("https://api.razorpay.com/v1/"), "Unexpected network request; no external requests are permitted during this verification");
     if (path.endsWith("/orders") && init?.method === "POST") {
       providerCreates++; providerAmount = JSON.parse(String(init.body)).amount; providerReceipt = JSON.parse(String(init.body)).receipt;
-      return Response.json({ id: "order_local_fixture", amount: providerAmount, currency: "INR", status: "created" });
+      providerId = uniqueProviderIds ? `order_switch_fixture_${providerCreates}` : "order_local_fixture";
+      return Response.json({ id: providerId, amount: providerAmount, currency: "INR", status: "created" });
     }
     const payment = { id: "pay_local_fixture", order_id: "order_local_fixture", amount: wrongAmount ? 100 : providerAmount, currency: "INR", status: "captured" };
     if (path.includes("orders?receipt=")) return Response.json({ items: [{ id: "order_local_fixture", amount: providerAmount, currency: "INR", status: "created", receipt: providerReceipt }] });
-    if (path.endsWith("/payments")) return Response.json({ items: capturedAtProvider ? [payment] : [] });
+    if (path.endsWith("/payments")) { const id = path.split("/").at(-2)!; return Response.json({ items: paymentOverrides.get(id) || (capturedAtProvider ? [payment] : []) }); }
     if (path.includes("/payments/")) return Response.json(payment);
-    return Response.json({ id: "order_local_fixture", amount: providerAmount, currency: "INR", status: "created" });
+    return Response.json({ id: path.split("/").at(-1), amount: providerAmount, currency: "INR", status: "created" });
   };
   const request = (route: string, body?: unknown, cookie = "", token = "") => new NextRequest(`http://localhost:3002${route}`, { method: "POST", headers: { origin: "http://localhost:3002", "content-type": "application/json", cookie, ...(token ? { "x-hume-checkout-token": token } : {}) }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
   try {
@@ -109,7 +113,11 @@ async function main() {
       assert.equal((await createSecurePayment(request("/api/create-order", {}, cookie, token))).status, 200);
       assert.equal(providerCreates, countBefore + 1, "Retries reuse the provider order");
       assert.equal(providerAmount, expectedPaymentMinor(quote.grandTotal, partial));
-      assert.equal((await resumeAccountCheckout(request("/api/account/checkout/resume", { orderId: session.orderId, paymentMode: alternateMode }, cookie))).status, 409, "An existing provider payment cannot be silently changed");
+      capturedAtProvider = true;
+      assert.equal((await resumeAccountCheckout(request("/api/account/checkout/resume", { orderId: session.orderId, paymentMode: alternateMode }, cookie))).status, 409, "An existing paid provider payment cannot be changed");
+      capturedAtProvider = false;
+      const unpaid = await recoverSecurePayment(request("/api/checkout-session/recover", undefined, cookie, token));
+      assert.equal((await unpaid.json()).state, "unpaid", "A closed unpaid window is not an uncertain payment");
       await db.update(orders).set({ razorpayOrderId: null, paymentSyncStatus: "creating" }).where(eq(orders.id, session.orderId));
       const restoredRequest = await recoverSecurePayment(request("/api/checkout-session/recover", undefined, cookie, token));
       assert.equal(restoredRequest.status, 200);
@@ -135,10 +143,60 @@ async function main() {
       assert.equal((await (await activeSecureCheckout(activeRequest())).json()).checkout, null, "Paid orders lose the completion reminder");
       assert.equal((await resumeAccountCheckout(request("/api/account/checkout/resume", { orderId: session.orderId }, cookie))).status, 409);
     }
-    console.log("Secure checkout integration passed: admin drafts, contact alert deduplication, owner-only account recovery, same-order resume, closed reminders, tampered totals, full payment, advance COD, provider-order reuse, amount mismatch, repeat callbacks and fulfillment preservation. No real provider requests were made.");
+    uniqueProviderIds = true; capturedAtProvider = false;
+    const start = await startSecureCheckout(request("/api/checkout-session", { cart }));
+    assert.equal(start.status, 200);
+    const token = (await start.json()).path.split("/").pop();
+    const cookie = `hume_checkout_owner=${start.cookies.get("hume_checkout_owner")!.value}; hume_checkout_active=${token}`;
+    const { hashCustomerToken } = await import("../lib/customer-access-token");
+    const [session] = await db.select().from(secureCheckoutSessions).where(eq(secureCheckoutSessions.tokenHash, hashCustomerToken(token)!));
+    fixtureSessionIds.push(session.id); fixtureOrderIds.push(session.orderId);
+    const details = { fullName: "Local Verification Fixture", phone: "9900000000", addressLine1: "Test fixture only", city: "Kanpur", state: "Uttar Pradesh", pincode: "208012" };
+    assert.equal((await saveSecureOrder(request("/api/orders", { cartSnapshot: cart, details, checkoutChannel: "razorpay", paymentMethod: "Razorpay Online Payment", status: "payment_pending", grandTotal: quote.grandTotal, shippingFee: quote.shippingFee }, cookie, token))).status, 200);
+    assert.equal((await createSecurePayment(request("/api/create-order", {}, cookie, token))).status, 200);
+    const previousId = providerId;
+    paymentOverrides.set(previousId, [{ id: "pay_processing_fixture", order_id: previousId, amount: providerAmount, currency: "INR", status: "authorized" }]);
+    const processing = await recoverSecurePayment(request("/api/checkout-session/recover", undefined, cookie, token));
+    assert.equal((await processing.json()).canPay, false, "Authorized payments block another attempt");
+    assert.equal((await resumeAccountCheckout(request("/api/account/checkout/resume", { orderId: session.orderId, paymentMode: "partial_cod" }, cookie))).status, 409, "COD cannot replace an authorized payment");
+    paymentOverrides.set(previousId, []);
+    assert.equal((await resumeAccountCheckout(request("/api/account/checkout/resume", { orderId: session.orderId, paymentMode: "partial_cod" }, cookie))).status, 200, "An unpaid full-payment request can switch safely to advance COD");
+    const [changed] = await db.select().from(orders).where(eq(orders.id, session.orderId));
+    assert.equal(changed.razorpayOrderId, null);
+    assert.equal(changed.id, session.orderId, "COD switch retains customer order identity");
+    const [draft] = await db.select().from(checkoutDrafts).where(eq(checkoutDrafts.sessionId, session.id));
+    assert.deepEqual(draft.pricingBreakdown.previousPaymentRequests, [previousId], "Earlier provider request is retained for late-payment checks");
+    const previousWebhook = async (status: "failed" | "captured") => {
+      const payload = JSON.stringify({ event: `payment.${status}`, payload: { payment: { entity: { id: `pay_stale_${status}`, order_id: previousId, amount: expectedPaymentMinor(quote.grandTotal, false), currency: "INR", status } } } });
+      return paymentWebhook(new NextRequest("http://localhost:3002/api/razorpay/webhook", { method: "POST", headers: { "x-razorpay-signature": createHmac("sha256", "test_local_webhook_secret").update(payload).digest("hex"), "x-razorpay-event-id": `fixture-${session.id}-${status}`, "content-type": "application/json" }, body: payload }));
+    };
+    const oldFailure = await previousWebhook("failed");
+    assert.equal(oldFailure.status, 200);
+    assert.equal((await oldFailure.json()).ignoredPreviousPayment, true, "An old failed webhook is recognized even without provider notes");
+    assert.equal((await db.select().from(orders).where(eq(orders.id, session.orderId)))[0].razorpayOrderId, null, "Old webhooks cannot restore the full-payment request during a COD switch");
+    assert.equal((await createSecurePayment(request("/api/create-order", {}, cookie, token))).status, 200);
+    assert.notEqual(providerId, previousId);
+    assert.equal(providerAmount, expectedPaymentMinor(quote.grandTotal, true), "COD collects only the frozen advance");
+    const createsBeforeRetry = providerCreates;
+    assert.equal((await createSecurePayment(request("/api/create-order", {}, cookie, token))).status, 200);
+    assert.equal(providerCreates, createsBeforeRetry, "COD retry reuses the same provider request");
+    await db.update(orders).set({ paymentSyncStatus: "switching", updatedAt: new Date(Date.now() - 120000) }).where(eq(orders.id, session.orderId));
+    const interruptedSwitch = await recoverSecurePayment(request("/api/checkout-session/recover", undefined, cookie, token));
+    assert.equal(interruptedSwitch.status, 200);
+    assert.equal((await interruptedSwitch.json()).canPay, true, "An interrupted mode-change claim can be checked and recovered");
+    assert.equal((await db.select().from(orders).where(eq(orders.id, session.orderId)))[0].razorpayOrderId, providerId, "Recovering a stale claim never changes the provider request");
+    paymentOverrides.set(previousId, [{ id: "pay_late_fixture", order_id: previousId, amount: expectedPaymentMinor(quote.grandTotal, false), currency: "INR", status: "captured" }]);
+    assert.equal((await recoverSecurePayment(request("/api/checkout-session/recover", undefined, cookie, token))).status, 409, "A late earlier payment is held for review");
+    assert.equal((await createSecurePayment(request("/api/create-order", {}, cookie, token))).status, 409, "A late earlier payment blocks another payment");
+    assert.equal((await db.select().from(orders).where(eq(orders.id, session.orderId)))[0].paymentSyncStatus, "payment_review");
+    const lateCapture = await previousWebhook("captured");
+    assert.equal(lateCapture.status, 200);
+    assert.equal((await lateCapture.json()).reviewRequired, true, "A late previous capture is held for review by the webhook too");
+    assert.equal((await db.select().from(orders).where(eq(orders.id, session.orderId)))[0].status, "payment_pending", "A stale full-payment webhook cannot fulfill an advance-COD order");
+    console.log("Secure checkout integration passed: admin drafts, owner-only recovery, same-order resume, unpaid/processing states, full payment, advance COD switching, retained provider history, stale webhooks, late-payment blocking, provider reuse, amount mismatch, repeat callbacks and fulfillment preservation. No real provider requests were made.");
   } finally {
     globalThis.fetch = originalFetch;
-    if (fixtureOrderIds.length) { await db.delete(customerAccessLinks).where(inArray(customerAccessLinks.resourceId, fixtureOrderIds)); await db.delete(orders).where(inArray(orders.id, fixtureOrderIds)); }
+    if (fixtureOrderIds.length) { await db.delete(razorpayWebhookEvents).where(inArray(razorpayWebhookEvents.localOrderId, fixtureOrderIds)); await db.delete(customerAccessLinks).where(inArray(customerAccessLinks.resourceId, fixtureOrderIds)); await db.delete(orders).where(inArray(orders.id, fixtureOrderIds)); }
     if (fixtureSessionIds.length) { await db.delete(checkoutDrafts).where(inArray(checkoutDrafts.sessionId, fixtureSessionIds)); await db.delete(secureCheckoutSessions).where(inArray(secureCheckoutSessions.id, fixtureSessionIds)); }
     console.log("Generated verification rows removed; existing customer orders were untouched.");
   }

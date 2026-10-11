@@ -87,7 +87,7 @@ export default function PaymentRecoveryPrompt() {
 
   if (checkout && !shouldBlockAnotherPayment(recovery)) return (
     <button type="button" onClick={() => router.push(checkout.path)} aria-label="Complete pending order" className="fixed bottom-24 right-3 z-[60] flex items-center gap-3 rounded-2xl border border-[#d9b866]/80 bg-[#10533b] px-4 py-3 text-left text-white shadow-xl sm:bottom-8 sm:right-6">
-      <ShoppingBag className="h-5 w-5 text-[#e7c47e]" /><span><span className="block text-[9px] uppercase tracking-widest text-[#e7c47e]">{checkout.status === "draft" ? "Checkout saved" : "Payment pending"}</span><span className="block font-serif text-lg">Complete your order</span></span><ChevronRight className="h-4 w-4" />
+      <ShoppingBag className="h-5 w-5 text-[#e7c47e]" /><span><span className="block text-[9px] uppercase tracking-widest text-[#e7c47e]">{checkout.status === "draft" ? "Checkout saved" : "Payment incomplete"}</span><span className="block font-serif text-lg">{checkout.status === "draft" ? "Continue checkout" : "Complete payment"}</span></span><ChevronRight className="h-4 w-4" />
     </button>
   );
   if (!recovery) return null;

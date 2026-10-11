@@ -520,7 +520,7 @@ function PaymentStartNotice({ message, path }: { message: string; path: string }
   return <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950"><p>{message}</p><a href={path} referrerPolicy="no-referrer" className="mt-2 inline-block font-semibold underline">Check saved payment</a></div>;
 }
 
-export default function CheckoutClient({ secureSession }: { secureSession?: { token: string; id: string; orderId: string; orderNumber: string; savedTotal?: number; savedShippingFee?: number; expectedPaymentMinor?: number } } = {}) {
+export default function CheckoutClient({ secureSession, paymentBlocked = false, paymentMode }: { paymentBlocked?: boolean; paymentMode?: RecoveryPaymentMode; secureSession?: { token: string; id: string; orderId: string; orderNumber: string; savedTotal?: number; savedShippingFee?: number; expectedPaymentMinor?: number } } = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const { items, totalPrice, clearCart } = useCart();
@@ -542,6 +542,7 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
   const [paymentStartProblem, setPaymentStartProblem] = useState("");
   const pendingDraftSaveRef = useRef<string | null>(null);
   const activeDraftSaveRef = useRef<Promise<void> | null>(null);
+  const navigationDraftFlushRef = useRef<(() => void) | null>(null);
   useEffect(() => {
     if (secureSession && isPaymentProcessing) pendingDraftSaveRef.current = null;
   }, [secureSession, isPaymentProcessing]);
@@ -565,12 +566,14 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
   }, [isPaymentProcessing, paymentStage, recordActivity]);
   const [paidSavePending, setPaidSavePending] = useState(false);
   useEffect(() => { setPaidSavePending(shouldBlockAnotherPayment(readPaymentRecovery(window.localStorage))); }, []);
-  const [recoveryPaymentMode] = useState<RecoveryPaymentMode>(() => {
+  const [recoveryPaymentMode, setRecoveryPaymentMode] = useState<RecoveryPaymentMode>(() => {
+    if (paymentMode) return paymentMode;
     if (typeof window === "undefined") return "full";
     return window.localStorage.getItem(PAYMENT_RECOVERY_MODE_KEY) === "partial_cod"
       ? "partial_cod"
       : "full";
   });
+  useEffect(() => { if (paymentMode) setRecoveryPaymentMode(paymentMode); }, [paymentMode]);
   const [isRecoveryCheckout, setIsRecoveryCheckout] = useState(false);
 
   useEffect(() => {
@@ -1067,12 +1070,13 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
   }, [details, items, persistDraft, totalPrice, shippingFee, grandTotal, isPaymentProcessing]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || items.length === 0) return;
+    if (typeof window === "undefined" || items.length === 0) { navigationDraftFlushRef.current = null; return; }
 
     const flushDraft = () => {
       if (isPaymentProcessing) return;
       void persistDraft(undefined, undefined, true);
     };
+    navigationDraftFlushRef.current = secureSession?.expectedPaymentMinor ? null : flushDraft;
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
@@ -1087,7 +1091,10 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
       window.removeEventListener("pagehide", flushDraft);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [items.length, persistDraft, isPaymentProcessing]);
+  }, [items.length, persistDraft, isPaymentProcessing, secureSession?.expectedPaymentMinor]);
+  // App-router navigation does not fire pagehide. Flush the latest unfinished
+  // draft on unmount as well, using keepalive and the existing save queue.
+  useEffect(() => () => { navigationDraftFlushRef.current?.(); }, []);
 
   const validate = () => {
     const requiredFields: Array<{ key: keyof CheckoutDetails; label: string }> =
@@ -1408,6 +1415,7 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
   };
 
   const handleRazorpayPayment = async () => {
+    if (paymentBlocked) return;
     if (isPaymentProcessing) return;
     if (paidSavePending || shouldBlockAnotherPayment(readPaymentRecovery(window.localStorage))) {
       toast({ title: "Payment verification is being completed", description: "Please contact HUME support before paying again.", variant: "destructive" });
@@ -1755,6 +1763,7 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
   };
 
   const handleWhatsAppOrder = async () => {
+    if (paymentBlocked) return;
     if (paidSavePending || shouldBlockAnotherPayment(readPaymentRecovery(window.localStorage))) {
       toast({ title: "Your payment needs order confirmation", description: "Contact HUME support; do not place another order.", variant: "destructive" });
       return;
@@ -1881,7 +1890,7 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
         </div>
 
         {paidSavePending && <div role="alert" className="mb-5 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950"><strong>Payment verified — order confirmation pending</strong><p className="mt-2 text-sm">Please do not pay again. Your checkout is preserved while we confirm the order.</p><a href="https://wa.me/919559024822" target="_blank" rel="noreferrer" className="mt-3 inline-block font-semibold underline">Contact HUME support</a></div>}
-        {isRecoveryCheckout ? (
+        {(!secureSession && isRecoveryCheckout) || recoveryPaymentMode === "partial_cod" ? (
           <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 md:mb-6">
             <strong>{recoveryPaymentMode === "partial_cod" ? "20% prepaid + COD selected" : "Completing your pending order"}</strong>
             <p className="mt-1 text-xs leading-5 text-amber-900/70">
@@ -2260,7 +2269,7 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
               {isOnlinePaymentAvailable ? (
                 <Button
                   onClick={handleRazorpayPayment}
-                  disabled={isPaymentProcessing || paidSavePending}
+                  disabled={isPaymentProcessing || paidSavePending || paymentBlocked}
                   className={orderButtonClassName}
                 >
                   <OrderButtonContent processing={isPaymentProcessing} stage={paymentStage} />
@@ -2269,7 +2278,7 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
               {settings.whatsappCheckoutEnabled ? (
                 <Button
                   onClick={handleWhatsAppOrder}
-                  disabled={isPaymentProcessing || paidSavePending}
+                  disabled={isPaymentProcessing || paidSavePending || paymentBlocked}
                   className={whatsappButtonClassName}
                 >
                   <WhatsAppIcon className="mr-3 h-11 w-11 scale-150" />
@@ -2434,7 +2443,7 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
               {isOnlinePaymentAvailable ? (
                 <Button
                   onClick={handleRazorpayPayment}
-                  disabled={isPaymentProcessing || paidSavePending}
+                  disabled={isPaymentProcessing || paidSavePending || paymentBlocked}
                   className={orderButtonClassName}
                 >
                   <OrderButtonContent processing={isPaymentProcessing} stage={paymentStage} />
@@ -2443,7 +2452,7 @@ export default function CheckoutClient({ secureSession }: { secureSession?: { to
               {settings.whatsappCheckoutEnabled ? (
                 <Button
                   onClick={handleWhatsAppOrder}
-                  disabled={isPaymentProcessing || paidSavePending}
+                  disabled={isPaymentProcessing || paidSavePending || paymentBlocked}
                   className={whatsappButtonClassName}
                 >
                   <WhatsAppIcon className="mr-3 h-11 w-11 scale-150" />

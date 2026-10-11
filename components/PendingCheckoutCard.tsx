@@ -4,9 +4,9 @@ import { ArrowRight, ShoppingBag } from "lucide-react";
 import { useActiveCheckout } from "@/hooks/use-active-checkout";
 import { formatINR } from "@/lib/currency";
 import ImageWithFallback from "./ImageWithFallback";
-export default function PendingCheckoutCard() {
+export default function PendingCheckoutCard({ draftsOnly = false }: { draftsOnly?: boolean }) {
   const { checkout } = useActiveCheckout();
-  if (!checkout) return null;
+  if (!checkout || (draftsOnly && checkout.status !== "draft")) return null;
   return <section className="mb-6 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_4px_24px_rgba(28,25,23,0.04)]" aria-label="Your unfinished checkout">
     <div className="flex items-start gap-3 px-5 py-5 sm:px-6">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f5f2eb] text-[#746447]"><ShoppingBag className="h-4 w-4" aria-hidden="true" /></div>

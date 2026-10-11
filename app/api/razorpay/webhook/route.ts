@@ -4,7 +4,7 @@ import { secureCheckoutSessions } from "@/db/schema";
 import { storedPaymentMinor } from "@/lib/secure-checkout-pricing";
 import { reportServerError } from "@/lib/server-error-monitoring";
 import { NextRequest, NextResponse } from "next/server";
-import { eq, ilike, or } from "drizzle-orm";
+import { and, eq, ilike, or, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -334,6 +334,12 @@ async function findOrder({
     if (order) return order;
   }
 
+  if (razorpayOrderId) {
+    const [previous] = await db.select({ order: orders }).from(orders)
+      .innerJoin(checkoutDrafts, eq(checkoutDrafts.sessionId, orders.sessionId))
+      .where(sql`${checkoutDrafts.pricingBreakdown}->'previousPaymentRequests' ? ${razorpayOrderId}`).limit(1);
+    if (previous) return previous.order;
+  }
   return null;
 }
 
@@ -614,6 +620,10 @@ export async function POST(request: NextRequest) {
       const result = await reconcileManualPayment(existingOrder.id);
       return NextResponse.json({ ok: true, matched: true, event, status: result.order.status });
     }
+    const [ownedSession] = secureCheckoutConfigured() ? await db.select({ expectedMinor: secureCheckoutSessions.expectedPaymentMinor }).from(secureCheckoutSessions).where(eq(secureCheckoutSessions.orderId, existingOrder.id)).limit(1) : [];
+    if (ownedSession && razorpayOrderId && existingOrder.razorpayOrderId !== razorpayOrderId && !["payment.captured", "order.paid"].includes(event)) {
+      return NextResponse.json({ ok: true, matched: true, ignoredPreviousPayment: true });
+    }
     const nextStatus = resolveNextStatus({
       event,
       paymentStatus,
@@ -624,12 +634,20 @@ export async function POST(request: NextRequest) {
       currentStatus: existingOrder.status,
     });
     if (["payment.captured", "order.paid"].includes(event)) {
-      const [ownedSession] = secureCheckoutConfigured() ? await db.select({ expectedMinor: secureCheckoutSessions.expectedPaymentMinor }).from(secureCheckoutSessions).where(eq(secureCheckoutSessions.orderId, existingOrder.id)).limit(1) : [];
       if (ownedSession) {
         const expected = storedPaymentMinor(ownedSession.expectedMinor, Number(existingOrder.grandTotal), /Prepaid.*Cash on Delivery/i.test(existingOrder.paymentMethod || ""));
         if (razorpayOrderId !== existingOrder.razorpayOrderId || Number(paymentAmount) !== expected || getString(payment?.currency) !== "INR" || !razorpayPaymentId) {
           await db.update(orders).set({ paymentSyncStatus: "payment_mismatch", paymentReconciledAt: new Date() }).where(eq(orders.id, existingOrder.id));
           await reportServerError("PAYMENT_VERIFY_FAILED");
+          return NextResponse.json({ ok: true, matched: true, reviewRequired: true });
+        }
+        const { finalizeSecurePayment, CheckoutRequestError } = await import("@/lib/secure-checkout");
+        try {
+          await finalizeSecurePayment(existingOrder.sessionId, existingOrder.id, { id: razorpayPaymentId, order_id: razorpayOrderId!, amount: Number(paymentAmount), currency: "INR", status: "captured" });
+          return NextResponse.json({ ok: true, matched: true, event, status: "processing" });
+        } catch (error) {
+          if (!(error instanceof CheckoutRequestError) || error.status !== 409) throw error;
+          await db.update(orders).set({ paymentSyncStatus: "payment_review", paymentReconciledAt: new Date() }).where(eq(orders.id, existingOrder.id));
           return NextResponse.json({ ok: true, matched: true, reviewRequired: true });
         }
       }
@@ -683,7 +701,9 @@ export async function POST(request: NextRequest) {
         whatsappMessage: nextMessage,
         updatedAt: new Date(),
       })
-      .where(eq(orders.id, existingOrder.id));
+      .where(ownedSession && razorpayOrderId
+        ? and(eq(orders.id, existingOrder.id), eq(orders.razorpayOrderId, razorpayOrderId))
+        : eq(orders.id, existingOrder.id));
 
     if (checkoutSessionId && nextStatus === "processing") {
       await db

@@ -280,6 +280,67 @@ export async function saveSecureOrder(request: NextRequest) {
 
 type ProviderOrder = { id: string; amount: number | string; currency: string; status: string; receipt?: string };
 type ProviderPayment = { id: string; order_id: string; amount: number; currency: string; status: string };
+async function earlierPaymentRequests(sessionId: string): Promise<string[]> {
+  const [draft] = await db.select({ pricing: checkoutDrafts.pricingBreakdown }).from(checkoutDrafts).where(eq(checkoutDrafts.sessionId, sessionId)).limit(1);
+  const value = draft?.pricing?.previousPaymentRequests;
+  return Array.isArray(value) ? value.filter((id): id is string => typeof id === "string" && /^order_[a-zA-Z0-9_]+$/.test(id)).slice(0, 5) : [];
+}
+async function checkEarlierPayments(sessionId: string, orderId: string) {
+  for (const id of await earlierPaymentRequests(sessionId)) {
+    const result = await razorpay<{ items: ProviderPayment[] }>(`orders/${encodeURIComponent(id)}/payments`);
+    if (result.items.some(p => !["failed", "refunded"].includes(p.status))) {
+      await db.update(orders).set({ paymentSyncStatus: "payment_review", paymentReconciledAt: new Date() }).where(eq(orders.id, orderId));
+      throw new CheckoutRequestError("An earlier payment needs checking. Please contact HUME before paying again.", 409);
+    }
+  }
+}
+// Called only after owner/account authorization. Keep the same customer order;
+// retain previous provider references for late-payment checks and reconciliation.
+export async function switchSecurePaymentMode(sessionId: string, mode: "full" | "partial_cod") {
+  const snapshot = await db.transaction(async tx => {
+    await tx.execute(sql`SELECT set_config('lock_timeout', '5s', true), set_config('statement_timeout', '10s', true)`);
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${sessionId}))`);
+    const [session] = await tx.select({ orderId: secureCheckoutSessions.orderId }).from(secureCheckoutSessions).where(eq(secureCheckoutSessions.id, sessionId)).limit(1);
+    const [order] = session ? await tx.select().from(orders).where(eq(orders.id, session.orderId)).limit(1) : [];
+    if (!order || !checkoutCanContinue(order)) throw new CheckoutRequestError("This order no longer needs payment", 409);
+    const savedMode = /Prepaid.*Cash on Delivery/i.test(order.paymentMethod || "") ? "partial_cod" : "full";
+    if (mode === savedMode) return null;
+    if (!["payment_pending", "payment_failed"].includes(order.status) || ["creating", "switching", "payment_review", "payment_mismatch", "multiple_captures"].includes(order.paymentSyncStatus || "")) throw new CheckoutRequestError("Your payment is being checked. Please wait before changing payment options.", 409);
+    // One provider-bound switch to COD is enough for this flow. Repeated mode
+    // changes would leave multiple payable provider requests outstanding.
+    if (order.razorpayOrderId && mode !== "partial_cod") throw new CheckoutRequestError("Continue your saved COD advance payment. Contact HUME to change this order.", 409);
+    await tx.update(orders).set({ paymentSyncStatus: "switching", updatedAt: new Date() }).where(eq(orders.id, order.id));
+    return order;
+  });
+  if (!snapshot) return;
+  try {
+    await checkEarlierPayments(sessionId, snapshot.id);
+    if (snapshot.razorpayOrderId) {
+      const [provider, payments] = await Promise.all([
+        razorpay<ProviderOrder>(`orders/${encodeURIComponent(snapshot.razorpayOrderId)}`),
+        razorpay<{ items: ProviderPayment[] }>(`orders/${encodeURIComponent(snapshot.razorpayOrderId)}/payments`),
+      ]);
+      if (provider.status === "paid" || payments.items.some(p => !["failed", "refunded"].includes(p.status))) throw new CheckoutRequestError("Your earlier payment is processing or paid. Check its status before choosing COD.", 409);
+    }
+    await db.transaction(async tx => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${sessionId}))`);
+      const [latest] = await tx.select().from(orders).where(eq(orders.id, snapshot.id)).limit(1);
+      if (!latest || latest.paymentCapturedAt || latest.paymentSyncStatus !== "switching" || latest.razorpayOrderId !== snapshot.razorpayOrderId || !checkoutCanContinue(latest)) throw new CheckoutRequestError("Payment status changed. Check your saved order before continuing.", 409);
+      if (snapshot.razorpayOrderId) {
+        const [draft] = await tx.select().from(checkoutDrafts).where(eq(checkoutDrafts.sessionId, sessionId)).limit(1);
+        if (!draft) throw new CheckoutRequestError("Saved payment history unavailable", 503);
+        const previous = draft.pricingBreakdown.previousPaymentRequests;
+        if (Array.isArray(previous) && previous.length) throw new CheckoutRequestError("Please contact HUME before changing this payment again.", 409);
+        await tx.update(checkoutDrafts).set({ pricingBreakdown: { ...draft.pricingBreakdown, previousPaymentRequests: [snapshot.razorpayOrderId] } }).where(eq(checkoutDrafts.id, draft.id));
+      }
+      await tx.update(orders).set({ paymentMethod: mode === "partial_cod" ? "20% Prepaid + 80% Cash on Delivery" : "Razorpay Online Payment", razorpayOrderId: null, razorpayPaymentId: null, paymentSyncStatus: "unpaid", status: "payment_pending", updatedAt: new Date() }).where(eq(orders.id, snapshot.id));
+      await tx.update(secureCheckoutSessions).set({ expectedPaymentMinor: expectedPaymentMinor(Number(snapshot.grandTotal), mode === "partial_cod"), updatedAt: new Date() }).where(eq(secureCheckoutSessions.id, sessionId));
+    });
+  } catch (error) {
+    await db.update(orders).set({ paymentSyncStatus: snapshot.paymentSyncStatus }).where(and(eq(orders.id, snapshot.id), eq(orders.paymentSyncStatus, "switching")));
+    throw error;
+  }
+}
 async function razorpay<T>(path: string, body?: unknown): Promise<T> {
   const key = process.env.RAZORPAY_KEY_ID, secret = process.env.RAZORPAY_KEY_SECRET;
   if (!key || !secret) throw new CheckoutRequestError("Online payments are unavailable", 503);
@@ -291,25 +352,33 @@ export async function createSecurePayment(request: NextRequest) {
   try {
     const { session } = await requireCheckoutSession(request);
     await canonicalCart(session.cart); // Recheck availability without changing an already agreed order total.
+    await checkEarlierPayments(session.id, session.orderId);
     // Claim creation before the provider call. Ambiguous timeouts remain locked instead of charging twice.
     const order = await db.transaction(async tx => {
       await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${session.id}))`);
       const [stored] = await tx.select().from(orders).where(eq(orders.id, session.orderId)).limit(1);
       if (!stored || stored.checkoutChannel !== "razorpay") throw new CheckoutRequestError("Save your checkout before paying", 409);
       if (stored.paymentCapturedAt || !["payment_pending", "payment_failed"].includes(stored.status)) throw new CheckoutRequestError("This order already has a payment or is under review. Do not pay again.", 409);
-      if (stored.razorpayOrderId) return stored;
+      if (["switching", "payment_review", "payment_mismatch", "multiple_captures"].includes(stored.paymentSyncStatus || "")) throw new CheckoutRequestError("Your payment needs checking. Please do not pay again.", 409);
+      const [paymentSession] = await tx.select({ expectedMinor: secureCheckoutSessions.expectedPaymentMinor }).from(secureCheckoutSessions).where(eq(secureCheckoutSessions.id, session.id)).limit(1);
+      if (!paymentSession) throw new CheckoutRequestError("Saved checkout unavailable", 409);
+      const claimed = { ...stored, lockedExpectedMinor: paymentSession.expectedMinor };
+      if (stored.razorpayOrderId) return claimed;
       if (stored.paymentSyncStatus === "creating") throw new CheckoutRequestError("A payment request is being confirmed. Please contact HUME before retrying.", 409);
       await tx.update(orders).set({ paymentSyncStatus: "creating", updatedAt: new Date() }).where(eq(orders.id, stored.id));
-      return stored;
+      return claimed;
     });
-    const amount = storedPaymentMinor(session.expectedPaymentMinor, Number(order.grandTotal), /Prepaid.*Cash on Delivery/i.test(order.paymentMethod || ""));
+    // The order was read under the shared lock; the session read before the
+    // transaction may precede a concurrent mode change.
+    const amount = storedPaymentMinor(order.lockedExpectedMinor, Number(order.grandTotal), /Prepaid.*Cash on Delivery/i.test(order.paymentMethod || ""));
     if (order.razorpayOrderId) {
       const attempts = await razorpay<{ items: ProviderPayment[] }>(`orders/${encodeURIComponent(order.razorpayOrderId)}/payments`);
       if (attempts.items.some(payment => ["captured", "authorized"].includes(payment.status))) throw new CheckoutRequestError("An existing payment needs confirmation. Please check your order instead of paying again.", 409);
     }
     const providerOrder = order.razorpayOrderId ? await razorpay<ProviderOrder>(`orders/${encodeURIComponent(order.razorpayOrderId)}`) : await razorpay<ProviderOrder>("orders", { amount, currency: "INR", receipt: order.orderNumber.slice(0, 40), notes: { humeOrderId: order.id, humeOrderNumber: order.orderNumber, checkoutSessionId: session.id } });
     if (Number(providerOrder.amount) !== amount || providerOrder.currency !== "INR" || providerOrder.status === "paid") throw new CheckoutRequestError("This payment needs confirmation. Do not pay again.", 409);
-    await db.update(orders).set({ razorpayOrderId: providerOrder.id, paymentSyncStatus: "pending", updatedAt: new Date() }).where(eq(orders.id, order.id));
+    const [attached] = await db.update(orders).set({ razorpayOrderId: providerOrder.id, paymentSyncStatus: "pending", updatedAt: new Date() }).where(and(eq(orders.id, order.id), order.razorpayOrderId ? eq(orders.razorpayOrderId, order.razorpayOrderId) : eq(orders.paymentSyncStatus, "creating"))).returning({ id: orders.id });
+    if (!attached) throw new CheckoutRequestError("Payment option changed. Reopen your saved checkout before paying.", 409);
     return NextResponse.json({ order_id: providerOrder.id, amount, currency: "INR" }, { headers: privateHeaders });
   } catch (error) { return checkoutFailure(error, "PAYMENT_PROVIDER_FAILED"); }
 }
@@ -325,15 +394,20 @@ export async function verifySecurePayment(request: NextRequest) {
     const payment = await razorpay<ProviderPayment>(`payments/${encodeURIComponent(input.razorpay_payment_id)}`);
     const expected = storedPaymentMinor(session.expectedPaymentMinor, Number(order.grandTotal), /Prepaid.*Cash on Delivery/i.test(order.paymentMethod || ""));
     if (!matchesCapturedPayment(payment, order.razorpayOrderId, expected)) throw new CheckoutRequestError("Your payment is awaiting capture or needs review. Do not pay again.", 409);
+    await checkEarlierPayments(session.id, order.id);
     await finalizeSecurePayment(session.id, order.id, payment);
     return NextResponse.json({ success: true, payment_id: payment.id, order_id: payment.order_id, orderPath: `/order/${deriveOrderToken(token)}` }, { headers: privateHeaders });
   } catch (error) { return checkoutFailure(error, "PAYMENT_VERIFY_FAILED"); }
 }
-async function finalizeSecurePayment(sessionId: string, orderId: string, payment: ProviderPayment) {
+export async function finalizeSecurePayment(sessionId: string, orderId: string, payment: ProviderPayment) {
+  await checkEarlierPayments(sessionId, orderId);
   const notification = await db.transaction(async tx => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${sessionId}))`);
     const [latest] = await tx.select().from(orders).where(eq(orders.id, orderId)).limit(1);
     if (!latest || latest.razorpayOrderId !== payment.order_id) throw new CheckoutRequestError("Payment mismatch", 409);
+    if (["payment_review", "payment_mismatch", "multiple_captures"].includes(latest.paymentSyncStatus || "")) throw new CheckoutRequestError("This payment is under review. Please contact HUME.", 409);
+    const [session] = await tx.select().from(secureCheckoutSessions).where(eq(secureCheckoutSessions.id, sessionId)).limit(1);
+    if (!session || !matchesCapturedPayment(payment, latest.razorpayOrderId, storedPaymentMinor(session.expectedPaymentMinor, Number(latest.grandTotal), /Prepaid.*Cash on Delivery/i.test(latest.paymentMethod || "")))) throw new CheckoutRequestError("Payment amount mismatch", 409);
     if (/refund|disput/i.test(latest.status)) throw new CheckoutRequestError("This order's payment is under review. Please contact HUME.", 409);
     if (latest.razorpayPaymentId && latest.razorpayPaymentId !== payment.id) throw new CheckoutRequestError("Another payment is already recorded. Contact HUME.", 409);
     const nextStatus = ["payment_pending", "payment_authorized", "payment_failed"].includes(latest.status) ? "processing" : latest.status;
@@ -347,7 +421,23 @@ export async function recoverSecurePayment(request: NextRequest) {
   try {
     const { session, token } = await requireCheckoutSession(request);
     let [order] = await db.select().from(orders).where(eq(orders.id, session.orderId)).limit(1);
-    if (!order) return NextResponse.json({ confirmed: false }, { headers: privateHeaders });
+    if (!order) return NextResponse.json({ confirmed: false, state: "draft", canPay: true }, { headers: privateHeaders });
+    if (order.paymentSyncStatus === "switching" && order.updatedAt < new Date(Date.now() - 60000)) {
+      // A terminated function can leave a mode-change claim behind. Recover
+      // only the claim under the same lock; never change a provider reference.
+      order = await db.transaction(async tx => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${session.id}))`);
+        const [latest] = await tx.select().from(orders).where(eq(orders.id, session.orderId)).limit(1);
+        if (latest?.paymentSyncStatus === "switching" && !latest.paymentCapturedAt && latest.updatedAt < new Date(Date.now() - 60000)) {
+          const [restored] = await tx.update(orders).set({ paymentSyncStatus: "pending", updatedAt: new Date() }).where(eq(orders.id, latest.id)).returning();
+          return restored;
+        }
+        return latest;
+      });
+      if (!order) throw new CheckoutRequestError("Saved order unavailable", 404);
+    }
+    await checkEarlierPayments(session.id, session.orderId);
+    if (["switching", "payment_review", "payment_mismatch", "multiple_captures"].includes(order.paymentSyncStatus || "")) return NextResponse.json({ confirmed: false, state: "processing", canPay: false }, { headers: privateHeaders });
     if (order.paymentCapturedAt && Math.round(Number(order.capturedPaymentAmount) * 100) !== storedPaymentMinor(session.expectedPaymentMinor, Number(order.grandTotal), /Prepaid.*Cash on Delivery/i.test(order.paymentMethod || ""))) throw new CheckoutRequestError("The recorded payment needs review. Contact HUME; do not pay again.", 409);
     if (order.checkoutChannel === "razorpay" && !order.razorpayOrderId && order.paymentSyncStatus === "creating") {
       const expected = storedPaymentMinor(session.expectedPaymentMinor, Number(order.grandTotal), /Prepaid.*Cash on Delivery/i.test(order.paymentMethod || ""));
@@ -359,6 +449,7 @@ export async function recoverSecurePayment(request: NextRequest) {
           await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${session.id}))`);
           const [latest] = await tx.select().from(orders).where(eq(orders.id, session.orderId)).limit(1);
           if (!latest || latest.razorpayOrderId && latest.razorpayOrderId !== matching[0].id) throw new CheckoutRequestError("Payment request needs review", 409);
+          if (["payment_review", "payment_mismatch", "multiple_captures", "switching"].includes(latest.paymentSyncStatus || "")) throw new CheckoutRequestError("This payment is under review. Please contact HUME.", 409);
           const [updated] = await tx.update(orders).set({ razorpayOrderId: matching[0].id, paymentSyncStatus: latest.paymentCapturedAt ? latest.paymentSyncStatus : "pending", updatedAt: new Date() }).where(eq(orders.id, latest.id)).returning();
           return updated;
         });
@@ -370,8 +461,11 @@ export async function recoverSecurePayment(request: NextRequest) {
       const captured = result.items.filter(p => matchesCapturedPayment(p, order.razorpayOrderId!, expected));
       if (captured.length > 1) throw new CheckoutRequestError("Multiple payments need review. Please contact HUME.", 409);
       if (captured[0]) await finalizeSecurePayment(session.id, order.id, captured[0]);
-      else return NextResponse.json({ confirmed: false, pending: true }, { headers: privateHeaders });
-    } else if (order.checkoutChannel === "razorpay" && !order.paymentCapturedAt) return NextResponse.json({ confirmed: false, pending: true }, { headers: privateHeaders });
+      else {
+        const processing = result.items.some(p => !["failed", "refunded"].includes(p.status));
+        return NextResponse.json({ confirmed: false, pending: processing, state: processing ? "processing" : "unpaid", canPay: !processing }, { headers: privateHeaders });
+      }
+    } else if (order.checkoutChannel === "razorpay" && !order.paymentCapturedAt) return NextResponse.json({ confirmed: false, pending: order.paymentSyncStatus === "creating", state: order.paymentSyncStatus === "creating" ? "processing" : "unpaid", canPay: order.paymentSyncStatus !== "creating" }, { headers: privateHeaders });
     return NextResponse.json({ confirmed: true, orderPath: `/order/${deriveOrderToken(token)}` }, { headers: privateHeaders });
   } catch (error) { return checkoutFailure(error); }
 }

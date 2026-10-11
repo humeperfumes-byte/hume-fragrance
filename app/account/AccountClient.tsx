@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import SiteLoading from "@/components/SiteLoading";
+import PendingCheckoutCard from "@/components/PendingCheckoutCard";
 import {
   Check,
   ChevronRight,
@@ -142,6 +143,7 @@ function formatDate(value?: string | null) {
 
 function titleStatus(status: string) {
   if (status === "processing") return "Order Confirmed";
+  if (status === "payment_authorized") return "Payment being checked";
   return status
     .replace(/[_-]+/g, " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -150,7 +152,7 @@ function titleStatus(status: string) {
 function statusClass(status: string) {
   if (status.includes("delivered")) return "bg-emerald-50 text-emerald-800 border-emerald-200/80 shadow-xs";
   if (status.includes("failed")) return "bg-rose-50 text-rose-800 border-rose-200 shadow-xs";
-  if (status.includes("pending")) return "bg-[#fef8ee] text-[#93631c] border-[#f4e2c4] shadow-xs";
+  if (status.includes("pending") || status === "payment_authorized") return "bg-[#fef8ee] text-[#93631c] border-[#f4e2c4] shadow-xs";
   if (status.includes("whatsapp")) return "bg-sky-50 text-sky-800 border-sky-200";
   if (status.includes("processing") || status.includes("confirmed")) return "bg-[#faf4ec] text-[#80583b] border-[#e8d7c5] shadow-xs";
   if (status.includes("shipped")) return "bg-blue-50 text-blue-800 border-blue-200 shadow-xs";
@@ -161,7 +163,7 @@ function orderProgress(order: AccountOrder): number {
   if (order.status.includes("delivered") || order.deliveredAt) return 100;
   if (order.status.includes("shipped") || order.trackingNumber || order.shippedAt) return 72;
   if (order.status.includes("processing") || order.status.includes("confirmed")) return 38;
-  if (order.status.includes("payment_pending") || order.status.includes("payment_failed")) return 3;
+  if (["payment_pending", "payment_failed", "payment_authorized"].includes(order.status)) return 3;
   return 22;
 }
 
@@ -218,7 +220,7 @@ export default function AccountClient() {
       if (resumingOrder) return;
       setResumingOrder(order.id);
       setPaymentResumeError(null);
-      void fetch("/api/account/checkout/resume", { method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(20000), body: JSON.stringify({ orderId: order.id, paymentMode: mode, accountToken: getStoredAccountLoginToken(window.localStorage) || undefined }) })
+      void fetch("/api/account/checkout/resume", { method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(30000), body: JSON.stringify({ orderId: order.id, paymentMode: mode, accountToken: getStoredAccountLoginToken(window.localStorage) || undefined }) })
         .then(async response => { const result = await response.json(); if (!response.ok || !result.path) throw new Error(result.error || "Could not resume your order"); router.push(result.path); })
         .catch(error => setPaymentResumeError({ orderId: order.id, message: error instanceof Error ? error.message : "Could not resume your order" }))
         .finally(() => setResumingOrder(null));
@@ -633,6 +635,7 @@ export default function AccountClient() {
         ) : null}
 
           <div className="space-y-5">
+            <PendingCheckoutCard draftsOnly />
             <div className="flex items-center justify-between gap-3 px-1">
               <div>
                 <p className="text-[9px] font-semibold uppercase tracking-[0.24em] text-[#a08772]">Your collection</p>
@@ -687,7 +690,7 @@ export default function AccountClient() {
 
                       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#f4ede5] pt-3">
                         <div className="flex flex-col">
-                          {!["payment_pending", "payment_failed"].includes(order.status) && (
+                          {!["payment_pending", "payment_failed", "payment_authorized"].includes(order.status) && (
                             <span className="text-xs text-[#806f64]">
                               {order.paymentMethod || (order.checkoutChannel === "razorpay" ? "Razorpay online payment" : "WhatsApp order")}
                             </span>
@@ -777,7 +780,7 @@ export default function AccountClient() {
                       ) : null}
                     </div>
 
-                    {["payment_pending", "payment_failed"].includes(order.status) ? (
+                    {["payment_pending", "payment_failed", "payment_authorized"].includes(order.status) ? (
                       <div className="relative mt-5 overflow-hidden rounded-[24px] bg-[#102e25] p-5 text-white shadow-[0_16px_35px_-18px_rgba(16,46,37,0.55)] sm:p-7">
                         <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-32 h-80 w-80 rounded-full border-[40px] border-[#b79b65]/10" />
                         <div className="relative mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -789,15 +792,15 @@ export default function AccountClient() {
                           <div className="text-left sm:text-right"><p className="text-[10px] uppercase tracking-[0.16em] text-white/50">Order total</p><p className="mt-1 font-serif text-3xl text-[#f1dfb5]">{order.grandTotal !== null ? formatINR(order.grandTotal) : "—"}</p></div>
                         </div>
                         <div className="relative grid gap-3 sm:grid-cols-2">
-                          <button type="button" onClick={() => resumeOrderPayment(order, "partial_cod")} disabled={resumingOrder !== null} className="group flex w-full flex-col items-start rounded-[18px] border border-[#dfc89e] bg-[#f8efdf] p-3.5 text-left text-[#30271e] transition hover:bg-[#fff7e8] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#e5c68e] disabled:cursor-wait disabled:opacity-60">
+                          {!/Prepaid.*Cash on Delivery/i.test(order.paymentMethod || "") && order.status !== "payment_authorized" && <button type="button" onClick={() => resumeOrderPayment(order, "partial_cod")} disabled={resumingOrder !== null} className="group flex w-full flex-col items-start rounded-[18px] border border-[#dfc89e] bg-[#f8efdf] p-3.5 text-left text-[#30271e] transition hover:bg-[#fff7e8] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#e5c68e] disabled:cursor-wait disabled:opacity-60">
                             <span className="flex w-full items-center justify-between"><WalletCards className="h-4 w-4 text-[#927044]" aria-hidden="true" /><span className="rounded-full border border-[#b49a6d]/30 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider">80% on delivery</span></span>
                             <span className="mt-2 text-sm font-semibold">20% advance + COD</span>
                             <span className="mt-1 text-xs text-[#806d54]">{order.grandTotal !== null ? formatINR(Math.max(1, Math.round(order.grandTotal * 0.2))) + " due now" : "Pay 20% now"}</span>
                             <span className="mt-3 flex w-full items-center justify-between text-[11px] font-semibold">{resumingOrder === order.id ? "Opening checkout…" : "Choose advance COD"}<ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" /></span>
-                          </button>
+                          </button>}
                           <button type="button" onClick={() => resumeOrderPayment(order, order.secureCheckout && /Prepaid.*Cash on Delivery/i.test(order.paymentMethod || "") ? "partial_cod" : "full")} disabled={resumingOrder !== null} className="group flex w-full flex-col items-start rounded-[18px] border border-white/20 bg-white/[0.07] p-3.5 text-left text-white transition hover:border-white/35 hover:bg-white/[0.12] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#e5c68e] disabled:cursor-wait disabled:opacity-60">
                             <span className="flex w-full items-center justify-between"><CreditCard className="h-4 w-4 text-[#dec794]" aria-hidden="true" /><span className="rounded-full border border-white/15 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-white/65">Razorpay</span></span>
-                            <span className="mt-2 text-sm font-semibold">{order.secureCheckout ? "Continue saved payment" : "Pay in full"}</span>
+                            <span className="mt-2 text-sm font-semibold">{order.status === "payment_authorized" ? "Check payment status" : /Prepaid.*Cash on Delivery/i.test(order.paymentMethod || "") ? "Pay 20% advance" : "Pay online"}</span>
                             <span className="mt-1 text-xs text-white/55">UPI, cards & netbanking</span>
                             <span className="mt-3 flex w-full items-center justify-between text-[11px] font-semibold">{resumingOrder === order.id ? "Opening checkout…" : "Continue securely"}<ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" /></span>
                           </button>
@@ -806,7 +809,7 @@ export default function AccountClient() {
                       </div>
                     ) : null}
 
-                    {!["payment_pending", "payment_failed", "whatsapp_initiated"].includes(order.status) ? (
+                    {!["payment_pending", "payment_failed", "payment_authorized", "whatsapp_initiated"].includes(order.status) ? (
                       <div className="mt-4 rounded-2xl border border-[#e7ddd2] bg-[linear-gradient(135deg,#fffdf9,#f7f2eb)] p-4">
                         {order.trackingNumber ? (
                           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
@@ -879,7 +882,7 @@ export default function AccountClient() {
                       Payment
                     </p>
                     <p className="mt-2 text-sm font-semibold text-zinc-950">
-                      {["payment_pending", "payment_failed"].includes(selectedOrder.status)
+                      {["payment_pending", "payment_failed", "payment_authorized"].includes(selectedOrder.status)
                         ? "Awaiting payment confirmation"
                         : selectedOrder.paymentMethod || (selectedOrder.checkoutChannel === "razorpay" ? "Razorpay" : "WhatsApp")}
                     </p>

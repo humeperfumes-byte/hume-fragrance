@@ -8,7 +8,7 @@ import { CHECKOUT_ACTIVE_COOKIE, CHECKOUT_OWNER_COOKIE, ownsCheckout, deriveOrde
 import { createCustomerToken, hashCustomerToken } from "@/lib/customer-access-token";
 import { randomUUID } from "node:crypto";
 import { checkoutCanContinue } from "@/lib/checkout-continuation";
-import { secureCheckoutEnabled, checkoutFailure, CheckoutRequestError } from "@/lib/secure-checkout";
+import { secureCheckoutEnabled, checkoutFailure, CheckoutRequestError, switchSecurePaymentMode } from "@/lib/secure-checkout";
 import { readBoundedJson } from "@/lib/bounded-request-body";
 import { expectedPaymentMinor } from "@/lib/secure-checkout-pricing";
 export const runtime = "nodejs";
@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
     const account = !owned && body.accountToken ? await findAccountSession(body.accountToken) : null;
     const [authorized] = owned ? [true] : account ? await db.select({ id: orders.id }).from(orders).where(and(eq(orders.id, body.orderId), accountOrderWhere(identityFromSession(account)))).limit(1) : [];
     if (!authorized) throw new CheckoutRequestError("Please sign in to resume this order", 401);
+    if (body.paymentMode) await switchSecurePaymentMode(session.id, body.paymentMode);
     const activeToken = request.cookies.get(CHECKOUT_ACTIVE_COOKIE)?.value;
     const capability = owned && activeToken && hashCustomerToken(activeToken) === session.tokenHash ? { token: activeToken, hash: session.tokenHash } : createCustomerToken();
     const ownerCapability = owned ? null : createCustomerToken();
