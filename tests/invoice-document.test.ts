@@ -27,8 +27,8 @@ test("saved invoices reject missing buyers, item descriptions and invalid numeri
   assert.equal(invoiceDocumentSchema.safeParse({ ...invoice, items: [{ ...invoice.items[0], name: "" }] }).success, false);
   assert.equal(invoiceDocumentSchema.safeParse({ ...invoice, shippingFee: -1 }).success, false);
 });
-test("payment status visibility persists in saved copies and defaults to visible for older invoices", () => {
-  assert.equal(invoiceDocumentSchema.parse({ ...invoice, showPaymentStatus: undefined }).showPaymentStatus, true);
+test("payment status visibility persists in saved copies and defaults to hidden when visibility is unspecified", () => {
+  assert.equal(invoiceDocumentSchema.parse({ ...invoice, showPaymentStatus: undefined }).showPaymentStatus, false);
   const hidden = invoiceDocumentSchema.parse({ ...invoice, showPaymentStatus: false });
   assert.equal(hidden.showPaymentStatus, false);
   assert.equal(duplicateInvoice(hidden).showPaymentStatus, false);

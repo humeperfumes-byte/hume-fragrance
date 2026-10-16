@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {invoiceFilename} from '../lib/invoice-filename';
+test('invoice filenames sort by invoice date, then IST time, customer and brand',()=>{assert.equal(invoiceFilename('Rahul Sharma','2026-10-17',new Date('2026-10-17T10:05:09Z')),'2026-10-17 15-35-09 Rahul Sharma HUME Fragrance');});
+test('filenames preserve the invoice date while using IST export time across midnight',()=>{assert.equal(invoiceFilename('Customer','2026-10-16',new Date('2026-10-17T20:30:00Z')),'2026-10-16 02-00-00 Customer HUME Fragrance');});
+test('customer names remain readable while Windows-invalid filename characters are removed',()=>{const name=invoiceFilename('A/B: Test? * नाम','2026-10-17',new Date('2026-10-17T00:00:00Z'));assert.match(name,/A B Test नाम HUME Fragrance$/);assert.ok(!/[<>:"/\\|?*]/.test(name));});

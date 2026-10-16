@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: { "/api/admin/invoices/pdf": ["./public/fonts/*.ttf", "./public/images/logo/invoice-hume-black.png"] },
   // Keep the native PostgreSQL driver outside development bundles/HMR.
   ...(process.env.NODE_ENV === "development" ? { serverExternalPackages: ["postgres"] } : {}),
   turbopack: {},

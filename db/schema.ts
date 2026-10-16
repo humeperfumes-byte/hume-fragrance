@@ -36,6 +36,11 @@ export const savedInvoices = pgTable("saved_invoices", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Immutable issued snapshots and append-only revisions. Invoice numbers are allocated in a transaction.
+export const invoiceCounters = pgTable("invoice_counters", { financialYear: varchar("financial_year", {length:7}).primaryKey(), lastNumber: integer("last_number").notNull().default(0) });
+export const issuedInvoices = pgTable("issued_invoices", { invoiceId: varchar("invoice_id",{length:100}).primaryKey().references(()=>savedInvoices.id), financialYear:varchar("financial_year",{length:7}).notNull(), invoiceNumber:varchar("invoice_number",{length:16}).notNull().unique(), document:jsonb("document").$type<import("@/lib/invoice-document").InvoiceDocument>().notNull(), issuedAt:timestamp("issued_at").defaultNow().notNull() });
+export const invoiceRevisions = pgTable("invoice_revisions", { id:varchar("id",{length:100}).primaryKey(), invoiceId:varchar("invoice_id",{length:100}).notNull().references(()=>savedInvoices.id), action:varchar("action",{length:30}).notNull(), title:varchar("title",{length:255}).notNull(), document:jsonb("document").$type<import("@/lib/invoice-document").InvoiceDocument>().notNull(), createdAt:timestamp("created_at").defaultNow().notNull() }, table=>[index("invoice_revisions_invoice_idx").on(table.invoiceId,table.createdAt)]);
+
 export const genderEnum = pgEnum("gender", ["Men", "Women", "Unisex"]);
 export const productVisibilityEnum = pgEnum("product_visibility", ["public", "seo_only"]);
 
