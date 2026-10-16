@@ -1,7 +1,8 @@
 import type { CartItem } from "@/context/CartContext";
+import { isEligibleDiscoverySample } from "./discovery-set";
 import { DISCOVERY_SET_PRODUCT_ID, DISCOVERY_SET_PRICE, DISCOVERY_SET_IMAGES, DISCOVERY_SET_SAMPLE_COUNT, DISCOVERY_SET_SIZE, isDiscoverySetCartItemId } from "./discovery-set";
 type Snapshot = { id: string; quantity: number; price: number; isGift?: boolean; sampleSelections?: { id: string }[]; kitSelections?: { id: string }[] };
-export type ResumeProduct = { id: string; name: string; inspiration: string; price: number; category: string; images: string[]; size: string; badges?: { soldOut?: boolean; comingSoon?: boolean; showInDiscoverySet?: boolean }; priceCurrency?: string };
+export type ResumeProduct = { id: string; name: string; inspiration: string; price: number; category: string; categoryId?: string; visibility?: string; images: string[]; size: string; badges?: { soldOut?: boolean; comingSoon?: boolean; showInDiscoverySet?: boolean }; priceCurrency?: string };
 export function buildResumeCart(snapshot: Snapshot[], catalogue: ResumeProduct[]) {
   const products = new Map(catalogue.map(product => [product.id, product]));
   const items: CartItem[] = [];
@@ -17,7 +18,7 @@ export function buildResumeCart(snapshot: Snapshot[], catalogue: ResumeProduct[]
     if (discovery) {
       const choices = saved.sampleSelections || [];
       const samples = choices.map(choice => products.get(choice.id));
-      if (choices.length !== DISCOVERY_SET_SAMPLE_COUNT || new Set(choices.map(choice => choice.id)).size !== DISCOVERY_SET_SAMPLE_COUNT || samples.some(sample => !sample || sample.id === DISCOVERY_SET_PRODUCT_ID || sample.badges?.soldOut || sample.badges?.comingSoon || !sample.badges?.showInDiscoverySet)) { issues.push("Your discovery set needs updated sample selections. Please rebuild it before checkout."); continue; }
+      if (choices.length !== DISCOVERY_SET_SAMPLE_COUNT || new Set(choices.map(choice => choice.id)).size !== DISCOVERY_SET_SAMPLE_COUNT || samples.some(sample => !sample || !isEligibleDiscoverySample(sample))) { issues.push("Your discovery set needs updated sample selections. Please rebuild it before checkout."); continue; }
       sampleSelections = samples.map(sample => ({ id: sample!.id, name: sample!.name, inspiration: sample!.inspiration }));
     }
     const price = discovery ? DISCOVERY_SET_PRICE : product.price;

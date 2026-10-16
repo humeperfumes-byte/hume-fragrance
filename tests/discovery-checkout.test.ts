@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { buildResumeCart, type ResumeProduct } from '../lib/checkout-resume-cart';
+import { isEligibleDiscoverySample, DISCOVERY_SET_PRODUCT_ID } from '../lib/discovery-set';
+const samples: ResumeProduct[] = Array.from({length:15}, (_, i) => ({ id:`sample-${i}`,name:`Perfume ${i}`,inspiration:'Original',price:799,category:'Perfume',visibility:'public',images:[],size:'50ml',badges:{} }));
+const discovery: ResumeProduct = {...samples[0],id:DISCOVERY_SET_PRODUCT_ID,category:'Discovery Set',price:999};
+const cart = [{id:'discovery-set-selected',quantity:1,price:999,sampleSelections:samples.map(p=>({id:p.id}))}];
+test('builder-approved public samples check out without a separate sample flag',()=>{const result=buildResumeCart(cart,[discovery,...samples]);assert.deepEqual(result.issues,[]);assert.equal(result.items[0].sampleSelections?.length,15);assert.equal(result.items[0].price,999);});
+test('hidden samples need opt-in; unavailable and non-perfume items stay blocked',()=>{assert.equal(isEligibleDiscoverySample({...samples[0],visibility:'seo_only'}),false);assert.equal(isEligibleDiscoverySample({...samples[0],visibility:'seo_only',badges:{showInDiscoverySet:true}}),true);for(const change of [{badges:{soldOut:true}},{badges:{comingSoon:true}},{categoryId:'naturals'},{category:'Kit'},{visibility:'seo_only'}]){assert.ok(buildResumeCart(cart,[discovery,...samples.map((p,i)=>i===0?{...p,...change}:p)]).issues.length);}});
+test('incomplete, duplicate and unknown sample selections cannot check out',()=>{for(const choices of [cart[0].sampleSelections.slice(1),Array(15).fill({id:samples[0].id}),[...cart[0].sampleSelections.slice(1),{id:'missing'}]])assert.ok(buildResumeCart([{...cart[0],sampleSelections:choices}],[discovery,...samples]).issues.length);});

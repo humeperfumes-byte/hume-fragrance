@@ -28,6 +28,19 @@ export type FragranceSelection = {
   inspiration?: string;
 };
 
+/** Shared by the builder and server checkout; public perfumes are sampleable. */
+export function isEligibleDiscoverySample(product: {
+  id: string; category?: string; categoryId?: string; visibility?: string;
+  badges?: { soldOut?: boolean; comingSoon?: boolean; showInDiscoverySet?: boolean };
+}) {
+  const blocked = new Set(["kit", "gift", "accessory", "discovery-set", "discovery set", "naturals", "rose-water", "car-fragrance"]);
+  return !isDiscoverySetCartItemId(product.id)
+    && !product.badges?.soldOut && !product.badges?.comingSoon
+    && !blocked.has(product.categoryId?.toLowerCase() || "")
+    && !blocked.has(product.category?.toLowerCase() || "")
+    && ((product.visibility ?? "public") === "public" || product.badges?.showInDiscoverySet === true);
+}
+
 export function getDiscoverySetReviewAggregate(
   reviews: Array<{ rating: number; reviewerLanguage?: string; title?: string }>,
 ) {

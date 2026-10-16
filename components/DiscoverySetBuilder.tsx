@@ -18,18 +18,12 @@ import {
   DISCOVERY_SET_SIZE,
   DISCOVERY_SET_STATUS,
   isDiscoverySetProductId,
+  isEligibleDiscoverySample,
 } from "@/lib/discovery-set";
 import { useCart } from "@/context/CartContext";
 
 function isEligibleSamplePerfume(perfume: PerfumeData) {
-  const blockedCategories = new Set(["kit", "gift", "accessory", "discovery-set"]);
-  return (
-    !isDiscoverySetProductId(perfume.id) &&
-    !perfume.badges?.soldOut &&
-    !perfume.badges?.comingSoon &&
-    !blockedCategories.has(perfume.categoryId?.toLowerCase()) &&
-    !blockedCategories.has(perfume.category?.toLowerCase())
-  );
+  return isEligibleDiscoverySample(perfume);
 }
 
 const DISCOVERY_SET_HERO_GALLERY = DISCOVERY_SET_IMAGES.map((src, index) => ({
