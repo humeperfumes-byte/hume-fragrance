@@ -1,13 +1,14 @@
 import { createHash, randomUUID } from "crypto";
-import { and, asc, eq, gt } from "drizzle-orm";
+import { and, asc, desc, eq, gt } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { after } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { liveChatMessages, liveChatSessions } from "@/db/schema";
-import { generatePrakharChatReply } from "@/lib/ai/live-chat";
+import { generateHumeChatReply } from "@/lib/ai/live-chat";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 const bodySchema = z.object({ sessionId: z.string().max(255), token: z.string().min(32).max(255), message: z.string().trim().min(1).max(1200), page: z.string().max(2048).optional() });
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 const escapeHtml = (value: string) => value.replace(/[&<>]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[character] ?? character));
@@ -27,11 +28,13 @@ export async function POST(request: NextRequest) {
       [session] = await db.insert(liveChatSessions).values({ id: data.sessionId, visitorTokenHash: hash(data.token), page: data.page }).returning();
     }
 
-    const existingMessages = await db.select({ sender: liveChatMessages.sender, message: liveChatMessages.message }).from(liveChatMessages).where(eq(liveChatMessages.sessionId, session.id)).orderBy(asc(liveChatMessages.createdAt)).limit(20);
     const id = randomUUID();
     const createdAt = new Date();
-    await db.insert(liveChatMessages).values({ id, sessionId: session.id, sender: "customer", message: data.message, createdAt });
-    await db.update(liveChatSessions).set({ updatedAt: new Date(), page: data.page ?? session.page }).where(eq(liveChatSessions.id, session.id));
+    await db.transaction(async tx => {
+      await tx.select({id:liveChatSessions.id}).from(liveChatSessions).where(eq(liveChatSessions.id,session.id)).for("update");
+      await tx.insert(liveChatMessages).values({ id, sessionId: session.id, sender: "customer", message: data.message, createdAt });
+      await tx.update(liveChatSessions).set({ updatedAt: new Date(), status: "open", page: data.page ?? session.page }).where(eq(liveChatSessions.id, session.id));
+    });
 
     after(async () => {
       const botToken = process.env.ADMIN_TELEGRAM_BOT_TOKEN?.trim();
@@ -42,18 +45,18 @@ export async function POST(request: NextRequest) {
       }
 
       if (session.handlingMode === "ai") {
-        const replies = await generatePrakharChatReply([...existingMessages, { sender: "customer", message: data.message }], existingMessages.length === 0 ? "first" : "draft");
-        if (replies) {
+        const [before] = await db.select({mode:liveChatSessions.handlingMode}).from(liveChatSessions).where(eq(liveChatSessions.id,session.id)).limit(1);
+        if (before?.mode !== "ai") return;
+        const recent = await db.select({sender:liveChatMessages.sender,message:liveChatMessages.message}).from(liveChatMessages).where(eq(liveChatMessages.sessionId,session.id)).orderBy(desc(liveChatMessages.createdAt)).limit(30);
+        const reply = await generateHumeChatReply(recent.reverse());
+        await db.transaction(async tx => {
+          const [current] = await tx.select().from(liveChatSessions).where(eq(liveChatSessions.id,session.id)).for("update");
+          const [latest] = await tx.select({id:liveChatMessages.id,sender:liveChatMessages.sender}).from(liveChatMessages).where(eq(liveChatMessages.sessionId,session.id)).orderBy(desc(liveChatMessages.createdAt)).limit(1);
+          if (!current || current.handlingMode !== "ai" || current.status === "closed" || current.status === "resolved" || latest?.id !== id) return;
           const replyStartedAt = Date.now();
-          await db.insert(liveChatMessages).values(replies.map((message, index) => ({
-            id: randomUUID(),
-            sessionId: session.id,
-            sender: "admin",
-            message,
-            createdAt: new Date(replyStartedAt + index * 750),
-          })));
-          await db.update(liveChatSessions).set({ updatedAt: new Date() }).where(eq(liveChatSessions.id, session.id));
-        }
+          await tx.insert(liveChatMessages).values(reply.messages.map((message,index)=>({id:randomUUID(),sessionId:session.id,sender:"admin",message,createdAt:new Date(replyStartedAt+index)})));
+          await tx.update(liveChatSessions).set({updatedAt:new Date(),...(reply.handoff?{handlingMode:"manual",status:"waiting"}:{})}).where(eq(liveChatSessions.id,session.id));
+        });
       }
     });
     return NextResponse.json({ ok: true, message: { id, sender: "customer", message: data.message, createdAt: createdAt.toISOString() } });
@@ -68,9 +71,10 @@ export async function GET(request: NextRequest) {
     const sessionId = request.nextUrl.searchParams.get("sessionId") || "";
     const token = request.nextUrl.searchParams.get("token") || "";
     const after = request.nextUrl.searchParams.get("after");
-    if (!(await authorized(sessionId, token))) return NextResponse.json({ error: "Invalid chat session" }, { status: 403 });
+    const session = await authorized(sessionId, token);
+    if (!session) return NextResponse.json({ error: "Invalid chat session" }, { status: 403 });
     const condition = after ? and(eq(liveChatMessages.sessionId, sessionId), gt(liveChatMessages.createdAt, new Date(after))) : eq(liveChatMessages.sessionId, sessionId);
     const rows = await db.select({ id: liveChatMessages.id, sender: liveChatMessages.sender, message: liveChatMessages.message, createdAt: liveChatMessages.createdAt }).from(liveChatMessages).where(condition).orderBy(asc(liveChatMessages.createdAt)).limit(100);
-    return NextResponse.json({ messages: rows }, { headers: { "Cache-Control": "private, no-store" } });
+    return NextResponse.json({ messages: rows, handlingMode: session.handlingMode, status: session.status }, { headers: { "Cache-Control": "private, no-store" } });
   } catch { return NextResponse.json({ messages: [] }); }
 }

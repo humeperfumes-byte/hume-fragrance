@@ -34,8 +34,11 @@ export async function POST(request: NextRequest) {
     if (!session) return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     const createdAt = new Date();
     const message = { id: randomUUID(), sessionId: input.sessionId, sender: "admin", message: input.message, createdAt };
-    await db.insert(liveChatMessages).values(message);
-    await db.update(liveChatSessions).set({ updatedAt: createdAt }).where(eq(liveChatSessions.id, input.sessionId));
+    await db.transaction(async tx => {
+      await tx.select({id:liveChatSessions.id}).from(liveChatSessions).where(eq(liveChatSessions.id,input.sessionId)).for("update");
+      await tx.insert(liveChatMessages).values(message);
+      await tx.update(liveChatSessions).set({ updatedAt: createdAt, handlingMode: "manual", status: "open" }).where(eq(liveChatSessions.id, input.sessionId));
+    });
     return NextResponse.json({ message: { ...message, createdAt: createdAt.toISOString() } });
   } catch (error) {
     console.error("Admin live chat reply failed:", error);

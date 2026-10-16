@@ -66,13 +66,14 @@ export default function LiveChatWidget() {
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [sending, setSending] = useState(false);
+  const [handlingMode, setHandlingMode] = useState("ai");
   const [showQuestions, setShowQuestions] = useState(true);
   const [chatReady, setChatReady] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
   const openedAt = useRef(0), last = useRef(""), end = useRef<HTMLDivElement>(null);
   const lastReadAt = useRef(0);
   const latestMessage = messages.at(-1);
-  const waitingForReply = latestMessage?.sender === "customer" && latestMessage.status !== "failed";
+  const waitingForReply = handlingMode === "ai" && latestMessage?.sender === "customer" && latestMessage.status !== "failed";
 
   const activateChat = useCallback(async () => {
     const auth = identity();
@@ -115,7 +116,8 @@ export default function LiveChatWidget() {
           if (last.current) query.set("after", last.current);
           const response = await fetch(`/api/live-chat/messages?${query}`, { cache: "no-store", signal: AbortSignal.timeout(8_000) });
           if (response.ok) {
-            const data = await response.json() as { messages: Msg[] };
+            const data = await response.json() as { messages: Msg[]; handlingMode?: string };
+            if (data.handlingMode) setHandlingMode(data.handlingMode);
             if (data.messages.length) {
               if (!open && data.messages.some(message => message.sender === "admin" && new Date(message.createdAt).getTime() > lastReadAt.current)) {
                 setHasUnread(true);
@@ -190,14 +192,14 @@ export default function LiveChatWidget() {
       <div className="mx-auto mt-2 h-1 w-9 rounded-full bg-white/25 md:hidden" />
       <header className="relative border-b border-white/[.07] bg-[radial-gradient(circle_at_top_right,rgba(207,255,100,.1),transparent_42%),linear-gradient(135deg,#11150f,#0b0d0a)] px-4 pb-3 pt-2.5 text-white">
         <button type="button" onClick={() => setOpen(false)} aria-label="Close live chat" className="absolute right-3 top-2.5 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/10 hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"><X className="h-4 w-4" /></button>
-        <p className="text-[9px] font-bold uppercase tracking-[.18em] text-[#d8f39a]">Prakhar from HUME</p>
+        <p className="text-[9px] font-bold uppercase tracking-[.18em] text-[#d8f39a]">HUME support</p>
         <h2 className="mt-1 pr-11 font-serif text-[23px] font-light leading-tight">Hi, how can I help?</h2>
-        <p className="mt-0.5 flex items-center text-[10px] text-white/55"><span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[#b8dc69] shadow-[0_0_8px_rgba(184,220,105,.55)]" />Online now</p>
+        <p className="mt-0.5 flex items-center text-[10px] text-white/55"><span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[#b8dc69] shadow-[0_0_8px_rgba(184,220,105,.55)]" />{handlingMode === "manual" ? "With the HUME team" : "AI assistance · human support available"}</p>
       </header>
       <div aria-live="polite" className="flex-1 space-y-2 overflow-y-auto bg-[radial-gradient(circle_at_15%_30%,rgba(207,255,100,.035),transparent_32%)] px-4 py-4 [scrollbar-color:rgba(216,243,154,.28)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#d8f39a]/25 [&::-webkit-scrollbar-thumb:hover]:bg-[#d8f39a]/40 [&::-webkit-scrollbar-track]:bg-transparent">
-        <div className="flex items-end gap-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#d8f39a] text-[10px] font-bold text-[#11150f]">P</span><div className="max-w-[78%] rounded-[20px] rounded-bl-md bg-[#292c28] px-4 py-3 text-[13px] leading-5 text-white/90">Hey, I&apos;m Prakhar. How can I help you?</div></div>
-        {messages.map(item => <div key={item.id} className={`flex items-end gap-2 ${item.sender === "customer" ? "justify-end" : "justify-start"}`}>{item.sender === "admin" && <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#d8f39a] text-[10px] font-bold text-[#11150f]">P</span>}<div className={`max-w-[78%] ${item.sender === "customer" ? "text-right" : "text-left"}`}><div className={`whitespace-pre-line rounded-[20px] px-4 py-3 text-left text-[13px] leading-5 ${item.sender === "customer" ? "rounded-br-md bg-[#d8f39a] text-[#11150f]" : "rounded-bl-md bg-[#292c28] text-white/90"}`}><MessageText text={item.message} customer={item.sender === "customer"}/></div><div className={`mt-1 flex items-center gap-1.5 px-1 text-[9px] ${item.sender === "customer" ? "justify-end" : "justify-start"} ${item.status === "failed" ? "text-[#ef9b91]" : "text-white/30"}`}><span>{item.status === "sending" ? "Sending…" : item.status === "failed" ? "Couldn’t send" : messageTime(item.createdAt)}</span>{item.status === "failed" && <button type="button" disabled={sending} onClick={() => void sendMessage(item.message, item.id)} className="inline-flex items-center gap-1 font-medium text-[#d8f39a]"><RotateCcw className="h-2.5 w-2.5" />Retry</button>}</div></div></div>)}
-        {waitingForReply && <div className="flex items-end gap-2" aria-label="Prakhar is typing"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#d8f39a] text-[10px] font-bold text-[#11150f]">P</span><div className="flex h-10 items-center gap-1 rounded-[18px] rounded-bl-md bg-[#292c28] px-4"><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-white/55 [animation-delay:-.3s]"/><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-white/55 [animation-delay:-.15s]"/><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-white/55"/></div></div>}
+        <div className="flex items-end gap-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#d8f39a] text-[10px] font-bold text-[#11150f]">H</span><div className="max-w-[78%] rounded-[20px] rounded-bl-md bg-[#292c28] px-4 py-3 text-[13px] leading-5 text-white/90">Hi! I’m HUME’s AI assistant. I can help you choose a fragrance or connect you with our team.</div></div>
+        {messages.map(item => <div key={item.id} className={`flex items-end gap-2 ${item.sender === "customer" ? "justify-end" : "justify-start"}`}>{item.sender === "admin" && <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#d8f39a] text-[10px] font-bold text-[#11150f]">H</span>}<div className={`max-w-[78%] ${item.sender === "customer" ? "text-right" : "text-left"}`}><div className={`whitespace-pre-line rounded-[20px] px-4 py-3 text-left text-[13px] leading-5 ${item.sender === "customer" ? "rounded-br-md bg-[#d8f39a] text-[#11150f]" : "rounded-bl-md bg-[#292c28] text-white/90"}`}><MessageText text={item.message} customer={item.sender === "customer"}/></div><div className={`mt-1 flex items-center gap-1.5 px-1 text-[9px] ${item.sender === "customer" ? "justify-end" : "justify-start"} ${item.status === "failed" ? "text-[#ef9b91]" : "text-white/30"}`}><span>{item.status === "sending" ? "Sending…" : item.status === "failed" ? "Couldn’t send" : messageTime(item.createdAt)}</span>{item.status === "failed" && <button type="button" disabled={sending} onClick={() => void sendMessage(item.message, item.id)} className="inline-flex items-center gap-1 font-medium text-[#d8f39a]"><RotateCcw className="h-2.5 w-2.5" />Retry</button>}</div></div></div>)}
+        {waitingForReply && <div className="flex items-end gap-2" aria-label="HUME assistant is replying"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#d8f39a] text-[10px] font-bold text-[#11150f]">H</span><div className="flex h-10 items-center gap-1 rounded-[18px] rounded-bl-md bg-[#292c28] px-4"><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-white/55 [animation-delay:-.3s]"/><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-white/55 [animation-delay:-.15s]"/><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-white/55"/></div></div>}
         <div ref={end} />
       </div>
       <form onSubmit={send} className="border-t border-white/[.07] bg-[#11140f]/95 px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
