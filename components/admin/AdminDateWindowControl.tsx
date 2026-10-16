@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { CalendarRange, Check, ChevronDown, SlidersHorizontal } from "lucide-react";
+import { useState, useTransition } from "react";
+import { CalendarRange, Check, ChevronDown, SlidersHorizontal, Loader2 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   DropdownMenu,
@@ -25,6 +25,7 @@ export function AdminDateWindowControl() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
   const current = parseAdminTimeWindow(
     searchParams.get("hours"),
     searchParams.get("from"),
@@ -39,7 +40,7 @@ export function AdminDateWindowControl() {
     params.set("hours", String(hours));
     params.delete("from");
     params.delete("to");
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    startTransition(() => router.replace(`${pathname}?${params.toString()}`, { scroll: false }));
   };
 
   const applyCustomWindow = () => {
@@ -52,7 +53,7 @@ export function AdminDateWindowControl() {
     params.delete("hours");
     params.set("from", from.toISOString());
     params.set("to", to.toISOString());
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    startTransition(() => router.replace(`${pathname}?${params.toString()}`, { scroll: false }));
     setCustomOpen(false);
   };
 
@@ -66,10 +67,12 @@ export function AdminDateWindowControl() {
 
   return (
     <div className="flex shrink-0 items-center gap-1.5">
+    {isPending && <div role="status" className="fixed inset-x-3 top-20 z-[90] mx-auto flex w-fit items-center gap-3 rounded-2xl border border-[#c9b3ff]/30 bg-[#201b2b] px-5 py-3 text-sm text-[#e8ddff] shadow-xl"><Loader2 className="h-4 w-4 animate-spin" />Updating reporting period…</div>}
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
+          disabled={isPending}
           className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-[13px] border border-white/[0.09] bg-[#1b1b1e] text-left shadow-[inset_0_1px_rgba(255,255,255,.05)] outline-none transition hover:border-[#c9b3ff]/25 hover:bg-[#202024] focus-visible:ring-2 focus-visible:ring-[#c9b3ff]/35 xl:w-[190px] xl:justify-start xl:px-2"
           aria-label={`Date window: ${current.label}`}
         >
@@ -125,6 +128,7 @@ export function AdminDateWindowControl() {
               : "border-white/[0.09] bg-[#1b1b1e] text-white/55 hover:border-[#c9b3ff]/25 hover:bg-[#202024] hover:text-white"
           }`}
           aria-label="Select a custom date range"
+          disabled={isPending}
         >
           <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" />
           <span className="hidden md:inline">Custom</span>

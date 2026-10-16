@@ -266,8 +266,11 @@ export function OrdersTable({
   capturedAmounts?: Record<string, number>;
 }) {
   const [orderRows, setOrderRows] = useState(initialOrders);
+  useEffect(() => { setOrderRows(initialOrders); }, [initialOrders]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isSavingTracking, setIsSavingTracking] = useState(false);
+  const [trackingSaved, setTrackingSaved] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<OrderEditForm>({});
 
@@ -450,6 +453,7 @@ export function OrdersTable({
   };
 
   const openOrderDetails = (order: Order) => {
+    setTrackingSaved(false);
     setIsEditing(false);
 
     setSelectedOrder(order);
@@ -570,7 +574,7 @@ export function OrdersTable({
   };
 
   const handleSaveTracking = async () => {
-    if (!selectedOrder) return;
+    if (!selectedOrder || isUpdating || isSavingTracking) return;
     const trackingNumber = String(editForm.trackingNumber || "").trim().toUpperCase();
     const fulfillmentCarrier = String(editForm.fulfillmentCarrier || "shiprocket").trim();
     const trackingUrl = buildPublicTrackingUrl(trackingNumber, window.location.origin);
@@ -579,25 +583,38 @@ export function OrdersTable({
       fulfillmentCarrier,
       trackingNumber,
       trackingUrl,
+      expectedUpdatedAt: new Date(selectedOrder.updatedAt).toISOString(),
     };
 
-    if (trackingNumber) {
+    if (trackingNumber && !["shipped", "delivered"].includes(selectedOrder.status)) {
       payload.status = "shipped";
       payload.shippedAt = new Date().toISOString();
     }
 
     setIsUpdating(true);
+    setIsSavingTracking(true);
+    setTrackingSaved(false);
     try {
       const res = await fetch(`/api/admin/orders/${selectedOrder.id}`, {
         method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(30000),
       });
-      if (!res.ok) throw new Error("Failed to update tracking");
-      window.location.reload();
+      const data = await res.json();
+      if (!res.ok || !data.order) throw new Error(data.error || "Failed to update tracking");
+      setSelectedOrder(data.order);
+      setOrderRows(current => current.map(order => order.id === data.order.id ? data.order : order));
+      setEditForm(current => ({ ...current, ...data.order, fulfillmentCarrier: data.order.fulfillmentCarrier || "shiprocket" }));
+      setTrackingSaved(true);
+      toast({ title: "Tracking saved", description: "Your order is still open. You can now copy or share the tracking link." });
+      void loadCustomerActivity(data.order.id);
     } catch (error) {
       console.error(error);
+      toast({ title: "Tracking could not be confirmed", description: error instanceof Error ? error.message : "Please check the order before retrying.", variant: "destructive" });
     } finally {
       setIsUpdating(false);
+      setIsSavingTracking(false);
     }
   };
 
@@ -917,6 +934,7 @@ export function OrdersTable({
       </div>
 
       <Sheet open={!!selectedOrder} onOpenChange={(open) => {
+        if (!open && isSavingTracking) return;
         if (!open) {
           activityRequestRef.current += 1;
           setSelectedOrder(null);
@@ -1338,7 +1356,8 @@ export function OrdersTable({
                           disabled={isUpdating}
                           className="rounded-xl bg-emerald-500 text-black hover:bg-emerald-400"
                         >
-                          Save Tracking
+                          {isSavingTracking && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                          {isSavingTracking ? "Saving tracking…" : "Save Tracking"}
                         </Button>
                         <Button
                           type="button"
@@ -1358,6 +1377,7 @@ export function OrdersTable({
                         </Button>
                       </div>
 
+                      {trackingSaved && <p role="status" className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-3 text-sm text-emerald-200">Tracking saved. Copy or share the link below.</p>}
                       {selectedOrder.trackingNumber && (
                         <div className="grid gap-2 sm:grid-cols-2">
                           <Button

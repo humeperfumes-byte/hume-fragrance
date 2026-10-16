@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -246,12 +246,17 @@ export default function DashboardPage() {
   const [financeGranularity, setFinanceGranularity] = useState<FinanceGranularity>("monthly");
   const [financeLoading, setFinanceLoading] = useState(true);
   const [loading, setLoading] = useState(true);
+  const dashboardRequest = useRef(0);
+  const financeRequest = useRef(0);
+  const [refreshError, setRefreshError] = useState("");
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState(() => dateKey(new Date()));
   const [selectedProductId, setSelectedProductId] = useState("revenue");
 
   const loadData = useCallback(async () => {
+    const requestId = ++dashboardRequest.current;
     setLoading(true);
+    setRefreshError("");
     try {
       const params = new URLSearchParams({ market });
       if (selectedWindow.isCustom && windowFromParam && windowToParam) {
@@ -262,16 +267,19 @@ export default function DashboardPage() {
       }
       const response = await fetch(`/api/admin/dashboard?${params.toString()}`, {
         cache: "no-store",
+        signal: AbortSignal.timeout(30000),
       });
 
       if (!response.ok) throw new Error("Failed to load dashboard");
       const data = await response.json();
-      setAnalytics(data);
+      if (requestId === dashboardRequest.current) setAnalytics(data);
     } catch (error) {
+      if (requestId !== dashboardRequest.current) return;
       console.error(error);
+      setRefreshError("This period could not be loaded. Any figures below are from the previous successful refresh. Please retry.");
       toast({ title: "Failed to refresh dashboard", variant: "destructive" });
     } finally {
-      setLoading(false);
+      if (requestId === dashboardRequest.current) setLoading(false);
     }
   }, [market, selectedWindow.hours, selectedWindow.isCustom, windowFromParam, windowToParam]);
 
@@ -280,17 +288,20 @@ export default function DashboardPage() {
   }, [loadData]);
 
   const loadFinanceData = useCallback(async () => {
+    const requestId = ++financeRequest.current;
     setFinanceLoading(true);
     try {
       const params = new URLSearchParams({ market, granularity: financeGranularity });
-      const response = await fetch(`/api/admin/finance-trends?${params.toString()}`, { cache: "no-store" });
+      const response = await fetch(`/api/admin/finance-trends?${params.toString()}`, { cache: "no-store", signal: AbortSignal.timeout(30000) });
       if (!response.ok) throw new Error("Failed to load finance trends");
-      setFinanceTrends(await response.json());
+      const data = await response.json();
+      if (requestId === financeRequest.current) setFinanceTrends(data);
     } catch (error) {
+      if (requestId !== financeRequest.current) return;
       console.error(error);
       toast({ title: "Failed to refresh finance trends", variant: "destructive" });
     } finally {
-      setFinanceLoading(false);
+      if (requestId === financeRequest.current) setFinanceLoading(false);
     }
   }, [financeGranularity, market]);
 
@@ -366,6 +377,8 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-[1540px] space-y-4 sm:space-y-5">
+      {loading && <div role="status" className="sticky top-20 z-10 flex items-center gap-3 rounded-2xl border border-[#c9b3ff]/25 bg-[#201b2b] px-4 py-3 text-sm text-[#e8ddff] shadow-lg"><RefreshCcw className="h-4 w-4 animate-spin" /><span>Loading {selectedWindow.label}…{analytics ? " Previous figures remain visible until the update finishes." : ""}</span></div>}
+      {refreshError && <div role="alert" className="rounded-2xl border border-amber-400/25 bg-amber-400/10 p-4 text-sm text-amber-100">{refreshError}<button type="button" className="ml-3 font-semibold underline" onClick={() => void loadData()}>Retry</button></div>}
       <div className="flex justify-end">
         <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center">
           <div className="admin-page-intro-copy min-w-0">
