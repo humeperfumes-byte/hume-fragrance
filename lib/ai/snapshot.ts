@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
-import { and, gte, lte } from "drizzle-orm";
+import { and, gte, lt, or } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -12,11 +12,15 @@ import {
   customerFeedback,
   flyerCampaignEvents,
   orders,
+  safeDiagnostics,
   products,
   reviews,
   stockNotifyRequests,
 } from "@/db/schema";
 import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-data-filters";
+
+import { completedBusinessWeeks, businessContext, percentChange, safeAnalyticsPath, capturedFundsInWindow } from "./business-context";
+import { readCheckoutActivity } from "../checkout-activity";
 
 type CartItem = {
   id: string;
@@ -30,6 +34,9 @@ type SafeOrder = {
   sessionId: string;
   status: string;
   paymentMethod: string | null;
+  paymentCapturedAt: Date | null;
+  capturedPaymentAmount: string | null;
+  checkoutChannel: string;
   trackingNumber: string | null;
   shippedAt: Date | null;
   deliveredAt: Date | null;
@@ -48,16 +55,12 @@ function money(value: unknown) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function isPartialCodOrder(order: SafeOrder) {
-  return Boolean(order.paymentMethod?.includes("Prepaid") && order.paymentMethod.includes("Cash on Delivery"));
-}
-
 function isRevenueQualifiedOrder(order: SafeOrder) {
   if (["cancelled", "payment_pending", "payment_failed", "refunded", "partially_refunded"].includes(order.status)) {
     return false;
   }
   return Boolean(
-    order.trackingNumber ||
+    order.paymentCapturedAt || order.trackingNumber ||
       order.shippedAt ||
       order.deliveredAt ||
       ["shipped", "delivered", "complete"].includes(order.status) ||
@@ -65,26 +68,11 @@ function isRevenueQualifiedOrder(order: SafeOrder) {
   );
 }
 
-function recognizedRevenue(order: SafeOrder) {
-  const total = money(order.grandTotal);
-  if (!isPartialCodOrder(order)) return total;
-  if (order.deliveredAt || ["delivered", "complete", "shipped"].includes(order.status) || order.trackingNumber || order.shippedAt) {
-    return total;
-  }
-  const parsed = Number(order.paymentMethod?.match(/(\d+)%\s*Prepaid/i)?.[1] ?? 20);
-  return Math.round(total * ((Number.isFinite(parsed) ? parsed : 20) / 100));
-}
-
 function orderUnits(order: SafeOrder) {
   return order.cartSnapshot.reduce(
     (sum, item) => sum + (item.isGift ? 0 : Math.max(0, Number(item.quantity || 0))),
     0,
   );
-}
-
-function percentChange(current: number, previous: number) {
-  if (previous <= 0) return current > 0 ? 100 : 0;
-  return Math.round(((current - previous) / previous) * 1000) / 10;
 }
 
 function increment(map: Map<string, number>, key: string, by = 1) {
@@ -105,7 +93,7 @@ function safeRate(numerator: number, denominator: number) {
 
 function summarizeOrders(rows: SafeOrder[]) {
   const qualified = rows.filter(isRevenueQualifiedOrder);
-  const revenue = qualified.reduce((sum, row) => sum + recognizedRevenue(row), 0);
+  const revenue = rows.reduce((sum, row) => sum + (row.paymentCapturedAt ? money(row.capturedPaymentAmount) : 0), 0);
   const units = qualified.reduce((sum, row) => sum + orderUnits(row), 0);
   const statusMix = new Map<string, number>();
   const paymentMix = new Map<string, number>();
@@ -117,8 +105,10 @@ function summarizeOrders(rows: SafeOrder[]) {
     qualifiedOrders: qualified.length,
     totalOrderRecords: rows.length,
     revenue,
+    qualifiedOrderValue: qualified.reduce((sum, row) => sum + money(row.grandTotal), 0),
+    capturedOrders: rows.filter(row => row.paymentCapturedAt).length,
     units,
-    averageOrderValue: qualified.length ? Math.round(revenue / qualified.length) : 0,
+    averageOrderValue: qualified.length ? Math.round(qualified.reduce((sum, row) => sum + money(row.grandTotal), 0) / qualified.length) : 0,
     statusMix: topEntries(statusMix, 12),
     paymentMix: topEntries(paymentMix, 8),
   };
@@ -132,17 +122,18 @@ function customerKey(row: Pick<SafeOrder, "phone" | "email">) {
 }
 
 export async function buildAiAnalyticsSnapshot(now = new Date()) {
-  const periodEnd = now;
-  const periodStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const previousStart = new Date(periodStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const { periodEnd, periodStart, previousStart } = completedBusinessWeeks(now);
 
-  const [orderRows, draftRows, cartRows, behaviorRows, productRows, reviewRows, notifyRows, couponRows, feedbackRows, flyerRows] =
+  const [orderRows, draftRows, cartRows, behaviorRows, productRows, reviewRows, notifyRows, couponRows, feedbackRows, flyerRows, diagnosticRows] =
     await Promise.all([
       db
         .select({
           sessionId: orders.sessionId,
           status: orders.status,
           paymentMethod: orders.paymentMethod,
+          checkoutChannel: orders.checkoutChannel,
+          capturedPaymentAmount: orders.capturedPaymentAmount,
+          paymentCapturedAt: orders.paymentCapturedAt,
           trackingNumber: orders.trackingNumber,
           shippedAt: orders.shippedAt,
           deliveredAt: orders.deliveredAt,
@@ -156,7 +147,7 @@ export async function buildAiAnalyticsSnapshot(now = new Date()) {
           userAgent: orders.userAgent,
         })
         .from(orders)
-        .where(and(gte(orders.createdAt, previousStart), lte(orders.createdAt, periodEnd)))
+        .where(or(and(gte(orders.createdAt, previousStart), lt(orders.createdAt, periodEnd)), and(gte(orders.paymentCapturedAt, previousStart), lt(orders.paymentCapturedAt, periodEnd))))
         .limit(10000),
       db
         .select({
@@ -166,13 +157,15 @@ export async function buildAiAnalyticsSnapshot(now = new Date()) {
           state: checkoutDrafts.state,
           cartSnapshot: checkoutDrafts.cartSnapshot,
           updatedAt: checkoutDrafts.updatedAt,
+          createdAt: checkoutDrafts.createdAt,
+          pricingBreakdown: checkoutDrafts.pricingBreakdown,
           phone: checkoutDrafts.phone,
           email: checkoutDrafts.email,
           ipAddress: checkoutDrafts.ipAddress,
           userAgent: checkoutDrafts.userAgent,
         })
         .from(checkoutDrafts)
-        .where(and(gte(checkoutDrafts.updatedAt, previousStart), lte(checkoutDrafts.updatedAt, periodEnd)))
+        .where(and(gte(checkoutDrafts.createdAt, previousStart), lt(checkoutDrafts.createdAt, periodEnd)))
         .limit(10000),
       db
         .select({
@@ -186,7 +179,7 @@ export async function buildAiAnalyticsSnapshot(now = new Date()) {
           userAgent: cartEvents.userAgent,
         })
         .from(cartEvents)
-        .where(and(gte(cartEvents.createdAt, previousStart), lte(cartEvents.createdAt, periodEnd)))
+        .where(and(gte(cartEvents.createdAt, previousStart), lt(cartEvents.createdAt, periodEnd)))
         .limit(10000),
       db
         .select({
@@ -200,7 +193,7 @@ export async function buildAiAnalyticsSnapshot(now = new Date()) {
           userAgent: behavioralEvents.userAgent,
         })
         .from(behavioralEvents)
-        .where(and(gte(behavioralEvents.createdAt, previousStart), lte(behavioralEvents.createdAt, periodEnd)))
+        .where(and(gte(behavioralEvents.createdAt, previousStart), lt(behavioralEvents.createdAt, periodEnd)))
         .limit(10000),
       db
         .select({
@@ -216,28 +209,29 @@ export async function buildAiAnalyticsSnapshot(now = new Date()) {
       db
         .select({ productId: reviews.productId, rating: reviews.rating, verified: reviews.verified, createdAt: reviews.createdAt })
         .from(reviews)
-        .where(lte(reviews.createdAt, periodEnd))
+        .where(lt(reviews.createdAt, periodEnd))
         .limit(10000),
       db
         .select({ productName: stockNotifyRequests.productName, status: stockNotifyRequests.status, createdAt: stockNotifyRequests.createdAt })
         .from(stockNotifyRequests)
-        .where(and(gte(stockNotifyRequests.createdAt, periodStart), lte(stockNotifyRequests.createdAt, periodEnd)))
+        .where(and(gte(stockNotifyRequests.createdAt, periodStart), lt(stockNotifyRequests.createdAt, periodEnd)))
         .limit(5000),
       db
         .select({ channel: couponCodeEvents.channel, eventType: couponCodeEvents.eventType, createdAt: couponCodeEvents.createdAt })
         .from(couponCodeEvents)
-        .where(and(gte(couponCodeEvents.createdAt, periodStart), lte(couponCodeEvents.createdAt, periodEnd)))
+        .where(and(gte(couponCodeEvents.createdAt, periodStart), lt(couponCodeEvents.createdAt, periodEnd)))
         .limit(5000),
       db
         .select({ rating: customerFeedback.rating, source: customerFeedback.source, createdAt: customerFeedback.createdAt })
         .from(customerFeedback)
-        .where(and(gte(customerFeedback.createdAt, periodStart), lte(customerFeedback.createdAt, periodEnd)))
+        .where(and(gte(customerFeedback.createdAt, periodStart), lt(customerFeedback.createdAt, periodEnd)))
         .limit(5000),
       db
         .select({ city: flyerCampaignEvents.city, eventType: flyerCampaignEvents.eventType, revenue: flyerCampaignEvents.revenue, createdAt: flyerCampaignEvents.createdAt })
         .from(flyerCampaignEvents)
-        .where(and(gte(flyerCampaignEvents.createdAt, periodStart), lte(flyerCampaignEvents.createdAt, periodEnd)))
+        .where(and(gte(flyerCampaignEvents.createdAt, periodStart), lt(flyerCampaignEvents.createdAt, periodEnd)))
         .limit(5000),
+      db.select({ code: safeDiagnostics.code, at: safeDiagnostics.occurredAt }).from(safeDiagnostics).where(and(gte(safeDiagnostics.occurredAt, previousStart), lt(safeDiagnostics.occurredAt, periodEnd))).limit(10000),
     ]);
 
   const excludedSessionIds = collectExcludedSessionIds(orderRows, draftRows, cartRows, behaviorRows);
@@ -245,15 +239,16 @@ export async function buildAiAnalyticsSnapshot(now = new Date()) {
   const safeDrafts = filterExcludedAdminRows(draftRows, excludedSessionIds);
   const safeCart = filterExcludedAdminRows(cartRows, excludedSessionIds);
   const safeBehavior = filterExcludedAdminRows(behaviorRows, excludedSessionIds);
-  const currentOrders = safeOrders.filter((row) => row.createdAt >= periodStart);
-  const previousOrders = safeOrders.filter((row) => row.createdAt < periodStart);
-  const currentSales = summarizeOrders(currentOrders);
-  const previousSales = summarizeOrders(previousOrders);
+  const currentOrders = safeOrders.filter((row) => row.createdAt >= periodStart && row.createdAt < periodEnd);
+  const previousOrders = safeOrders.filter((row) => row.createdAt >= previousStart && row.createdAt < periodStart);
+  const collected = (start: Date, end: Date) => capturedFundsInWindow(safeOrders, start, end);
+  const currentSales = { ...summarizeOrders(currentOrders), revenue: collected(periodStart, periodEnd) };
+  const previousSales = { ...summarizeOrders(previousOrders), revenue: collected(previousStart, periodStart) };
 
   const currentCart = safeCart.filter((row) => row.createdAt >= periodStart);
   const previousCart = safeCart.filter((row) => row.createdAt < periodStart);
-  const currentDrafts = safeDrafts.filter((row) => row.updatedAt >= periodStart);
-  const previousDrafts = safeDrafts.filter((row) => row.updatedAt < periodStart);
+  const currentDrafts = safeDrafts.filter((row) => row.createdAt >= periodStart);
+  const previousDrafts = safeDrafts.filter((row) => row.createdAt < periodStart);
   const currentBehavior = safeBehavior.filter((row) => row.createdAt >= periodStart);
   const previousBehavior = safeBehavior.filter((row) => row.createdAt < periodStart);
 
@@ -266,7 +261,9 @@ export async function buildAiAnalyticsSnapshot(now = new Date()) {
     ].filter(Boolean)).size;
     const cartVisitors = new Set(cart.map((row) => row.sessionId)).size;
     const addToCart = cart.filter((row) => row.eventType === "add_to_cart").length;
-    const checkoutSessions = new Set(drafts.map((row) => row.sessionId)).size;
+    const checkoutIds = new Set(drafts.map((row) => row.sessionId));
+    const checkoutSessions = checkoutIds.size;
+    const convertedSessions = new Set(orderData.filter(isRevenueQualifiedOrder).filter(row => checkoutIds.has(row.sessionId)).map(row => row.sessionId)).size;
     const qualifiedOrders = orderData.filter(isRevenueQualifiedOrder).length;
     return {
       visitors,
@@ -274,9 +271,10 @@ export async function buildAiAnalyticsSnapshot(now = new Date()) {
       addToCart,
       checkoutSessions,
       qualifiedOrders,
+      matchedConvertedSessions: convertedSessions,
       visitorToCartRate: safeRate(cartVisitors, visitors),
       cartToCheckoutRate: safeRate(checkoutSessions, cartVisitors),
-      checkoutToOrderRate: safeRate(qualifiedOrders, checkoutSessions),
+      checkoutToOrderRate: safeRate(convertedSessions, checkoutSessions),
       visitorToOrderRate: safeRate(qualifiedOrders, visitors),
     };
   };
@@ -304,7 +302,7 @@ export async function buildAiAnalyticsSnapshot(now = new Date()) {
   const pageViews = new Map<string, number>();
   currentBehavior
     .filter((row) => row.eventType === "page_view" && row.path)
-    .forEach((row) => increment(pageViews, String(row.path).split("?")[0]));
+    .forEach((row) => increment(pageViews, safeAnalyticsPath(String(row.path))));
 
   const customerCounts = new Map<string, number>();
   currentOrders.filter(isRevenueQualifiedOrder).forEach((row) => {
@@ -330,7 +328,14 @@ export async function buildAiAnalyticsSnapshot(now = new Date()) {
   const feedbackSources = new Map<string, number>();
   feedbackRows.forEach((row) => increment(feedbackSources, row.source));
 
+  const activityCounts = (start: Date, end: Date) => {
+    const counts = new Map<string, number>();
+    safeDrafts.forEach(draft => readCheckoutActivity(draft.pricingBreakdown?.checkoutActivity).filter(event => new Date(event.at) >= start && new Date(event.at) < end).forEach(event => increment(counts, event.event)));
+    return topEntries(counts, 25);
+  };
   const snapshot = {
+    businessContext,
+    dataQuality: { confidence: currentOrders.length < 30 || currentFunnel.checkoutSessions < 100 ? "low" : "medium", caveats: ["Small weekly samples can cause large percentage swings; quote raw counts alongside rates.", "Drafts are a creation-week cohort and mutable; later resumes can change historical classification.", "Captured amounts are gross Razorpay captures, not net revenue, settlements, profit or proof of COD collection.", "Missing tracking events do not prove a customer motive; blocked cookies and missing telemetry can affect coverage.", "Results are capped; reaching a query cap means coverage is incomplete.", "Historic reports before business context v2 used different revenue and window definitions; do not compare their headline numbers directly."], queryCapsReached: { orders: orderRows.length >= 10000, drafts: draftRows.length >= 10000, cart: cartRows.length >= 10000, behavior: behaviorRows.length >= 10000, diagnostics: diagnosticRows.length >= 10000 } },
     period: {
       currentFrom: periodStart.toISOString(),
       currentTo: periodEnd.toISOString(),
@@ -347,12 +352,14 @@ export async function buildAiAnalyticsSnapshot(now = new Date()) {
         unitsPercent: percentChange(currentSales.units, previousSales.units),
         averageOrderValuePercent: percentChange(currentSales.averageOrderValue, previousSales.averageOrderValue),
       },
+      fulfillment: { paidAwaitingDispatch: currentOrders.filter(row => row.paymentCapturedAt && !row.shippedAt && !["shipped", "delivered", "cancelled", "refunded"].includes(row.status)).length, shippedMissingTracking: currentOrders.filter(row => row.status === "shipped" && !row.trackingNumber).length },
       topOrderedProducts: topEntries(orderedProducts),
       regionsWithAtLeastThreeOrders: safeRegions,
     },
     conversion: {
       current: currentFunnel,
       previous: previousFunnel,
+      observedStages: { current: activityCounts(periodStart, periodEnd), previous: activityCounts(previousStart, periodStart), note: "Counts of retained events on drafts created in the two-week cohort, not unique customers; history can be truncated." },
       abandonedDrafts: currentDrafts.filter((row) => !["complete", "converted"].includes(row.status)).length,
       abandonedDraftValue: currentDrafts
         .filter((row) => !["complete", "converted"].includes(row.status))
@@ -361,6 +368,7 @@ export async function buildAiAnalyticsSnapshot(now = new Date()) {
     },
     catalog: {
       products: productRows.length,
+      publicSoldOutProducts: productRows.filter(row => row.visibility === "public" && row.badges?.soldOut).length,
       publicProducts: productRows.filter((row) => row.visibility === "public").length,
       soldOutProducts: productRows.filter((row) => row.badges?.soldOut).length,
       limitedStockProducts: productRows.filter((row) => row.badges?.limitedStock).length,
@@ -378,7 +386,7 @@ export async function buildAiAnalyticsSnapshot(now = new Date()) {
       soldOutProductFlags: productRows.filter((row) => row.badges?.soldOut).length,
       notifyRequestsThisWeek: notifyRows.length,
       topNotifyProducts: topEntries(notifyDemand),
-      note: "Inventory quantities are frontend-only and are intentionally excluded from AI analysis.",
+      note: "This snapshot exposes catalogue availability flags, not verified warehouse quantities or historical stock movement.",
     },
     customers: {
       identifiedOrderingCustomers: customerCounts.size,
@@ -397,6 +405,7 @@ export async function buildAiAnalyticsSnapshot(now = new Date()) {
       topLandingPages: topEntries(pageViews),
     },
     system: {
+      diagnostics: { current: topEntries(diagnosticRows.filter(row => row.at >= periodStart).reduce((map, row) => { increment(map, row.code); return map; }, new Map<string, number>())), previous: topEntries(diagnosticRows.filter(row => row.at < periodStart).reduce((map, row) => { increment(map, row.code); return map; }, new Map<string, number>())) },
       generatedFrom: [
         "orders",
         "checkout_drafts",

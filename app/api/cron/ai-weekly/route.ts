@@ -4,7 +4,7 @@ import { generateStoredAiReport, serializeAiReport } from "@/lib/ai/reports";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 function isAuthorizedCronRequest(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET?.trim();

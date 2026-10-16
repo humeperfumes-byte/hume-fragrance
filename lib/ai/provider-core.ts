@@ -37,6 +37,7 @@ const FORBIDDEN_KEYS = new Set([
 function redactString(value: string) {
   return value
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[redacted-email]")
+    .replace(/\/(checkout|order|checkout-resume)\/[^\s?"<>]+/gi, "/$1/[private]")
     .replace(/(?:\+?91[-\s]?)?[6-9]\d{9}/g, "[redacted-phone]");
 }
 

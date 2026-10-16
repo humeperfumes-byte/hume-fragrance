@@ -1,7 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { desc, eq, gte, lt } from "drizzle-orm";
+import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { aiAnalyticsReports } from "@/db/schema";
@@ -34,6 +34,7 @@ export function serializeAiReport(row: typeof aiAnalyticsReports.$inferSelect | 
     model: row.model,
     report: parsedReport?.success ? parsedReport.data : null,
     attempts: row.attempts,
+    contextVersion: typeof row.report?.contextVersion === "number" ? row.report.contextVersion : 1,
     error: row.error,
     durationMs: row.durationMs,
     createdAt: row.createdAt.toISOString(),
@@ -122,7 +123,15 @@ export async function generateStoredAiReport(trigger: AiReportTrigger) {
   }
 
   const id = randomUUID();
-  await db.insert(aiAnalyticsReports).values({
+  const reused = await db.transaction(async tx => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('hume-weekly-ai-report'))`);
+    const [active] = await tx.select().from(aiAnalyticsReports).where(and(eq(aiAnalyticsReports.status, "processing"), gte(aiAnalyticsReports.createdAt, new Date(Date.now() - PROCESSING_STALE_MS)))).limit(1);
+    if (active) throw new Error("An AI report is already being generated");
+    if (trigger === "scheduled") {
+      const [completed] = await tx.select().from(aiAnalyticsReports).where(and(eq(aiAnalyticsReports.status, "completed"), eq(aiAnalyticsReports.periodStart, aggregate.periodStart), eq(aiAnalyticsReports.periodEnd, aggregate.periodEnd))).limit(1);
+      if (completed) return completed;
+    }
+    await tx.insert(aiAnalyticsReports).values({
     id,
     periodStart: aggregate.periodStart,
     periodEnd: aggregate.periodEnd,
@@ -131,17 +140,23 @@ export async function generateStoredAiReport(trigger: AiReportTrigger) {
     inputHash: aggregate.inputHash,
     attempts: [],
   });
+    return null;
+  });
+  if (reused) return reused;
 
   const startedAt = Date.now();
   try {
-    const generated = await generateAiAnalyticsReport(aggregate.snapshot);
+    const [previous] = await db.select().from(aiAnalyticsReports).where(and(eq(aiAnalyticsReports.status, "completed"), lt(aiAnalyticsReports.periodStart, aggregate.periodStart))).orderBy(desc(aiAnalyticsReports.periodStart)).limit(1);
+    const previousParsed = aiAnalyticsReportSchema.safeParse(previous?.report);
+    const previousReport = previous && previousParsed.success ? { periodStart: previous.periodStart.toISOString(), periodEnd: previous.periodEnd.toISOString(), comparableDefinitions: previous.report?.contextVersion === 2, executiveSummary: previousParsed.data.executiveSummary, recommendedActions: previousParsed.data.recommendedActions, caution: "Historical recommendations do not establish actions completed; old report definitions may differ. Numeric comparisons must use the current snapshot's two windows." } : null;
+    const generated = await generateAiAnalyticsReport({ ...aggregate.snapshot, previousReport });
     const [completed] = await db
       .update(aiAnalyticsReports)
       .set({
         status: "completed",
         provider: generated.provider,
         model: generated.model,
-        report: generated.report as Record<string, unknown>,
+        report: { ...generated.report, contextVersion: 2 } as Record<string, unknown>,
         attempts: generated.attempts,
         durationMs: Date.now() - startedAt,
         completedAt: new Date(),

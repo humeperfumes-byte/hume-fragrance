@@ -45,6 +45,7 @@ type ReportContent = {
 
 type StoredReport = {
   id: string;
+  contextVersion?: number;
   periodStart: string;
   periodEnd: string;
   trigger: string;
@@ -169,7 +170,7 @@ export function AdminAiInsightDock() {
           <div className="mt-4 flex flex-wrap items-center gap-2 text-[10px] text-white/32">
             <span>{formatDate(state?.latest?.completedAt)}</span>
             {state?.latest?.model ? <span className="rounded-full border border-white/8 bg-white/[0.035] px-2 py-1">{state.latest.model}</span> : null}
-            {usedFallback ? <span className="rounded-full border border-amber-300/15 bg-amber-300/[0.055] px-2 py-1 text-amber-100/70">Fallback used</span> : null}
+            {usedFallback ? <span className="rounded-full border border-amber-300/15 bg-amber-300/[0.055] px-2 py-1 text-amber-100/70">Backup model used</span> : null}
             <span className="capitalize">{sectionKey}</span>
           </div>
         </div>
@@ -255,11 +256,16 @@ export function AdminAiExecutiveBrief() {
       <div className="flex flex-col gap-4 border-b border-white/[0.08] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
         <div className="flex items-start gap-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#c9b3ff]/20 bg-[#c9b3ff]/10 text-[#dacaff]"><BrainCircuit className="h-5 w-5" /></span>
-          <div><div className="flex flex-wrap items-center gap-2"><p className="text-[10px] font-bold uppercase tracking-[.19em] text-[#c9b3ff]/65">Weekly executive intelligence</p>{state ? <StatusPill state={state} /> : null}{usedFallback ? <span className="rounded-full border border-amber-300/15 bg-amber-300/[0.055] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[.12em] text-amber-100/75">Fallback used</span> : null}</div><h2 className="mt-2 text-xl font-medium text-white">{content?.sections.executive.headline || "Your AI business brief"}</h2><p className="mt-1 text-xs text-white/35">{latest ? `${formatDate(latest.completedAt)} · ${latest.provider} / ${latest.model}` : "Runs Monday at 8:00 AM IST"}</p></div>
+          <div><div className="flex flex-wrap items-center gap-2"><p className="text-[10px] font-bold uppercase tracking-[.19em] text-[#c9b3ff]/65">Weekly executive intelligence</p>{state ? <StatusPill state={state} /> : null}{usedFallback ? <span className="rounded-full border border-amber-300/15 bg-amber-300/[0.055] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[.12em] text-amber-100/75">Backup model used</span> : null}</div><h2 className="mt-2 text-xl font-medium text-white">{content?.sections.executive.headline || "Your AI business brief"}</h2><p className="mt-1 text-xs text-white/35">{latest ? `${formatDate(latest.completedAt)} · ${latest.provider} / ${latest.model}` : "Runs Monday at 8:00 AM IST"}</p></div>
         </div>
         <button type="button" onClick={() => void generate()} disabled={generating || loading || !state?.ai.ready} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/12 bg-white px-4 text-xs font-bold text-black transition hover:bg-[#ddd2ff] disabled:cursor-not-allowed disabled:opacity-40">{generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}{generating ? "Analyzing business…" : "Generate fresh report"}</button>
       </div>
 
+      {latest && <div className="border-b border-white/[0.08] px-5 py-3 text-xs leading-6 text-white/50 sm:px-6">
+        <p>Reporting week: {new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium" }).format(new Date(latest.periodStart))} – {new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium" }).format(new Date(new Date(latest.periodEnd).getTime() - 1))} IST · Automatic report every Monday, 8:00 AM IST.</p>
+        <p>{latest.contextVersion === 2 ? "Compared with the preceding completed week. Captured funds and order value are separate; see each section’s confidence and evidence." : "Legacy report: generated with older metric definitions. Generate a fresh report to use the updated business context."}</p>
+        {usedFallback && <p>A backup AI model generated this report after an earlier model failed. This label does not mean business metrics were estimated.</p>}
+      </div>}
       <div className="p-5 sm:p-6">
         {loading ? <div className="h-36 animate-pulse rounded-2xl bg-white/[0.035]" /> : null}
         {error ? <div className="rounded-2xl border border-rose-400/15 bg-rose-400/[0.05] p-5 text-sm text-rose-100">{error}</div> : null}
