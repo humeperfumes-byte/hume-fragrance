@@ -271,7 +271,7 @@ export default function InvoicePage() {
               {/* Invoice Header */}
               <div className="flex justify-between items-start border-b border-black/10 pb-8">
                 <div>
-                  <img src="/images/logo/brown cursive hf png.png" alt="HUME Logo" className="h-16 w-auto object-contain" />
+                  <img src="/images/logo/invoice-hume-black.png" alt="HUME Fragrance" width={1958} height={803} className="h-16 w-auto object-contain" />
                   <p className="text-sm font-bold tracking-[0.15em] text-black uppercase mt-2">HUME FRAGRANCE</p>
                   <div className="text-xs md:text-sm leading-relaxed text-black/75 mt-4 max-w-[320px]">
                     <p className="font-semibold text-black">{sellerName}</p>
