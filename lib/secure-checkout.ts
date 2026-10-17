@@ -24,6 +24,7 @@ import { sendAdminOrderAlert } from "./notifications/admin-order-alert";
 import type { Order } from "@/db/schema";
 import type { SafeErrorCode } from "./safe-error-monitoring";
 import { checkoutCanContinue, checkoutDraftAlert, hasCheckoutContact } from "./checkout-continuation";
+import {isExternallySettled} from './external-order-payment';
 import { sendAdminCheckoutDraftAlert } from "./notifications/admin-order-alert";
 import { displayPhoneNumber } from "./phone";
 import { resolveIndiaAwareCountry } from "./admin-market";
@@ -441,6 +442,7 @@ export async function recoverSecurePayment(request: NextRequest) {
     const { session, token } = await requireCheckoutSession(request);
     let [order] = await db.select().from(orders).where(eq(orders.id, session.orderId)).limit(1);
     if (!order) return NextResponse.json({ confirmed: false, state: "draft", canPay: true }, { headers: privateHeaders });
+    if(isExternallySettled(order))return NextResponse.json({confirmed:true,canPay:false,orderPath:`/order/${deriveOrderToken(token)}`},{headers:privateHeaders});
     if (order.paymentSyncStatus === "switching" && order.updatedAt < new Date(Date.now() - 60000)) {
       // A terminated function can leave a mode-change claim behind. Recover
       // only the claim under the same lock; never change a provider reference.

@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { Product, Order } from "@/db/schema";
 import { MANUAL_LINK_CHANNEL, readManualPayment } from "@/lib/manual-order";
+import {isExternallySettled,readExternalReceipt} from '@/lib/external-order-payment';
 
 const money = (minor: number) => `₹${(minor / 100).toFixed(2)}`;
 export function ManualPaymentPanel({ order, onUpdate, generating = false }: { order: Order; onUpdate?: (order: Order) => void; generating?: boolean }) {
@@ -16,6 +17,7 @@ export function ManualPaymentPanel({ order, onUpdate, generating = false }: { or
   if (order.checkoutChannel !== MANUAL_LINK_CHANNEL) return null;
   const payment = readManualPayment(order.whatsappMessage);
   if (!payment) return null;
+  if(isExternallySettled(order)){const receipt=readExternalReceipt(order.externalPaymentReceipt);return <div className="rounded-xl border border-emerald-400/25 bg-emerald-400/5 p-4"><h3 className="font-semibold">Confirmed · Fully paid</h3><p className="mt-2 text-sm">Total {money(payment.totalMinor)} · COD ₹0.00</p><p className="mt-1 text-xs text-muted-foreground">Payment received outside the website · {receipt?.reference}</p></div>;}
   async function act(action: string) {
     setBusy(true);
     try {
@@ -63,7 +65,9 @@ export function ManualOrderCreator({ products }: { products: Product[] }) {
       const response = await fetch("/api/admin/orders/manual?saveOnly=1", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: AbortSignal.timeout(30000) });
       const data = await response.json();
       if (!response.ok) { if (response.status === 400) pendingRequest.current = null; throw new Error(data.error || "Could not create order"); }
-      setResult(data.order); setStage("Order saved. Generating payment link…");
+      setResult(data.order);
+      if(isExternallySettled(data.order)){toast.success('Confirmed, fully paid order created');router.refresh();return;}
+      setStage("Order saved. Generating payment link…");
       try {
         const linkResponse = await fetch(`/api/admin/orders/${encodeURIComponent(data.order.id)}/payment-link`, { method: "POST", signal: AbortSignal.timeout(30000) });
         const linkData = await linkResponse.json();
@@ -103,12 +107,13 @@ export function ManualOrderCreator({ products }: { products: Product[] }) {
         <div className="grid gap-3 sm:grid-cols-2"><label className="text-sm">Shipping fee (₹)<input className={inputClass} type="number" min="0" max="10000" step="0.01" value={shipping} onChange={e => setShipping(Number(e.target.value))} /></label><label className="text-sm">Discount (₹)<input className={inputClass} type="number" min="0" step="0.01" value={discount} onChange={e => setDiscount(Number(e.target.value))} /></label></div>
         <label className="block text-sm">Discount reason<input name="adjustmentReason" required={discount > 0} className={inputClass} /></label>
         <label className="block text-sm">Order notes<textarea name="notes" className={inputClass} /></label>
-        <label className="block text-sm">Payment option<select value={mode} onChange={e => setMode(e.target.value)} className={inputClass}><option value="full">100% online payment</option><option value="partial_cod">20% online advance + 80% COD</option></select></label>
-        <p className="text-sm">Total {money(total)} · Online {money(advance)} · COD {money(total - advance)}</p>
-        <p className="text-xs text-muted-foreground">Creates a pending order and a payment link. Copy and share the link yourself; no message is sent automatically.</p>
+        <label className="block text-sm">Payment option<select value={mode} onChange={e => setMode(e.target.value)} className={inputClass}><option value="full">100% online payment</option><option value="partial_cod">20% online advance + 80% COD</option><option value="already_paid">Already paid · Confirmed order</option></select></label>
+        {mode==='already_paid'&&<><label className="block text-sm">Received through<select name="receiptMethod" className={inputClass}><option value="upi_qr">UPI / personal QR</option><option value="bank_transfer">Bank transfer</option><option value="cash">Cash</option></select></label><label className="block text-sm">Payment reference / receipt note<input name="receiptReference" required minLength={3} maxLength={200} className={inputClass}/></label><label className="flex items-start gap-2 text-xs text-white/65"><input type="checkbox" required/>I verified that the full amount was received. No payment link or COD collection is needed.</label></>}
+        <p className="text-sm">Total {money(total)} · {mode==='already_paid'?'Already received':'Online'} {money(advance)} · COD {money(total - advance)}</p>
+        <p className="text-xs text-muted-foreground">{mode==='already_paid'?'Creates a confirmed, fully paid entry with an audit receipt. No payment request is generated.':'Creates a pending order and a payment link. Copy and share the link yourself; no message is sent automatically.'}</p>
       </fieldset>
         {pendingRequest.current && !busy && <p className="text-sm text-amber-100">Retry will use the original submitted details to recover the same order safely.</p>}
-        <button disabled={busy || !items.length || total < 100} type="submit" className="rounded-lg bg-purple-500 px-4 py-2 font-medium text-white disabled:opacity-40">{busy ? stage : pendingRequest.current ? "Retry same order" : "Create order & payment link"}</button>
+        <button disabled={busy || !items.length || total < 100} type="submit" className="rounded-lg bg-purple-500 px-4 py-2 font-medium text-white disabled:opacity-40">{busy ? stage : pendingRequest.current ? "Retry same order" : mode==='already_paid'?'Create confirmed order':"Create order & payment link"}</button>
       </form>)}
   </section>;
 }

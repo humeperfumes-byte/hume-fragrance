@@ -5,6 +5,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, products, orderEditAudits, type Order } from "@/db/schema";
 import { MANUAL_LINK_CHANNEL, manualOrderSchema, manualPaymentAmounts, readManualPayment, writeManualPayment, validateManualLink, manualPaymentNextStatus } from "./manual-order";
+import {externalPaymentPatch,isExternallySettled} from './external-order-payment';
 
 type Link = { id: string; short_url: string; reference_id: string; amount: number; amount_paid: number; currency: string; status: string; order_id?: string; payments?: { payment_id: string }[] };
 export class ManualOrderError extends Error {}
@@ -50,16 +51,26 @@ export async function createManualOrder(raw: unknown) {
   const shippingMinor = Math.round(input.shippingFee * 100), discountMinor = Math.round(input.discount * 100);
   if (discountMinor > subtotalMinor) throw new ManualOrderError("Discount cannot exceed the perfume subtotal");
   let amounts: ReturnType<typeof manualPaymentAmounts>;
-  try { amounts = manualPaymentAmounts(subtotalMinor + shippingMinor - discountMinor, input.paymentMode); }
+  try { amounts = manualPaymentAmounts(subtotalMinor + shippingMinor - discountMinor, input.paymentMode === 'already_paid' ? 'full' : input.paymentMode); }
   catch (error) { throw new ManualOrderError(error instanceof Error ? error.message : "Invalid order total"); }
   const payment = { ...amounts, requestFingerprint };
-  const [created] = await db.insert(orders).values({ id: input.requestId, orderNumber: `HME-M-${randomUUID().slice(0, 12).toUpperCase()}`, sessionId: `manual-${input.requestId}`, checkoutChannel: MANUAL_LINK_CHANNEL, status: "payment_pending", paymentSyncStatus: "link_pending", paymentMethod: input.paymentMode === "partial_cod" ? "20% Prepaid + 80% Cash on Delivery" : "Razorpay Payment Link", fullName: input.fullName, phone: input.phone, email: input.email || null, addressLine1: input.addressLine1, addressLine2: input.addressLine2, city: input.city, state: input.state, pincode: input.pincode, notes: input.notes, country: "IN", acquisitionSource: "admin", acquisitionCategory: "manual", path: "/admin/orders", cartSnapshot, subtotal: (subtotalMinor / 100).toFixed(2), shippingFee: (shippingMinor / 100).toFixed(2), manualAdjustment: (-discountMinor / 100).toFixed(2), adjustmentReason: input.adjustmentReason, grandTotal: (payment.totalMinor / 100).toFixed(2), whatsappMessage: writeManualPayment(null, payment) }).onConflictDoNothing({ target: orders.id }).returning();
+  let externalPatch:Partial<typeof orders.$inferInsert> = {};
+  if(input.paymentMode === 'already_paid') {
+    try {externalPatch = externalPaymentPatch({grandTotal:payment.totalMinor/100,status:'payment_pending'}, {amountMinor:payment.totalMinor,method:input.receiptMethod || 'upi_qr',reference:input.receiptReference || ''});}
+    catch(error){throw new ManualOrderError(error instanceof Error ? error.message : 'Add the external payment receipt');}
+  }
+  const created = await db.transaction(async tx=>{
+  const [record] = await tx.insert(orders).values({ id: input.requestId, orderNumber: `HME-M-${randomUUID().slice(0, 12).toUpperCase()}`, sessionId: `manual-${input.requestId}`, checkoutChannel: MANUAL_LINK_CHANNEL, status: "payment_pending", paymentSyncStatus: "link_pending", paymentMethod: input.paymentMode === "partial_cod" ? "20% Prepaid + 80% Cash on Delivery" : "Razorpay Payment Link", fullName: input.fullName, phone: input.phone, email: input.email || null, addressLine1: input.addressLine1, addressLine2: input.addressLine2, city: input.city, state: input.state, pincode: input.pincode, notes: input.notes, country: "IN", acquisitionSource: "admin", acquisitionCategory: "manual", path: "/admin/orders", cartSnapshot, subtotal: (subtotalMinor / 100).toFixed(2), shippingFee: (shippingMinor / 100).toFixed(2), manualAdjustment: (-discountMinor / 100).toFixed(2), adjustmentReason: input.adjustmentReason, grandTotal: (payment.totalMinor / 100).toFixed(2), whatsappMessage: writeManualPayment(null, payment), ...externalPatch }).onConflictDoNothing({ target: orders.id }).returning();
+  if(record && input.paymentMode === 'already_paid')await tx.insert(orderEditAudits).values({id:randomUUID(),orderId:record.id,changeType:'external_payment',actor:'admin',reason:`Created confirmed, fully paid order: ${input.receiptMethod || 'upi_qr'}; ${input.receiptReference}`,beforeSnapshot:{},afterSnapshot:record});
+  return record;
+  });
   const saved = created ?? await loadManualOrder(input.requestId);
   if (readManualPayment(saved.whatsappMessage)?.requestFingerprint !== requestFingerprint) throw new ManualOrderError("This request already created an order with different details");
   return saved;
 }
 export async function ensureManualPaymentLink(id: string) {
   let order = await loadManualOrder(id);
+  if(isExternallySettled(order))throw new ManualOrderError('This order is fully paid. No payment link is needed.');
   const payment = readManualPayment(order.whatsappMessage);
   if (!payment) throw new ManualOrderError("Payment details are missing");
   if (payment.linkId) return { order, payment };
@@ -119,4 +130,19 @@ export async function cancelManualLink(order: Order) {
     const [cancelled] = await tx.update(orders).set({ status: "cancelled", updatedAt: new Date() }).where(eq(orders.id, order.id)).returning();
     if (current.status !== "cancelled") await tx.insert(orderEditAudits).values({ id: randomUUID(), orderId: order.id, actor: "admin", changeType: "payment_link_cancellation", reason: "Order cancelled after checking or revoking its payment link", beforeSnapshot: current, afterSnapshot: cancelled });
   });
+}
+
+/** Revoke an unpaid shared link before an admin records the money elsewhere. */
+export async function closeManualLinkForExternalPayment(order: Order) {
+  if(order.checkoutChannel!==MANUAL_LINK_CHANNEL)return;
+  const payment=readManualPayment(order.whatsappMessage);
+  if(!payment?.linkId){if(order.paymentSyncStatus==='link_creating')throw new ManualOrderError('Recover the in-progress payment link first, then record the external receipt.');return;}
+  const link=await provider(`payment_links/${encodeURIComponent(payment.linkId)}`);
+  validateManualLink(payment,link,order.id);
+  if(link.status==='paid'){
+    if(Math.round(Number(order.capturedPaymentAmount||0)*100)<payment.advanceMinor)throw new ManualOrderError('Razorpay also received a payment. Choose Check Razorpay payment first, then record only the remaining external balance.');
+    return;
+  }
+  if(Number(link.amount_paid)>0)throw new ManualOrderError('This payment link has a partial receipt. Reconcile it before recording another payment.');
+  if(['created','partially_paid'].includes(link.status))await provider(`payment_links/${encodeURIComponent(payment.linkId)}/cancel`,{});
 }

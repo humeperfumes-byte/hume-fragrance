@@ -14,7 +14,7 @@ import { SavedInvoiceLibrary } from "./SavedInvoiceLibrary";
 import { calculateInvoice } from "@/lib/invoice-calculations";
 import { InvoiceHistory } from "./InvoiceHistory";
 import { invoiceFilename } from "@/lib/invoice-filename";
-import { invoiceOptionDefaults, invoiceOptions, invoiceDocumentSchema, newInvoiceIdentity, duplicateInvoice, type InvoiceDocument, type InvoiceItem, type SavedInvoice } from "@/lib/invoice-document";
+import { invoiceSnapshotFingerprint, invoiceOptionDefaults, invoiceOptions, invoiceDocumentSchema, newInvoiceIdentity, duplicateInvoice, type InvoiceDocument, type InvoiceItem, type SavedInvoice } from "@/lib/invoice-document";
 
 export default function InvoicePage() {
   const [savedId, setSavedId] = useState<string | null>(null);
@@ -69,7 +69,7 @@ export default function InvoicePage() {
   }, []);
 
   const invoiceData: InvoiceDocument = { ...options, sellerName, sellerAddress, sellerEmail, sellerPhone, sellerGstin, buyerName, buyerAddress, buyerEmail, buyerPhone, buyerGstin, invoiceNumber, invoiceDate, paymentStatus: paymentStatus as InvoiceDocument["paymentStatus"], showPaymentStatus, items, targetGrandTotal, shippingFee, bankDetails, terms, notes };
-  const dirty = savedId ? savedSnapshot !== JSON.stringify({ document: invoiceData, title: saveTitle }) : Boolean(buyerName || buyerAddress || buyerPhone || saveTitle || shippingFee || targetGrandTotal || items.some(item => item.name));
+  const dirty = savedId ? savedSnapshot !== invoiceSnapshotFingerprint({ document: invoiceData, title: saveTitle }) : Boolean(buyerName || buyerAddress || buyerPhone || saveTitle || shippingFee || targetGrandTotal || items.some(item => item.name));
   function applyInvoice(data: InvoiceDocument) {
     setOptions({...invoiceOptions(data),issuedAt:data.issuedAt});
     setSellerName(data.sellerName); setSellerAddress(data.sellerAddress); setSellerEmail(data.sellerEmail); setSellerPhone(data.sellerPhone); setSellerGstin(data.sellerGstin);
@@ -90,7 +90,7 @@ export default function InvoicePage() {
     const normalized = { ...invoice.document, ...invoiceOptions(invoice.document), issuedAt:invoice.document.issuedAt, showPaymentStatus: invoice.document.showPaymentStatus ?? false };
     const data = asNew ? duplicateInvoice(normalized) : normalized;
     applyInvoice(data); setSavedId(asNew ? null : invoice.id); setSavedAt(asNew ? null : invoice.updatedAt); setSaveTitle(asNew ? "" : invoice.title);
-    setSavedSnapshot(asNew ? "" : JSON.stringify({ document: data, title: invoice.title })); pendingSaveId.current = null; setLibraryOpen(false);
+    setSavedSnapshot(asNew ? "" : invoiceSnapshotFingerprint({ document: data, title: invoice.title })); pendingSaveId.current = null; setLibraryOpen(false);
     toast({ title: asNew ? "New invoice from saved details" : "Saved invoice opened", description: asNew ? "A new invoice number was created. Edit the details and save." : "Make your changes, then choose Update saved invoice." });
   }
   function startNewInvoice() {
@@ -112,7 +112,7 @@ export default function InvoicePage() {
       const result = await response.json(); if (!response.ok) throw new Error(result.error || "Could not save invoice");
       const invoice: SavedInvoice = result.invoice;
       applyInvoice(invoice.document);
-      setSavedId(invoice.id); setSavedAt(invoice.updatedAt); setSaveTitle(invoice.title); setSavedSnapshot(JSON.stringify({ document: invoice.document, title: invoice.title })); pendingSaveId.current = null;
+      setSavedId(invoice.id); setSavedAt(invoice.updatedAt); setSaveTitle(invoice.title); setSavedSnapshot(invoiceSnapshotFingerprint({ document: { ...invoice.document, ...invoiceOptions(invoice.document) }, title: invoice.title })); pendingSaveId.current = null;
       setLibraryOpen(false);
       toast({ title: "Invoice saved", description: "You can reopen it from Saved invoices." });
     } catch (error) { toast({ title: "Save failed", description: error instanceof Error ? error.message : "Your edits are still in the form.", variant: "destructive" }); }
@@ -122,9 +122,11 @@ export default function InvoicePage() {
 
   const totals=calculateInvoice(invoiceData);
   const handlePrint=async()=>{
+    if(exporting||saving)return;
+    if(invoiceData.lifecycle==='issued'&&dirty){toast({title:'Save your payment changes first',description:'Choose Update payment record, then download the saved invoice.'});return;}
     const parsed=invoiceDocumentSchema.safeParse(invoiceData);if(!parsed.success){toast({title:"Complete invoice details before export",description:parsed.error.issues.map(issue=>issue.message).join("; "),variant:"destructive"});return;}
     if(totals.errors.length){toast({title:"Check invoice totals",description:totals.errors.join(" "),variant:"destructive"});return;}
-    setExporting(true);try{const response=await fetch("/api/admin/invoices/pdf",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:savedId||undefined,document:parsed.data}),signal:AbortSignal.timeout(60000)});if(!response.ok){const data=await response.json();throw new Error(data.error||"PDF export failed");}const blob=await response.blob();const url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download=invoiceFilename(buyerName,invoiceDate)+".pdf";link.click();window.setTimeout(()=>URL.revokeObjectURL(url),30000);}catch(error){toast({title:"PDF could not be downloaded",description:error instanceof Error?error.message:"Please try again",variant:"destructive"});}finally{setExporting(false);}
+    setExporting(true);try{const response=await fetch("/api/admin/invoices/pdf",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:savedId||undefined,document:parsed.data}),signal:AbortSignal.timeout(60000)});if(!response.ok){const data=await response.json().catch(()=>({error:response.status===504?'The PDF export timed out. Please retry; the invoice is preserved.':'PDF export failed. Please retry.'}));throw new Error(data.error||"PDF export failed");}if(!response.headers.get('Content-Type')?.includes('application/pdf'))throw new Error('The server did not return a PDF. Please sign in again and retry.');const blob=await response.blob();const url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download=invoiceFilename(buyerName,invoiceDate)+".pdf";document.body.appendChild(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),30000);}catch(error){toast({title:"PDF could not be downloaded",description:error instanceof Error?error.message:"Please try again",variant:"destructive"});}finally{setExporting(false);}
   };
 
   const handleCopyImage = async () => {

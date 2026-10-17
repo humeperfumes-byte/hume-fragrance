@@ -3,6 +3,7 @@ import { getStoredOrderDiscount, preserveOrderItem } from "@/lib/order-edit-pric
 import { DISCOVERY_SET_PRODUCT_ID, DISCOVERY_SET_SAMPLE_COUNT, DISCOVERY_SET_PRICE, DISCOVERY_SET_IMAGES, DISCOVERY_SET_SIZE, isDiscoverySetCartItemId } from "@/lib/discovery-set";
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
+import {isExternallySettled} from '@/lib/external-order-payment';
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
@@ -58,10 +59,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       || (input.appliedCouponCode !== undefined && input.appliedCouponCode.trim().toUpperCase() !== (current.appliedCouponCode || "").trim().toUpperCase())
       || (input.shippingFee !== undefined && money(input.shippingFee) !== money(current.shippingFee))
       || (input.manualAdjustment !== undefined && money(input.manualAdjustment) !== money(current.manualAdjustment));
+    if(isExternallySettled(current)&&(financialChange||(input.paymentMethod!==undefined&&input.paymentMethod!==current.paymentMethod)))return NextResponse.json({error:'The fully paid receipt and total are locked. Record any correction through a separate accounting adjustment.'},{status:409});
     if (current.checkoutChannel === MANUAL_LINK_CHANNEL) {
       if (financialChange || (input.paymentMethod !== undefined && input.paymentMethod !== current.paymentMethod)) return NextResponse.json({ error: "Payment-link totals and payment mode are locked. Cancel the unpaid order and create a corrected order." }, { status: 400 });
       const payment = readManualPayment(current.whatsappMessage);
-      if (input.status && paidStatuses.has(input.status) && (!payment || Math.round(Number(current.capturedPaymentAmount || 0) * 100) < payment.advanceMinor)) return NextResponse.json({ error: "Check Razorpay payment before processing or shipping this order" }, { status: 400 });
+      if (!isExternallySettled(current) && input.status && paidStatuses.has(input.status) && (!payment || Math.round(Number(current.capturedPaymentAmount || 0) * 100) < payment.advanceMinor)) return NextResponse.json({ error: "Check Razorpay payment or record the external receipt before processing or shipping this order" }, { status: 400 });
       if (input.status === "cancelled" && current.status !== "cancelled") await cancelManualLink(current);
     }
     if (financialChange && paidStatuses.has(current.status) && !input.editReason?.trim()) return NextResponse.json({ error: "A reason is required when changing a paid order" }, { status: 400 });

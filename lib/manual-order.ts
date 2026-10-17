@@ -19,7 +19,9 @@ export const manualOrderSchema = z.object({
   shippingFee: z.number().min(0).max(10000).default(0),
   discount: z.number().min(0).max(100000).default(0),
   adjustmentReason: z.string().trim().max(500).optional(),
-  paymentMode: z.enum(["full", "partial_cod"]),
+  paymentMode: z.enum(["full", "partial_cod", "already_paid"]),
+  receiptMethod: z.enum(["upi_qr", "bank_transfer", "cash"]).optional(),
+  receiptReference: z.string().trim().max(200).optional(),
 }).strict();
 
 export function manualPaymentAmounts(totalMinor: number, mode: "full" | "partial_cod") {

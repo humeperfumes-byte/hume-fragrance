@@ -16,6 +16,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { OrderProductPicker } from "@/components/admin/OrderProductPicker";
 import { DISCOVERY_SET_CART_ITEM_PREFIX, DISCOVERY_SET_IMAGES, isDiscoverySetProductId } from "@/lib/discovery-set";
 import { ManualPaymentPanel } from "@/components/admin/ManualOrderCreator";
+import {ExternalPaymentPanel} from '@/components/admin/ExternalPaymentPanel';
+import {isExternallySettled} from '@/lib/external-order-payment';
 import { MANUAL_LINK_CHANNEL, readManualPayment } from "@/lib/manual-order";
 import { CheckCircle2, Clock3, Copy, ExternalLink, History, MessageCircle, Package, RefreshCw, ShoppingCart, Trash2, Truck, Undo2, WalletCards } from "lucide-react";
 import { buildPublicTrackingUrl } from "@/lib/tracking-url";
@@ -95,6 +97,7 @@ function isPartialCodOrder(order: Pick<Order, "paymentMethod">) {
 }
 
 function getPartialCodBreakdown(order: Order) {
+  if(isExternallySettled(order))return null;
   if (!isPartialCodOrder(order)) return null;
   if (order.checkoutChannel === MANUAL_LINK_CHANNEL) {
     const payment = readManualPayment(order.whatsappMessage);
@@ -343,6 +346,7 @@ export function OrdersTable({
   };
 
   const getOrderStatusBadge = (order: Order) => {
+    if(isExternallySettled(order)&&['processing','payment_authorized'].includes(order.status))return <Badge className="rounded-full border border-emerald-400/25 bg-emerald-400/10 text-[9px] uppercase text-emerald-200">Confirmed · Fully paid</Badge>;
     const partialCod = getPartialCodBreakdown(order);
     if (partialCod && partialCod.advanceReceived && !partialCod.codCollected) {
       return <Badge className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-emerald-200 shadow-none hover:bg-emerald-400/15">{partialCod.prepaidPercent}% Paid + COD</Badge>;
@@ -982,6 +986,7 @@ export function OrdersTable({
 
               <div className="space-y-5 px-4 py-5 sm:px-7 sm:py-7">
                 <CustomerLinkButton key={selectedOrder.id} scope="order" resourceId={selectedOrder.id} />
+                <ExternalPaymentPanel key={`${selectedOrder.id}:${selectedOrder.updatedAt}`} order={selectedOrder} onUpdate={order=>{setSelectedOrder(order);setOrderRows(rows=>rows.map(row=>row.id===order.id?order:row));setEditForm({...order});void loadCustomerActivity(order.id);}}/>
                 <ManualPaymentPanel order={selectedOrder} onUpdate={(order) => { setSelectedOrder(order); setOrderRows(rows => rows.map(row => row.id === order.id ? order : row)); }} />
                 {(() => {
                   const partialCod = getPartialCodBreakdown(selectedOrder);

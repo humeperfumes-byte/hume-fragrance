@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { requireAdminToken } from "@/lib/admin-auth";
 import { MANUAL_LINK_CHANNEL, readManualPayment } from "@/lib/manual-order";
 import { cancelManualLink } from "@/lib/manual-order-payment";
+import {isExternallySettled} from '@/lib/external-order-payment';
 
 export async function PATCH(
   req: NextRequest,
@@ -61,7 +62,7 @@ export async function PATCH(
     if (!current) return NextResponse.json({ error: "Order not found" }, { status: 404 });
     if (current.checkoutChannel === MANUAL_LINK_CHANNEL) {
       const payment = readManualPayment(current.whatsappMessage);
-      if (["payment_authorized", "processing", "packed", "shipped", "delivered"].includes(status) && (!payment || Math.round(Number(current.capturedPaymentAmount || 0) * 100) < payment.advanceMinor)) return NextResponse.json({ error: "Check Razorpay payment before processing or shipping this order" }, { status: 400 });
+      if (!isExternallySettled(current) && ["payment_authorized", "processing", "packed", "shipped", "delivered"].includes(status) && (!payment || Math.round(Number(current.capturedPaymentAmount || 0) * 100) < payment.advanceMinor)) return NextResponse.json({ error: "Check Razorpay payment or record the external receipt before processing or shipping this order" }, { status: 400 });
       if (status === "cancelled" && current.status !== "cancelled") await cancelManualLink(current);
     }
     const updated = await db.transaction(async (tx) => {

@@ -22,6 +22,8 @@ Tax treatment supports domestic CGST/SGST, IGST, and an explicit No GST option. 
 
 The direct PDF endpoint uses the same totals and produces selectable text on true A4 pages, repeating item headings and numbering continued pages. Latin/Devanagari fonts and the uploaded black logo are packaged with the route. Filenames use the invoice date, IST export time, customer and HUME Fragrance. Issued PDF exports load their saved server document instead of trusting edited client financial fields.
 
+PDF styling follows the workspace preview: logo and brand caption on the left, black invoice label and reference/date on the right, buyer block, item table, and terms/bank column beside totals. Bold font assets are included in serverless tracing. Save pending changes to an issued payment record before downloading; the export will not silently use different saved financial details. Preview dirty checks compare stable key ordering so JSONB serialization does not falsely report unsaved changes.
+
 References: [CBIC invoice rules](https://taxinformation.cbic.gov.in/content-page/explore-rules/1000136/1000001) and [CGST Section 15, value of taxable supply](https://taxinformation.cbic.gov.in/content-page/explore-act/1000284/1000001).
 
 Checks: `node --import tsx --test tests/invoice-accounting.test.ts tests/invoice-document.test.ts tests/invoice-filename.test.ts`. `scripts/verify-invoice-ledger.ts` wraps every write, audit entry and number allocation in a rolled-back transaction. `scripts/render-invoice-fixtures.ts` creates synthetic PDF fixtures for Poppler review, without saving or issuing customer invoices.

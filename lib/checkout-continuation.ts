@@ -1,4 +1,5 @@
 import type { CartItem } from "@/context/CartContext";
+import {isExternallySettled} from './external-order-payment';
 
 export type ActiveCheckout = {
   path: string;
@@ -8,8 +9,8 @@ export type ActiveCheckout = {
   items: Pick<CartItem, "id" | "name" | "image" | "size" | "price" | "quantity">[];
 };
 
-export function checkoutCanContinue(order: { status: string; checkoutChannel: string; paymentCapturedAt: unknown } | null) {
-  return !order || (order.checkoutChannel === "razorpay" && !order.paymentCapturedAt &&
+export function checkoutCanContinue(order: { status: string; checkoutChannel: string; paymentCapturedAt: unknown;grandTotal?:string|number|null;externalPaymentReceipt?:unknown;capturedPaymentAmount?:string|null } | null) {
+  return !order || (!isExternallySettled({...order,grandTotal:order.grandTotal||0}) && order.checkoutChannel === "razorpay" && !order.paymentCapturedAt &&
     !["cancelled", "refunded", "partially_refunded", "disputed", "delivered", "complete"].includes(order.status));
 }
 

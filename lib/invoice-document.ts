@@ -34,8 +34,11 @@ export function duplicateInvoice(document: InvoiceDocument): InvoiceDocument {
 export type InvoiceOptions = {lifecycle: "draft"|"issued";priceMode:"inclusive"|"exclusive";taxMode:"auto"|"intra"|"inter"|"none";sellerStateCode:string;placeOfSupplyCode:string;placeOfSupply:string;shippingGstPercent:number|null;amountReceived:number;showPaymentAmounts:boolean;issuedAt?:string};
 export const invoiceOptionDefaults:InvoiceOptions = { lifecycle: 'draft' as const, priceMode: 'inclusive' as const, taxMode: 'auto' as const, sellerStateCode: '09', placeOfSupplyCode: '', placeOfSupply: '', shippingGstPercent: null as number | null, amountReceived: 0, showPaymentAmounts: false };
 export function invoiceOptions(document: InvoiceDocument) { return Object.fromEntries(Object.entries(invoiceOptionDefaults).map(([key,value])=>[key,document[key as keyof InvoiceDocument]??value])) as InvoiceOptions; }
+export function invoiceSnapshotFingerprint(value: unknown) {
+  const stable = (value: unknown): unknown => Array.isArray(value) ? value.map(stable) : value && typeof value === 'object' ? Object.fromEntries(Object.entries(value).filter(([,entry])=>entry!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([key,entry])=>[key,stable(entry)])) : value;
+  return JSON.stringify(stable(value));
+}
 export function invoiceFinancialFingerprint(document: InvoiceDocument) {
   const payments = new Set(['amountReceived','showPaymentAmounts','paymentStatus','showPaymentStatus']);
-  const stable = (value: unknown): unknown => Array.isArray(value) ? value.map(stable) : value && typeof value === 'object' ? Object.fromEntries(Object.entries(value).filter(([,entry])=>entry!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([key,entry])=>[key,stable(entry)])) : value;
-  return JSON.stringify(stable(Object.fromEntries(Object.entries(document).filter(([key])=>!payments.has(key)))));
+  return invoiceSnapshotFingerprint(Object.fromEntries(Object.entries(document).filter(([key])=>!payments.has(key))));
 }
