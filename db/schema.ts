@@ -710,3 +710,14 @@ export const qrCampaigns = pgTable("qr_campaigns", {
 
 export type QRCampaign = typeof qrCampaigns.$inferSelect;
 export type NewQRCampaign = typeof qrCampaigns.$inferInsert;
+
+// Reusable admin invoice descriptions; independent from the storefront catalogue.
+export const invoiceItemSuggestions = pgTable('invoice_item_suggestions', {
+  id: varchar('id',{length:64}).primaryKey(),
+  name: varchar('name',{length:1000}).notNull(),
+  category: varchar('category',{length:20}).notNull(),
+  unit: varchar('unit',{length:20}).notNull(),
+  price: decimal('price',{precision:12,scale:2}).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});

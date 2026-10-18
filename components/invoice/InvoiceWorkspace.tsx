@@ -10,13 +10,14 @@ import {
 import Link from "next/link";
 import { toast } from "@/hooks/use-toast";
 import { InvoiceEditor } from "./InvoiceEditor";
+import type {InvoiceSuggestion} from '@/lib/invoice-suggestions';
 import { SavedInvoiceLibrary } from "./SavedInvoiceLibrary";
 import { calculateInvoice } from "@/lib/invoice-calculations";
 import { InvoiceHistory } from "./InvoiceHistory";
 import { invoiceFilename } from "@/lib/invoice-filename";
 import { invoiceSnapshotFingerprint, invoiceOptionDefaults, invoiceOptions, invoiceDocumentSchema, newInvoiceIdentity, duplicateInvoice, type InvoiceDocument, type InvoiceItem, type SavedInvoice } from "@/lib/invoice-document";
 
-export default function InvoicePage() {
+export default function InvoicePage({suggestions=[]}:{suggestions?:InvoiceSuggestion[]}) {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [savedSnapshot, setSavedSnapshot] = useState("");
@@ -58,7 +59,7 @@ export default function InvoicePage() {
   const [targetGrandTotal, setTargetGrandTotal] = useState<string>("");
   const [shippingFee, setShippingFee] = useState<number>(0);
   const [bankDetails, setBankDetails] = useState("Name: \nAccount No.: \nIFSC Code: ");
-  const [terms, setTerms] = useState("1. Goods once sold will not be taken back.\n2. Interest @ 18% per annum will be charged if payment is not received within due date.");
+  const [terms, setTerms] = useState("Goods once sold will not be taken back.");
   const [notes, setNotes] = useState("");
 
   // Set default dates on client mount (using local timezone offsets)
@@ -121,12 +122,13 @@ export default function InvoicePage() {
 
 
   const totals=calculateInvoice(invoiceData);
+  const noGst=invoiceData.taxMode==='none';
   const handlePrint=async()=>{
     if(exporting||saving)return;
     if(invoiceData.lifecycle==='issued'&&dirty){toast({title:'Save your payment changes first',description:'Choose Update payment record, then download the saved invoice.'});return;}
     const parsed=invoiceDocumentSchema.safeParse(invoiceData);if(!parsed.success){toast({title:"Complete invoice details before export",description:parsed.error.issues.map(issue=>issue.message).join("; "),variant:"destructive"});return;}
     if(totals.errors.length){toast({title:"Check invoice totals",description:totals.errors.join(" "),variant:"destructive"});return;}
-    setExporting(true);try{const response=await fetch("/api/admin/invoices/pdf",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:savedId||undefined,document:parsed.data}),signal:AbortSignal.timeout(60000)});if(!response.ok){const data=await response.json().catch(()=>({error:response.status===504?'The PDF export timed out. Please retry; the invoice is preserved.':'PDF export failed. Please retry.'}));throw new Error(data.error||"PDF export failed");}if(!response.headers.get('Content-Type')?.includes('application/pdf'))throw new Error('The server did not return a PDF. Please sign in again and retry.');const blob=await response.blob();const url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download=invoiceFilename(buyerName,invoiceDate)+".pdf";document.body.appendChild(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),30000);}catch(error){toast({title:"PDF could not be downloaded",description:error instanceof Error?error.message:"Please try again",variant:"destructive"});}finally{setExporting(false);}
+    setExporting(true);try{const container=document.querySelector<HTMLElement>(".print-container");if(!container)throw new Error("Invoice preview is unavailable. Please reload and retry.");const {downloadInvoicePreview}=await import("@/lib/invoice-preview-pdf");await downloadInvoicePreview(container,invoiceFilename(buyerName,invoiceDate)+".pdf");}catch(error){toast({title:"PDF could not be downloaded",description:error instanceof Error?error.message:"Please retry",variant:"destructive"});}finally{setExporting(false);}
   };
 
   const handleCopyImage = async () => {
@@ -231,7 +233,7 @@ export default function InvoicePage() {
       <div className="mx-auto max-w-[1900px] grid grid-cols-1 xl:grid-cols-[560px_1fr] print:block">
 
         {/* Left Side: Editor Form Panel - Hidden during print */}
-        <aside className="invoice-editor border-r border-white/10 bg-[#111215] p-5 lg:p-7 print:hidden"><fieldset disabled={saving||invoiceData.lifecycle==="issued"}><InvoiceEditor document={invoiceData} onChange={applyInvoice} /></fieldset>{invoiceData.lifecycle==="issued"&&<section className="invoice-card mt-5"><h2>Payment record</h2><label className="invoice-field mt-3"><span>Amount recorded received (₹)</span><input type="number" min="0" max={totals.grandTotal} step="0.01" value={options.amountReceived} onChange={e=>applyInvoice({...invoiceData,amountReceived:Number(e.target.value),showPaymentAmounts:true})}/></label><label className="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" checked={showPaymentStatus} onChange={e=>setShowPaymentStatus(e.target.checked)}/>Show payment status</label><p className="mt-2 text-xs text-white/40">These are manual payment records, not bank verification. Choose Update saved invoice to record the change.</p></section>}{savedId&&<InvoiceHistory key={savedAt} id={savedId}/>}</aside>
+        <aside className="invoice-editor border-r border-white/10 bg-[#111215] p-5 lg:p-7 print:hidden"><fieldset disabled={saving||invoiceData.lifecycle==="issued"}><InvoiceEditor document={invoiceData} onChange={applyInvoice} suggestions={suggestions} /></fieldset>{invoiceData.lifecycle==="issued"&&<section className="invoice-card mt-5"><h2>Payment record</h2><label className="invoice-field mt-3"><span>Amount recorded received (₹)</span><input type="number" min="0" max={totals.grandTotal} step="0.01" value={options.amountReceived} onChange={e=>applyInvoice({...invoiceData,amountReceived:Number(e.target.value),showPaymentAmounts:true})}/></label><label className="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" checked={showPaymentStatus} onChange={e=>setShowPaymentStatus(e.target.checked)}/>Show payment status</label><p className="mt-2 text-xs text-white/40">These are manual payment records, not bank verification. Choose Update saved invoice to record the change.</p></section>}{savedId&&<InvoiceHistory key={savedAt} id={savedId}/>}</aside>
 
         <section className="flex items-start justify-center bg-[#181818] p-8 min-h-[calc(100vh-69px)] overflow-y-auto overflow-x-auto w-full print:p-0 print:bg-white print:h-auto print:overflow-visible">
 
@@ -248,7 +250,7 @@ export default function InvoicePage() {
                     <p className="mt-0.5">{sellerAddress}</p>
                     <p className="mt-1">Email: {sellerEmail}</p>
                     <p>Phone: {sellerPhone}</p>
-                    {sellerGstin && <p className="mt-1 font-semibold text-black">GSTIN: {sellerGstin}</p>}
+                    {!noGst && sellerGstin && <p className="mt-1 font-semibold text-black">GSTIN: {sellerGstin}</p>}
                   </div>
                 </div>
 
@@ -256,7 +258,6 @@ export default function InvoicePage() {
                   <span className="inline-block bg-black px-4 py-1.5 text-xs font-bold uppercase tracking-[0.15em] text-white">
                     INVOICE
                   </span>
-                  <p className="mt-2 text-[10px] text-black/45">{invoiceData.lifecycle==="issued"?"Issued invoice":"DRAFT - not issued"}</p>
                   <div className="mt-4 space-y-1.5 text-xs md:text-sm">
                     <p className="text-black/50 text-[11px] uppercase tracking-wider font-semibold">Invoice No</p>
                     <p className="font-bold text-base text-black">{invoiceNumber || "—"}</p>
@@ -275,8 +276,8 @@ export default function InvoicePage() {
                     {buyerAddress && <p className="leading-relaxed whitespace-pre-line">{buyerAddress}</p>}
                     {buyerEmail && <p>Email: {buyerEmail}</p>}
                     {buyerPhone && <p>Phone: {buyerPhone}</p>}
-                    {invoiceData.placeOfSupply&&<p>Place of supply: {invoiceData.placeOfSupply} ({invoiceData.placeOfSupplyCode})</p>}
-                    {buyerGstin && <p className="font-semibold mt-1 text-black">GSTIN: {buyerGstin}</p>}
+                    {!noGst && invoiceData.placeOfSupply&&<p>Place of supply: {invoiceData.placeOfSupply} ({invoiceData.placeOfSupplyCode})</p>}
+                    {!noGst && buyerGstin && <p className="font-semibold mt-1 text-black">GSTIN: {buyerGstin}</p>}
                   </div>
                 </div>
 
@@ -303,7 +304,7 @@ export default function InvoicePage() {
                       <th className="py-3">Item Description</th>
                       <th className="py-3 text-right w-20">Price</th>
                       <th className="py-3 text-center w-14">Qty</th>
-                      <th className="py-3 text-center w-14">GST %</th>
+                      {!noGst&&<th className="py-3 text-center w-14">GST %</th>}
                       <th className="py-3 text-right w-28">Amount</th>
                     </tr>
                   </thead>
@@ -313,10 +314,10 @@ export default function InvoicePage() {
                       return (
                         <tr key={item.id} className="border-b border-black/5">
                           <td className="py-4 text-black/40 font-medium">{index + 1}</td>
-                          <td className="py-4 font-medium text-[15px] text-black">{item.name || "Untitled Item"}{item.hsnSac&&<span className="mt-1 block text-[10px] text-black/50">HSN/SAC: {item.hsnSac}</span>}<span className="mt-1 block text-[10px] text-black/50">Taxable: ₹{totals.lines[index].taxable.toFixed(2)}{totals.lines[index].discount>0?` · Discount: ₹${totals.lines[index].discount.toFixed(2)}`:""}</span></td>
+                          <td className="py-4 font-medium text-[15px] text-black">{item.name || "Untitled Item"}{!noGst&&item.hsnSac&&<span className="mt-1 block text-[10px] text-black/50">HSN/SAC: {item.hsnSac}</span>}{!noGst&&<span className="mt-1 block text-[10px] text-black/50">Taxable: ₹{totals.lines[index].taxable.toFixed(2)}{totals.lines[index].discount>0?` · Discount: ₹${totals.lines[index].discount.toFixed(2)}`:""}</span>}</td>
                           <td className="py-4 text-right font-medium">₹{item.price.toFixed(2)}</td>
           <td className="py-4 text-center font-medium">{item.quantity}<span className="block text-[10px] text-black/45">{item.unit}</span></td>
-                          <td className="py-4 text-center font-medium text-black/60">{totals.lines[index].rate}%</td>
+                          {!noGst&&<td className="py-4 text-center font-medium text-black/60">{totals.lines[index].rate}%</td>}
                           <td className="py-4 text-right font-bold">₹{totals.lines[index].gross.toFixed(2)}</td>
                         </tr>
                       );
@@ -350,7 +351,7 @@ export default function InvoicePage() {
 
                 <div className="text-xs md:text-sm space-y-2.5">
                   <div className="flex justify-between text-black/60">
-                    <span>Taxable value</span>
+                    <span>{noGst?"Subtotal":"Taxable value"}</span>
                     <span className="font-semibold">₹{totals.subtotal.toFixed(2)}</span>
                   </div>
                   {totals.taxKind==="split"&&totals.totalGst>0&&<><div className="flex justify-between text-black/60"><span>CGST</span><span>₹{totals.cgst.toFixed(2)}</span></div><div className="flex justify-between text-black/60"><span>SGST</span><span>₹{totals.sgst.toFixed(2)}</span></div></>}

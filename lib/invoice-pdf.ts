@@ -14,6 +14,7 @@ export async function renderInvoicePdf(data:InvoiceDocument):Promise<Buffer> {
  pdf.registerFont('Hindi',fontPath('NotoSansDevanagari-Regular.ttf'));
  const left=36,right=559,width=523,bottom=785;
  const totals=calculateInvoice(data);
+ const noGst=data.taxMode==='none';
  const runs=(value:string)=>value.match(/[\u0900-\u097f]+|[^\u0900-\u097f]+/g)||[];
  const selectFont=(value:string,bold=false)=>pdf.font(/[\u0900-\u097f]/.test(value)?'Hindi':bold?'Bold':'Latin');
  function height(value:string,size:number,w:number,bold=false) {
@@ -38,7 +39,7 @@ export async function renderInvoicePdf(data:InvoiceDocument):Promise<Buffer> {
  function page(){pdf.addPage();y=64;if(tableMode)tableHeading();}
  function need(h:number){if(y+h>bottom)page();}
  function tableHeading(){
-  const labels=['#','ITEM DESCRIPTION','PRICE','QTY','GST %','AMOUNT'];
+  const labels=['#','ITEM DESCRIPTION','PRICE','QTY',noGst?'':'GST %','AMOUNT'];
   const xs=[36,60,331,391,433,475],ws=[18,265,60,42,42,84];
   labels.forEach((label,index)=>text(label,xs[index],y,ws[index],7.5,'#777',true,index===2||index===5?'right':index===3||index===4?'center':'left'));
   y+=25;rule(y,'#d6d6d6');y+=9;
@@ -47,11 +48,10 @@ export async function renderInvoicePdf(data:InvoiceDocument):Promise<Buffer> {
   pdf.image(path.join(process.cwd(),'public/images/logo/invoice-hume-black.png'),left,y,{fit:[117,48]});
   text('HUME FRAGRANCE',left,94,265,10.5,'#111',true);
   let sellerY=122;
-  for(const value of [data.sellerAddress, data.sellerEmail?`Email: ${data.sellerEmail}`:'',data.sellerPhone?`Phone: ${data.sellerPhone}`:'',data.sellerGstin?`GSTIN: ${data.sellerGstin}`:'']){
+  for(const value of [data.sellerAddress, data.sellerEmail?`Email: ${data.sellerEmail}`:'',data.sellerPhone?`Phone: ${data.sellerPhone}`:'',!noGst&&data.sellerGstin?`GSTIN: ${data.sellerGstin}`:'']){
    if(!value)continue;text(value,left,sellerY,240,9.5,'#444');sellerY+=height(value,9.5,240)+3;
   }
   pdf.rect(465,36,94,24).fill('#111');text('INVOICE',465,41,94,9,'#fff',true,'center');
-  text(data.lifecycle==='issued'?'Issued invoice':'DRAFT - not issued',374,69,185,7.5,'#888',false,'right');
   text('INVOICE NO',374,96,185,8,'#777',true,'right');
   text(data.invoiceNumber,344,113,215,11,'#111',true,'right');
   const numberHeight=height(data.invoiceNumber,11,215,true);
@@ -62,27 +62,27 @@ export async function renderInvoicePdf(data:InvoiceDocument):Promise<Buffer> {
   text('BILLED TO',left,y,270,8,'#777',true);
   const billingTop=y;let buyerY=y+20;
   text(data.buyerName,left,buyerY,270,12,'#111',true);buyerY+=height(data.buyerName,12,270,true)+4;
-  for(const value of [data.buyerAddress,data.buyerEmail?`Email: ${data.buyerEmail}`:'',data.buyerPhone?`Phone: ${data.buyerPhone}`:'',data.placeOfSupply?`Place of supply: ${data.placeOfSupply} (${data.placeOfSupplyCode||'not set'})`:'',data.buyerGstin?`GSTIN: ${data.buyerGstin}`:'']){
+  for(const value of [data.buyerAddress,data.buyerEmail?`Email: ${data.buyerEmail}`:'',data.buyerPhone?`Phone: ${data.buyerPhone}`:'',!noGst&&data.placeOfSupply?`Place of supply: ${data.placeOfSupply} (${data.placeOfSupplyCode||'not set'})`:'',!noGst&&data.buyerGstin?`GSTIN: ${data.buyerGstin}`:'']){
    if(!value)continue;text(value,left,buyerY,270,9.5,'#444');buyerY+=height(value,9.5,270)+3;
   }
   if(data.showPaymentStatus){text('PAYMENT DETAILS',349,billingTop,210,8,'#777',true,'right');text(`Status: ${data.paymentStatus}`,349,billingTop+21,210,10,data.paymentStatus==='Paid'?'#047857':data.paymentStatus==='Unpaid'?'#be123c':'#a16207',true,'right');}
   y=Math.max(buyerY,billingTop+48)+21;rule(y);y+=16;
   const legend=data.taxMode==='none'?'No GST charged.':data.priceMode==='exclusive'?'Unit prices exclude GST; line totals include GST.':'Unit prices and line totals include GST.';
-  text(legend,left,y,width,8,'#777');y+=28;
+  if(!noGst){text(legend,left,y,width,8,'#777');y+=28;}else y+=12;
   need(85);tableMode=true;tableHeading();
   totals.lines.forEach((line,index)=>{
    const nameHeight=height(line.name,10.5,265,true);
-   const details=[line.hsnSac?`HSN/SAC: ${line.hsnSac}`:'',`Taxable: ${money(line.taxable)}${line.discount?` · Discount: ${money(line.discount)}`:''}`].filter(Boolean);
+   const details=noGst?[]:[line.hsnSac?`HSN/SAC: ${line.hsnSac}`:'',`Taxable: ${money(line.taxable)}${line.discount?` · Discount: ${money(line.discount)}`:''}`].filter(Boolean);
    const detailsHeight=details.reduce((sum,value)=>sum+height(value,7.5,265)+2,0);
    const rowHeight=Math.max(49,nameHeight+detailsHeight+19);
    need(rowHeight);
    text(String(index+1),36,y,18,9,'#888');text(line.name,60,y,265,10.5,'#111',true);
    let detailY=y+nameHeight+3;for(const detail of details){text(detail,60,detailY,265,7.5,'#777');detailY+=height(detail,7.5,265)+2;}
-   text(money(line.price),331,y,60,9.5,'#333',false,'right');text(String(line.quantity),391,y,42,9.5,'#333',false,'center');text(line.unit,391,y+17,42,7.5,'#888',false,'center');text(`${line.rate}%`,433,y,42,9.5,'#666',false,'center');text(money(line.gross),475,y,84,10,'#111',true,'right');
+   text(money(line.price),331,y,60,9.5,'#333',false,'right');text(String(line.quantity),391,y,42,9.5,'#333',false,'center');text(line.unit,391,y+17,42,7.5,'#888',false,'center');if(!noGst)text(`${line.rate}%`,433,y,42,9.5,'#666',false,'center');text(money(line.gross),475,y,84,10,'#111',true,'right');
    y+=rowHeight;rule(y,'#eeeeee');y+=12;
   });
   tableMode=false;y+=9;
-  const summary:Array<[string,number,boolean?]>=[['Taxable value',totals.subtotal]];
+  const summary:Array<[string,number,boolean?]>=[[noGst?'Subtotal':'Taxable value',totals.subtotal]];
   if(totals.totalGst>0){if(totals.taxKind==='split')summary.push(['CGST',totals.cgst],['SGST',totals.sgst]);else if(totals.taxKind==='igst')summary.push(['IGST',totals.igst]);}
   if(data.shippingFee>0)summary.push(['Shipping (included)',totals.shippingGross]);
   if(totals.discountAmount>0)summary.push(['Discount included',totals.discountAmount]);

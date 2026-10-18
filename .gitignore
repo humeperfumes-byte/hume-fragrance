@@ -50,3 +50,7 @@ next-env.d.ts
 
 # Local invoice PDF verification renders
 /tmp/pdfs/
+/output/pdf/
+
+# Browser verification artifacts (exclude from source scanning and commits)
+/.playwright-cli/

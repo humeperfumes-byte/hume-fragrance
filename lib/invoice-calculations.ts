@@ -29,7 +29,7 @@ export function calculateInvoice(data:InvoiceDocument) {
 export function validateForIssue(data:InvoiceDocument) {
   const errors=[...calculateInvoice(data).errors];
   if(!data.sellerAddress.trim()||!data.buyerAddress.trim())errors.push('Seller and buyer addresses are required before issue.');
-  if(!data.placeOfSupplyCode||!data.placeOfSupply?.trim())errors.push('Enter place of supply and its two-digit state code.');
+  if(data.taxMode!=='none'&&(!data.placeOfSupplyCode||!data.placeOfSupply?.trim()))errors.push('Enter place of supply and its two-digit state code.');
   const gstin=/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
   if(data.taxMode!=='none') {
     if(!gstin.test(data.sellerGstin.toUpperCase()))errors.push('Enter the registered seller GSTIN, or choose No GST.');
@@ -37,7 +37,7 @@ export function validateForIssue(data:InvoiceDocument) {
     if(data.items.some(item=>!item.hsnSac))errors.push('Enter an HSN/SAC for every item before issuing a GST invoice.');
     if(data.shippingFee>0&&data.shippingGstPercent==null)errors.push('Choose the reviewed GST rate for shipping, including 0% where applicable.');
   }
-  if(data.buyerGstin&&!gstin.test(data.buyerGstin.toUpperCase()))errors.push('Buyer GSTIN format is invalid.');
+  if(data.taxMode!=='none'&&data.buyerGstin&&!gstin.test(data.buyerGstin.toUpperCase()))errors.push('Buyer GSTIN format is invalid.');
   if(data.taxMode==='intra'&&data.placeOfSupplyCode!==(data.sellerStateCode||'09'))errors.push('Intra-state GST requires matching seller and supply states.');
   if(data.taxMode==='inter'&&data.placeOfSupplyCode===(data.sellerStateCode||'09'))errors.push('Inter-state GST requires different seller and supply states.');
   return errors;
