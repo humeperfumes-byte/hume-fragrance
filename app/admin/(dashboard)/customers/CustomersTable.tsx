@@ -1,5 +1,6 @@
 "use client";
 
+import { RepeatOrderAction } from "@/components/admin/RepeatOrderAction";
 import { useMemo, useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import {
@@ -14,7 +15,7 @@ import {
   Tag,
   User,
 } from "lucide-react";
-import type { CheckoutDraft, Order } from "@/db/schema";
+import type { CheckoutDraft, Order, Product } from "@/db/schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -265,8 +266,10 @@ function PricingRows({ draft }: { draft: CheckoutDraft }) {
 
 function CustomerDetailSheet({
   customer,
+  products,
   onOpenChange,
 }: {
+  products: Product[];
   customer: CustomerRecord | null;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -449,7 +452,7 @@ function CustomerDetailSheet({
                         <p className="text-lg font-semibold text-white">{formatINR(toMoney(order.grandTotal))}</p>
                       </div>
                       <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_260px]">
-                        <ItemsList items={order.cartSnapshot || []} />
+                        <div className="space-y-3"><ItemsList items={order.cartSnapshot || []} /><RepeatOrderAction order={order} products={products} /></div>
                         <div className="space-y-2 rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm">
                           <div className="flex justify-between gap-4 text-white/55">
                             <span>Subtotal</span>
@@ -512,7 +515,7 @@ function CustomerDetailSheet({
   );
 }
 
-export function CustomersTable({ customers }: { customers: CustomerRecord[] }) {
+export function CustomersTable({ customers, products }: { customers: CustomerRecord[]; products: Product[] }) {
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerRecord | null>(null);
 
   const sortedCustomers = useMemo(
@@ -647,7 +650,7 @@ export function CustomersTable({ customers }: { customers: CustomerRecord[] }) {
         })}
       </div>
 
-      <CustomerDetailSheet customer={selectedCustomer} onOpenChange={(open) => !open && setSelectedCustomer(null)} />
+      <CustomerDetailSheet products={products} customer={selectedCustomer} onOpenChange={(open) => !open && setSelectedCustomer(null)} />
     </>
   );
 }

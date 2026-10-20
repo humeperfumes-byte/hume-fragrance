@@ -18,4 +18,6 @@ test("verified payment awaiting order save blocks another payment", () => {
   assert.equal(shouldBlockAnotherPayment({ ...base, status: "verified_pending_save" }), true);
   for (const status of ["payment_pending", "payment_failed"] as PaymentRecovery["status"][]) assert.equal(shouldBlockAnotherPayment({ ...base, status }), false);
   assert.equal(shouldBlockAnotherPayment(null), false);
+  assert.equal(shouldBlockAnotherPayment({ ...base, status: 'verified_pending_save' }, 'another-order'), false);
+  assert.equal(shouldBlockAnotherPayment({ ...base, status: 'verified_pending_save' }, base.orderId), true);
 });

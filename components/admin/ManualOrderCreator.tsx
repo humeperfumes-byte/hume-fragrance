@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { normalizeIndianMobile } from "@/lib/phone";
 import Image from "next/image";
 import { OrderProductPicker } from "./OrderProductPicker";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import type { Product, Order } from "@/db/schema";
 import { MANUAL_LINK_CHANNEL, readManualPayment } from "@/lib/manual-order";
 import {isExternallySettled,readExternalReceipt} from '@/lib/external-order-payment';
+import { buildRepeatOrder, type CustomerContact, type RepeatOrderSource } from '@/lib/admin-customer-records';
 
 const money = (minor: number) => `₹${(minor / 100).toFixed(2)}`;
 export function ManualPaymentPanel({ order, onUpdate, generating = false }: { order: Order; onUpdate?: (order: Order) => void; generating?: boolean }) {
@@ -42,15 +43,17 @@ export function ManualPaymentPanel({ order, onUpdate, generating = false }: { or
   </div>;
 }
 
-export function ManualOrderCreator({ products }: { products: Product[] }) {
-  const [open, setOpen] = useState(false), [busy, setBusy] = useState(false), [result, setResult] = useState<Order | null>(null);
+export function ManualOrderCreator({ products, initialOrder, customer, repeatOf, onBusyChange }: { products: Product[]; initialOrder?: RepeatOrderSource; customer?: CustomerContact; repeatOf?: string; onBusyChange?: (busy: boolean) => void }) {
+  const [open, setOpen] = useState(!!initialOrder || !!customer), [busy, setBusy] = useState(false), [result, setResult] = useState<Order | null>(null);
   const pendingRequest = useRef<Record<string, unknown> | null>(null);
   const submitting = useRef(false);
   const [error, setError] = useState("");
   const [stage, setStage] = useState("");
-  const [items, setItems] = useState<{ id: string; quantity: number; sampleSelections?: string[] }[]>([]);
+  const [repeat] = useState(() => initialOrder ? buildRepeatOrder(initialOrder, products) : null);
+  const [items, setItems] = useState<{ id: string; quantity: number; sampleSelections?: string[] }[]>(repeat?.items || []);
   const [mode, setMode] = useState("full"), [shipping, setShipping] = useState(0), [discount, setDiscount] = useState(0);
   const router = useRouter();
+  useEffect(() => { onBusyChange?.(busy); }, [busy, onBusyChange]);
   const available = products.filter(p => p.priceCurrency === "INR");
   const total = Math.round((items.reduce((sum, item) => sum + (isDiscoverySetProductId(item.id) ? DISCOVERY_SET_PRICE : Number(available.find(p => p.id === item.id)?.price || 0)) * item.quantity, 0) + shipping - discount) * 100);
   const advance = mode === "partial_cod" ? Math.round(total * .2) : total;
@@ -58,7 +61,7 @@ export function ManualOrderCreator({ products }: { products: Product[] }) {
     event.preventDefault();
     if (submitting.current) return;
     const form = Object.fromEntries(new FormData(event.currentTarget));
-    const payload = pendingRequest.current || { ...form, phone: normalizeIndianMobile(String(form.phone || "")), requestId: crypto.randomUUID(), items, shippingFee: shipping, discount, paymentMode: mode };
+    const payload = pendingRequest.current || { ...form, phone: normalizeIndianMobile(String(form.phone || "")), requestId: crypto.randomUUID(), items, shippingFee: shipping, discount, paymentMode: mode, ...(repeatOf ? { repeatOf } : {}) };
     pendingRequest.current = payload;
     submitting.current = true; setBusy(true); setError(""); setStage("Saving order…");
     try {
@@ -83,18 +86,19 @@ export function ManualOrderCreator({ products }: { products: Product[] }) {
     } finally { setBusy(false); submitting.current = false; setStage(""); }
   }
   const inputClass = "w-full rounded-lg border border-white/15 bg-black/20 px-3 py-2 text-sm";
+  const contact = initialOrder || customer;
   return <section className={open ? "rounded-2xl border border-white/15 bg-white/5 p-5" : ""}>
     <button type="button" disabled={busy} aria-expanded={open} onClick={() => setOpen(!open)} className="inline-flex items-center gap-2 rounded-lg border border-purple-300/25 bg-purple-300/10 px-3 py-2 text-sm font-semibold text-purple-100">{open ? "−" : "+"} Create customer order</button>
     {open && error && <p role="alert" className="mt-4 rounded-xl border border-amber-300/25 bg-amber-300/10 p-3 text-sm text-amber-100">{error}</p>}{open && stage && <p role="status" className="mt-3 text-sm text-purple-200">{stage}</p>}
     {open && (result ? <div className="mt-4 space-y-4"><p>Order created: <strong>{result.orderNumber}</strong> · {result.fullName}</p><ManualPaymentPanel order={result} onUpdate={setResult} generating={busy} /><button type="button" className="rounded border px-3 py-2 text-sm" disabled={busy} onClick={() => { setResult(null); pendingRequest.current = null; setError(""); setItems([]); setShipping(0); setDiscount(0); }}>Create another order</button></div> :
-      <form onSubmit={submit} className="mt-4 space-y-4"><fieldset disabled={busy || !!pendingRequest.current} className="space-y-4 disabled:opacity-60">
-        <div className="grid gap-3 sm:grid-cols-2">{[{ name: "fullName", label: "Customer name", required: true }, { name: "phone", label: "Mobile number", type: "tel", required: true }, { name: "email", label: "Email (optional)", type: "email" }, { name: "addressLine1", label: "Street address", required: true }, { name: "addressLine2", label: "Apartment / landmark (optional)" }, { name: "city", label: "City", required: true }, { name: "state", label: "State", required: true }, { name: "pincode", label: "Pincode", required: true }].map(field => <label key={field.name} className="space-y-1 text-sm"><span>{field.label}</span><input className={inputClass} name={field.name} type={field.type || "text"} required={field.required} placeholder={field.name === "phone" ? "9876543210 or +91 98765 43210" : undefined} autoComplete={field.name === "phone" ? "tel" : undefined} />{field.name === "phone" && <span className="block text-xs text-white/55">10-digit Indian mobile number; +91 and spaces are accepted.</span>}</label>)}</div>
+      <form onSubmit={submit} className="mt-4 space-y-4">{repeat && <div role="status" className="rounded-xl border border-purple-300/20 bg-purple-300/5 p-3 text-sm text-purple-100"><p>New order at current prices. Review items and delivery details. Payment, discounts and tracking start fresh.</p>{repeat.notices.map((notice, index) => <p key={index} className="mt-2 text-amber-200">{notice}</p>)}</div>}<fieldset disabled={busy || !!pendingRequest.current} className="space-y-4 disabled:opacity-60">
+        <div className="grid gap-3 sm:grid-cols-2">{[{ name: "fullName", label: "Customer name", required: true }, { name: "phone", label: "Mobile number", type: "tel", required: true }, { name: "email", label: "Email (optional)", type: "email" }, { name: "addressLine1", label: "Street address", required: true }, { name: "addressLine2", label: "Apartment / landmark (optional)" }, { name: "city", label: "City", required: true }, { name: "state", label: "State", required: true }, { name: "pincode", label: "Pincode", required: true }].map(field => <label key={field.name} className="space-y-1 text-sm"><span>{field.label}</span><input className={inputClass} name={field.name} defaultValue={contact?.[field.name as keyof CustomerContact] || ''} type={field.type || "text"} required={field.required} placeholder={field.name === "phone" ? "9876543210 or +91 98765 43210" : undefined} autoComplete={field.name === "phone" ? "tel" : undefined} />{field.name === "phone" && <span className="block text-xs text-white/55">10-digit Indian mobile number; +91 and spaces are accepted.</span>}</label>)}</div>
         {items.map((item, index) => {
           const product = available.find(p => p.id === item.id);
           const image = isDiscoverySetProductId(item.id) ? DISCOVERY_SET_IMAGES[0] : product?.images?.[0];
           return <div key={item.id} className="flex items-center gap-3 rounded-xl border border-white/10 p-3">
             <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-white/5">{image ? <Image src={image} alt={product?.name || "Product"} fill unoptimized sizes="56px" className="object-cover" /> : <span className="text-xs text-white/50">No image</span>}</span>
-            <div className="min-w-0 flex-1"><p className="text-sm font-medium">{product?.name}</p><p className="text-xs text-white/60">₹{isDiscoverySetProductId(item.id) ? DISCOVERY_SET_PRICE : product?.price} each</p>{item.sampleSelections?.length ? <p className="mt-1 text-xs leading-5 text-white/60">{item.sampleSelections.map(id => products.find(p => p.id === id)?.name).join(", ")}</p> : null}</div>
+            <div className="min-w-0 flex-1"><p className="text-sm font-medium">{product?.name}</p><p className="text-xs text-white/60">₹{isDiscoverySetProductId(item.id) ? DISCOVERY_SET_PRICE : product?.price} each</p>{item.sampleSelections?.length ? <p className="mt-1 text-xs leading-5 text-white/60">{item.sampleSelections.map(id => products.find(p => p.id === id)?.name).filter((name): name is string => !!name).sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base", numeric: true })).join(", ")}</p> : null}</div>
             <input aria-label={`Quantity for ${product?.name}`} type="number" min="1" max="20" required value={item.quantity} className="w-20 rounded-lg border border-white/15 bg-black/20 px-2 py-2" onChange={e => setItems(current => current.map((row, i) => i === index ? { ...row, quantity: Number(e.target.value) } : row))} />
             <button type="button" aria-label={`Remove ${product?.name}`} onClick={() => setItems(current => current.filter((_, i) => i !== index))} className="px-2 text-rose-200">×</button>
           </div>;

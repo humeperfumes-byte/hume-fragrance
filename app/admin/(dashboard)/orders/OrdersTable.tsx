@@ -1,4 +1,5 @@
 "use client";
+import { RepeatOrderAction } from "@/components/admin/RepeatOrderAction";
 import CheckoutActivityTimeline from "@/components/admin/CheckoutActivityTimeline";
 import { CustomerLinkButton } from "@/components/admin/CustomerLinkButton";
 
@@ -986,7 +987,8 @@ export function OrdersTable({
 
               <div className="space-y-5 px-4 py-5 sm:px-7 sm:py-7">
                 <CustomerLinkButton key={selectedOrder.id} scope="order" resourceId={selectedOrder.id} />
-                <ExternalPaymentPanel key={`${selectedOrder.id}:${selectedOrder.updatedAt}`} order={selectedOrder} onUpdate={order=>{setSelectedOrder(order);setOrderRows(rows=>rows.map(row=>row.id===order.id?order:row));setEditForm({...order});void loadCustomerActivity(order.id);}}/>
+                <RepeatOrderAction key={`repeat:${selectedOrder.id}`} order={selectedOrder} products={productOptions} />
+              <ExternalPaymentPanel key={`${selectedOrder.id}:${selectedOrder.updatedAt}`} order={selectedOrder} onUpdate={order=>{setSelectedOrder(order);setOrderRows(rows=>rows.map(row=>row.id===order.id?order:row));setEditForm({...order});void loadCustomerActivity(order.id);}}/>
                 <ManualPaymentPanel order={selectedOrder} onUpdate={(order) => { setSelectedOrder(order); setOrderRows(rows => rows.map(row => row.id === order.id ? order : row)); }} />
                 {(() => {
                   const partialCod = getPartialCodBreakdown(selectedOrder);
@@ -1114,7 +1116,7 @@ export function OrdersTable({
                           <div><h5 className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary/60">Order items</h5><p className="mt-1 text-xs text-white/30">Existing items keep their order price. New products use the current catalogue price.</p></div>
                           {(editForm.cartSnapshot || []).map((item, index) => (
                             <div key={`${item.id}-${index}`} className="grid grid-cols-[48px_1fr_64px_38px] items-center gap-2 rounded-xl border border-white/8 bg-black/20 p-2.5">
-                              <span className="relative h-12 w-12 overflow-hidden rounded-lg bg-white/5">{item.image ? <Image src={item.image} alt={item.name} fill unoptimized sizes="48px" className="object-cover" /> : <span className="flex h-full items-center justify-center text-[9px] text-white/50">No image</span>}</span><div className="min-w-0"><p className="text-sm font-medium text-white">{item.name}</p><p className="mt-0.5 text-[10px] text-white/30">{item.isGift ? "Complimentary gift" : `${formatINR(item.price)} each`}</p>{item.sampleSelections?.length ? <p className="mt-1 text-xs leading-5 text-white/60">{item.sampleSelections.map(sample => sample.name).join(", ")}</p> : null}</div>
+                              <span className="relative h-12 w-12 overflow-hidden rounded-lg bg-white/5">{item.image ? <Image src={item.image} alt={item.name} fill unoptimized sizes="48px" className="object-cover" /> : <span className="flex h-full items-center justify-center text-[9px] text-white/50">No image</span>}</span><div className="min-w-0"><p className="text-sm font-medium text-white">{item.name}</p><p className="mt-0.5 text-[10px] text-white/30">{item.isGift ? "Complimentary gift" : `${formatINR(item.price)} each`}</p>{item.sampleSelections?.length ? <p className="mt-1 text-xs leading-5 text-white/60">{[...item.sampleSelections].sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base", numeric: true })).map(sample => sample.name).join(", ")}</p> : null}</div>
                               <input type="number" min="1" max="100" value={item.quantity} onChange={(event) => updateEditItem(index, { quantity: Math.min(100, Math.max(1, Math.trunc(Number(event.target.value)) || 1)) })} disabled={item.isGift} aria-label={`Quantity for ${item.name}`} className="h-9 rounded-lg border border-white/10 bg-white/5 px-2 text-center text-xs text-white outline-none" />
                               <Button type="button" size="icon" variant="ghost" onClick={() => removeEditItem(index)} disabled={(editForm.cartSnapshot || []).length <= 1} aria-label={`Remove ${item.name}`} className="h-9 w-9 text-rose-300"><Trash2 className="h-4 w-4" /></Button>
                             </div>
@@ -1491,7 +1493,7 @@ export function OrdersTable({
                                 </>}
                                 {item.sampleSelections?.length ? (
                                   <div className="mt-4 overflow-hidden rounded-2xl border border-[#c5a9ff]/15 bg-[linear-gradient(145deg,rgba(197,169,255,.065),rgba(0,0,0,.12))] shadow-[inset_0_1px_rgba(255,255,255,.035)]">
-                                    {item.sampleSelections.map((selection, selectionIndex) => (
+                                    {[...item.sampleSelections].sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base", numeric: true })).map((selection, selectionIndex) => (
                                       <label key={`${selection.id}-${selectionIndex}`} className="group flex min-h-11 cursor-pointer items-center gap-3 border-b border-white/[0.055] px-3.5 py-2.5 transition hover:bg-[#c5a9ff]/[0.065] last:border-b-0">
                                         <input type="checkbox" className="peer sr-only" aria-label={`Mark ${selection.name} as packed`} />
                                         <span className="relative flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-white/20 bg-black/25 text-[12px] font-bold text-white opacity-80 transition after:content-['✓'] after:scale-75 after:opacity-0 after:transition peer-checked:border-[#b99cff] peer-checked:bg-[#a786ee] peer-checked:shadow-[0_0_14px_rgba(185,156,255,.35)] peer-checked:after:scale-100 peer-checked:after:opacity-100 group-hover:border-[#c5a9ff]/45" />

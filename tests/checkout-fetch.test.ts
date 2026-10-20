@@ -8,11 +8,11 @@ test("Checkout timeout covers stalled headers and stalled response bodies withou
   let requestSignal: AbortSignal | undefined;
   try {
     globalThis.fetch = async (_, init) => { calls++; requestSignal = init?.signal as AbortSignal; return new Promise<Response>(() => {}); };
-    await assert.rejects(checkoutFetch("http://localhost/api/orders", { method: "POST" }, 20), /check its payment before retrying/);
+    await assert.rejects(checkoutFetch("http://localhost/api/orders", { method: "POST" }, 20), /tap Place Order to try again/);
     assert.equal(requestSignal?.aborted, true);
     assert.equal(calls, 1, "An ambiguous write must not be retried automatically");
     globalThis.fetch = async () => { calls++; return new Response(new ReadableStream({ start() { /* Server sends headers but never a body. */ } })); };
-    await assert.rejects(checkoutFetch("http://localhost/api/create-order", {}, 20), /Checkout took too long/);
+    await assert.rejects(checkoutFetch("http://localhost/api/create-order", {}, 20), /connection took too long/);
     assert.equal(calls, 2);
   } finally { globalThis.fetch = original; }
 });

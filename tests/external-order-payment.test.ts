@@ -25,6 +25,17 @@ test('COD settlement records only the remainder and preserves its real online ad
  const laterCapture={...saved,capturedPaymentAmount:'999.00'};
  assert.equal(orderPaymentBalance(laterCapture).overpaidMinor,79920);
 });
+
+test('single-button admin confirmation settles only the COD remainder without inventing a payment method',()=>{
+ const order={...pending,status:'processing',capturedPaymentAmount:'199.80'};
+ const patch=externalPaymentPatch(order,{amountMinor:79920,method:'admin_confirmed',reference:'Full payment confirmed by admin'},now);
+ const saved={...order,...patch};
+ assert.equal(patch.paymentMethod,'Fully paid — Manual confirmation (admin recorded)');
+ assert.equal(readExternalReceipt(patch.externalPaymentReceipt)?.method,'admin_confirmed');
+ assert.equal(saved.capturedPaymentAmount,'199.80');
+ assert.equal(orderPaymentBalance(saved).remainingMinor,0);
+ assert.equal(isExternallySettled(saved),true);
+});
 test('receipt validation rejects incomplete, negative, refunded and disputed entries and keeps delivery status',()=>{
  assert.equal(readExternalReceipt('HUME external receipt: {"amountMinor":99900}'),null);
  assert.throws(()=>externalPaymentPatch(pending,{...receipt,reference:''},now));

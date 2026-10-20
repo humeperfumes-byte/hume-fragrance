@@ -1,11 +1,14 @@
 import { db } from "@/db";
-import { checkoutDrafts, orders, type CheckoutDraft, type Order } from "@/db/schema";
-import { and, desc, gte, lte } from "drizzle-orm";
+import { checkoutDrafts, orders, products, type CheckoutDraft, type Order } from "@/db/schema";
+import { and, asc, desc, gte, lte } from "drizzle-orm";
 import { formatINR } from "@/lib/currency";
 import { collectExcludedSessionIds, filterExcludedAdminRows } from "@/lib/admin-data-filters";
 import { parseAdminTimeWindow } from "@/lib/admin-time-window";
 import { parseAdminMarket, isIndiaCheckoutSignal } from "@/lib/admin-market";
 import { CustomersTable, type CustomerRecord } from "./CustomersTable";
+
+import { CustomerWorkspace } from "@/components/admin/CustomerWorkspace";
+import { customerIdentity } from '@/lib/admin-customer-records';
 
 export const dynamic = "force-dynamic";
 
@@ -16,13 +19,8 @@ type AdminPageProps = {
 };
 
 function getIdentityKeys(row: CustomerSource): string[] {
-  const keys: string[] = [];
-  const phone = row.phone?.replace(/\D/g, "");
-  const email = row.email?.trim().toLowerCase();
-  if (phone && phone.length >= 8) keys.push(`phone:${phone}`);
-  if (email) keys.push(`email:${email}`);
-  if (!keys.length && row.sessionId) keys.push(`session:${row.sessionId}`);
-  return keys;
+  const key = customerIdentity(row);
+  return key ? [key] : row.sessionId ? [`session:${row.sessionId}`] : [];
 }
 
 function getPrimaryCustomerKey(row: CustomerSource): string | null {
@@ -59,6 +57,7 @@ function mergeIntoCustomerMap(
 }
 
 function latestName(existing: CustomerRecord | null, row: CustomerSource): string {
+  if (existing && row.updatedAt < existing.lastSeenAt && !existing.name.startsWith('Unknown')) return existing.name;
   return row.fullName || existing?.name || "Unknown customer";
 }
 
@@ -67,6 +66,7 @@ function latestPhone(existing: CustomerRecord | null, row: CustomerSource): stri
 }
 
 function latestEmail(existing: CustomerRecord | null, row: CustomerSource): string | null {
+  if (existing?.email && row.updatedAt < existing.lastSeenAt) return existing.email;
   return row.email || existing?.email || null;
 }
 
@@ -107,6 +107,7 @@ function createCustomerFromDraft(key: string, draft: CheckoutDraft): CustomerRec
 }
 
 export default async function CustomersPage({ searchParams }: AdminPageProps) {
+  const productOptions = await db.select().from(products).orderBy(asc(products.name));
   const params = await searchParams;
   const timeWindow = parseAdminTimeWindow(params?.hours, params?.from, params?.to);
   let allOrders: Order[] = [];
@@ -268,7 +269,8 @@ export default async function CustomersPage({ searchParams }: AdminPageProps) {
         </div>
       </div>
 
-      <CustomersTable customers={customers} />
+      <CustomerWorkspace products={productOptions} />
+      <CustomersTable customers={customers} products={productOptions} />
     </div>
   );
 }

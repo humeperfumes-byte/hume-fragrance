@@ -6,6 +6,7 @@ import { z } from "zod";
 import { getRequestHost, isRazorpayAllowedHost } from "@/lib/razorpay-domain";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const createOrderSchema = z.object({
   amount: z.number().int().min(100),

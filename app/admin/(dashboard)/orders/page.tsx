@@ -8,6 +8,8 @@ import { parseAdminMarket, isIndiaCheckoutSignal } from "@/lib/admin-market";
 import { PackageCheck } from "lucide-react";
 import { ManualOrderCreator } from "@/components/admin/ManualOrderCreator";
 
+import { CustomerWorkspace } from "@/components/admin/CustomerWorkspace";
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
@@ -88,6 +90,7 @@ export default async function OrdersPage({ searchParams }: AdminPageProps) {
         </div>
       </div>
 
+      {tableExists && <CustomerWorkspace products={productOptions} />}
       {tableExists && <ManualOrderCreator products={productOptions} />}
       {!tableExists ? (
         <div className="rounded-2xl border border-dashed border-border p-12 text-center bg-card shadow-sm">

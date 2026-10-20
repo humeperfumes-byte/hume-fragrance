@@ -5,6 +5,7 @@ import { DISCOVERY_SET_PRODUCT_ID, DISCOVERY_SET_SAMPLE_COUNT } from "./discover
 export const MANUAL_LINK_CHANNEL = "manual_payment_link";
 export const manualOrderSchema = z.object({
   requestId: z.string().uuid(),
+  repeatOf: z.string().min(1).max(255).optional(),
   fullName: z.string().trim().min(2).max(255),
   phone: z.string().transform(normalizeIndianMobile).pipe(z.string().regex(/^[6-9]\d{9}$/, "Enter a 10-digit Indian mobile number, for example 9876543210. +91 is also accepted.")),
   email: z.union([z.string().trim().email(), z.literal("")]).optional(),

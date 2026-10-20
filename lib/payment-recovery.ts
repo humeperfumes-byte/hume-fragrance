@@ -32,8 +32,8 @@ export function readPaymentRecovery(storage: Storage): PaymentRecovery | null {
   }
 }
 
-export function shouldBlockAnotherPayment(recovery: PaymentRecovery | null): boolean {
-  return recovery?.status === "verified_pending_save";
+export function shouldBlockAnotherPayment(recovery: PaymentRecovery | null, orderId?: string): boolean {
+  return recovery?.status === "verified_pending_save" && (!orderId || recovery.orderId === orderId);
 }
 
 export function savePaymentRecovery(storage: Storage, recovery: PaymentRecovery) {

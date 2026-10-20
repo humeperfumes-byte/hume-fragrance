@@ -336,7 +336,7 @@ export const orders = pgTable("orders", {
   razorpayOrderId: varchar("razorpay_order_id", { length: 255 }),
   razorpayPaymentId: varchar("razorpay_payment_id", { length: 255 }),
   capturedPaymentAmount: decimal("captured_payment_amount", { precision: 10, scale: 2 }),
-  externalPaymentReceipt: jsonb("external_payment_receipt").$type<{amountMinor:number;method:'upi_qr'|'bank_transfer'|'cash';reference:string;recordedAt:string}>(),
+  externalPaymentReceipt: jsonb("external_payment_receipt").$type<{amountMinor:number;method:'upi_qr'|'bank_transfer'|'cash'|'admin_confirmed';reference:string;recordedAt:string}>(),
   paymentCapturedAt: timestamp("payment_captured_at"),
   paymentReconciledAt: timestamp("payment_reconciled_at"),
   paymentSyncStatus: varchar("payment_sync_status", { length: 50 }),

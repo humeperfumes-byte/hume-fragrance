@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const externalReceiptSchema = z.object({
   amountMinor: z.number().int().positive().max(100000000),
-  method: z.enum(['upi_qr', 'bank_transfer', 'cash']),
+  method: z.enum(['upi_qr', 'bank_transfer', 'cash', 'admin_confirmed']),
   reference: z.string().trim().min(3, 'Add a payment reference or receipt note').max(200),
   recordedAt: z.string().datetime(),
 });
@@ -31,7 +31,7 @@ export function externalPaymentPatch(order: PaymentOrder, input: {amountMinor:nu
   if (!balance.totalMinor || receipt.amountMinor !== balance.remainingMinor) throw new Error(`Record exactly the remaining balance of ₹${(balance.remainingMinor / 100).toFixed(2)}. Refresh if the Razorpay payment changed.`);
   return {
     externalPaymentReceipt: receipt,
-    paymentMethod: `Fully paid — ${receipt.method === 'upi_qr' ? 'UPI / QR' : receipt.method === 'cash' ? 'Cash' : 'Bank transfer'} (admin recorded)`,
+    paymentMethod: `Fully paid — ${receipt.method === 'upi_qr' ? 'UPI / QR' : receipt.method === 'cash' ? 'Cash' : receipt.method === 'admin_confirmed' ? 'Manual confirmation' : 'Bank transfer'} (admin recorded)`,
     paymentSyncStatus: 'external_paid',
     status: ['packed','shipped','delivered','complete'].includes(order.status) ? order.status : 'processing',
     updatedAt: now,

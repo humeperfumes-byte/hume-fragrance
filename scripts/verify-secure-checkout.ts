@@ -40,19 +40,22 @@ async function main() {
   const quote = priceSecureCart(cart, null, 0, normalizeAdminControls(setting?.value));
   const fixtureSessionIds: string[] = [], fixtureOrderIds: string[] = [];
   const originalFetch = globalThis.fetch;
-  let providerCreates = 0, providerAmount = 0, providerReceipt = "", wrongAmount = false, capturedAtProvider = false;
+  let providerCreates = 0, providerReads = 0, providerAmount = 0, providerReceipt = "", wrongAmount = false, capturedAtProvider = false;
+  let lookupEmpty = false, rejectCreate = false;
   let uniqueProviderIds = false, providerId = "order_local_fixture";
   const paymentOverrides = new Map<string, { id: string; order_id: string; amount: number; currency: string; status: string }[]>();
   globalThis.fetch = async (url, init) => {
     const path = String(url);
     assert.ok(path.startsWith("https://api.razorpay.com/v1/"), "Unexpected network request; no external requests are permitted during this verification");
+    if (init?.method === 'GET') providerReads++;
     if (path.endsWith("/orders") && init?.method === "POST") {
+      if (rejectCreate) return Response.json({ error: 'Synthetic rejection' }, { status: 400 });
       providerCreates++; providerAmount = JSON.parse(String(init.body)).amount; providerReceipt = JSON.parse(String(init.body)).receipt;
       providerId = uniqueProviderIds ? `order_switch_fixture_${providerCreates}` : "order_local_fixture";
       return Response.json({ id: providerId, amount: providerAmount, currency: "INR", status: "created" });
     }
     const payment = { id: "pay_local_fixture", order_id: "order_local_fixture", amount: wrongAmount ? 100 : providerAmount, currency: "INR", status: "captured" };
-    if (path.includes("orders?receipt=")) return Response.json({ items: [{ id: "order_local_fixture", amount: providerAmount, currency: "INR", status: "created", receipt: providerReceipt }] });
+    if (path.includes("orders?receipt=")) return Response.json({ items: lookupEmpty ? [] : [{ id: "order_local_fixture", amount: providerAmount, currency: "INR", status: "created", receipt: providerReceipt }] });
     if (path.endsWith("/payments")) { const id = path.split("/").at(-2)!; return Response.json({ items: paymentOverrides.get(id) || (capturedAtProvider ? [payment] : []) }); }
     if (path.includes("/payments/")) return Response.json(payment);
     return Response.json({ id: path.split("/").at(-1), amount: providerAmount, currency: "INR", status: "created" });
@@ -110,7 +113,9 @@ async function main() {
       assert.equal((await saveSecureOrder(request("/api/orders", { ...body, status: "processing" }, cookie, token))).status, 409);
       const countBefore = providerCreates;
       assert.equal((await createSecurePayment(request("/api/create-order", {}, cookie, token))).status, 200);
+      const readsBeforeRetry = providerReads;
       assert.equal((await createSecurePayment(request("/api/create-order", {}, cookie, token))).status, 200);
+      assert.equal(providerReads, readsBeforeRetry, 'Normal retries do not wait on provider history or status fetches');
       assert.equal(providerCreates, countBefore + 1, "Retries reuse the provider order");
       assert.equal(providerAmount, expectedPaymentMinor(quote.grandTotal, partial));
       capturedAtProvider = true;
@@ -119,10 +124,14 @@ async function main() {
       const unpaid = await recoverSecurePayment(request("/api/checkout-session/recover", undefined, cookie, token));
       assert.equal((await unpaid.json()).state, "unpaid", "A closed unpaid window is not an uncertain payment");
       await db.update(orders).set({ razorpayOrderId: null, paymentSyncStatus: "creating" }).where(eq(orders.id, session.orderId));
-      const restoredRequest = await recoverSecurePayment(request("/api/checkout-session/recover", undefined, cookie, token));
+      const restoredRequest = await createSecurePayment(request("/api/create-order", {}, cookie, token));
       assert.equal(restoredRequest.status, 200);
       assert.equal((await db.select().from(orders).where(eq(orders.id, session.orderId)))[0].razorpayOrderId, "order_local_fixture", "An ambiguous provider creation is recovered by its server receipt");
       assert.equal(providerCreates, countBefore + 1);
+      await db.update(orders).set({ paymentSyncStatus: 'payment_review', paymentReconciledAt: new Date() }).where(eq(orders.id, session.orderId));
+      const legacyRetry = await createSecurePayment(request('/api/create-order', {}, cookie, token));
+      assert.equal(legacyRetry.status, 200, 'An old review with no received payment repairs itself on the payment click');
+      assert.equal((await db.select().from(orders).where(eq(orders.id, session.orderId)))[0].paymentSyncStatus, 'pending');
       const callback = { razorpay_order_id: "order_local_fixture", razorpay_payment_id: "pay_local_fixture", razorpay_signature: createHmac("sha256", "test_local_only_secret").update("order_local_fixture|pay_local_fixture").digest("hex") };
       wrongAmount = true; assert.equal((await verifySecurePayment(request("/api/verify-payment", callback, cookie, token))).status, 409);
       assert.equal((await db.select().from(orders).where(eq(orders.id, session.orderId)))[0].paymentCapturedAt, null);
@@ -135,7 +144,9 @@ async function main() {
       if (partial) await db.update(orders).set({ status: "shipped", grandTotal: (quote.grandTotal + 100).toFixed(2) }).where(eq(orders.id, session.orderId));
       assert.equal((await verifySecurePayment(request("/api/verify-payment", callback, cookie, token))).status, 200);
       assert.equal((await verifySecurePayment(request("/api/verify-payment", callback, cookie, token))).status, 200);
-      assert.equal((await createSecurePayment(request("/api/create-order", {}, cookie, token))).status, 409);
+      const alreadyPaid = await createSecurePayment(request("/api/create-order", {}, cookie, token));
+      assert.equal(alreadyPaid.status, 200);
+      assert.equal((await alreadyPaid.json()).confirmed, true, 'A known paid order redirects to confirmation instead of a payment-review loop');
       const recovery = await recoverSecurePayment(request("/api/checkout-session/recover", undefined, cookie, token)); assert.equal(recovery.status, 200); assert.equal((await recovery.json()).confirmed, true);
       const saved = (await db.select().from(orders).where(eq(orders.id, session.orderId)))[0];
       assert.equal(saved.status, partial ? "shipped" : "processing");
@@ -203,7 +214,34 @@ async function main() {
     assert.equal(lateCapture.status, 200);
     assert.equal((await lateCapture.json()).reviewRequired, true, "A late previous capture is held for review by the webhook too");
     assert.equal((await db.select().from(orders).where(eq(orders.id, session.orderId)))[0].status, "payment_pending", "A stale full-payment webhook cannot fulfill an advance-COD order");
-    console.log("Secure checkout integration passed: admin drafts, owner-only recovery, same-order resume, unpaid/processing states, full payment, advance COD switching, retained provider history, stale webhooks, late-payment blocking, provider reuse, amount mismatch, repeat callbacks and fulfillment preservation. No real provider requests were made.");
+    capturedAtProvider = false;
+    const combinedStart = await startSecureCheckout(request('/api/checkout-session', { cart }));
+    assert.equal(combinedStart.status, 200);
+    const combinedToken = (await combinedStart.json()).path.split('/').pop();
+    const combinedCookie = `hume_checkout_owner=${combinedStart.cookies.get('hume_checkout_owner')!.value}; hume_checkout_active=${combinedToken}`;
+    const [combinedSession] = await db.select().from(secureCheckoutSessions).where(eq(secureCheckoutSessions.tokenHash, hashCustomerToken(combinedToken)!));
+    fixtureSessionIds.push(combinedSession.id); fixtureOrderIds.push(combinedSession.orderId);
+    await db.update(secureCheckoutSessions).set({ cart: [{ ...cart[0], id: 'removed-from-bag-fixture' }] }).where(eq(secureCheckoutSessions.id, combinedSession.id));
+    const checkout = { cartSnapshot: cart, details, checkoutChannel: 'razorpay', paymentMethod: 'Razorpay Online Payment', status: 'payment_pending', grandTotal: quote.grandTotal, shippingFee: quote.shippingFee };
+    assert.equal((await createSecurePayment(request('/api/create-order', { checkout: { ...checkout, grandTotal: 1 } }, combinedCookie, combinedToken))).status, 409, 'Combined startup still rejects tampered prices');
+    const combined = await createSecurePayment(request('/api/create-order', { checkout }, combinedCookie, combinedToken));
+    assert.equal(combined.status, 200, await combined.clone().text());
+    assert.ok((await combined.json()).order_id, 'One request saves checkout and prepares Razorpay using the updated cart, not its old session snapshot');
+    const [combinedOrder] = await db.select().from(orders).where(eq(orders.id, combinedSession.orderId));
+    assert.equal(combinedOrder.fullName, details.fullName);
+    lookupEmpty = true;
+    await db.update(orders).set({ razorpayOrderId: null, paymentSyncStatus: 'creating', updatedAt: new Date(Date.now() - 120000) }).where(eq(orders.id, combinedOrder.id));
+    const missing = await createSecurePayment(request('/api/create-order', {}, combinedCookie, combinedToken));
+    assert.equal(missing.status, 200, await missing.clone().text());
+    assert.ok((await missing.json()).order_id, 'A stale creation with no provider record is recovered automatically');
+    await db.update(orders).set({ razorpayOrderId: null, paymentSyncStatus: 'unpaid' }).where(eq(orders.id, combinedOrder.id));
+    rejectCreate = true;
+    const rejected = await createSecurePayment(request('/api/create-order', {}, combinedCookie, combinedToken));
+    assert.equal(rejected.status, 400);
+    assert.equal((await db.select().from(orders).where(eq(orders.id, combinedOrder.id)))[0].paymentSyncStatus, 'unpaid', 'Definitive rejection must not leave a creating lock');
+    rejectCreate = false;
+    assert.equal((await createSecurePayment(request('/api/create-order', {}, combinedCookie, combinedToken))).status, 200);
+    console.log("Secure checkout integration passed: single-request payment launch, zero provider reads on normal retry, interrupted-creation recovery, rejection recovery, paid-order confirmation, admin drafts, owner-only recovery, full payment, advance COD switching, late-payment protection, amount validation and callback idempotency. No real provider requests were made.");
   } finally {
     globalThis.fetch = originalFetch;
     if (fixtureOrderIds.length) { await db.delete(razorpayWebhookEvents).where(inArray(razorpayWebhookEvents.localOrderId, fixtureOrderIds)); await db.delete(customerAccessLinks).where(inArray(customerAccessLinks.resourceId, fixtureOrderIds)); await db.delete(orders).where(inArray(orders.id, fixtureOrderIds)); }

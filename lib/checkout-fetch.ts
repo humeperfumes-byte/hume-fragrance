@@ -11,7 +11,7 @@ export async function checkoutFetch(input: RequestInfo | URL, init?: RequestInit
       })(),
       new Promise<never>((_, reject) => {
         timer = setTimeout(() => {
-          reject(new Error("Checkout took too long. Your saved order may already exist. Reopen this checkout to check its payment before retrying."));
+          reject(new Error("The connection took too long. Please tap Place Order to try again. Your checkout details are saved."));
           controller.abort();
         }, timeoutMs);
       }),

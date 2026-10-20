@@ -1,5 +1,5 @@
 import "server-only";
-import { DISCOVERY_SET_PRODUCT_ID, DISCOVERY_SET_PRICE, DISCOVERY_SET_IMAGES, DISCOVERY_SET_SIZE } from "./discovery-set";
+import { DISCOVERY_SET_PRODUCT_ID, DISCOVERY_SET_PRICE, DISCOVERY_SET_IMAGES, DISCOVERY_SET_SIZE, isEligibleDiscoverySample } from "./discovery-set";
 import { randomUUID, createHash } from "node:crypto";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
@@ -33,14 +33,20 @@ export async function createManualOrder(raw: unknown) {
   }
   if (new Set(input.items.map(item => item.id)).size !== input.items.length) throw new ManualOrderError("Select each perfume once and use its quantity field");
   if (input.discount && !input.adjustmentReason) throw new ManualOrderError("Add a reason for the discount");
+  if (input.repeatOf) {
+    const [source] = await db.select({ id: orders.id }).from(orders).where(eq(orders.id, input.repeatOf)).limit(1);
+    if (!source) throw new ManualOrderError('The original order was not found. Refresh customer history.');
+  }
   const catalogue = await db.select().from(products).where(inArray(products.id, [...new Set(input.items.flatMap(item => [item.id, ...(item.sampleSelections || [])]))]));
   const cartSnapshot = input.items.map(item => {
     const product = catalogue.find(p => p.id === item.id);
     if (!product || product.priceCurrency !== "INR") throw new ManualOrderError("One of the selected products is unavailable for an INR manual order");
+    if (input.repeatOf && (product.badges?.soldOut || product.badges?.comingSoon)) throw new ManualOrderError(`${product.name} is no longer available. Remove it or choose a replacement.`);
     const discovery = product.id === DISCOVERY_SET_PRODUCT_ID;
     const sampleSelections = discovery ? (item.sampleSelections || []).map(id => {
       const sample = catalogue.find(p => p.id === id);
       if (!sample || sample.id === DISCOVERY_SET_PRODUCT_ID) throw new ManualOrderError("A discovery sample is missing from the catalogue");
+      if (input.repeatOf && !isEligibleDiscoverySample(sample)) throw new ManualOrderError(`${sample.name} is no longer available as a discovery sample. Rebuild the set.`);
       return { id: sample.id, name: sample.name, inspiration: sample.inspiration };
     }) : undefined;
     const price = discovery ? DISCOVERY_SET_PRICE : Number(product.price);
