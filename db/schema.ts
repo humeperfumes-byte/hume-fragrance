@@ -36,6 +36,29 @@ export const savedInvoices = pgTable("saved_invoices", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const invoiceCustomers = pgTable("invoice_customers", {
+  id: varchar("id", {length:100}).primaryKey(), name: varchar("name", {length:255}).notNull(),
+  address: text("address").notNull().default(""), email: varchar("email", {length:320}).notNull().default(""),
+  phone: varchar("phone", {length:50}).notNull().default(""), gstin: varchar("gstin", {length:15}).notNull().default(""),
+  createdAt: timestamp("created_at").defaultNow().notNull(), updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+export const invoiceCustomerLinks = pgTable("invoice_customer_links", {
+  invoiceId: varchar("invoice_id", {length:100}).primaryKey().references(()=>savedInvoices.id),
+  customerId: varchar("customer_id", {length:100}).notNull().references(()=>invoiceCustomers.id),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+export const invoiceCorrectionCounters = pgTable("invoice_correction_counters", {
+  financialYear: varchar("financial_year", {length:7}).primaryKey(), lastNumber: integer("last_number").notNull(),
+});
+export const invoiceCorrections = pgTable("invoice_corrections", {
+  id: varchar("id", {length:100}).primaryKey(), invoiceId: varchar("invoice_id", {length:100}).notNull().references(()=>issuedInvoices.invoiceId),
+  kind: varchar("kind", {length:10}).$type<"credit"|"refund"|"cancel">().notNull(), number: varchar("number", {length:24}).notNull().unique(),
+  date: varchar("date", {length:10}).notNull(), reason: text("reason").notNull(), reference: varchar("reference", {length:255}).notNull(),
+  amountMinor: decimal("amount_minor", {precision:18,scale:0}).notNull(),
+  details: jsonb("details").$type<{lines:import("@/lib/invoice-ledger").CreditLine[];includeShipping:boolean;source:import("@/lib/invoice-document").InvoiceDocument}>().notNull(),
+  requestFingerprint: text("request_fingerprint").notNull(), createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Immutable issued snapshots and append-only revisions. Invoice numbers are allocated in a transaction.
 export const invoiceCounters = pgTable("invoice_counters", { financialYear: varchar("financial_year", {length:7}).primaryKey(), lastNumber: integer("last_number").notNull().default(0) });
 export const issuedInvoices = pgTable("issued_invoices", { invoiceId: varchar("invoice_id",{length:100}).primaryKey().references(()=>savedInvoices.id), financialYear:varchar("financial_year",{length:7}).notNull(), invoiceNumber:varchar("invoice_number",{length:16}).notNull().unique(), document:jsonb("document").$type<import("@/lib/invoice-document").InvoiceDocument>().notNull(), issuedAt:timestamp("issued_at").defaultNow().notNull() });
@@ -712,7 +735,10 @@ export type QRCampaign = typeof qrCampaigns.$inferSelect;
 export type NewQRCampaign = typeof qrCampaigns.$inferInsert;
 
 // Reusable admin invoice descriptions; independent from the storefront catalogue.
+export const invoiceReusableDefaults = pgTable('invoice_reusable_defaults', {id:varchar('id',{length:30}).primaryKey(),document:jsonb('document').$type<Partial<import('@/lib/invoice-document').InvoiceDocument>>().notNull(),updatedAt:timestamp('updated_at').defaultNow().notNull()});
+
 export const invoiceItemSuggestions = pgTable('invoice_item_suggestions', {
+  details:jsonb('details').$type<{gstPercent?:number;hsnSac?:string;priceMode?:'inclusive'|'exclusive';taxMode?:'auto'|'intra'|'inter'|'none'}>().notNull().default({}),
   id: varchar('id',{length:64}).primaryKey(),
   name: varchar('name',{length:1000}).notNull(),
   category: varchar('category',{length:20}).notNull(),

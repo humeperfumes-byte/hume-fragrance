@@ -19,6 +19,9 @@ const LiveChatWidget = dynamic(() => import("@/components/LiveChatWidget"), { ss
 export default function ClientGlobalOverlays() {
   const pathname = usePathname();
   const isAdmin = pathname.startsWith("/admin");
+  const isInvoice = pathname === "/invoice" || pathname === "/bill";
+
+  if (isInvoice) return null;
 
   return (
     <>

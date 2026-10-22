@@ -3,13 +3,13 @@ export async function captureInvoicePreview(container: HTMLElement) {
   const {toCanvas,getFontEmbedCSS}=await import('html-to-image');
   await document.fonts.ready;
   const computed=getComputedStyle(container);
-  const width=container.getBoundingClientRect().width;
+  const width=parseFloat(computed.width) || container.offsetWidth;
   const host=document.createElement('div');
   host.setAttribute('aria-hidden','true');
   host.style.cssText=`position:fixed;left:-10000px;top:0;width:${width}px;pointer-events:none;`;
   const copy=container.cloneNode(true) as HTMLElement;
   copy.classList.remove('print-container');
-  for(const [property,value] of Object.entries({width:`${width}px`,height:'auto','min-height':computed.minHeight,'max-height':'none',transform:'none',margin:'0',display:'block','box-shadow':'none',overflow:'visible','box-sizing':'border-box','font-family':computed.fontFamily}))copy.style.setProperty(property,value,'important');
+  for(const [property,value] of Object.entries({width:`${width}px`,height:'auto','min-height':computed.minHeight,'max-height':'none',transform:'none',zoom:'1',visibility:'visible',margin:'0',display:'block','box-shadow':'none',overflow:'visible','box-sizing':'border-box','font-family':computed.fontFamily}))copy.style.setProperty(property,value,'important');
   for(const variable of ['--font-sans','--font-serif','--font-mono'])copy.style.setProperty(variable,computed.getPropertyValue(variable));
   host.appendChild(copy);document.body.appendChild(host);
   try {

@@ -10,6 +10,7 @@ export const invoiceItemSchema = z.object({
 const text = z.string().max(4000);
 export const invoiceDocumentSchema = z.object({
   sellerName: z.string().trim().min(1).max(255), sellerAddress: text, sellerEmail: text, sellerPhone: text, sellerGstin: text.transform(value=>value.trim().toUpperCase()),
+  customerId: z.string().uuid().optional(),
   buyerName: z.string().trim().min(1, "Add the buyer name").max(255), buyerAddress: text, buyerEmail: text, buyerPhone: text, buyerGstin: text.transform(value=>value.trim().toUpperCase()),
   invoiceNumber: z.string().trim().min(1).max(100), invoiceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value=>{const date=new Date(value+"T00:00:00Z");return Number.isFinite(date.getTime())&&date.toISOString().slice(0,10)===value;}, "Enter a valid calendar date"),
   paymentStatus: z.enum(["Paid", "Unpaid", "Partially Paid"]), showPaymentStatus: z.boolean().default(false), items: z.array(invoiceItemSchema).min(1).max(100),
@@ -22,7 +23,7 @@ export const invoiceDocumentSchema = z.object({
 }).strict();
 export type InvoiceDocument = z.infer<typeof invoiceDocumentSchema>;
 export type InvoiceItem = z.infer<typeof invoiceItemSchema>;
-export type SavedInvoice = { id: string; title: string; document: InvoiceDocument; createdAt: string; updatedAt: string };
+export type SavedInvoice = { id: string; title: string; document: InvoiceDocument; createdAt: string; updatedAt: string; customerId?: string | null; ledger?: ReturnType<typeof import("./invoice-ledger").invoiceBalance> };
 export function newInvoiceIdentity() {
   const date = new Date();
   const invoiceDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
@@ -31,9 +32,9 @@ export function newInvoiceIdentity() {
 export function duplicateInvoice(document: InvoiceDocument): InvoiceDocument {
   return { ...structuredClone(document), ...newInvoiceIdentity(), paymentStatus: "Unpaid", lifecycle: "draft", issuedAt: undefined, amountReceived: 0, items: document.items.map(item => ({ ...item, id: crypto.randomUUID() })) };
 }
-export type InvoiceOptions = {lifecycle: "draft"|"issued";priceMode:"inclusive"|"exclusive";taxMode:"auto"|"intra"|"inter"|"none";sellerStateCode:string;placeOfSupplyCode:string;placeOfSupply:string;shippingGstPercent:number|null;amountReceived:number;showPaymentAmounts:boolean;issuedAt?:string};
+export type InvoiceOptions = {customerId?:string;lifecycle: "draft"|"issued";priceMode:"inclusive"|"exclusive";taxMode:"auto"|"intra"|"inter"|"none";sellerStateCode:string;placeOfSupplyCode:string;placeOfSupply:string;shippingGstPercent:number|null;amountReceived:number;showPaymentAmounts:boolean;issuedAt?:string};
 export const invoiceOptionDefaults:InvoiceOptions = { lifecycle: 'draft' as const, priceMode: 'inclusive' as const, taxMode: 'auto' as const, sellerStateCode: '09', placeOfSupplyCode: '', placeOfSupply: '', shippingGstPercent: null as number | null, amountReceived: 0, showPaymentAmounts: false };
-export function invoiceOptions(document: InvoiceDocument) { return Object.fromEntries(Object.entries(invoiceOptionDefaults).map(([key,value])=>[key,document[key as keyof InvoiceDocument]??value])) as InvoiceOptions; }
+export function invoiceOptions(document: InvoiceDocument) { return {customerId:document.customerId,...Object.fromEntries(Object.entries(invoiceOptionDefaults).map(([key,value])=>[key,document[key as keyof InvoiceDocument]??value]))} as InvoiceOptions; }
 export function invoiceSnapshotFingerprint(value: unknown) {
   const stable = (value: unknown): unknown => Array.isArray(value) ? value.map(stable) : value && typeof value === 'object' ? Object.fromEntries(Object.entries(value).filter(([,entry])=>entry!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([key,entry])=>[key,stable(entry)])) : value;
   return JSON.stringify(stable(value));
