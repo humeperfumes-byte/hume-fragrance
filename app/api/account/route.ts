@@ -129,6 +129,7 @@ export async function POST(request: NextRequest) {
         subtotal: toNumber(order.subtotal),
         shippingFee: toNumber(order.shippingFee),
         grandTotal: toNumber(order.grandTotal),
+        codFee: toNumber(order.codFee),
         appliedCouponCode: order.appliedCouponCode,
         cartSnapshot: order.cartSnapshot.map((item) => ({
           ...item,

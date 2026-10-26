@@ -33,7 +33,7 @@ async function main() {
   const { freshResumeCatalogue } = await import("../lib/fresh-resume-catalogue");
   const { normalizeAdminControls, ADMIN_CONTROLS_KEY } = await import("../lib/admin-settings");
   const { expectedPaymentMinor, priceSecureCart } = await import("../lib/secure-checkout-pricing");
-  const product = (await freshResumeCatalogue()).find(p => p.priceCurrency === "INR" && !p.badges?.soldOut && !p.badges?.comingSoon && p.price >= 100 && p.id !== "hume-discovery-set");
+  const product = (await freshResumeCatalogue()).find(p => p.priceCurrency === "INR" && !p.badges?.soldOut && !p.badges?.comingSoon && p.price >= 100 && p.price <= 1400 && p.id !== "hume-discovery-set");
   assert.ok(product, "An available product is required");
   const cart = [{ ...product, image: product.images[0] || "", quantity: 1 }];
   const [setting] = await db.select().from(siteSettings).where(eq(siteSettings.key, ADMIN_CONTROLS_KEY));
@@ -85,7 +85,7 @@ async function main() {
       assert.equal((await (await activeSecureCheckout(activeRequest(`hume_checkout_active=${token}`))).json()).checkout, null);
       assert.equal((await accountLookup(request("/api/account", { sessionId: session.id }))).status, 401, "Secure UUID alone cannot authorize account access");
       const details = { fullName: "Local Verification Fixture", phone: "9900000000", addressLine1: "Test fixture only", city: "Kanpur", state: "Uttar Pradesh", pincode: "208012" };
-      const body = { cartSnapshot: cart, details, checkoutChannel: "razorpay", paymentMethod: partial ? "20% Prepaid + 80% Cash on Delivery" : "Razorpay Online Payment", status: "payment_pending", grandTotal: quote.grandTotal, shippingFee: quote.shippingFee };
+      const body = { cartSnapshot: cart, details, checkoutChannel: "razorpay", paymentMethod: partial ? "20% Prepaid + 80% Cash on Delivery" : "Razorpay Online Payment", status: "payment_pending", grandTotal: quote.grandTotal + (partial ? 50 : 0), shippingFee: quote.shippingFee };
       assert.equal((await saveSecureOrder(request("/api/orders", body, "", token))).status, 401);
       assert.equal((await saveSecureOrder(request("/api/orders", { ...body, grandTotal: 1 }, cookie, token))).status, 409);
       assert.equal((await db.select().from(orders).where(eq(orders.id, session.orderId))).length, 0);
@@ -106,8 +106,11 @@ async function main() {
       assert.equal((await resumed.json()).path, `/checkout/${token}`, "Same browser resumes the same capability, session and order");
       const alternateMode = partial ? "full" : "partial_cod";
       assert.equal((await resumeAccountCheckout(request("/api/account/checkout/resume", { orderId: session.orderId, paymentMode: alternateMode }, cookie))).status, 200);
-      assert.equal((await db.select().from(secureCheckoutSessions).where(eq(secureCheckoutSessions.id, session.id)))[0].expectedPaymentMinor, expectedPaymentMinor(quote.grandTotal, !partial), "Changing an unstarted payment freezes the chosen amount");
+      assert.equal((await db.select().from(secureCheckoutSessions).where(eq(secureCheckoutSessions.id, session.id)))[0].expectedPaymentMinor, expectedPaymentMinor(quote.grandTotal + (!partial ? 50 : 0), !partial), "Changing an unstarted payment freezes the chosen amount");
       assert.equal((await resumeAccountCheckout(request("/api/account/checkout/resume", { orderId: session.orderId, paymentMode: partial ? "partial_cod" : "full" }, cookie))).status, 200);
+      const [feeOrder] = await db.select().from(orders).where(eq(orders.id, session.orderId));
+      assert.equal(Number(feeOrder.codFee), partial ? 50 : 0, "COD fee is stored independently");
+      assert.equal(Number(feeOrder.grandTotal), quote.grandTotal + (partial ? 50 : 0), "Returning to the original mode restores the total without duplicate fees");
       assert.equal((await accountLookup(request("/api/account", { sessionId: session.id }, cookie))).status, 200);
       assert.equal((await accountLookup(request("/api/account", {}, cookie))).status, 200, "Owner cookie restores account without local profile storage");
       assert.equal((await saveSecureOrder(request("/api/orders", { ...body, status: "processing" }, cookie, token))).status, 409);
@@ -117,7 +120,7 @@ async function main() {
       assert.equal((await createSecurePayment(request("/api/create-order", {}, cookie, token))).status, 200);
       assert.equal(providerReads, readsBeforeRetry, 'Normal retries do not wait on provider history or status fetches');
       assert.equal(providerCreates, countBefore + 1, "Retries reuse the provider order");
-      assert.equal(providerAmount, expectedPaymentMinor(quote.grandTotal, partial));
+      assert.equal(providerAmount, expectedPaymentMinor(quote.grandTotal + (partial ? 50 : 0), partial));
       capturedAtProvider = true;
       assert.equal((await resumeAccountCheckout(request("/api/account/checkout/resume", { orderId: session.orderId, paymentMode: alternateMode }, cookie))).status, 409, "An existing paid provider payment cannot be changed");
       capturedAtProvider = false;
@@ -187,7 +190,7 @@ async function main() {
     assert.equal((await db.select().from(orders).where(eq(orders.id, session.orderId)))[0].razorpayOrderId, null, "Old webhooks cannot restore the full-payment request during a COD switch");
     assert.equal((await createSecurePayment(request("/api/create-order", {}, cookie, token))).status, 200);
     assert.notEqual(providerId, previousId);
-    assert.equal(providerAmount, expectedPaymentMinor(quote.grandTotal, true), "COD collects only the frozen advance");
+    assert.equal(providerAmount, expectedPaymentMinor(quote.grandTotal + 50, true), "COD collects only the frozen advance");
     const createsBeforeRetry = providerCreates;
     assert.equal((await createSecurePayment(request("/api/create-order", {}, cookie, token))).status, 200);
     assert.equal(providerCreates, createsBeforeRetry, "COD retry reuses the same provider request");
@@ -241,6 +244,32 @@ async function main() {
     assert.equal((await db.select().from(orders).where(eq(orders.id, combinedOrder.id)))[0].paymentSyncStatus, 'unpaid', 'Definitive rejection must not leave a creating lock');
     rejectCreate = false;
     assert.equal((await createSecurePayment(request('/api/create-order', {}, combinedCookie, combinedToken))).status, 200);
+    // Boundary prices are server-owned overrides on generated drafts only.
+    for (const base of [1500, 1500.01]) {
+      const fresh = await startSecureCheckout(request('/api/checkout-session', { cart }));
+      assert.equal(fresh.status, 200);
+      const freshToken = (await fresh.json()).path.split('/').pop();
+      const freshCookie = 'hume_checkout_owner=' + fresh.cookies.get('hume_checkout_owner')!.value + '; hume_checkout_active=' + freshToken;
+      const [freshSession] = await db.select().from(secureCheckoutSessions).where(eq(secureCheckoutSessions.tokenHash, hashCustomerToken(freshToken)!));
+      fixtureSessionIds.push(freshSession.id); fixtureOrderIds.push(freshSession.orderId);
+      const [freshDraft] = await db.select().from(checkoutDrafts).where(eq(checkoutDrafts.sessionId, freshSession.id));
+      await db.update(checkoutDrafts).set({pricingBreakdown:{...freshDraft.pricingBreakdown,overrideTotal:base}}).where(eq(checkoutDrafts.id,freshDraft.id));
+      const boundaryOrder = {cartSnapshot:cart,details,checkoutChannel:'razorpay',paymentMethod:'20% Prepaid + 80% Cash on Delivery',status:'payment_pending',grandTotal:base + 50,shippingFee:quote.shippingFee};
+      const boundaryResult = await saveSecureOrder(request('/api/orders',boundaryOrder,freshCookie,freshToken));
+      assert.equal(boundaryResult.status, base === 1500 ? 200 : 409, 'Server enforces COD boundary before the fee');
+      if (base === 1500) {
+        let [boundarySaved] = await db.select().from(orders).where(eq(orders.id,freshSession.orderId));
+        assert.equal(Number(boundarySaved.codFee),50); assert.equal(Number(boundarySaved.grandTotal),1550);
+        for (const nextMode of ['full','partial_cod','full'] as const) {
+          assert.equal((await createSecurePayment(request('/api/create-order',{},freshCookie,freshToken))).status,200);
+          const switched = await resumeAccountCheckout(request('/api/account/checkout/resume',{orderId:freshSession.orderId,paymentMode:nextMode},freshCookie));
+          assert.equal(switched.status,200,'Unpaid provider requests can switch in both directions');
+          [boundarySaved] = await db.select().from(orders).where(eq(orders.id,freshSession.orderId));
+          assert.equal(Number(boundarySaved.codFee),nextMode === 'full' ? 0 : 50);
+          assert.equal(Number(boundarySaved.grandTotal),nextMode === 'full' ? 1500 : 1550);
+        }
+      }
+    }
     console.log("Secure checkout integration passed: single-request payment launch, zero provider reads on normal retry, interrupted-creation recovery, rejection recovery, paid-order confirmation, admin drafts, owner-only recovery, full payment, advance COD switching, late-payment protection, amount validation and callback idempotency. No real provider requests were made.");
   } finally {
     globalThis.fetch = originalFetch;

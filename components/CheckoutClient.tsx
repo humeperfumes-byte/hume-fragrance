@@ -1,4 +1,5 @@
 "use client";
+import { COD_FEE, COD_PAYMENT_METHOD, isCodEligible } from "@/lib/cod-policy";
 import { useCheckoutActivity } from "@/hooks/use-checkout-activity";
 import type { CheckoutEvent } from "@/lib/checkout-activity";
 import { checkoutFetch } from "@/lib/checkout-fetch";
@@ -56,7 +57,6 @@ const CHECKOUT_STORAGE_KEY = "hume_checkout_details_v1";
 const CHECKOUT_SESSION_KEY = "hume_checkout_session_id";
 const CART_SESSION_KEY = "hume_cart_session_id";
 const FIRST_TOUCH_SOURCE_KEY = "hume_first_touch_source";
-const APPLIED_COUPON_STORAGE_KEY = "hume_applied_coupon_code";
 const LAST_ORDER_SIGNATURE_KEY = "hume_last_order_signature_v1";
 const LAST_ORDER_ID_KEY = "hume_last_order_id_v1";
 const LAST_ORDER_NUMBER_KEY = "hume_last_order_number_v1";
@@ -520,10 +520,10 @@ function PaymentStartNotice({ message }: { message: string }) {
   return <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950"><p>{message}</p></div>;
 }
 
-export default function CheckoutClient({ secureSession, paymentBlocked = false, paymentMode }: { paymentBlocked?: boolean; paymentMode?: RecoveryPaymentMode; secureSession?: { token: string; id: string; orderId: string; orderNumber: string; savedTotal?: number; savedShippingFee?: number; expectedPaymentMinor?: number } } = {}) {
+export default function CheckoutClient({ secureSession, paymentBlocked = false, paymentMode, paymentOptions }: { paymentOptions?: (baseTotal: number) => React.ReactNode; paymentBlocked?: boolean; paymentMode?: RecoveryPaymentMode; secureSession?: { token: string; id: string; orderId: string; orderNumber: string; savedCodFee?: number; savedTotal?: number; savedShippingFee?: number; expectedPaymentMinor?: number } } = {}) {
   const router = useRouter();
   const pathname = usePathname();
-  const { items, totalPrice, clearCart } = useCart();
+  const { items, totalPrice, clearCart, appliedCouponCode, hydrated } = useCart();
   const settings = useSiteControls();
   const checkoutSessionIdRef = useRef<string | null>(secureSession?.id || null);
   const secureOrderPathRef = useRef<string | null>(null);
@@ -534,6 +534,13 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
   >({});
   const didAutoFocusRef = useRef(false);
   const [allCoupons, setAllCoupons] = useState<Coupon[]>([]);
+  const [couponsLoaded, setCouponsLoaded] = useState(false);
+  const [couponLoadError, setCouponLoadError] = useState(false);
+  const [couponLoadAttempt, setCouponLoadAttempt] = useState(0);
+  const [overrideReady, setOverrideReady] = useState(false);
+  const [overrideLoadError, setOverrideLoadError] = useState(false);
+  const [overrideLoadAttempt, setOverrideLoadAttempt] = useState(0);
+  const pricingReady = hydrated && (secureSession?.savedTotal !== undefined || (couponsLoaded && overrideReady));
   const [welcomeBackReward, setWelcomeBackReward] =
     useState<WelcomeBackReward | null>(null);
   const [isRazorpayAvailable, setIsRazorpayAvailable] = useState(false);
@@ -572,7 +579,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
   const [recoveryPaymentMode, setRecoveryPaymentMode] = useState<RecoveryPaymentMode>(() => {
     if (paymentMode) return paymentMode;
     if (typeof window === "undefined") return "full";
-    return window.localStorage.getItem(PAYMENT_RECOVERY_MODE_KEY) === "partial_cod"
+    return readPaymentRecovery(window.localStorage) && window.localStorage.getItem(PAYMENT_RECOVERY_MODE_KEY) === "partial_cod"
       ? "partial_cod"
       : "full";
   });
@@ -640,15 +647,6 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
     if (details.alternatePhone.trim()) setShowAlternatePhone(true);
   }, [details.alternatePhone]);
 
-  const appliedCouponCode = useMemo(() => {
-    if (typeof window === "undefined") return null;
-    return (
-      window.localStorage
-        .getItem(APPLIED_COUPON_STORAGE_KEY)
-        ?.trim()
-        .toUpperCase() ?? null
-    );
-  }, []);
   const appliedCoupon = useMemo(
     () =>
       allCoupons.find(
@@ -700,7 +698,8 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
   const rawGrandTotal =
     Math.max(0, totalPrice - couponDiscount - welcomeBackDiscount) +
     shippingFee;
-  const grandTotal = secureSession?.savedTotal ?? (adminOverrideTotal !== null ? adminOverrideTotal : rawGrandTotal);
+  const codFee = recoveryPaymentMode === "partial_cod" ? (secureSession?.savedCodFee ?? COD_FEE) : 0;
+  const grandTotal = secureSession?.savedTotal ?? ((adminOverrideTotal !== null ? adminOverrideTotal : rawGrandTotal) + codFee);
   const appliedOfferCodes = [appliedCouponCode, hasWelcomeBackBenefit ? effectiveWelcomeBackCode : null]
     .filter(Boolean)
     .join(" + ");
@@ -709,6 +708,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
       subtotal: totalPrice,
       regularShippingFee,
       shippingFee,
+      codFee,
       couponCode: appliedCouponCode,
       couponLabel: appliedCoupon?.description || appliedCoupon?.code || null,
       couponDiscount,
@@ -728,6 +728,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
       appliedCouponCode,
       appliedOfferCodes,
       couponDiscount,
+      codFee,
       effectiveWelcomeBackCode,
       effectiveWelcomeBackPercent,
       grandTotal,
@@ -795,11 +796,13 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
     let active = true;
     const loadCoupons = async () => {
       try {
-        const response = await fetch("/api/coupons?includeHidden=1");
+        const response = await checkoutFetch("/api/coupons?includeHidden=1", undefined, 15000, "Offers took too long to load. Please retry.");
         if (!response.ok) throw new Error("Failed to fetch coupons");
         const data = (await response.json()) as Coupon[];
-        if (active) setAllCoupons(Array.isArray(data) ? data : []);
+        if (!Array.isArray(data)) throw new Error("Invalid offers response");
+        if (active) { setAllCoupons(data); setCouponsLoaded(true); setCouponLoadError(false); }
       } catch (error) {
+        if (active) setCouponLoadError(true);
         console.error("Failed to load checkout coupons:", error);
       }
     };
@@ -807,22 +810,25 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
     return () => {
       active = false;
     };
-  }, []);
+  }, [couponLoadAttempt]);
 
   useEffect(() => {
-    if (isPaymentProcessing) return;
+    if (isPaymentProcessing || secureSession?.savedTotal !== undefined) return;
     let active = true;
     const checkOverride = async () => {
       const sessionId = checkoutSessionIdRef.current || getOrCreateCheckoutSessionId();
       if (!sessionId) return;
       try {
-        const response = await fetch(`/api/checkout-override?sessionId=${sessionId}`, { headers: secureSession ? { "x-hume-checkout-token": secureSession.token } : {} });
-        if (!response.ok) return;
+        const response = await checkoutFetch(`/api/checkout-override?sessionId=${sessionId}`, { headers: secureSession ? { "x-hume-checkout-token": secureSession.token } : {} }, 15000, "Your total took too long to load. Please retry.");
+        if (!response.ok) throw new Error("Could not confirm checkout total");
         const data = await response.json();
-        if (active && typeof data.overrideTotal === "number") {
-          setAdminOverrideTotal(data.overrideTotal);
+        if (active) {
+          setAdminOverrideTotal(typeof data.overrideTotal === "number" ? data.overrideTotal : null);
+          setOverrideReady(true);
+          setOverrideLoadError(false);
         }
       } catch (err) {
+        if (active) setOverrideLoadError(true);
         console.error("Failed to fetch checkout override:", err);
       }
     };
@@ -840,7 +846,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", checkOverrideWhileVisible);
     };
-  }, [secureSession, isPaymentProcessing]);
+  }, [secureSession, isPaymentProcessing, overrideLoadAttempt]);
 
   useEffect(() => {
     if (didAutoFocusRef.current || items.length === 0) return;
@@ -855,9 +861,11 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const syncReward = () => setWelcomeBackReward(readWelcomeBackReward(window.localStorage));
+    window.addEventListener("hume:welcome-back-reward-sync", syncReward);
     const reward = readWelcomeBackReward(window.localStorage);
     setWelcomeBackReward(reward);
-    if (!reward) return;
+    if (!reward) return () => window.removeEventListener("hume:welcome-back-reward-sync", syncReward);
     window.dispatchEvent(
       new CustomEvent("hume:tracking", {
         detail: {
@@ -873,6 +881,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
         },
       }),
     );
+    return () => window.removeEventListener("hume:welcome-back-reward-sync", syncReward);
   }, []);
 
   const buildDraftPayload = useCallback(
@@ -935,7 +944,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
         | "whatsapp_initiated",
       force = false,
     ) => {
-      if (typeof window === "undefined") return;
+      if (typeof window === "undefined" || !pricingReady) return;
 
       if (!checkoutSessionIdRef.current) {
         checkoutSessionIdRef.current = getOrCreateCheckoutSessionId();
@@ -972,7 +981,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
       activeDraftSaveRef.current = drain().finally(() => { activeDraftSaveRef.current = null; });
       return activeDraftSaveRef.current;
     },
-    [buildDraftPayload, secureSession],
+    [buildDraftPayload, secureSession, pricingReady],
   );
 
   const captureCheckoutAction = useCallback(
@@ -1418,6 +1427,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
   };
 
   const handleRazorpayPayment = async () => {
+    if (!pricingReady) return;
     if (paymentBlocked) return;
     if (isPaymentProcessing) return;
     const previousWindow = activeRazorpayRef.current;
@@ -1494,13 +1504,14 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
       const sessionId =
         checkoutSessionIdRef.current ?? getOrCreateCheckoutSessionId();
       const isPartialCod = recoveryPaymentMode === "partial_cod";
+      if (isPartialCod && !secureSession?.savedTotal && !isCodEligible(grandTotal - codFee)) throw new Error("COD is available only for orders up to ₹1,500. Please select full payment.");
       const paymentTotal = secureSession?.expectedPaymentMinor ? secureSession.expectedPaymentMinor / 100 : isPartialCod
         ? Math.max(1, Math.round(grandTotal * 0.2))
         : grandTotal;
       const codBalance = Math.max(0, grandTotal - paymentTotal);
       const amount = Math.max(100, Math.round(paymentTotal * 100));
       const recoveryPaymentMethod = isPartialCod
-        ? "20% Prepaid + 80% Cash on Delivery"
+        ? COD_PAYMENT_METHOD
         : "Razorpay Online Payment";
       setPaymentStage("Preparing secure payment…");
       const createOrderResponse = await checkoutFetch("/api/create-order", {
@@ -1776,6 +1787,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
   };
 
   const handleWhatsAppOrder = async () => {
+    if (!pricingReady) return;
     if (paymentBlocked) return;
     if (paidSavePending || shouldBlockAnotherPayment(readPaymentRecovery(window.localStorage), secureSession?.orderId)) {
       toast({ title: "Your payment needs order confirmation", description: "Contact HUME support; do not place another order.", variant: "destructive" });
@@ -1902,10 +1914,17 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
           </h1>
         </div>
 
+        {!pricingReady && <div role="status" className="mb-4 rounded-xl border border-stone-200 bg-white p-4 text-sm text-stone-700">
+          {couponLoadError || overrideLoadError ? "We couldn’t confirm your final total. Please retry before paying." : "Checking your offers and final total…"}
+          {(couponLoadError || overrideLoadError) && <button type="button" className="ml-2 font-semibold underline underline-offset-4" onClick={() => { setCouponLoadError(false); setOverrideLoadError(false); setCouponLoadAttempt(attempt => attempt + 1); setOverrideLoadAttempt(attempt => attempt + 1); }}>{couponLoadError ? "Retry offers" : "Retry total"}</button>}
+        </div>}
+        {pricingReady && paymentOptions?.(grandTotal - codFee)}
+
         {paidSavePending && <div role="alert" className="mb-5 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950"><strong>Payment verified — order confirmation pending</strong><p className="mt-2 text-sm">Please do not pay again. Your checkout is preserved while we confirm the order.</p><a href="https://wa.me/919559024822" target="_blank" rel="noreferrer" className="mt-3 inline-block font-semibold underline">Contact HUME support</a></div>}
         {(!secureSession && isRecoveryCheckout) || recoveryPaymentMode === "partial_cod" ? (
           <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 md:mb-6">
             <strong>{recoveryPaymentMode === "partial_cod" ? "20% prepaid + COD selected" : "Completing your pending order"}</strong>
+            {codFee > 0 && <p className="mt-1 text-xs">₹50 COD charge included in your total.</p>}
             <p className="mt-1 text-xs leading-5 text-amber-900/70">
               {recoveryPaymentMode === "partial_cod"
                 ? `Razorpay will collect ${formatINR(Math.max(1, Math.round(grandTotal * 0.2)))} now. The remaining ${formatINR(Math.max(0, grandTotal - Math.max(1, Math.round(grandTotal * 0.2))))} will be collected on delivery.`
@@ -2282,7 +2301,8 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
               {isOnlinePaymentAvailable ? (
                 <Button
                   onClick={handleRazorpayPayment}
-                  disabled={isPaymentProcessing || paidSavePending || paymentBlocked}
+                  aria-label={isPaymentProcessing ? paymentStage : "Place Order"}
+                  disabled={!pricingReady || isPaymentProcessing || paidSavePending || paymentBlocked}
                   className={orderButtonClassName}
                 >
                   <OrderButtonContent processing={isPaymentProcessing} stage={paymentStage} />
@@ -2291,7 +2311,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
               {settings.whatsappCheckoutEnabled ? (
                 <Button
                   onClick={handleWhatsAppOrder}
-                  disabled={isPaymentProcessing || paidSavePending || paymentBlocked}
+                  disabled={!pricingReady || isPaymentProcessing || paidSavePending || paymentBlocked}
                   className={whatsappButtonClassName}
                 >
                   <WhatsAppIcon className="mr-3 h-11 w-11 scale-150" />
@@ -2379,6 +2399,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
                   <span className="text-black/45">Subtotal</span>
                   <span>{formatINR(totalPrice)}</span>
                 </div>
+                {codFee > 0 && <div className="flex justify-between text-sm"><span className="text-black/45">COD charge</span><span>{formatINR(codFee)}</span></div>}
                 {couponDiscount > 0 ? (
                   <div className="flex items-center justify-between">
                     <span className="text-black/45">
@@ -2456,7 +2477,8 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
               {isOnlinePaymentAvailable ? (
                 <Button
                   onClick={handleRazorpayPayment}
-                  disabled={isPaymentProcessing || paidSavePending || paymentBlocked}
+                  aria-label={isPaymentProcessing ? paymentStage : "Place Order"}
+                  disabled={!pricingReady || isPaymentProcessing || paidSavePending || paymentBlocked}
                   className={orderButtonClassName}
                 >
                   <OrderButtonContent processing={isPaymentProcessing} stage={paymentStage} />
@@ -2465,7 +2487,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
               {settings.whatsappCheckoutEnabled ? (
                 <Button
                   onClick={handleWhatsAppOrder}
-                  disabled={isPaymentProcessing || paidSavePending || paymentBlocked}
+                  disabled={!pricingReady || isPaymentProcessing || paidSavePending || paymentBlocked}
                   className={whatsappButtonClassName}
                 >
                   <WhatsAppIcon className="mr-3 h-11 w-11 scale-150" />

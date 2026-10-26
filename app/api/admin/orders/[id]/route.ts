@@ -104,7 +104,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
     const shippingFee = input.shippingFee ?? money(current.shippingFee); const manualAdjustment = input.manualAdjustment ?? money(current.manualAdjustment);
     if (financialChange && manualAdjustment !== 0 && !(input.adjustmentReason ?? current.adjustmentReason)?.trim()) return NextResponse.json({ error: "Manual adjustments require a reason" }, { status: 400 });
-    const grandTotal = financialChange ? Math.max(0, subtotal - Math.min(subtotal, couponDiscount) + shippingFee + manualAdjustment) : money(current.grandTotal);
+    const grandTotal = financialChange ? Math.max(0, subtotal - Math.min(subtotal, couponDiscount) + shippingFee + money(current.codFee) + manualAdjustment) : money(current.grandTotal);
     const patch = {
       ...input, cartSnapshot: financialChange ? repricedItems : undefined, appliedCouponCode: itemsOrCouponChanged ? couponCode || null : undefined, subtotal: financialChange ? subtotal.toFixed(2) : undefined, shippingFee: financialChange ? shippingFee.toFixed(2) : undefined, manualAdjustment: financialChange ? manualAdjustment.toFixed(2) : undefined, grandTotal: financialChange ? grandTotal.toFixed(2) : undefined, updatedAt: new Date(),
       phone: input.phone === undefined ? undefined : (displayPhoneNumber(input.phone) || null), alternatePhone: input.alternatePhone === undefined ? undefined : (displayPhoneNumber(input.alternatePhone) || null), email: input.email === undefined ? undefined : (input.email || null),

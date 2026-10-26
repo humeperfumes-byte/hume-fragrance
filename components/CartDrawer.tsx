@@ -142,8 +142,6 @@ function getCouponDetailContent(
   };
 }
 
-const APPLIED_COUPON_STORAGE_KEY = "hume_applied_coupon_code";
-const SPECIAL5_CODE = "SPECIAL-5";
 const REWARD_CONFETTI = [
   { left: "4%", top: "-8%", delay: 0, x: -18, color: "#16a34a" },
   { left: "10%", top: "-12%", delay: 0.1, x: 22, color: "#0f766e" },
@@ -183,6 +181,9 @@ const CartDrawer = () => {
   const pathname = usePathname();
   const {
     items,
+    hydrated,
+    appliedCouponCode,
+    setAppliedCouponCode,
     removeItem,
     updateQuantity,
     totalItems,
@@ -203,9 +204,7 @@ const CartDrawer = () => {
   const [allCoupons, setAllCoupons] = useState<Coupon[]>(
     () => fallbackCoupons,
   );
-  const [appliedCouponCode, setAppliedCouponCode] = useState<string | null>(
-    null,
-  );
+  const [couponsLoaded, setCouponsLoaded] = useState(false);
   const [couponInput, setCouponInput] = useState("");
   const [expandedCouponCode, setExpandedCouponCode] = useState<string | null>(
     null,
@@ -363,21 +362,6 @@ const CartDrawer = () => {
   );
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const storedCode = window.localStorage
-      .getItem(APPLIED_COUPON_STORAGE_KEY)
-      ?.trim()
-      .toUpperCase();
-    if (storedCode === SPECIAL5_CODE) {
-      window.localStorage.removeItem(APPLIED_COUPON_STORAGE_KEY);
-      queueMicrotask(() => setCouponInput(""));
-      return;
-    }
-    if (!storedCode) return;
-    queueMicrotask(() => { setAppliedCouponCode(storedCode); setCouponInput(storedCode); });
-  }, []);
-
-  useEffect(() => {
     const handleCouponRequest = (event: Event) => {
       const code = (event as CustomEvent<{ code?: string }>).detail?.code
         ?.trim()
@@ -390,7 +374,7 @@ const CartDrawer = () => {
 
     window.addEventListener("hume:apply-coupon", handleCouponRequest);
     return () => window.removeEventListener("hume:apply-coupon", handleCouponRequest);
-  }, []);
+  }, [setAppliedCouponCode]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -467,6 +451,7 @@ const CartDrawer = () => {
       if (allResult.status === "fulfilled" && allResult.value.ok) {
         const allData = (await allResult.value.json()) as Coupon[];
         setAllCoupons(Array.isArray(allData) ? allData : []);
+        setCouponsLoaded(true);
       }
     };
     loadCoupons();
@@ -572,8 +557,7 @@ const CartDrawer = () => {
   }, [isCartOpen]);
 
   useEffect(() => {
-    if (!appliedCouponCode) return;
-    if (allCoupons.length === 0) return;
+    if (!hydrated || !couponsLoaded || !appliedCouponCode) return;
     if (!appliedCoupon) {
       queueMicrotask(() => setAppliedCouponCode(null));
       return;
@@ -585,7 +569,9 @@ const CartDrawer = () => {
       queueMicrotask(() => setAppliedCouponCode(null));
     }
   }, [
-    allCoupons.length,
+    hydrated,
+    couponsLoaded,
+    setAppliedCouponCode,
     appliedCoupon,
     appliedCouponCode,
     isCouponEligible,
@@ -602,15 +588,6 @@ const CartDrawer = () => {
 
     queueMicrotask(() => setRewardUnlockOpen(true));
   }, [isCartOpen, items.length, welcomeBackReward]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!appliedCouponCode) {
-      window.localStorage.removeItem(APPLIED_COUPON_STORAGE_KEY);
-      return;
-    }
-    window.localStorage.setItem(APPLIED_COUPON_STORAGE_KEY, appliedCouponCode);
-  }, [appliedCouponCode]);
 
   useEffect(() => {
     if (!rewardUnlockOpen) return;

@@ -24,6 +24,8 @@ export interface CartItem {
 
 interface CartContextType {
   hydrated: boolean;
+  appliedCouponCode: string | null;
+  setAppliedCouponCode: (code: string | null) => void;
   items: CartItem[];
   addItem: (item: Omit<CartItem, "quantity">) => void;
   removeItem: (id: string) => void;
@@ -44,6 +46,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const settings = useSiteControls();
+  const [appliedCouponCode, setAppliedCouponCode] = useState<string | null>(null);
 
   const emitTracking = (eventType: string, payload?: Record<string, unknown>) => {
     if (typeof window === "undefined") return;
@@ -57,6 +60,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   // Hydrate cart from local storage
   useEffect(() => {
     try {
+      setAppliedCouponCode(window.localStorage.getItem("hume_applied_coupon_code")?.trim().toUpperCase() || null);
       const raw = window.localStorage.getItem(CART_STORAGE_KEY);
       if (!raw) {
         setHydrated(true);
@@ -81,6 +85,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       setHydrated(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (appliedCouponCode) window.localStorage.setItem("hume_applied_coupon_code", appliedCouponCode);
+    else window.localStorage.removeItem("hume_applied_coupon_code");
+  }, [hydrated, appliedCouponCode]);
 
   const addItem = (item: Omit<CartItem, "quantity">) => {
     setItems((prev) => {
@@ -184,6 +194,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     <CartContext.Provider
       value={{
         hydrated,
+        appliedCouponCode,
+        setAppliedCouponCode,
         items,
         addItem,
         removeItem,

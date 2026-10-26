@@ -28,3 +28,11 @@ test("Successful and rejected checkout responses retain status and JSON", async 
     }
   } finally { globalThis.fetch = original; }
 });
+
+test("Account timeout uses its own retry message for a stalled response body", async () => {
+  const original = globalThis.fetch;
+  try {
+    globalThis.fetch = async () => new Response(new ReadableStream({ start() {} }));
+    await assert.rejects(checkoutFetch("http://localhost/api/account", {}, 20, "Your account took too long to load. Please try again."), /Your account took too long to load/);
+  } finally { globalThis.fetch = original; }
+});

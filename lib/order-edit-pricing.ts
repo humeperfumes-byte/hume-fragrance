@@ -5,6 +5,6 @@ export function preserveOrderItem<T extends Item>(item: T, originalItems: T[]): 
   return original ? { ...original, quantity: item.quantity } : undefined;
 }
 
-export function getStoredOrderDiscount(order: { subtotal: string | null; shippingFee: string | null; manualAdjustment: string | null; grandTotal: string | null }): number {
-  return Math.max(0, Number(order.subtotal || 0) + Number(order.shippingFee || 0) + Number(order.manualAdjustment || 0) - Number(order.grandTotal || 0));
+export function getStoredOrderDiscount(order: { subtotal: string | null; shippingFee: string | null; manualAdjustment: string | null; codFee?: string | null; grandTotal: string | null }): number {
+  return Math.max(0, Number(order.subtotal || 0) + Number(order.shippingFee || 0) + Number(order.manualAdjustment || 0) + Number(order.codFee || 0) - Number(order.grandTotal || 0));
 }

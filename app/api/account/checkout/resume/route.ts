@@ -10,7 +10,6 @@ import { randomUUID } from "node:crypto";
 import { checkoutCanContinue } from "@/lib/checkout-continuation";
 import { secureCheckoutEnabled, checkoutFailure, CheckoutRequestError, switchSecurePaymentMode } from "@/lib/secure-checkout";
 import { readBoundedJson } from "@/lib/bounded-request-body";
-import { expectedPaymentMinor } from "@/lib/secure-checkout-pricing";
 export const runtime = "nodejs";
 export async function POST(request: NextRequest) {
   try {
@@ -33,12 +32,6 @@ export async function POST(request: NextRequest) {
       if (!currentSession || (owned && (!ownsCheckout(owner, currentSession.ownerHash) || currentSession.expiresAt <= new Date()))) throw new CheckoutRequestError("Please sign in to resume this order", 401);
       const [order] = await tx.select().from(orders).where(eq(orders.id, body.orderId)).for("update").limit(1);
       if (!order || !checkoutCanContinue(order)) throw new CheckoutRequestError("This order no longer needs payment", 409);
-      const savedMode = /Prepaid.*Cash on Delivery/i.test(order.paymentMethod || "") ? "partial_cod" : "full";
-      if (body.paymentMode && body.paymentMode !== savedMode) {
-        if (order.razorpayOrderId || order.paymentSyncStatus === "creating" || order.checkoutChannel !== "razorpay") throw new CheckoutRequestError("This order already has a saved payment request. Continue saved payment to check it before changing payment options.", 409);
-        await tx.update(orders).set({ paymentMethod: body.paymentMode === "partial_cod" ? "20% Prepaid + 80% Cash on Delivery" : "Razorpay Online Payment", updatedAt: new Date() }).where(eq(orders.id, order.id));
-        await tx.update(secureCheckoutSessions).set({ expectedPaymentMinor: expectedPaymentMinor(Number(order.grandTotal), body.paymentMode === "partial_cod") }).where(eq(secureCheckoutSessions.id, session.id));
-      }
       await tx.update(secureCheckoutSessions).set({ tokenHash: capability.hash, ...(ownerCapability ? { ownerHash: ownerCapability.hash } : {}), expiresAt: new Date(Date.now() + 7 * 86400000), updatedAt: new Date() }).where(eq(secureCheckoutSessions.id, session.id));
       await tx.insert(customerAccessLinks).values({ id: randomUUID(), tokenHash: hashCustomerToken(deriveOrderToken(capability.token))!, scope: "order", resourceId: order.id, expiresAt: new Date(Date.now() + 30 * 86400000) }).onConflictDoNothing({ target: customerAccessLinks.tokenHash });
     });

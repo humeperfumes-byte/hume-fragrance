@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ChevronRight, CreditCard, ShieldCheck, ShoppingBag, X } from "lucide-react";
 import ImageWithFallback from "@/components/ImageWithFallback";
+import { isCodEligible, COD_FEE } from "@/lib/cod-policy";
 import { formatINR } from "@/lib/currency";
 import { useCart } from "@/context/CartContext";
 import { useActiveCheckout } from "@/hooks/use-active-checkout";
@@ -86,7 +87,7 @@ export default function PaymentRecoveryPrompt() {
     return null;
 
   if (checkout && !shouldBlockAnotherPayment(recovery)) return (
-    <button type="button" onClick={() => router.push(checkout.path)} aria-label="Complete pending order" className="fixed bottom-24 right-3 z-[60] flex items-center gap-3 rounded-2xl border border-[#d9b866]/80 bg-[#10533b] px-4 py-3 text-left text-white shadow-xl sm:bottom-8 sm:right-6">
+    <button type="button" onClick={() => router.push(checkout.path + "?resume=1")} aria-label="Complete pending order" className="fixed bottom-24 right-3 z-[60] flex items-center gap-3 rounded-2xl border border-[#d9b866]/80 bg-[#10533b] px-4 py-3 text-left text-white shadow-xl sm:bottom-8 sm:right-6">
       <ShoppingBag className="h-5 w-5 text-[#e7c47e]" /><span><span className="block text-[9px] uppercase tracking-widest text-[#e7c47e]">{checkout.status === "draft" ? "Checkout saved" : "Payment incomplete"}</span><span className="block font-serif text-lg">{checkout.status === "draft" ? "Continue checkout" : "Complete payment"}</span></span><ChevronRight className="h-4 w-4" />
     </button>
   );
@@ -161,9 +162,9 @@ export default function PaymentRecoveryPrompt() {
               </div>
             ) : null}
             <div className="mt-5 space-y-3">
-              <button type="button" onClick={() => continueWith("partial_cod")} className="flex w-full items-center gap-3 rounded-2xl border border-[#d7b76e] bg-[#fff7df] p-4 text-left">
-                <ShieldCheck className="h-5 w-5 text-[#7b5a13]" /><span className="flex-1"><strong className="block text-sm">Pay 20% now + COD</strong><span className="mt-1 block text-xs text-black/50">Pay {formatINR(Math.round(recovery.grandTotal * .2))} now; the remaining 80% is due on delivery.</span></span><ChevronRight className="h-4 w-4" />
-              </button>
+              {isCodEligible(recovery.grandTotal) && <button type="button" onClick={() => continueWith("partial_cod")} className="flex w-full items-center gap-3 rounded-2xl border border-[#d7b76e] bg-[#fff7df] p-4 text-left">
+                <ShieldCheck className="h-5 w-5 text-[#7b5a13]" /><span className="flex-1"><strong className="block text-sm">Pay 20% now + COD</strong><span className="mt-1 block text-xs text-black/50">Pay {formatINR(Math.round((recovery.grandTotal + COD_FEE) * .2))} now; the remaining 80% is due on delivery. Includes ₹50 COD charge.</span></span><ChevronRight className="h-4 w-4" />
+              </button>}
               <button type="button" onClick={() => continueWith("full")} className="group flex min-h-16 w-full items-center gap-3 overflow-hidden rounded-2xl border border-[#6faa8b] bg-[linear-gradient(115deg,#0d3b2c_0%,#176447_52%,#26835c_100%)] p-4 text-left text-white shadow-[0_12px_28px_rgba(13,77,52,.22)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(13,77,52,.3)]">
                 <span className="flex h-9 w-9 items-center justify-center rounded-full border border-white/25 bg-white/10"><CreditCard className="h-4.5 w-4.5 text-[#d9f2df]" /></span><strong className="flex-1 text-sm tracking-[.01em]">Pay complete amount</strong><ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </button>

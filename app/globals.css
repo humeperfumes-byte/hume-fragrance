@@ -867,3 +867,68 @@ a, button, select, input[type="submit"], input[type="button"], [role="button"], 
 @media (prefers-reduced-motion: reduce) {
   .hume-checkout-loading-bar { animation: none; left: 30%; }
 }
+
+/* Seasonal offer returns to its original appearance after November 9. */
+.hume-diwali-offer {
+  background: linear-gradient(115deg, #651f27, #963b28 58%, #6e202a);
+  border-color: #e9bc66;
+  animation: hume-diwali-glow 3s ease-in-out infinite;
+}
+.hume-diwali-offer:hover { border-color: #ffe0a0; }
+.hume-diwali-shine {
+  background: linear-gradient(110deg, transparent 30%, rgba(255,224,160,.16) 48%, transparent 66%);
+  transform: translateX(-110%);
+  animation: hume-diwali-shine 5s ease-in-out infinite;
+}
+.hume-diwali-flame { animation: hume-diwali-flicker 2.5s ease-in-out infinite; }
+.hume-diwali-sparkle { animation: hume-diwali-twinkle 2s ease-in-out infinite; }
+@keyframes hume-diwali-glow {
+  0%, 100% { box-shadow: 0 4px 16px rgba(128,47,28,.18); }
+  50% { box-shadow: 0 5px 23px rgba(210,143,42,.35); }
+}
+@keyframes hume-diwali-shine {
+  0%, 25% { transform: translateX(-110%); }
+  65%, 100% { transform: translateX(110%); }
+}
+@keyframes hume-diwali-flicker {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px #edac49); }
+  50% { transform: scale(1.08); filter: drop-shadow(0 0 6px #edac49); }
+}
+@keyframes hume-diwali-twinkle { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .hume-diwali-offer, .hume-diwali-shine, .hume-diwali-flame, .hume-diwali-sparkle { animation: none; }
+}
+
+.hume-diwali-offer {
+  background: radial-gradient(ellipse at 8% 80%, #b75d23 0, transparent 42%), linear-gradient(115deg, #762326, #9d3227 55%, #571e36);
+  border: 1px solid #edc77e;
+}
+.hume-diwali-rangoli {
+  border-radius: 50%;
+  opacity: .18;
+  border: 1px solid #ffe2a1;
+  background: repeating-conic-gradient(from 0deg, transparent 0deg 12deg, #ffd583 12deg 14deg, transparent 14deg 30deg);
+  mask-image: radial-gradient(circle, transparent 25%, #000 26% 28%, transparent 29% 41%, #000 42% 44%, transparent 45% 59%, #000 60% 63%, transparent 64%);
+  animation: hume-diwali-rangoli-turn 50s linear infinite;
+}
+.hume-diwali-lights > span {
+  width: 3px; height: 3px; border-radius: 50%; background: #ffe8b2;
+  box-shadow: 0 0 5px 2px #ffbe4f80;
+  animation: hume-diwali-twinkle 2.4s ease-in-out infinite alternate;
+}
+.hume-diwali-wick { transform-origin: 24px 25px; animation: hume-diwali-wick-dance 1.8s ease-in-out infinite; }
+.hume-diwali-free { background: linear-gradient(120deg, #ffecc0, #e9af51, #ffe4a4); box-shadow: 0 0 12px #ffc04b40; color: #652517; }
+@keyframes hume-diwali-rangoli-turn { to { transform: rotate(360deg); } }
+@keyframes hume-diwali-wick-dance { 0%, 100% { transform: rotate(-4deg) scaleY(.94); } 50% { transform: rotate(4deg) scaleY(1.08); } }
+@media (prefers-reduced-motion: reduce) {
+  .hume-diwali-rangoli, .hume-diwali-lights > span, .hume-diwali-wick { animation: none; }
+}
+
+.hume-diwali-title {
+  color: #ffe1a1;
+  background: linear-gradient(100deg, #ffecc1 10%, #edbc68 45%, #fff1ce 75%, #edbc68);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 1px 14px rgba(255, 191, 87, .18);
+}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { checkoutFetch } from "@/lib/checkout-fetch";
 import SiteLoading from "@/components/SiteLoading";
 import PendingCheckoutCard from "@/components/PendingCheckoutCard";
 import {
@@ -92,6 +93,7 @@ type AccountOrder = {
   subtotal: number | null;
   shippingFee: number | null;
   grandTotal: number | null;
+  codFee?: number | null;
   appliedCouponCode: string | null;
   cartSnapshot: AccountOrderItem[];
   giftItems: string[];
@@ -272,30 +274,30 @@ export default function AccountClient() {
     setError(null);
     setIsLoading(true);
 
-    const storage = window.localStorage;
-    const savedAccount = readStoredCustomerAccount(storage);
-    const checkoutDetails = readStoredCheckoutDetails(storage);
-    const accountToken =
-      savedAccount?.accountLoginToken || getStoredAccountLoginToken(storage);
-    const sessionId =
-      savedAccount?.sessionId || getStoredCheckoutSessionId(storage);
-    const hydratedAccount =
-      savedAccount ||
-      (checkoutDetails && sessionId
-        ? persistCustomerAccountFromCheckout(storage, sessionId, checkoutDetails)
-        : null);
-
-    setAccount(hydratedAccount);
-
     try {
-      const response = await fetch("/api/account", {
+      const storage = window.localStorage;
+      const savedAccount = readStoredCustomerAccount(storage);
+      const checkoutDetails = readStoredCheckoutDetails(storage);
+      const accountToken =
+        savedAccount?.accountLoginToken || getStoredAccountLoginToken(storage);
+      const sessionId =
+        savedAccount?.sessionId || getStoredCheckoutSessionId(storage);
+      const hydratedAccount =
+        savedAccount ||
+        (checkoutDetails && sessionId
+          ? persistCustomerAccountFromCheckout(storage, sessionId, checkoutDetails)
+          : null);
+
+      setAccount(hydratedAccount);
+
+      const response = await checkoutFetch("/api/account", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId: sessionId || undefined,
           accountToken: accountToken || undefined,
         }),
-      });
+      }, 20000, "Your account took too long to load. Please try again.");
       const data = (await response.json()) as AccountResponse;
       if (response.status === 401 && !accountToken) { setOrders([]); return; }
       if (!response.ok || !data.ok) {
@@ -472,6 +474,10 @@ export default function AccountClient() {
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-zinc-950 text-white">
             <UserRound className="h-6 w-6" />
           </div>
+          {error && <div role="alert" className="mt-5 rounded-xl bg-rose-50 p-4 text-sm text-rose-700">
+            <p>{error}</p>
+            <button type="button" className="mt-2 font-semibold underline underline-offset-4" onClick={() => void loadAccount()}>Try again</button>
+          </div>}
           <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
             Account not started
           </p>
@@ -630,7 +636,8 @@ export default function AccountClient() {
 
         {error ? (
           <div className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            {error}
+            <p role="alert">{error}</p>
+            <button type="button" onClick={() => void loadAccount()} disabled={isLoading} className="mt-2 font-semibold underline underline-offset-4 disabled:opacity-50">Try again</button>
           </div>
         ) : null}
 
@@ -648,6 +655,8 @@ export default function AccountClient() {
 
             {isLoading ? (
               <SiteLoading compact title="Opening your account" description="Bringing your orders and account details together." />
+            ) : error ? (
+              <p className="py-6 text-center text-sm text-stone-500">Your orders could not be refreshed. Please try again.</p>
             ) : orders.length === 0 ? (
               <div className="flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 px-6 text-center">
                 <ShoppingBag className="h-9 w-9 text-zinc-300" />
@@ -792,10 +801,10 @@ export default function AccountClient() {
                           <div className="text-left sm:text-right"><p className="text-[10px] uppercase tracking-[0.16em] text-white/50">Order total</p><p className="mt-1 font-serif text-3xl text-[#f1dfb5]">{order.grandTotal !== null ? formatINR(order.grandTotal) : "—"}</p></div>
                         </div>
                         <div className="relative grid gap-3 sm:grid-cols-2">
-                          {!/Prepaid.*Cash on Delivery/i.test(order.paymentMethod || "") && order.status !== "payment_authorized" && <button type="button" onClick={() => resumeOrderPayment(order, "partial_cod")} disabled={resumingOrder !== null} className="group flex w-full flex-col items-start rounded-[18px] border border-[#dfc89e] bg-[#f8efdf] p-3.5 text-left text-[#30271e] transition hover:bg-[#fff7e8] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#e5c68e] disabled:cursor-wait disabled:opacity-60">
+                          {order.grandTotal !== null && order.grandTotal <= 1500 && !/Prepaid.*Cash on Delivery/i.test(order.paymentMethod || "") && order.status !== "payment_authorized" && <button type="button" onClick={() => resumeOrderPayment(order, "partial_cod")} disabled={resumingOrder !== null} className="group flex w-full flex-col items-start rounded-[18px] border border-[#dfc89e] bg-[#f8efdf] p-3.5 text-left text-[#30271e] transition hover:bg-[#fff7e8] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#e5c68e] disabled:cursor-wait disabled:opacity-60">
                             <span className="flex w-full items-center justify-between"><WalletCards className="h-4 w-4 text-[#927044]" aria-hidden="true" /><span className="rounded-full border border-[#b49a6d]/30 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider">80% on delivery</span></span>
                             <span className="mt-2 text-sm font-semibold">20% advance + COD</span>
-                            <span className="mt-1 text-xs text-[#806d54]">{order.grandTotal !== null ? formatINR(Math.max(1, Math.round(order.grandTotal * 0.2))) + " due now" : "Pay 20% now"}</span>
+                            <span className="mt-1 text-xs text-[#806d54]">{order.grandTotal !== null ? formatINR(Math.max(1, Math.round((order.grandTotal + 50) * 0.2))) + " due now · includes ₹50 COD charge" : "Pay 20% now · ₹50 COD charge"}</span>
                             <span className="mt-3 flex w-full items-center justify-between text-[11px] font-semibold">{resumingOrder === order.id ? "Opening checkout…" : "Choose advance COD"}<ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" /></span>
                           </button>}
                           <button type="button" onClick={() => resumeOrderPayment(order, order.secureCheckout && /Prepaid.*Cash on Delivery/i.test(order.paymentMethod || "") ? "partial_cod" : "full")} disabled={resumingOrder !== null} className="group flex w-full flex-col items-start rounded-[18px] border border-white/20 bg-white/[0.07] p-3.5 text-left text-white transition hover:border-white/35 hover:bg-white/[0.12] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#e5c68e] disabled:cursor-wait disabled:opacity-60">

@@ -1,3 +1,4 @@
+import { savedCodFee } from "@/lib/cod-policy";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -19,8 +20,9 @@ import { redirect } from "next/navigation";
 import { storedPaymentMinor } from "@/lib/secure-checkout-pricing";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Continue your HUME checkout", robots: { index: false, follow: false }, referrer: "no-referrer" };
-export default async function ResumeCheckoutPage({ params }: { params: Promise<{ token: string }> }) {
+export default async function ResumeCheckoutPage({ params, searchParams }: { params: Promise<{ token: string }>; searchParams: Promise<{ resume?: string }> }) {
   const { token } = await params;
+  const resumed = (await searchParams).resume === "1";
   const automatic = await secureSessionByToken(token).catch(() => { reportServerError("CHECKOUT_RESUME_FAILED"); return null; });
   if (automatic) {
     if (await ownsPageSession(automatic.ownerHash)) {
@@ -31,7 +33,7 @@ export default async function ResumeCheckoutPage({ params }: { params: Promise<{
       // availability and authoritative pricing are checked again before payment.
       const cart = automatic.cart;
       if (!cart) return <main className="mx-auto max-w-xl space-y-5 px-5 py-20"><h1 className="text-2xl font-semibold">Please update your saved selection</h1><p>A saved product is unavailable or needs updated selections. Your bag is preserved.</p><Link href="/shop" className="inline-block underline">Return to the collection</Link></main>;
-      return <main className="min-h-screen bg-background"><Header /><OwnedCheckout session={{ token, id: automatic.id, orderId: automatic.orderId, orderNumber: automatic.orderNumber, cart, details: automatic.details, paymentPending: !!savedOrder, ...(savedOrder ? { expectedPaymentMinor: storedPaymentMinor(automatic.expectedPaymentMinor, Number(savedOrder.grandTotal), /Prepaid.*Cash on Delivery/i.test(savedOrder.paymentMethod || "")), savedTotal: Number(savedOrder.grandTotal), savedShippingFee: Number(savedOrder.shippingFee), paymentMode: /Prepaid.*Cash on Delivery/i.test(savedOrder.paymentMethod || "") ? "partial_cod" as const : "full" as const } : {}) }} /><Footer /></main>;
+      return <main className="min-h-screen bg-background"><Header /><OwnedCheckout session={{ token, id: automatic.id, orderId: automatic.orderId, orderNumber: automatic.orderNumber, cart, details: automatic.details, paymentPending: !!savedOrder, resumed, ...(savedOrder ? { expectedPaymentMinor: storedPaymentMinor(automatic.expectedPaymentMinor, Number(savedOrder.grandTotal), /Prepaid.*Cash on Delivery/i.test(savedOrder.paymentMethod || "")), savedCodFee: savedCodFee(savedOrder.paymentMethod, savedOrder.codFee), savedTotal: Number(savedOrder.grandTotal), savedShippingFee: Number(savedOrder.shippingFee), paymentMode: /Prepaid.*Cash on Delivery/i.test(savedOrder.paymentMethod || "") ? "partial_cod" as const : "full" as const } : {}) }} /><Footer /></main>;
     }
     const [savedOrder] = await db.select({ id: orders.id }).from(orders).where(eq(orders.id, automatic.orderId)).limit(1);
     if (savedOrder) return <main className="mx-auto max-w-xl px-5 py-20"><h1 className="text-2xl font-semibold">This checkout already has an order</h1><p className="mt-4">Check its progress before placing another order.</p><Link className="mt-5 inline-block underline" href={`/order/${deriveOrderToken(token)}`}>View order</Link></main>;

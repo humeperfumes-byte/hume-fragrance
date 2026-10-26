@@ -8,6 +8,7 @@ export interface OrderEmailData {
   subtotal?: string | number | null;
   shippingFee?: string | number | null;
   grandTotal?: string | number | null;
+  codFee?: string | number | null;
   details: {
     fullName?: string | null;
     email?: string | null;
@@ -83,6 +84,7 @@ export async function sendOrderConfirmationEmail(order: OrderEmailData) {
       total: `Rs. ${Number(order.grandTotal || 0).toFixed(2)}`,
       subtotal: `Rs. ${Number(order.subtotal || 0).toFixed(2)}`,
       shippingCharge: order.shippingFee !== undefined && Number(order.shippingFee) === 0 ? "Complimentary" : `Rs. ${Number(order.shippingFee || 0).toFixed(2)}`,
+      codCharge: Number(order.codFee || 0) > 0 ? `Rs. ${Number(order.codFee).toFixed(2)}` : undefined,
       tax: "Rs. 0.00",
       shippingAddress,
       supportEmail: "support@humefragrance.com",

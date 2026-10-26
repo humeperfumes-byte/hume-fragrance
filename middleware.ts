@@ -17,7 +17,7 @@ export function middleware(request: NextRequest) {
     // Token pages must not execute third-party analytics or transmit the URL.
     const paymentPage = pathWithoutPrefix.startsWith("/checkout/");
     response.headers.set("Content-Security-Policy", paymentPage
-      ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com; connect-src 'self' https://*.razorpay.com; img-src 'self' data: https://res.cloudinary.com https://*.razorpay.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-src https://*.razorpay.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.razorpay.com; connect-src 'self' https://*.razorpay.com; img-src 'self' data: https://res.cloudinary.com https://*.razorpay.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-src https://*.razorpay.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
       : "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
   }
   return response;

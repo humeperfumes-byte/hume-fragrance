@@ -13,3 +13,7 @@ test("shipping edits preserve discounts without treating manual discounts as cou
   assert.equal(getStoredOrderDiscount({ subtotal: "1000", shippingFee: "50", manualAdjustment: "-100", grandTotal: "750" }), 200);
   assert.equal(getStoredOrderDiscount({ subtotal: "1000", shippingFee: "0", manualAdjustment: "-100", grandTotal: "900" }), 0);
 });
+
+test("COD fee does not reduce the recorded coupon discount during admin edits", () => {
+  assert.equal(getStoredOrderDiscount({subtotal:"1000",shippingFee:"0",manualAdjustment:"0",codFee:"50",grandTotal:"950"}),100);
+});

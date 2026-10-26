@@ -18,6 +18,7 @@ type OrderConfirmationPreviewData = {
   total: string;
   subtotal: string;
   shippingCharge: string;
+  codCharge?: string;
   tax: string;
   shippingAddress: string;
   supportEmail: string;
@@ -163,6 +164,7 @@ export function buildOrderConfirmationPreviewHtml(data: OrderConfirmationPreview
                             <td style="padding:6px 0;color:#2f3837;font-size:15px;">Shipping</td>
                             <td align="right" style="padding:6px 0;font-family:'Inter',Arial,Helvetica,sans-serif;color:#1f6a64;font-size:15px;font-weight:600;">${data.shippingCharge}</td>
                           </tr>
+                          ${data.codCharge ? '<tr><td style="padding:6px 0;color:#2f3837;font-size:15px;">COD charge</td><td align="right" style="padding:6px 0;color:#2f3837;font-size:15px;">' + data.codCharge + '</td></tr>' : ''}
                           <tr>
                             <td style="padding:6px 0;color:#2f3837;font-size:15px;">Estimated Tax</td>
                             <td align="right" style="padding:6px 0;font-family:'Inter',Arial,Helvetica,sans-serif;color:#2f3837;font-size:15px;font-weight:500;">${data.tax}</td>

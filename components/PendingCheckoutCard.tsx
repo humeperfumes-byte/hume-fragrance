@@ -21,7 +21,7 @@ export default function PendingCheckoutCard({ draftsOnly = false }: { draftsOnly
     </div>
     <div className="flex flex-col gap-4 border-t border-stone-100 bg-[#faf9f6] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
       <div><p className="text-[10px] font-medium uppercase tracking-[0.15em] text-stone-500">Order total</p><p className="mt-1 text-lg font-semibold tracking-tight text-stone-900">{formatINR(checkout.grandTotal)}</p></div>
-      <Link href={checkout.path} referrerPolicy="no-referrer" className="inline-flex min-h-12 items-center justify-center gap-5 rounded-full bg-stone-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-stone-700 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-stone-900">Continue checkout<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+      <Link href={checkout.path + "?resume=1"} referrerPolicy="no-referrer" className="inline-flex min-h-12 items-center justify-center gap-5 rounded-full bg-stone-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-stone-700 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-stone-900">Continue checkout<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
     </div>
   </section>;
 }

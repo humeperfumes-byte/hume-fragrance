@@ -1,15 +1,19 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useCart, type CartItem } from "@/context/CartContext";
+import { isCodEligible } from "@/lib/cod-policy";
+import { canChooseCheckoutPayment } from "@/lib/checkout-payment-options";
 import CheckoutClient from "./CheckoutClient";
 import CheckoutLoading from "./CheckoutLoading";
-export type OwnedCheckoutData = { token: string; id: string; orderId: string; orderNumber: string; cart: CartItem[]; details: Record<string, string>; paymentPending: boolean; savedTotal?: number; savedShippingFee?: number; expectedPaymentMinor?: number; paymentMode?: "full" | "partial_cod" };
+export type OwnedCheckoutData = { token: string; id: string; orderId: string; orderNumber: string; cart: CartItem[]; details: Record<string, string>; paymentPending: boolean; resumed?: boolean; savedCodFee?: number; savedTotal?: number; savedShippingFee?: number; expectedPaymentMinor?: number; paymentMode?: "full" | "partial_cod" };
 export default function OwnedCheckout({ session }: { session: OwnedCheckoutData }) {
   const { hydrated, restoreItems } = useCart();
   const once = useRef(false);
   const [ready, setReady] = useState(false);
   const [message, setMessage] = useState("");
+  const allowPaymentChoice = canChooseCheckoutPayment(session);
   const [mode, setMode] = useState<"full" | "partial_cod">(() => {
+    if (!allowPaymentChoice) return "full";
     if (session.paymentMode) return session.paymentMode;
     if (typeof window !== "undefined") {
       try {
@@ -41,7 +45,7 @@ export default function OwnedCheckout({ session }: { session: OwnedCheckoutData 
   }, [hydrated, restoreItems, session]);
   useEffect(() => { if (session.paymentMode) setMode(session.paymentMode); }, [session.paymentMode]);
   const chooseMode = async (next: "full" | "partial_cod") => {
-    if (switching || next === mode) return;
+    if (!allowPaymentChoice || switching || next === mode) return;
     if (!session.paymentPending) {
       setMode(next);
       window.localStorage.setItem("hume_payment_recovery_mode_v1", next);
@@ -60,16 +64,13 @@ export default function OwnedCheckout({ session }: { session: OwnedCheckoutData 
     finally { setSwitching(false); }
   };
   if (!ready) return <CheckoutLoading title="Welcome back to checkout" description="Restoring your bag and saved details." />;
-  return <>
-    <aside className="mx-auto my-5 max-w-3xl rounded-2xl border border-[#ded4c1] bg-[#faf7f0] p-4 sm:p-5" aria-live="polite">
-      <p className="text-[10px] font-semibold uppercase tracking-[.18em] text-[#886d42]">Your payment options</p>
-      <h2 className="mt-1 font-serif text-2xl text-[#163c2f]">Pay your way</h2>
+  const paymentOptions = (baseTotal: number) => allowPaymentChoice && isCodEligible(baseTotal) ? <aside className="mb-5 overflow-hidden rounded-2xl border border-stone-200 bg-white p-3 shadow-sm sm:p-4" aria-label="Choose payment option" aria-live="polite">
+      <h2 className="font-serif text-lg leading-tight text-[#163c2f]">Choose how to pay</h2>
       {message && <p role="alert" className="mt-2 text-sm text-[#61594c]">{message}</p>}
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        {(["full", "partial_cod"] as const).filter(option => !(session.paymentPending && session.paymentMode === "partial_cod" && option === "full")).map(option => <button key={option} type="button" aria-pressed={mode === option} disabled={switching} onClick={() => void chooseMode(option)} className={`rounded-xl border px-4 py-3 text-left transition disabled:opacity-50 ${mode === option ? "border-[#173e30] bg-[#173e30] text-white" : "border-[#ded4c1] bg-white text-[#302c24]"}`}><span className="block text-sm font-semibold">{option === "full" ? "Pay in full" : "20% advance + COD"}</span><span className="mt-1 block text-xs opacity-75">{option === "full" ? "UPI, cards & netbanking" : "Pay 20% now · 80% on delivery"}</span></button>)}
+        {(["full", "partial_cod"] as const).filter(option => (option === "full" || mode === "partial_cod" || isCodEligible(baseTotal))).map(option => <button key={option} type="button" aria-pressed={mode === option} disabled={switching} onClick={() => void chooseMode(option)} className={`relative flex min-h-16 items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#173e30] disabled:opacity-50 ${mode === option ? "border-[#173e30] bg-[#173e30] text-white" : "border-[#ded4c1] bg-white text-[#302c24]"}`}><span aria-hidden="true" className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${mode === option ? "border-white/80" : "border-stone-300"}`}>{mode === option && <span className="h-2 w-2 rounded-full bg-white" />}</span><span className="min-w-0"><span className="block text-[13px] font-semibold">{option === "full" ? "Pay in full" : "20% advance + COD"}</span><span className="mt-0.5 block text-[11px] leading-4 opacity-75">{option === "full" ? "UPI, cards & netbanking" : "80% on delivery · +₹50 COD fee"}</span></span></button>)}
       </div>
       {switching && <p role="status" className="mt-2 text-sm">Updating your payment option…</p>}
-    </aside>
-    <CheckoutClient paymentMode={mode} paymentBlocked={switching} secureSession={{ token: session.token, id: session.id, orderId: session.orderId, orderNumber: session.orderNumber, savedTotal: session.savedTotal, savedShippingFee: session.savedShippingFee, expectedPaymentMinor: session.expectedPaymentMinor }} />
-  </>;
+    </aside> : null;
+  return <CheckoutClient paymentOptions={paymentOptions} paymentMode={allowPaymentChoice ? mode : "full"} paymentBlocked={switching} secureSession={{ token: session.token, id: session.id, orderId: session.orderId, orderNumber: session.orderNumber, savedCodFee: session.savedCodFee, savedTotal: session.savedTotal, savedShippingFee: session.savedShippingFee, expectedPaymentMinor: session.expectedPaymentMinor }} />;
 }

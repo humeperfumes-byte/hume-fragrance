@@ -1,5 +1,5 @@
 /** Bound both the HTTP request and response body, including an unresponsive server. */
-export async function checkoutFetch(input: RequestInfo | URL, init?: RequestInit, timeoutMs = 30000): Promise<Response> {
+export async function checkoutFetch(input: RequestInfo | URL, init?: RequestInit, timeoutMs = 30000, timeoutMessage = "The connection took too long. Please tap Place Order to try again. Your checkout details are saved."): Promise<Response> {
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
@@ -11,7 +11,7 @@ export async function checkoutFetch(input: RequestInfo | URL, init?: RequestInit
       })(),
       new Promise<never>((_, reject) => {
         timer = setTimeout(() => {
-          reject(new Error("The connection took too long. Please tap Place Order to try again. Your checkout details are saved."));
+          reject(new Error(timeoutMessage));
           controller.abort();
         }, timeoutMs);
       }),

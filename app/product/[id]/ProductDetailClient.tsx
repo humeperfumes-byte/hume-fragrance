@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Bell, ShieldCheck, Truck, WalletCards } from "lucide-react";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import BuyThreeGetOneButton from "@/components/BuyThreeGetOneButton";
 import { useCart } from "@/context/CartContext";
 import { toast } from "@/hooks/use-toast";
 import type { PerfumeData } from "@/data/perfumes";
@@ -162,6 +163,10 @@ export default function ProductDetailClient({
       >
         {isSoldOut ? "Sold Out" : isComingSoon ? "Coming Soon" : isDiscoverySet ? "Build Discovery Set" : "Add to Bag"}
       </motion.button>
+
+      {!isDiscoverySet && !isRoseWater && !isKapoorCarFragrance && !isUnavailable && perfume.size.toLowerCase().includes("50ml") && (
+        <BuyThreeGetOneButton />
+      )}
 
       <a
         href={`https://wa.me/919559024822?text=${whatsappMessage}`}

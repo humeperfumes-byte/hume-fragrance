@@ -13,7 +13,7 @@ export function customerOrderView(order: Order, expectedMinor?: number | null) {
   const status = ["processing", "packed", "shipped", "delivered", "complete", "cancelled", "refunded"].includes(order.status) ? order.status : "received";
   return {
     orderNumber: order.orderNumber, status, payment: refund ? "Contact HUME for payment details" : externalPaid ? 'Payment received' : verified ? partial ? "Advance received" : "Payment received" : "Awaiting payment verification",
-    total, received: verified ? received : 0, codBalance: externalPaid?0:verified && partial ? Math.max(0, total - received) : null,
+    codFee: Number(order.codFee || 0), total, received: verified ? received : 0, codBalance: externalPaid?0:verified && partial ? Math.max(0, total - received) : null,
     city: order.city || "", country: order.country || "IN",
     trackingNumber: order.trackingNumber || "", carrier: order.fulfillmentCarrier || "", trackingStatus: order.trackingStatus || "",
     items: (order.cartSnapshot || []).map(item => ({ name: item.name, size: item.size || "", quantity: item.quantity, price: item.isGift ? 0 : item.price, isGift: !!item.isGift, selections: (item.sampleSelections || item.kitSelections || []).map(selection => selection.name) })),

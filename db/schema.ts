@@ -392,6 +392,7 @@ export const orders = pgTable("orders", {
   appliedCouponCode: varchar("applied_coupon_code", { length: 50 }),
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }),
   shippingFee: decimal("shipping_fee", { precision: 10, scale: 2 }),
+  codFee: decimal("cod_fee", { precision: 10, scale: 2 }).notNull().default("0"),
   manualAdjustment: decimal("manual_adjustment", { precision: 10, scale: 2 }).notNull().default("0"),
   adjustmentReason: text("adjustment_reason"),
   grandTotal: decimal("grand_total", { precision: 10, scale: 2 }),

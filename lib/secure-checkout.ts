@@ -1,3 +1,4 @@
+import { COD_PAYMENT_METHOD, savedCodFee, totalWithCod, isCodEligible } from "./cod-policy";
 import { checkoutSigningSecret } from "@/lib/checkout-signing-secret";
 import { secureCheckoutConfigured } from "@/lib/checkout-settings";
 import "server-only";
@@ -83,7 +84,7 @@ function notificationsEnabled() {
 function scheduleOrderNotification(order: Order, sendEmail = true) {
   if (!notificationsEnabled()) return;
   after(async () => {
-    const payload = { orderNumber: order.orderNumber, status: order.status, checkoutChannel: order.checkoutChannel, paymentMethod: order.paymentMethod, shippingMethod: order.shippingMethod, subtotal: order.subtotal, shippingFee: order.shippingFee, grandTotal: order.grandTotal, details: { fullName: order.fullName, phone: order.phone, email: order.email, addressLine1: order.addressLine1, addressLine2: order.addressLine2, city: order.city, state: order.state, pincode: order.pincode }, cartSnapshot: order.cartSnapshot };
+    const payload = { orderNumber: order.orderNumber, status: order.status, checkoutChannel: order.checkoutChannel, paymentMethod: order.paymentMethod, shippingMethod: order.shippingMethod, subtotal: order.subtotal, shippingFee: order.shippingFee, codFee: order.codFee, grandTotal: order.grandTotal, details: { fullName: order.fullName, phone: order.phone, email: order.email, addressLine1: order.addressLine1, addressLine2: order.addressLine2, city: order.city, state: order.state, pincode: order.pincode }, cartSnapshot: order.cartSnapshot };
     await Promise.allSettled([...(sendEmail ? [sendOrderConfirmationEmail(payload)] : []), sendAdminOrderAlert(payload)]);
   });
 }
@@ -258,6 +259,11 @@ export async function saveSecureOrder(request: NextRequest, access?: Awaited<Ret
       const [draft] = await tx.select({ pricingBreakdown: checkoutDrafts.pricingBreakdown }).from(checkoutDrafts).where(eq(checkoutDrafts.sessionId, session.id)).limit(1);
       const override = draft?.pricingBreakdown?.overrideTotal;
       if (typeof override === "number" && Number.isFinite(override) && override > 0) quote.grandTotal = Math.round(override * 100) / 100;
+      const partial = body.checkoutChannel === "razorpay" && /Prepaid.*Cash on Delivery/i.test(body.paymentMethod);
+      if (partial) {
+        if (!isCodEligible(quote.grandTotal)) throw new CheckoutRequestError("COD is available only for orders up to ₹1,500. Please pay in full.", 409);
+        quote.grandTotal = totalWithCod(quote.grandTotal);
+      }
       if (Math.round(quote.grandTotal * 100) !== Math.round(body.grandTotal * 100) || Math.round(quote.shippingFee * 100) !== Math.round(body.shippingFee * 100)) throw new CheckoutRequestError("The price has changed. Refresh checkout to review the current total.", 409);
       const d = body.details;
       const phone = normalizeIndianMobile(d.phone);
@@ -265,9 +271,8 @@ export async function saveSecureOrder(request: NextRequest, access?: Awaited<Ret
       if (body.checkoutChannel === "razorpay" && !config.razorpayEnabled || body.checkoutChannel === "whatsapp" && !config.whatsappCheckoutEnabled) throw new CheckoutRequestError("This payment method is unavailable", 409);
       const gifts = quote.subtotal >= config.giftTwoThreshold ? 2 : quote.subtotal >= config.giftOneThreshold ? 1 : 0;
       const giftItems = Array.from({ length: gifts }, (_, i) => `Gift ${i + 1}`);
-      const partial = /Prepaid.*Cash on Delivery/i.test(body.paymentMethod);
       const snapshot = [...cart, ...giftItems.map((name, index) => ({ id: `gift-tier-${index + 1}`, name, inspiration: "Complimentary gift", size: "Gift", price: 0, quantity: 1, isGift: true }))];
-      const [order] = await tx.insert(orders).values({ id: session.orderId, orderNumber: session.orderNumber, sessionId: session.id, checkoutChannel: body.checkoutChannel, status: body.checkoutChannel === "whatsapp" ? "whatsapp_initiated" : "payment_pending", paymentMethod: body.checkoutChannel === "whatsapp" ? "WhatsApp order" : partial ? "20% Prepaid + 80% Cash on Delivery" : "Razorpay Online Payment", ...d, phone, country: "IN", path: "/checkout", subtotal: quote.subtotal.toFixed(2), shippingFee: quote.shippingFee.toFixed(2), grandTotal: quote.grandTotal.toFixed(2), appliedCouponCode: codes.join(" + ") || null, cartSnapshot: snapshot, giftItems, whatsappMessage: body.whatsappMessage || null }).returning();
+      const [order] = await tx.insert(orders).values({ id: session.orderId, orderNumber: session.orderNumber, sessionId: session.id, checkoutChannel: body.checkoutChannel, status: body.checkoutChannel === "whatsapp" ? "whatsapp_initiated" : "payment_pending", paymentMethod: body.checkoutChannel === "whatsapp" ? "WhatsApp order" : partial ? COD_PAYMENT_METHOD : "Razorpay Online Payment", ...d, phone, country: "IN", path: "/checkout", subtotal: quote.subtotal.toFixed(2), shippingFee: quote.shippingFee.toFixed(2), codFee: partial ? "50.00" : "0.00", grandTotal: quote.grandTotal.toFixed(2), appliedCouponCode: codes.join(" + ") || null, cartSnapshot: snapshot, giftItems, whatsappMessage: body.whatsappMessage || null }).returning();
       created = true;
       await tx.update(secureCheckoutSessions).set({ cart, details: { ...d, phone }, expectedPaymentMinor: body.checkoutChannel === "razorpay" ? expectedPaymentMinor(quote.grandTotal, partial) : null, updatedAt: new Date() }).where(eq(secureCheckoutSessions.id, session.id));
       if (body.checkoutChannel === "whatsapp") await tx.update(checkoutDrafts).set({ status: "whatsapp_initiated", whatsappInitiatedAt: new Date(), updatedAt: new Date() }).where(eq(checkoutDrafts.sessionId, session.id));
@@ -326,10 +331,8 @@ export async function switchSecurePaymentMode(sessionId: string, mode: "full" | 
     if (!order || !checkoutCanContinue(order)) throw new CheckoutRequestError("This order no longer needs payment", 409);
     const savedMode = /Prepaid.*Cash on Delivery/i.test(order.paymentMethod || "") ? "partial_cod" : "full";
     if (mode === savedMode) return null;
+    if (mode === "partial_cod" && !isCodEligible(Number(order.grandTotal) - savedCodFee(order.paymentMethod, order.codFee))) throw new CheckoutRequestError("COD is available only for orders up to ₹1,500. Please pay in full.", 409);
     if (!["payment_pending", "payment_failed"].includes(order.status) || ["creating", "switching", "payment_review", "payment_mismatch", "multiple_captures"].includes(order.paymentSyncStatus || "")) throw new CheckoutRequestError("Your payment is being checked. Please wait before changing payment options.", 409);
-    // One provider-bound switch to COD is enough for this flow. Repeated mode
-    // changes would leave multiple payable provider requests outstanding.
-    if (order.razorpayOrderId && mode !== "partial_cod") throw new CheckoutRequestError("Continue your saved COD advance payment. Contact HUME to change this order.", 409);
     await tx.update(orders).set({ paymentSyncStatus: "switching", updatedAt: new Date() }).where(eq(orders.id, order.id));
     return order;
   });
@@ -341,7 +344,7 @@ export async function switchSecurePaymentMode(sessionId: string, mode: "full" | 
         razorpay<ProviderOrder>(`orders/${encodeURIComponent(snapshot.razorpayOrderId)}`),
         razorpay<{ items: ProviderPayment[] }>(`orders/${encodeURIComponent(snapshot.razorpayOrderId)}/payments`),
       ]);
-      if (provider.status === "paid" || payments.items.some(p => !["failed", "refunded"].includes(p.status))) throw new CheckoutRequestError("Your earlier payment is processing or paid. Check its status before choosing COD.", 409);
+      if (provider.status === "paid" || payments.items.some(p => !["failed", "refunded"].includes(p.status))) throw new CheckoutRequestError("Your earlier payment is processing or paid. Check its status before changing payment options.", 409);
     }
     await db.transaction(async tx => {
       await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${sessionId}))`);
@@ -351,11 +354,14 @@ export async function switchSecurePaymentMode(sessionId: string, mode: "full" | 
         const [draft] = await tx.select().from(checkoutDrafts).where(eq(checkoutDrafts.sessionId, sessionId)).limit(1);
         if (!draft) throw new CheckoutRequestError("Saved payment history unavailable", 503);
         const previous = draft.pricingBreakdown.previousPaymentRequests;
-        if (Array.isArray(previous) && previous.length) throw new CheckoutRequestError("Please contact HUME before changing this payment again.", 409);
-        await tx.update(checkoutDrafts).set({ pricingBreakdown: { ...draft.pricingBreakdown, previousPaymentRequests: [snapshot.razorpayOrderId] } }).where(eq(checkoutDrafts.id, draft.id));
+        const history = Array.isArray(previous) ? previous.filter((id): id is string => typeof id === "string" && /^order_[a-zA-Z0-9_]+$/.test(id)) : [];
+        if (history.length >= 5) throw new CheckoutRequestError("Please contact HUME before changing this payment again.", 409);
+        await tx.update(checkoutDrafts).set({ pricingBreakdown: { ...draft.pricingBreakdown, previousPaymentRequests: [...new Set([...history, snapshot.razorpayOrderId])] } }).where(eq(checkoutDrafts.id, draft.id));
       }
-      await tx.update(orders).set({ paymentMethod: mode === "partial_cod" ? "20% Prepaid + 80% Cash on Delivery" : "Razorpay Online Payment", razorpayOrderId: null, razorpayPaymentId: null, paymentSyncStatus: "unpaid", status: "payment_pending", updatedAt: new Date() }).where(eq(orders.id, snapshot.id));
-      await tx.update(secureCheckoutSessions).set({ expectedPaymentMinor: expectedPaymentMinor(Number(snapshot.grandTotal), mode === "partial_cod"), updatedAt: new Date() }).where(eq(secureCheckoutSessions.id, sessionId));
+      const baseTotal = Number(snapshot.grandTotal) - savedCodFee(snapshot.paymentMethod, snapshot.codFee);
+      const nextTotal = mode === "partial_cod" ? totalWithCod(baseTotal) : baseTotal;
+      await tx.update(orders).set({ codFee: mode === "partial_cod" ? "50.00" : "0.00", grandTotal: nextTotal.toFixed(2), paymentMethod: mode === "partial_cod" ? COD_PAYMENT_METHOD : "Razorpay Online Payment", razorpayOrderId: null, razorpayPaymentId: null, paymentSyncStatus: "unpaid", status: "payment_pending", updatedAt: new Date() }).where(eq(orders.id, snapshot.id));
+      await tx.update(secureCheckoutSessions).set({ expectedPaymentMinor: expectedPaymentMinor(nextTotal, mode === "partial_cod"), updatedAt: new Date() }).where(eq(secureCheckoutSessions.id, sessionId));
     });
   } catch (error) {
     await db.update(orders).set({ paymentSyncStatus: snapshot.paymentSyncStatus }).where(and(eq(orders.id, snapshot.id), eq(orders.paymentSyncStatus, "switching")));

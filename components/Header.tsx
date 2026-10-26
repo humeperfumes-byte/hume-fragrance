@@ -16,6 +16,7 @@ import { celebrityFavorites } from "@/lib/celebrity-favorites";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 import { DISCOVERY_SET_PATH } from "@/lib/discovery-set";
+import BuyThreeGetOneButton from "./BuyThreeGetOneButton";
 import AnnouncementBar from "./AnnouncementBar";
 import { useSiteControls } from "@/hooks/use-site-controls";
 import { prepareOverlayNavigation, useOverlayHistory } from "@/hooks/use-overlay-history";
@@ -316,6 +317,7 @@ const Header = () => {
               </div>
 
               <div className="px-4 py-5 space-y-6">
+
                 <section>
                   <div className="space-y-3">
                     <button
@@ -428,6 +430,7 @@ const Header = () => {
                         <span className="text-[1.25rem]">→</span>
                       </div>
                     </button>
+                    <BuyThreeGetOneButton onNavigate={() => { setIsMenuOpen(false); navigateTo("/buy-3-get-1"); }} />
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);
