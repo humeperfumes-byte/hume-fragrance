@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "@/hooks/use-toast";
+import {invoiceDefaults,invoiceDefaultsSchema,invoiceCompletionIssues} from "@/lib/invoice-workflow";
 import { InvoiceEditor } from "./InvoiceEditor";
 import type {InvoiceSuggestion} from '@/lib/invoice-suggestions';
 import { CustomerDirectory } from "./CustomerDirectory";
@@ -32,6 +33,7 @@ export default function InvoicePage({suggestions=[]}:{suggestions?:InvoiceSugges
   const [recoveryStatus, setRecoveryStatus] = useState("");
   const [savedSuggestions,setSavedSuggestions]=useState<InvoiceSuggestion[]>([]);
   const defaultsLoaded=useRef(false);
+  const rememberedDefaults=useRef<Partial<InvoiceDocument>>({});
   const [validationErrors, setValidationErrors] = useState<{path:string;message:string}[]>([]);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -43,6 +45,7 @@ export default function InvoicePage({suggestions=[]}:{suggestions?:InvoiceSugges
   const [registerVersion,setRegisterVersion]=useState(0);
   const [cancelled,setCancelled]=useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [editorInitialSection,setEditorInitialSection]=useState("Items");
   const pendingSaveId = useRef<string | null>(null);
   const [copying, setCopying] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -106,7 +109,7 @@ export default function InvoicePage({suggestions=[]}:{suggestions?:InvoiceSugges
     setInvoiceNumber(identity.invoiceNumber);
     try {
       const raw=localStorage.getItem("hume-invoice-defaults-v1");
-      if(raw){const defaults=JSON.parse(raw);const setters={sellerName:setSellerName,sellerAddress:setSellerAddress,sellerEmail:setSellerEmail,sellerPhone:setSellerPhone,sellerGstin:setSellerGstin,bankDetails:setBankDetails,terms:setTerms};for(const [key,setter] of Object.entries(setters))if(typeof defaults[key]==="string" && defaults[key].length<=4000)setter(defaults[key]);}
+      if(raw){const defaults=invoiceDefaultsSchema.partial().parse(JSON.parse(raw));rememberedDefaults.current=defaults;setOptions(previous=>({...previous,...Object.fromEntries(Object.entries(defaults).filter(([key])=>key in invoiceOptionDefaults))}));setShowPaymentStatus(defaults.showPaymentStatus??false);const setters={sellerName:setSellerName,sellerAddress:setSellerAddress,sellerEmail:setSellerEmail,sellerPhone:setSellerPhone,sellerGstin:setSellerGstin,bankDetails:setBankDetails,terms:setTerms};for(const [key,setter] of Object.entries(setters)){const value=defaults[key as keyof typeof defaults];if(typeof value==="string"&&value.length<=4000)setter(value);}}
     } catch { /* Keep built-in defaults when storage is unavailable. */ }
   }, []);
 
@@ -123,7 +126,7 @@ export default function InvoicePage({suggestions=[]}:{suggestions?:InvoiceSugges
     fetch("/api/admin/invoices/defaults",{cache:"no-store",signal:controller.signal}).then(response=>response.json()).then(result=>{
       if(controller.signal.aborted)return;
       defaultsLoaded.current=true;
-      if(result.defaults){initialSnapshot.current=null;applyDefaults.current({...JSON.parse(defaultsInput),...result.defaults});}
+      if(result.defaults){const defaults=invoiceDefaultsSchema.parse(result.defaults);rememberedDefaults.current=defaults;initialSnapshot.current=null;applyDefaults.current({...JSON.parse(defaultsInput),...defaults});}
     }).catch(()=>{});
     return()=>controller.abort();
   },[recoveryReady,recovery,dirty,savedId,defaultsInput]);
@@ -157,15 +160,16 @@ export default function InvoicePage({suggestions=[]}:{suggestions?:InvoiceSugges
     if (dirty && !window.confirm("Replace the current form? Unsaved changes will be lost.")) return;
     const normalized = { ...invoice.document, ...invoiceOptions(invoice.document), ...(invoice.document.lifecycle!=="issued" && "customerId" in invoice ? {customerId:invoice.customerId||undefined}:{}), issuedAt:invoice.document.issuedAt, showPaymentStatus: invoice.document.showPaymentStatus ?? false };
     const data = asNew ? duplicateInvoice({...normalized,customerId:invoice.customerId||normalized.customerId}) : normalized;
+    setValidationErrors([]);setMobileView("edit");setEditorInitialSection(asNew?"Billing & shipping":"Items");
     setCancelled(!asNew && Boolean(invoice.ledger?.cancelled));
     applyInvoice(data); setSavedId(asNew ? null : invoice.id); setSavedAt(asNew ? null : invoice.updatedAt); setSaveTitle(asNew ? "" : invoice.title);
     setSavedSnapshot(asNew ? "" : invoiceSnapshotFingerprint({ document: data, title: invoice.title })); pendingSaveId.current = null; setLibraryOpen(false);
-    toast({ title: asNew ? "New invoice from saved details" : "Saved invoice opened", description: asNew ? "A new invoice number was created. Edit the details and save." : "Make your changes, then choose Update saved invoice." });
+    toast({ title: asNew ? "New invoice from saved details" : "Saved invoice opened", description: asNew ? "Change the customer, address or items, then issue this new invoice. The original stays unchanged." : "Make your changes, then choose Update saved invoice." });
   }
   function startNewInvoice() {
     if (saving || (dirty && !window.confirm("Start a new invoice? Unsaved changes will be lost."))) return;
-    applyInvoice({ ...invoiceData, ...newInvoiceIdentity(), customerId:undefined, buyerName: "", buyerAddress: "", buyerEmail: "", buyerPhone: "", buyerGstin: "", paymentStatus: "Unpaid", lifecycle:"draft", issuedAt:undefined, amountReceived:0, showPaymentStatus:false, notes:"", items: [{ id: crypto.randomUUID(), name: "", category: "other", unit: "pcs", quantity: 1, price: 0, gstPercent: 18 }], shippingFee: 0, targetGrandTotal: "" });
-    setCancelled(false);
+    applyInvoice({ ...invoiceData, ...rememberedDefaults.current, ...newInvoiceIdentity(), customerId:undefined, separateShipping:false, shippingName:"", shippingAddress:"", shippingPhone:"", buyerName: "", buyerAddress: "", buyerEmail: "", buyerPhone: "", buyerGstin: "", paymentStatus: "Unpaid", lifecycle:"draft", issuedAt:undefined, amountReceived:0, showPaymentStatus:rememberedDefaults.current.showPaymentStatus??false, notes:"", items: [{ id: crypto.randomUUID(), name: "", category: "other", unit: "pcs", quantity: 1, price: 0, gstPercent: 18 }], shippingFee: 0, targetGrandTotal: "" });
+    setCancelled(false);setEditorInitialSection("Items");
     initialSnapshot.current = null;
     setValidationErrors([]);
     setSavedId(null); setSavedAt(null); setSavedSnapshot(""); setSaveTitle(""); pendingSaveId.current = null; setLibraryOpen(false);
@@ -173,6 +177,7 @@ export default function InvoicePage({suggestions=[]}:{suggestions?:InvoiceSugges
   }
   async function saveInvoice(asCopy = false, issue = false) {
     const data = asCopy ? duplicateInvoice(invoiceData) : invoiceData;
+    if(issue){const issues=invoiceCompletionIssues(data);if(issues.length){setMobileView("edit");setValidationErrors(issues);toast({title:"Complete the red marked fields",description:"Open Review required fields to jump to each detail.",variant:"destructive"});return;}}
     const parsed = invoiceDocumentSchema.safeParse(data);
     if (!parsed.success) { setMobileView("edit"); setValidationErrors(parsed.error.issues.map(issue=>({path:issue.path.join("."),message:issue.message}))); toast({ title: "Check invoice details", description: parsed.error.issues.map(issue => issue.message).join("; "), variant: "destructive" }); return; }
     setValidationErrors([]);
@@ -187,7 +192,7 @@ export default function InvoicePage({suggestions=[]}:{suggestions?:InvoiceSugges
       setCancelled(false);
       applyInvoice(invoice.document);
       if(invoice.document.lifecycle!=="issued"||issue||asCopy){
-        try{const {sellerName,sellerAddress,sellerEmail,sellerPhone,sellerGstin,bankDetails,terms}=invoice.document;localStorage.setItem("hume-invoice-defaults-v1",JSON.stringify({sellerName,sellerAddress,sellerEmail,sellerPhone,sellerGstin,bankDetails,terms}));}catch{}
+        try{const defaults=invoiceDefaults(invoice.document);rememberedDefaults.current=defaults;localStorage.setItem("hume-invoice-defaults-v1",JSON.stringify(defaults));}catch{}
         void fetch("/api/admin/invoices/item-suggestions",{cache:"no-store"}).then(response=>response.ok?response.json():null).then(result=>{if(result?.suggestions)setSavedSuggestions(result.suggestions);}).catch(()=>{});
       }
       setRegisterVersion(value=>value+1);
@@ -299,7 +304,7 @@ export default function InvoicePage({suggestions=[]}:{suggestions?:InvoiceSugges
         <label className="min-w-0 flex-1 text-xs text-white/60">Save name<input disabled={saving} className="mt-1 block w-full min-w-0 rounded-lg border border-white/20 bg-black/20 px-3 py-2.5 text-sm text-white" placeholder="Invoice name (optional)" value={saveTitle} maxLength={255} onChange={e => setSaveTitle(e.target.value)} /></label>
         <button disabled={saving||cancelled} className="rounded-lg bg-[#c4aeec] px-4 py-3 text-sm font-semibold text-black disabled:opacity-50" onClick={() => saveInvoice()}>{saving ? "Saving…" : savedId ? invoiceData.lifecycle==="issued" ? "Update payment record" : "Update saved draft" : "Save draft"}</button>
         {savedId && <button disabled={saving} className="invoice-small-button" onClick={() => saveInvoice(true)}>Save as copy</button>}
-        <button disabled={saving} className="invoice-small-button" onClick={() => setLibraryOpen(!libraryOpen)}>Saved invoices</button>
+        <button disabled={saving} className="invoice-small-button" onClick={() => setLibraryOpen(!libraryOpen)}>Saved invoices / repeat</button>
         <button disabled={saving} className="invoice-small-button" onClick={()=>setCustomersOpen(!customersOpen)}>Customers</button>
         {savedId&&<button disabled={saving||dirty} className="invoice-small-button" title={dirty?"Save changes before opening records":undefined} onClick={()=>setRecordsId(savedId)}>Records & corrections</button>}
         <span className="text-xs text-white/45">{savedId ? dirty ? "Unsaved changes" : "All changes saved" : "Not saved yet"}</span>
@@ -307,6 +312,7 @@ export default function InvoicePage({suggestions=[]}:{suggestions?:InvoiceSugges
       </div>
       {invoiceData.lifecycle!=="issued"&&<div className="invoice-controls invoice-issue-bar border-b border-white/10 bg-[#15161b] px-6 py-3 text-sm text-white/65"><span>Draft</span><button type="button" disabled={saving} onClick={()=>void saveInvoice(false,true)} className="ml-4 rounded-lg bg-[#c4aeec] px-4 py-2 font-semibold text-black disabled:opacity-50">{saving?"Saving…":"Issue invoice & lock details"}</button>{totals.errors.map(error=><p key={error} className="mt-2 text-amber-200">{error}</p>)}</div>}
       {invoiceData.lifecycle==="issued"&&!cancelled&&<p className="invoice-controls border-b border-white/10 bg-emerald-400/10 px-6 py-3 text-sm text-emerald-100">Issued · {invoiceNumber} · Details locked</p>}
+      {savedId&&<div className="invoice-controls px-6 py-2 print:hidden"><button type="button" className="invoice-small-button" disabled={saving} onClick={()=>openSaved({id:savedId,title:saveTitle,document:invoiceData,createdAt:savedAt||'',updatedAt:savedAt||''},true)}>Repeat this invoice</button><span className="ml-3 text-xs text-white/50">Keeps customer and items; resets date, number and received amount.</span></div>}
       {libraryOpen && <SavedInvoiceLibrary key={`register-${registerVersion}`} onManage={invoice=>setRecordsId(invoice.id)} onOpen={invoice => openSaved(invoice, false)} onDuplicate={invoice => openSaved(invoice, true)} onClose={() => setLibraryOpen(false)} />}
 
       {cancelled&&<p className="invoice-controls border-b border-white/10 bg-amber-200/10 px-6 py-3 text-sm text-amber-100 print:hidden">Cancelled · Original invoice retained. See Records for the cancellation credit note.</p>}
@@ -320,7 +326,7 @@ export default function InvoicePage({suggestions=[]}:{suggestions?:InvoiceSugges
       <div className="mx-auto max-w-[1900px] grid grid-cols-1 xl:grid-cols-[560px_1fr] print:block">
 
         {/* Left Side: Editor Form Panel - Hidden during print */}
-        <aside data-mobile-view={mobileView} className="invoice-controls invoice-editor border-r border-white/10 bg-[#111215] p-5 lg:p-7 print:hidden"><fieldset disabled={saving||invoiceData.lifecycle==="issued"}><InvoiceEditor document={invoiceData} onChange={applyInvoice} suggestions={[...suggestions,...savedSuggestions]} /></fieldset>{invoiceData.lifecycle==="issued"&&<section className="invoice-card mt-5"><h2>Payment record</h2><label className="invoice-field mt-3"><span>Amount recorded received (₹)</span><input disabled={saving||cancelled} type="number" min="0" max={totals.grandTotal} step="0.01" value={options.amountReceived} onChange={e=>applyInvoice({...invoiceData,amountReceived:Number(e.target.value),showPaymentAmounts:true})}/></label><label className="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" checked={showPaymentStatus} onChange={e=>setShowPaymentStatus(e.target.checked)}/>Show payment status</label></section>}{savedId&&<InvoiceHistory key={savedAt} id={savedId}/>}</aside>
+        <aside data-mobile-view={mobileView} className="invoice-controls invoice-editor border-r border-white/10 bg-[#111215] p-5 lg:p-7 print:hidden"><fieldset disabled={saving||invoiceData.lifecycle==="issued"}><InvoiceEditor key={invoiceNumber} initialSection={editorInitialSection} document={invoiceData} onChange={applyInvoice} suggestions={[...suggestions,...savedSuggestions]} /></fieldset>{invoiceData.lifecycle==="issued"&&<section className="invoice-card mt-5"><h2>Payment record</h2><label className="invoice-field mt-3"><span>Amount recorded received (₹)</span><input disabled={saving||cancelled} type="number" min="0" max={totals.grandTotal} step="0.01" value={options.amountReceived} onChange={e=>applyInvoice({...invoiceData,amountReceived:Number(e.target.value),showPaymentAmounts:true})}/></label><label className="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" checked={showPaymentStatus} onChange={e=>setShowPaymentStatus(e.target.checked)}/>Show payment status</label></section>}{savedId&&<InvoiceHistory key={savedAt} id={savedId}/>}</aside>
 
         <section ref={previewRef} data-mobile-view={mobileView} style={{"--invoice-scale":zoomPreview?1:previewScale} as React.CSSProperties} className="invoice-preview flex items-start justify-center bg-[#181818] p-8 min-h-[calc(100vh-69px)] overflow-y-auto overflow-x-auto w-full print:p-0 print:bg-white print:h-auto print:overflow-visible">
 
@@ -355,9 +361,9 @@ export default function InvoicePage({suggestions=[]}:{suggestions?:InvoiceSugges
               </div>
 
               {/* Billing Info */}
-              <div className="grid grid-cols-2 gap-8 py-8 border-b border-black/10">
+              <div className="grid grid-cols-2 gap-8 pt-5 pb-2">
                 <div className="text-xs md:text-sm">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-black/45">Billed To</p>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-black/45">{invoiceData.separateShipping ? "BILLED TO:" : "BILLED & SHIPPING TO:"}</p>
                   <div className="mt-2.5 space-y-1 text-black/85">
                     <p className="font-bold text-base text-black">{buyerName || "—"}</p>
                     {buyerAddress && <p className="leading-relaxed whitespace-pre-line">{buyerAddress}</p>}
@@ -368,7 +374,9 @@ export default function InvoicePage({suggestions=[]}:{suggestions?:InvoiceSugges
                   </div>
                 </div>
 
-                {showPaymentStatus && <div className="text-right text-xs md:text-sm">
+                <div className="text-xs md:text-sm">
+                  {invoiceData.separateShipping && <div className="mb-4"><p className="text-[11px] font-bold uppercase tracking-[0.15em] text-black/45">SHIPPING TO:</p><div className="mt-2.5 space-y-1 text-black/85">{invoiceData.shippingName && <p className="font-bold text-base text-black">{invoiceData.shippingName}</p>}{invoiceData.shippingAddress && <p className="leading-relaxed whitespace-pre-line">{invoiceData.shippingAddress}</p>}{invoiceData.shippingPhone && <p>Phone: {invoiceData.shippingPhone}</p>}</div></div>}
+                  {showPaymentStatus && <div className="text-right">
                   <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-black/45">Payment Details</p>
                   <div className="mt-2.5 space-y-1 text-black/85">
                     {showPaymentStatus && <p className="font-semibold">Status: <span className={`font-bold text-xs md:text-sm uppercase tracking-wider ml-1 ${
@@ -379,11 +387,11 @@ export default function InvoicePage({suggestions=[]}:{suggestions?:InvoiceSugges
                         : "text-amber-500 print:text-amber-600"
                     }`}>{paymentStatus}</span></p>}
                   </div>
-                </div>}
+                </div>}</div>
               </div>
 
               {/* Line Items Table */}
-              <div className="py-8">
+              <div className="pt-3 pb-8">
                 <table className="w-full text-left text-xs md:text-sm border-collapse">
                   <thead>
                     <tr className="border-b border-black/15 text-[11px] font-bold uppercase tracking-[0.12em] text-black/45">
@@ -439,14 +447,14 @@ export default function InvoicePage({suggestions=[]}:{suggestions?:InvoiceSugges
                 <div className="text-xs md:text-sm space-y-2.5">
                   <div className="flex justify-between text-black/60">
                     <span>{noGst?"Subtotal":"Taxable value"}</span>
-                    <span className="font-semibold">₹{totals.subtotal.toFixed(2)}</span>
+                    <span className="font-semibold">₹{totals.itemSubtotal.toFixed(2)}</span>
                   </div>
                   {totals.taxKind==="split"&&totals.totalGst>0&&<><div className="flex justify-between text-black/60"><span>CGST</span><span>₹{totals.cgst.toFixed(2)}</span></div><div className="flex justify-between text-black/60"><span>SGST</span><span>₹{totals.sgst.toFixed(2)}</span></div></>}
                   {totals.taxKind==="igst"&&totals.totalGst>0&&<div className="flex justify-between text-black/60"><span>IGST</span><span>₹{totals.igst.toFixed(2)}</span></div>}
                   {shippingFee > 0 && (
                     <div className="flex justify-between text-black/60">
-                      <span>Shipping (included)</span>
-                      <span className="font-semibold">₹{totals.shippingGross.toFixed(2)}</span>
+                      <span>{noGst?"Shipping":"Shipping (excl. GST)"}</span>
+                      <span className="font-semibold">+₹{totals.shippingTaxable.toFixed(2)}</span>
                     </div>
                   )}
                   {totals.discountAmount > 0 && (
@@ -482,6 +490,15 @@ export default function InvoicePage({suggestions=[]}:{suggestions?:InvoiceSugges
           .invoice-preview[data-mobile-view="preview"] .print-container { zoom:var(--invoice-scale); margin-inline:auto; }
         }
         .invoice-card { border: 1px solid rgba(255,255,255,.10); border-radius: 16px; padding: 20px; background: rgba(255,255,255,.025); }
+        details.invoice-card { padding: 0; overflow: hidden; }
+        .invoice-section-toggle { width: 100%; min-height: 48px; padding: 20px; box-sizing: border-box; }
+        .invoice-section-toggle:hover { background: rgba(255,255,255,.035); }
+        .invoice-section-content { padding: 0 20px 20px; }
+        .invoice-fields[hidden] { display:none; }
+        .invoice-field:has([aria-invalid="true"]) > span::after { content:'●'; color:#f87171; margin-left:6px; font-size:10px; }
+        .invoice-field:has([aria-invalid="true"])::after { content:attr(data-error); color:#fca5a5; font-size:11px; }
+        .invoice-field [aria-invalid="true"] { border-color:rgba(248,113,113,.7); }
+        details.invoice-card:has([aria-invalid="true"]) > summary > span::after { content:'●'; color:#f87171; margin-left:8px; font-size:10px; }
         .invoice-card h2 { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
         .invoice-fields { display: grid; grid-template-columns: minmax(0,1fr); gap: 16px; }
         .invoice-field { display: flex; min-width: 0; flex-direction: column; gap: 7px; font-size: 12px; color: rgba(255,255,255,.65); }
@@ -517,6 +534,9 @@ export default function InvoicePage({suggestions=[]}:{suggestions?:InvoiceSugges
           .invoice-workspace .invoice-controls .invoice-fields { gap:10px; }
           .invoice-workspace .invoice-controls .invoice-field { gap:4px; font-size:10px; }
           .invoice-workspace .invoice-controls .invoice-card { padding:12px; border-radius:10px; }
+          .invoice-workspace .invoice-controls details.invoice-card { padding:0; }
+          .invoice-workspace .invoice-controls .invoice-section-toggle { padding:12px; }
+          .invoice-workspace .invoice-controls .invoice-section-content { padding:0 12px 12px; }
           .invoice-workspace .invoice-controls .invoice-card h2 { font-size:13px; margin-bottom:10px; }
           .invoice-workspace .invoice-controls :is(h2,h3,summary) { font-size:13px; }
           .invoice-workspace .invoice-controls .text-sm { font-size:12px; }

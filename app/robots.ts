@@ -4,7 +4,7 @@ import { getRequestSiteUrl } from "@/lib/request-site";
 export default async function robots(): Promise<MetadataRoute.Robots> {
   const baseUrl = await getRequestSiteUrl();
   const allowRules = ["/"];
-  const disallowRules = ["/_next/", "/api/", "/admin", "/checkout"];
+  const disallowRules = ["/api/", "/admin", "/invoice", "/bill", "/checkout"];
 
   return {
     rules: [

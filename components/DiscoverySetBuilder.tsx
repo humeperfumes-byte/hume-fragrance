@@ -32,77 +32,6 @@ const DISCOVERY_SET_HERO_GALLERY = DISCOVERY_SET_IMAGES.map((src, index) => ({
   priority: index === 0,
 }));
 
-const PREORDER_COUNTDOWN_DURATION_MS = 5 * 24 * 60 * 60 * 1000;
-const PREORDER_COUNTDOWN_STORAGE_KEY = "hume_discovery_preorder_countdown_v1";
-
-function getPreorderCountdownTarget(now: number) {
-  const storedTarget = Number(window.localStorage.getItem(PREORDER_COUNTDOWN_STORAGE_KEY));
-  let target = Number.isFinite(storedTarget) && storedTarget > 0
-    ? storedTarget
-    : now + PREORDER_COUNTDOWN_DURATION_MS;
-
-  if (target <= now) {
-    const completedCycles = Math.floor((now - target) / PREORDER_COUNTDOWN_DURATION_MS) + 1;
-    target += completedCycles * PREORDER_COUNTDOWN_DURATION_MS;
-  }
-
-  window.localStorage.setItem(PREORDER_COUNTDOWN_STORAGE_KEY, String(target));
-  return target;
-}
-
-function PreorderCountdown() {
-  const [remainingMs, setRemainingMs] = useState(PREORDER_COUNTDOWN_DURATION_MS);
-
-  useEffect(() => {
-    let target = getPreorderCountdownTarget(Date.now());
-
-    const updateCountdown = () => {
-      const now = Date.now();
-      if (target <= now) {
-        target = getPreorderCountdownTarget(now);
-      }
-      setRemainingMs(Math.max(0, target - now));
-    };
-
-    updateCountdown();
-    const interval = window.setInterval(updateCountdown, 1000);
-    return () => window.clearInterval(interval);
-  }, []);
-
-  const totalSeconds = Math.ceil(remainingMs / 1000);
-  const days = Math.floor(totalSeconds / 86400);
-  const hours = Math.floor((totalSeconds % 86400) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  const units = [
-    [days, "DAYS"],
-    [hours, "HRS"],
-    [minutes, "MIN"],
-    [seconds, "SEC"],
-  ] as const;
-
-  return (
-    <div
-      className="flex w-full items-center justify-center gap-3 sm:gap-5"
-      aria-label={`${days} days, ${hours} hours, ${minutes} minutes and ${seconds} seconds remaining in the current pre-order offer cycle`}
-    >
-      {units.map(([value, label], index) => (
-        <div key={label} className="flex items-center gap-3 sm:gap-5">
-          {index > 0 ? <span className="mb-3 text-base text-white/30">:</span> : null}
-          <span className="min-w-9 text-center font-sans">
-            <strong className="block text-lg font-semibold leading-none tracking-[0.08em] text-white sm:text-xl">
-              {String(value).padStart(2, "0")}
-            </strong>
-            <small className="mt-1.5 block text-[7px] font-semibold tracking-[0.18em] text-white/45">
-              {label}
-            </small>
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function MagicPrice() {
   return (
     <motion.div
@@ -121,10 +50,10 @@ function MagicPrice() {
   );
 }
 
-export default function DiscoverySetBuilder({ customH1 }: { customH1?: string }) {
+export default function DiscoverySetBuilder({ customH1, initialPerfumes }: { customH1?: string; initialPerfumes?: PerfumeData[] }) {
   const { addItem, setIsCartOpen } = useCart();
-  const [allPerfumes, setAllPerfumes] = useState<PerfumeData[]>([]);
-  const [loadingPerfumes, setLoadingPerfumes] = useState(true);
+  const [allPerfumes, setAllPerfumes] = useState<PerfumeData[]>(initialPerfumes ?? []);
+  const [loadingPerfumes, setLoadingPerfumes] = useState(initialPerfumes === undefined);
   const [selected, setSelected] = useState<PerfumeData[]>([]);
   const [activeHeroIndex, setActiveHeroIndex] = useState(0);
   const [showComingSoon, setShowComingSoon] = useState(false);
@@ -397,7 +326,7 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
                 </div>
 
                 <div className="mt-3.5 flex h-16 w-full items-center justify-center rounded-[1.1rem] bg-[#161618] px-4 shadow-inner">
-                  <PreorderCountdown />
+                  <p className="text-center text-xs tracking-wide text-white/70">Choose {DISCOVERY_SET_SAMPLE_COUNT} fragrances · {DISCOVERY_SET_SIZE}</p>
                 </div>
               </div>
             ) : null}
@@ -406,7 +335,7 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
               Discovery Collection
             </p>
             <h1 className="mt-3 font-serif text-[2.65rem] font-light leading-[0.92] tracking-tight sm:mt-4 sm:text-[4.7rem] lg:text-[5.3rem]">
-              {customH1 || "Discovery Set"}
+              {customH1 || "Build Your Own Perfume Discovery Set"}
             </h1>
 
             <div className="mt-4 lg:hidden">
@@ -636,13 +565,13 @@ export default function DiscoverySetBuilder({ customH1 }: { customH1?: string })
                   </div>
 
                   <div className="mt-3.5 flex h-16 w-full items-center justify-center rounded-[1.1rem] bg-[#161618] px-4 shadow-inner">
-                    <PreorderCountdown />
+                    <p className="text-center text-xs tracking-wide text-white/70">Choose {DISCOVERY_SET_SAMPLE_COUNT} fragrances · {DISCOVERY_SET_SIZE}</p>
                   </div>
                 </div>
               ) : null}
 
               <h2 className="mt-1 font-serif text-[2.6rem] font-light leading-none tracking-tight text-stone-900">
-                {customH1 || "Discovery Set"}
+                {customH1 || "Build Your Own Perfume Discovery Set"}
               </h2>
               <p className="mt-3 text-xs leading-5 text-stone-500">
                 A curated sequence of {sampleCount} olfactory studies. Build your personal archive from the HUME fragrance library and find the scent that actually works on your skin.

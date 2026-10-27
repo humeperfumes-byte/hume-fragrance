@@ -9,3 +9,12 @@ import {invoiceFinancialFingerprint} from '../lib/invoice-document';
 import {invoiceSnapshotFingerprint} from '../lib/invoice-document';
 test('saved preview snapshots ignore database key ordering but detect payment edits',()=>{const reversed=Object.fromEntries(Object.entries(fixture).reverse());assert.equal(invoiceSnapshotFingerprint(fixture),invoiceSnapshotFingerprint(reversed));assert.notEqual(invoiceSnapshotFingerprint(fixture),invoiceSnapshotFingerprint({...fixture,amountReceived:100}));});
 test('issued financial comparison survives JSONB property ordering while blocking item edits',()=>{const reverse=(value:unknown):unknown=>Array.isArray(value)?value.map(reverse):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).reverse().map(([key,v])=>[key,reverse(v)])):value;const stored=reverse(fixture) as InvoiceDocument;assert.equal(invoiceFinancialFingerprint(stored),invoiceFinancialFingerprint({...fixture,amountReceived:1180}));assert.notEqual(invoiceFinancialFingerprint(stored),invoiceFinancialFingerprint({...fixture,items:[{...fixture.items[0],price:1}]}));});
+
+test('item subtotal excludes shipping and summary adds up with or without GST',()=>{
+ const plain=calculateInvoice({...fixture,taxMode:'none',items:[{...fixture.items[0],price:4799}],shippingFee:400});
+ assert.equal(plain.itemSubtotal,4799);assert.equal(plain.shippingTaxable,400);assert.equal(plain.grandTotal,5199);
+ for(const priceMode of ['inclusive','exclusive'] as const){
+  const value=calculateInvoice({...fixture,priceMode,shippingFee:400,shippingGstPercent:18,targetGrandTotal:'1200'});
+  assert.equal(Math.round((value.itemSubtotal+value.shippingTaxable+value.totalGst)*100),Math.round(value.grandTotal*100));
+ }
+});

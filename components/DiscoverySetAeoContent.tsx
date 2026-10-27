@@ -1,4 +1,5 @@
 import Link from "next/link";
+import DiscoveryGuideLinks from "@/components/DiscoveryGuideLinks";
 import ProductReviews from "@/components/ProductReviews";
 import type { Review } from "@/data/perfumes";
 import type { DiscoverySetSeoPage } from "@/lib/discovery-set-seo";
@@ -56,6 +57,7 @@ export default function DiscoverySetAeoContent({
 
   return (
     <>
+      <DiscoveryGuideLinks />
       <section className="border-t border-border bg-white px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
         <div className="mx-auto max-w-[1120px]">
           <div className="max-w-2xl">

@@ -293,13 +293,13 @@ const ProductReviews = ({ productId, reviews, productName, inspiration }: Produc
 
                 <div className="mt-2 flex items-baseline gap-2">
                   <span className="font-serif text-5xl font-light leading-none text-zinc-900">
-                    {totalReviews > 0 ? averageRating : "5.0"}
+                    {totalReviews > 0 ? averageRating : "—"}
                   </span>
                   <span className="text-sm text-zinc-400 font-serif">/ 5</span>
                 </div>
 
                 <div className="mt-3">
-                  <StarRating rating={totalReviews > 0 ? Math.round(averageRating) : 5} size={18} />
+                  <StarRating rating={totalReviews > 0 ? Math.round(averageRating) : 0} size={18} />
                 </div>
 
                 <div className="mt-3 flex items-center gap-1.5 text-xs text-zinc-600 font-medium">
@@ -307,7 +307,7 @@ const ProductReviews = ({ productId, reviews, productName, inspiration }: Produc
                   <span>
                     {totalReviews > 0
                       ? `Based on ${totalReviews} review${totalReviews === 1 ? "" : "s"}`
-                      : "Verified Buyer Guarantee"}
+                      : "No ratings yet"}
                   </span>
                 </div>
               </div>

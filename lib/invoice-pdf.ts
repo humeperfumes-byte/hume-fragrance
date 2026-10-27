@@ -59,16 +59,24 @@ export async function renderInvoicePdf(data:InvoiceDocument):Promise<Buffer> {
   const date=new Date(`${data.invoiceDate}T00:00:00Z`).toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata'});
   text(date,374,138+numberHeight,185,10,'#111',true,'right');
   y=Math.max(sellerY,158+numberHeight)+22;rule(y);y+=25;
-  text('BILLED TO',left,y,270,8,'#777',true);
+  text(data.separateShipping?'BILLED TO:':'BILLED & SHIPPING TO:',left,y,270,8,'#777',true);
   const billingTop=y;let buyerY=y+20;
   text(data.buyerName,left,buyerY,270,12,'#111',true);buyerY+=height(data.buyerName,12,270,true)+4;
   for(const value of [data.buyerAddress,data.buyerEmail?`Email: ${data.buyerEmail}`:'',data.buyerPhone?`Phone: ${data.buyerPhone}`:'',!noGst&&data.placeOfSupply?`Place of supply: ${data.placeOfSupply} (${data.placeOfSupplyCode||'not set'})`:'',!noGst&&data.buyerGstin?`GSTIN: ${data.buyerGstin}`:'']){
    if(!value)continue;text(value,left,buyerY,270,9.5,'#444');buyerY+=height(value,9.5,270)+3;
   }
-  if(data.showPaymentStatus){text('PAYMENT DETAILS',349,billingTop,210,8,'#777',true,'right');text(`Status: ${data.paymentStatus}`,349,billingTop+21,210,10,data.paymentStatus==='Paid'?'#047857':data.paymentStatus==='Unpaid'?'#be123c':'#a16207',true,'right');}
-  y=Math.max(buyerY,billingTop+48)+21;rule(y);y+=16;
+  let shippingY=billingTop;
+  if(data.separateShipping){
+   text('SHIPPING TO:',349,shippingY,210,8,'#777',true);shippingY+=20;
+   for(const [value,size,bold] of [[data.shippingName||'',12,true],[data.shippingAddress||'',9.5,false],[data.shippingPhone?`Phone: ${data.shippingPhone}`:'',9.5,false]] as const){
+    if(!value)continue;text(value,349,shippingY,210,size,'#444',bold);shippingY+=height(value,size,210,bold)+4;
+   }
+   shippingY+=8;
+  }
+  if(data.showPaymentStatus){text('PAYMENT DETAILS',349,shippingY,210,8,'#777',true,'right');text(`Status: ${data.paymentStatus}`,349,shippingY+21,210,10,data.paymentStatus==='Paid'?'#047857':data.paymentStatus==='Unpaid'?'#be123c':'#a16207',true,'right');shippingY+=42;}
+  y=Math.max(buyerY,shippingY)+12;
   const legend=data.taxMode==='none'?'No GST charged.':data.priceMode==='exclusive'?'Unit prices exclude GST; line totals include GST.':'Unit prices and line totals include GST.';
-  if(!noGst){text(legend,left,y,width,8,'#777');y+=28;}else y+=12;
+  if(!noGst){text(legend,left,y,width,8,'#777');y+=22;}
   need(85);tableMode=true;tableHeading();
   totals.lines.forEach((line,index)=>{
    const nameHeight=height(line.name,10.5,265,true);
@@ -82,16 +90,16 @@ export async function renderInvoicePdf(data:InvoiceDocument):Promise<Buffer> {
    y+=rowHeight;rule(y,'#eeeeee');y+=12;
   });
   tableMode=false;y+=9;
-  const summary:Array<[string,number,boolean?]>=[[noGst?'Subtotal':'Taxable value',totals.subtotal]];
+  const summary:Array<[string,number,boolean?]>=[[noGst?'Subtotal':'Taxable value',totals.itemSubtotal]];
   if(totals.totalGst>0){if(totals.taxKind==='split')summary.push(['CGST',totals.cgst],['SGST',totals.sgst]);else if(totals.taxKind==='igst')summary.push(['IGST',totals.igst]);}
-  if(data.shippingFee>0)summary.push(['Shipping (included)',totals.shippingGross]);
+  if(data.shippingFee>0)summary.push([noGst?'Shipping':'Shipping (excl. GST)',totals.shippingTaxable]);
   if(totals.discountAmount>0)summary.push(['Discount included',totals.discountAmount]);
   summary.push(['Grand Total',totals.grandTotal,true]);
   if(data.showPaymentAmounts)summary.push(['Amount recorded received',totals.amountReceived],['Balance due',totals.balanceDue,true]);
   const summaryHeight=summary.reduce((sum,[label,,strong])=>sum+Math.max(strong?34:24,height(label,strong?10:8.5,130,strong)+9),0);
   need(Math.max(110,summaryHeight+35));rule(y);y+=20;
   const footerTop=y;let summaryY=y;
-  for(const [label,value,strong] of summary){if(strong){pdf.moveTo(349,summaryY-7).lineTo(right,summaryY-7).strokeColor('#dddddd').stroke();summaryY+=5;}text(label,349,summaryY,130,strong?10:8.5,'#444',!!strong);text(money(value),479,summaryY,80,strong?11:9,'#111',!!strong,'right');summaryY+=Math.max(strong?34:24,height(label,strong?10:8.5,130,strong)+9);}
+  for(const [label,value,strong] of summary){if(strong){pdf.moveTo(349,summaryY-7).lineTo(right,summaryY-7).strokeColor('#dddddd').stroke();summaryY+=5;}text(label,349,summaryY,130,strong?10:8.5,'#444',!!strong);text(`${label.startsWith('Shipping')?'+':''}${money(value)}`,479,summaryY,80,strong?11:9,'#111',!!strong,'right');summaryY+=Math.max(strong?34:24,height(label,strong?10:8.5,130,strong)+9);}
   // Notes, terms and bank details share the preview's left column, below the table.
   let footerY=footerTop;
   for(const [label,value] of [['Notes',data.notes],['Terms & Conditions',data.terms],['Bank Details',data.bankDetails]]){

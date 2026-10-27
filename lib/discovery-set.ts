@@ -16,7 +16,7 @@ export const DISCOVERY_SET_SIZE =
 export const DISCOVERY_SET_SHORT_DESCRIPTION =
   `Choose any ${DISCOVERY_SET_SAMPLE_COUNT} HUME perfume testers of ${DISCOVERY_SET_SAMPLE_SIZE_ML}ml each and compare them before buying a full bottle.`;
 export const DISCOVERY_SET_DESCRIPTION =
-  `Pre-order the HUME Discovery Set with ${DISCOVERY_SET_SIZE} testers for INR ${DISCOVERY_SET_PRICE} (original price INR ${DISCOVERY_SET_ORIGINAL_PRICE}). Choose your fragrances and test them on skin before buying a full bottle.`;
+  `Pre-order the HUME Discovery Set with ${DISCOVERY_SET_SIZE} testers for INR ${DISCOVERY_SET_PRICE} (original price INR ${DISCOVERY_SET_ORIGINAL_PRICE}). Choose your own 15 fragrances: 45ml total to compare on skin before buying a full bottle.`;
 
 export const DISCOVERY_SET_IMAGES = [
   "/images/bg/discovery-set-15x3ml.png",

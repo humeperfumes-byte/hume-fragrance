@@ -1,4 +1,6 @@
 import type { MetadataRoute } from "next";
+import { BEGINNER_PERFUME_GUIDES, BEGINNER_GUIDES_PATH, beginnerGuidePath } from "@/lib/beginner-perfume-guides";
+import { DISCOVERY_GUIDES, discoveryGuidePath } from "@/lib/discovery-guides";
 import { PERFUME_GUIDES, CLUSTER_UPDATED } from "@/lib/perfume-guides";
 import { getAllProducts } from "@/lib/db/products";
 import { getAllBlogPosts } from "@/lib/db/blog";
@@ -13,7 +15,6 @@ import { DISCOVERY_SET_PATH, isDiscoverySetProductId } from "@/lib/discovery-set
 import { DETAIL_UPCOMING_PRODUCTS } from "@/lib/upcoming-products";
 import { PERFUME_MATURATION_PATH } from "@/lib/perfume-maturation";
 import { NATURALS_PRODUCTS } from "@/lib/naturals-data";
-import { getDiscoverySetSeoSlugs } from "@/lib/discovery-set-seo";
 import { SPACE_PAGES, SPACES_PRODUCTS } from "@/lib/spaces";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -74,12 +75,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.75,
   }));
 
-  const discoverySetSeoEntries = getDiscoverySetSeoSlugs().map((slug) => ({
-    url: `${baseUrl}/discovery-set/${slug}`,
-    lastModified: new Date(),
-    changeFrequency: "weekly" as const,
-    priority: 0.75,
-  }));
   const spacesEntries = ["", "selector", ...SPACE_PAGES.map((page) => page.slug)].map((slug) => ({
     url: `${baseUrl}/spaces${slug ? `/${slug}` : ""}`,
     lastModified: new Date(),
@@ -110,6 +105,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]);
 
   return [
+    { url: `${baseUrl}${BEGINNER_GUIDES_PATH}`, changeFrequency: "monthly" as const, priority: 0.7 },
+    ...BEGINNER_PERFUME_GUIDES.map(guide => ({ url: `${baseUrl}${beginnerGuidePath(guide.slug)}`, changeFrequency: "monthly" as const, priority: 0.6 })),
+    ...DISCOVERY_GUIDES.map((guide) => ({ url: `${baseUrl}${discoveryGuidePath(guide.slug)}`, changeFrequency: "monthly" as const, priority: 0.65 })),
     {
       url: baseUrl,
       lastModified: new Date(),
@@ -300,7 +298,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...recommendationEntries,
     ...upcomingProductEntries,
     ...naturalsEntries,
-    ...discoverySetSeoEntries,
     ...spacesEntries,
     ...spacesProductEntries,
     ...flyerCampaignEntries,

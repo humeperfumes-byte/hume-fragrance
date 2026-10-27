@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BEGINNER_PERFUME_GUIDES, BEGINNER_GUIDES_PATH, beginnerGuidePath } from "@/lib/beginner-perfume-guides";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -138,6 +139,7 @@ export default async function FragranceGuidesHubPage() {
   }));
 
   const sections = [
+    section("Your First Perfume", [{ href: BEGINNER_GUIDES_PATH, label: "Start here: beginner perfume guides" }, ...BEGINNER_PERFUME_GUIDES.map(guide => ({ href: beginnerGuidePath(guide.slug), label: guide.title }))]),
     section("AI Recommendation Pages", recommendationGuides),
     section("High-Intent Inspired Alternatives", highIntentInspiredGuides),
     section("AI Search Guides", aiSearchGuides),

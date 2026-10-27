@@ -72,6 +72,7 @@ export default async function Footer() {
   ];
 
   const discoverLinks = [
+      { href: "/perfume-beginners", label: "Your First Perfume" },
     { href: "/fragrance-guides", label: "Fragrance Guides Hub" },
     { href: "/blog", label: "Journal" },
     { href: "/scent-quiz", label: "Scent Quiz" },

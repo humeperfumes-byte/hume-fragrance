@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { invoiceDocumentSchema, duplicateInvoice, type InvoiceDocument } from "../lib/invoice-document";
+import { invoiceDocumentSchema, invoiceOptions, duplicateInvoice, type InvoiceDocument } from "../lib/invoice-document";
 const invoice: InvoiceDocument = {
   sellerName: "HUME", sellerAddress: "Seller address", sellerEmail: "", sellerPhone: "", sellerGstin: "",
   buyerName: "Test business", buyerAddress: "Buyer address", buyerEmail: "", buyerPhone: "", buyerGstin: "",
@@ -33,4 +33,14 @@ test("payment status visibility persists in saved copies and defaults to hidden 
   assert.equal(hidden.showPaymentStatus, false);
   assert.equal(duplicateInvoice(hidden).showPaymentStatus, false);
   assert.equal(hidden.paymentStatus, "Paid");
+});
+
+test("separate shipping survives saving, editing and duplication while older invoices share billing", () => {
+  const document = invoiceDocumentSchema.parse({ ...invoice, separateShipping: true, shippingName: "Warehouse recipient", shippingAddress: "Different delivery address", shippingPhone: "9000000000" });
+  assert.equal(invoiceOptions(document).shippingAddress, "Different delivery address");
+  assert.equal(invoiceOptions(document).separateShipping, true);
+  assert.equal(duplicateInvoice(document).shippingName, "Warehouse recipient");
+  assert.equal(invoiceDocumentSchema.parse(JSON.parse(JSON.stringify(document))).shippingPhone, "9000000000");
+  assert.equal(invoiceOptions(invoice).separateShipping, false);
+  assert.equal(invoiceOptions(invoice).shippingAddress, "");
 });

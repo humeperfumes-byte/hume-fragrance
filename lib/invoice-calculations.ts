@@ -24,7 +24,7 @@ export function calculateInvoice(data:InvoiceDocument) {
   const sgstMinor=taxKind==='split'?taxMinor-cgstMinor:0;
   const grandTotal=(taxableMinor+taxMinor)/100;
   const received=minor(data.amountReceived??0);if(received>minor(grandTotal))errors.push('Amount received cannot exceed the invoice total.');
-  return {lines,taxKind,subtotal:taxableMinor/100,totalGst:taxMinor/100,cgst:cgstMinor/100,sgst:sgstMinor/100,igst:taxKind==='igst'?taxMinor/100:0,shippingGross:shippingGross/100,shippingTax:shippingTax/100,shippingTaxable:shippingTaxable/100,discountAmount:discount/100,discountPercent:itemGross?discount/itemGross*100:0,rawSubtotalInclusive:itemGross/100,grandTotal,amountReceived:received/100,balanceDue:Math.max(0,minor(grandTotal)-received)/100,errors};
+  return {lines,taxKind,itemSubtotal:(taxableMinor-shippingTaxable)/100,subtotal:taxableMinor/100,totalGst:taxMinor/100,cgst:cgstMinor/100,sgst:sgstMinor/100,igst:taxKind==='igst'?taxMinor/100:0,shippingGross:shippingGross/100,shippingTax:shippingTax/100,shippingTaxable:shippingTaxable/100,discountAmount:discount/100,discountPercent:itemGross?discount/itemGross*100:0,rawSubtotalInclusive:itemGross/100,grandTotal,amountReceived:received/100,balanceDue:Math.max(0,minor(grandTotal)-received)/100,errors};
 }
 export function validateForIssue(data:InvoiceDocument) {
   const errors=[...calculateInvoice(data).errors];

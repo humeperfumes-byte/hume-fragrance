@@ -21,7 +21,7 @@ import { formatINR } from "@/lib/currency";
 import { getRequestSiteUrl } from "@/lib/request-site";
 import { getBreadcrumbSchema, getOrganizationSchema } from "@/lib/seo";
 import { siteUrlForBase } from "@/lib/site";
-import { getProductById } from "@/lib/db/products";
+import { getAllProducts, getProductById } from "@/lib/db/products";
 import { Playfair_Display, Inter, Cormorant_Garamond } from "next/font/google";
 
 const inter = Inter({
@@ -63,6 +63,26 @@ const discoverySetKeywords = [
 const discoverySetDescription = DISCOVERY_SET_DESCRIPTION;
 
 const discoverySetFaq = [
+  {
+    question: "Can I buy perfume samples online in India?",
+    answer: `You can pre-order the HUME perfume discovery set online for ${formatINR(DISCOVERY_SET_PRICE)}. Choose ${DISCOVERY_SET_SAMPLE_COUNT} available HUME fragrances in 3ml spray testers, then add your completed sample kit to your bag.`,
+  },
+  {
+    question: "Are these luxury designer perfume testers or HUME fragrances?",
+    answer: "The kit contains HUME fragrances. It is not a box of original designer-brand testers or third-party decants. Check each fragrance's description when choosing your samples so you know exactly what you are ordering.",
+  },
+  {
+    question: "Can I customize the perfume set?",
+    answer: `Yes. Customize your sample selection by choosing ${DISCOVERY_SET_SAMPLE_COUNT} different available HUME fragrances. This customizes the contents of your discovery set; it does not create a new perfume formula or change the ingredients of a fragrance.`,
+  },
+  {
+    question: "Can I use the mini testers as a travel perfume set?",
+    answer: "The 3ml spray testers are small enough to carry for daily wear or travel. Keep them securely closed and check your airline's liquid and packing rules before flying.",
+  },
+  {
+    question: "How do I choose the best perfume samples for me?",
+    answer: "Choose a mix of scent families and occasions rather than judging by price alone. Wear one sample at a time, compare the opening and dry-down on your skin, and note which fragrances you enjoy wearing again before choosing a full bottle.",
+  },
   {
     question: "What is a perfume trial pack?",
     answer:
@@ -135,7 +155,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     title: {
-      absolute: "Perfume Trial Kit India | Build Your Own 15 x 3ml Discovery Set | HUME",
+      absolute: "Perfume Discovery Set India | Choose 15 × 3ml Samples | HUME",
     },
     description: discoverySetDescription,
     keywords: discoverySetKeywords,
@@ -176,7 +196,7 @@ function DiscoverySetSeoContent() {
               Perfume Trial Pack
             </p>
             <h2 className="mt-4 max-w-2xl font-serif text-4xl font-light leading-tight sm:text-5xl">
-              A starter perfume kit for finding your signature scent.
+              Perfume samples in India, chosen by you.
             </h2>
             <p className="mt-5 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
               The HUME Discovery Set is built for customers who want to test perfume
@@ -229,9 +249,10 @@ function DiscoverySetSeoContent() {
 }
 
 export default async function DiscoverySetCanonicalPage() {
-  const [baseUrl, discoverySetProduct] = await Promise.all([
+  const [baseUrl, discoverySetProduct, catalogue] = await Promise.all([
     getRequestSiteUrl(),
     getProductById(DISCOVERY_SET_PRODUCT_ID),
+    getAllProducts(),
   ]);
   const canonicalUrl = siteUrlForBase(baseUrl, DISCOVERY_SET_PATH);
   const imageUrls = DISCOVERY_SET_IMAGES.map((image) => siteUrlForBase(baseUrl, image));
@@ -361,7 +382,7 @@ export default async function DiscoverySetCanonicalPage() {
     <main className={`${inter.variable} ${playfair.variable} ${cormorant.variable} min-h-screen bg-background pb-20 lg:pb-0 discovery-set-page`}>
       <JsonLd data={jsonLd} />
       <Header />
-      <DiscoverySetBuilder />
+      <DiscoverySetBuilder initialPerfumes={catalogue.filter(product=>(product.visibility ?? "public")==="public" || product.badges?.showInDiscoverySet===true)} />
       <DiscoverySetSeoContent />
       <DiscoverySetAeoContent reviews={discoverySetProduct?.reviews ?? []} />
       <Footer />
