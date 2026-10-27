@@ -54,6 +54,7 @@ function normalizeCarrier(value: string | null | undefined, trackingNumber: stri
   if (/delhivery/.test(normalized)) return "delhivery";
   if (/speed|india_?post|indian_?post/.test(normalized)) return "speed_post";
   if (/^[A-Z]{2}\d{9}IN$/.test(cleanTrackingNumber(trackingNumber))) return "speed_post";
+  if (isLikelyDelhiveryAwb(trackingNumber) && process.env.DELHIVERY_API_TOKEN?.trim()) return "delhivery";
   if (process.env.SHIPROCKET_API_EMAIL && (process.env.SHIPROCKET_API_KEY || process.env.SHIPROCKET_API_PASSWORD)) {
     return "shiprocket";
   }
@@ -373,7 +374,8 @@ async function trackCarrierConsignment(
 export async function lookupPublicTrackingResult(value: string): Promise<TrackingResult> {
   const trackingNumber = cleanTrackingNumber(value);
   const checkedAt = new Date().toISOString();
-  const savedOrder = await getSavedOrderTrackingDetails(trackingNumber);
+  // Carrier tracking should remain usable if the order database is unavailable.
+  const savedOrder = await getSavedOrderTrackingDetails(trackingNumber).catch(()=>null);
   const carrier = savedOrder?.carrier ?? normalizeCarrier(null, trackingNumber);
   const result = await trackCarrierConsignment(carrier, trackingNumber, checkedAt);
 

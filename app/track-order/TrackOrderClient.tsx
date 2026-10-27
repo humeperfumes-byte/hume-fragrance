@@ -23,7 +23,6 @@ import {
 } from "lucide-react";
 import {
   TRACKING_CARRIERS,
-  TRACKING_STATUS_META,
   type TrackingDestination,
   type TrackingResult,
 } from "@/lib/tracking/carriers";
@@ -49,11 +48,12 @@ function formatDateTime(value?: string | null) {
     hour: "numeric",
     minute: "numeric",
     hour12: true,
+    timeZone: "Asia/Kolkata",
   }).format(date);
 }
 
 function getProgress(status?: TrackingResult["status"]) {
-  if (!status) return 0;
+  if (!status || !["pending","picked_up","in_transit","out_for_delivery","delivered"].includes(status)) return -1;
   if (status === "delivered") return 4;
   if (status === "out_for_delivery") return 3;
   if (status === "in_transit") return 2;
@@ -123,6 +123,7 @@ export default function TrackOrderClient({ initialTrackingNumber = "" }: TrackOr
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ trackingNumber: nextTrackingNumber }),
+        signal: AbortSignal.timeout(25000),
       });
       const data = (await response.json()) as TrackingResponse;
 
@@ -134,7 +135,7 @@ export default function TrackOrderClient({ initialTrackingNumber = "" }: TrackOr
     } catch (lookupError) {
       setError(
         lookupError instanceof Error
-          ? lookupError.message
+          ? ["TimeoutError","AbortError"].includes(lookupError.name)?"Tracking is taking longer than expected. Please try again shortly.":lookupError.message
           : "Unable to load shipment status. Please verify your tracking ID and try again."
       );
     } finally {
@@ -309,7 +310,7 @@ export default function TrackOrderClient({ initialTrackingNumber = "" }: TrackOr
                             {TRACKING_CARRIERS[result.carrier]?.shortLabel || result.carrier}
                           </span>
                         </div>
-                        <p className="mt-1 text-sm font-sans text-stone-600">{result.message}</p>
+                        <p className="mt-1 text-sm font-sans text-stone-600">{result.status==="needs_setup"?"Live carrier tracking is temporarily unavailable. Please use the official tracker or contact HUME support.":result.message}</p>
                       </div>
                     </div>
 
@@ -326,7 +327,7 @@ export default function TrackOrderClient({ initialTrackingNumber = "" }: TrackOr
                             : "border-stone-200 bg-stone-50 text-stone-800"
                         )}
                       >
-                        {result.statusLabel}
+                        {result.status==="needs_setup"?"Tracking unavailable":result.statusLabel}
                       </span>
 
                       {TRACKING_CARRIERS[result.carrier]?.officialUrl ? (
@@ -356,7 +357,7 @@ export default function TrackOrderClient({ initialTrackingNumber = "" }: TrackOr
                       <motion.div
                         className="absolute top-5 left-[8%] h-1 bg-gradient-to-r from-amber-600 to-emerald-600 rounded-full"
                         initial={{ width: "0%" }}
-                        animate={{ width: `${(progress / 4) * 84}%` }}
+                        animate={{ width: `${(Math.max(0, progress) / 4) * 84}%` }}
                         transition={{ duration: 0.8, ease: "easeInOut" }}
                       />
 
@@ -401,7 +402,8 @@ export default function TrackOrderClient({ initialTrackingNumber = "" }: TrackOr
                   </div>
 
                   {/* Summary Metric Cards */}
-                  <div className="grid gap-3 pt-4 sm:grid-cols-3">
+                  <div className="grid gap-3 pt-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="rounded-2xl border border-stone-150 bg-[#FAF9F6] p-4"><div className="flex items-center gap-2 text-stone-400"><Truck className="h-4 w-4 text-amber-700"/><span className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-stone-500">Expected delivery</span></div><p className="mt-2 font-sans text-sm font-semibold text-stone-900">{result.status==='delivered'?'Delivered':result.expectedDelivery?formatDateTime(result.expectedDelivery):'Awaiting carrier estimate'}</p></div>
                     <div className="rounded-2xl border border-stone-150 bg-[#FAF9F6] p-4">
                       <div className="flex items-center gap-2 text-stone-400">
                         <Clock className="h-4 w-4 text-amber-700" />
@@ -422,7 +424,7 @@ export default function TrackOrderClient({ initialTrackingNumber = "" }: TrackOr
                         </span>
                       </div>
                       <p className="mt-2 font-sans text-sm font-semibold text-stone-900 truncate">
-                        {result.location || "In Transit"}
+                        {result.location || "Not available yet"}
                       </p>
                     </div>
 
@@ -595,7 +597,7 @@ export default function TrackOrderClient({ initialTrackingNumber = "" }: TrackOr
                       className="inline-flex items-center gap-2 font-sans text-xs font-semibold text-amber-800 hover:text-amber-900 transition-colors"
                     >
                       <MessageCircle className="h-4 w-4" />
-                      <span>Didn't receive your tracking ID? Contact HUME Support</span>
+                      <span>Didn&apos;t receive your tracking ID? Contact HUME Support</span>
                     </a>
                   </div>
                 </div>

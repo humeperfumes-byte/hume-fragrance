@@ -145,15 +145,13 @@ export function getOfficialTrackingUrl(carrier: TrackingCarrier): string {
 export function normalizeTrackingStatus(value: unknown): TrackingStatus {
   const status = String(value ?? "").toLowerCase();
 
-  if (/(delivered|success|complete)/.test(status)) return "delivered";
-  if (/(out\s*for\s*delivery|ofd|delivery\s*out)/.test(status)) return "out_for_delivery";
-  if (/(in\s*transit|transit|dispatched|forwarded|arrived|departed|bagged|manifested)/.test(status)) {
-    return "in_transit";
-  }
-  if (/(picked|pickup|collected|booked|accepted|received)/.test(status)) return "picked_up";
   if (/(rto|return|returned)/.test(status)) return "returned";
-  if (/(failed|exception|hold|undelivered|lost|damaged|delay|rejected)/.test(status)) return "exception";
-  if (/(pending|ready|created|not\s*found|awaiting)/.test(status)) return "pending";
+  if (/(failed|unsuccessful|exception|hold|undelivered|not[ _-]*delivered|lost|damaged|delay|rejected)/.test(status)) return "exception";
+  if (/(pending|ready|created|not[ _-]*found|awaiting|manifested|not[ _-]*picked|pickup[ _-]*scheduled)/.test(status)) return "pending";
+  if (/\b(delivered|success|successful|complete|completed)\b/.test(status)) return "delivered";
+  if (/(out[ _-]*for[ _-]*delivery|ofd|delivery[ _-]*out)/.test(status)) return "out_for_delivery";
+  if (/(in[ _-]*transit|transit|dispatched|forwarded|arrived|departed|bagged)/.test(status)) return "in_transit";
+  if (/(picked|pickup|collected|booked|accepted|received)/.test(status)) return "picked_up";
 
   return "unknown";
 }

@@ -23,15 +23,10 @@ function normalizeKey(key: string): string {
 function pickString(value: unknown, keyHints: string[]): string | null {
   if (!isRecord(value)) return null;
 
-  const normalizedHints = keyHints.map(normalizeKey);
-  for (const [key, childValue] of Object.entries(value)) {
-    const normalizedKey = normalizeKey(key);
-    if (
-      normalizedHints.some((hint) => normalizedKey === hint || normalizedKey.includes(hint)) &&
-      (typeof childValue === "string" || typeof childValue === "number")
-    ) {
-      return String(childValue).trim() || null;
-    }
+  const entries=Object.entries(value);
+  for (const hint of keyHints.map(normalizeKey)) {
+    const entry=entries.find(([key,child])=>normalizeKey(key)===hint&&(typeof child==='string'||typeof child==='number'));
+    if(entry){const text=String(entry[1]).trim();if(text)return text;}
   }
 
   return null;
@@ -59,14 +54,12 @@ function deepPickString(value: unknown, keyHints: string[]): string | null {
   return null;
 }
 
-function getShipmentPayload(payload: unknown): unknown {
+function getShipmentPayload(payload: unknown, trackingNumber:string): unknown {
   if (!isRecord(payload)) return payload;
 
   const shipmentData = payload.ShipmentData;
-  if (Array.isArray(shipmentData) && shipmentData.length) {
-    const firstShipment = shipmentData[0];
-    if (isRecord(firstShipment) && "Shipment" in firstShipment) return firstShipment.Shipment;
-    return firstShipment;
+  if (Array.isArray(shipmentData)) {
+    return shipmentData.map(entry=>isRecord(entry)?entry.Shipment??entry:null).find(entry=>isRecord(entry)&&cleanTrackingNumber(pickString(entry,['AWB','waybill','trackingnumber'])||'')===trackingNumber)??null;
   }
 
   if ("Shipment" in payload) return payload.Shipment;
@@ -79,6 +72,11 @@ function getScanDetail(scan: unknown): UnknownRecord | null {
   return isRecord(detail) ? detail : scan;
 }
 
+function carrierTime(value:string|null):string|null {
+  if(!value)return null;
+  // Delhivery scan timestamps without an offset are India Standard Time.
+  return /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(value)?value.replace(' ','T')+'+05:30':value;
+}
 function parseTimeline(shipment: unknown): TrackingTimelineItem[] {
   if (!isRecord(shipment)) return [];
 
@@ -96,7 +94,7 @@ function parseTimeline(shipment: unknown): TrackingTimelineItem[] {
         pickString(detail, ["scan", "status", "instructions", "activity", "event"]) ??
         "Tracking update";
       const location = pickString(detail, ["scannedlocation", "scanlocation", "statuslocation", "location", "city"]);
-      const time = pickString(detail, ["scandatetime", "statusdatetime", "datetime", "date", "time"]);
+      const time = carrierTime(pickString(detail, ["scandatetime", "statusdatetime", "datetime", "date", "time"]));
 
       return {
         label,
@@ -112,57 +110,23 @@ function parseTimeline(shipment: unknown): TrackingTimelineItem[] {
       if (Number.isNaN(aTime)) return 1;
       if (Number.isNaN(bTime)) return -1;
       return bTime - aTime;
-    })
-    .slice(0, 12);
+    });
 }
 
 function getCarrierDestination(shipment: unknown): TrackingDestination | null {
-  const fullName = deepPickString(shipment, ["consignee", "receivername", "customername"]);
-  const phone = deepPickString(shipment, ["mobile", "phone", "phoneno", "contact"]);
-  const city = deepPickString(shipment, ["destinationcity", "destination", "city"]);
-  const state = deepPickString(shipment, ["destinationstate", "state"]);
-  const pincode = deepPickString(shipment, ["destinationpincode", "pin", "pincode"]);
-
-  if (!fullName && !phone && !city && !state && !pincode) return null;
-
-  return {
-    source: "carrier",
-    label: "Delivery address",
-    fullName,
-    phone,
-    city,
-    state,
-    pincode,
-    country: "India",
-  };
+  const city=pickString(shipment,['DestinationCity','Destination']);
+  const state=pickString(shipment,['DestinationState']);
+  const pincode=pickString(shipment,['DestinationPincode','DestinationPin']);
+  if(!city&&!state&&!pincode)return null;
+  return {source:'carrier',label:'Delivery destination',city,state,pincode,country:'India'};
 }
 
-function buildDelhiveryEndpoint(trackingNumber: string, token: string): string {
-  const template = process.env.DELHIVERY_TRACKING_ENDPOINT?.trim();
-  const replacements: Record<string, string> = {
-    trackingNumber,
-    waybill: trackingNumber,
-    awb: trackingNumber,
-    delhiveryToken: token,
-    token,
-  };
-
-  if (template) {
-    const replaced = template.replace(/\{([A-Za-z0-9_]+)\}/g, (_match, key: string) => {
-      return encodeURIComponent(replacements[key] ?? "");
-    });
-
-    if (replaced !== template) return replaced;
-
-    const url = new URL(replaced);
-    if (!url.searchParams.has("token")) url.searchParams.set("token", token);
-    if (!url.searchParams.has("waybill")) url.searchParams.set("waybill", trackingNumber);
-    return url.toString();
-  }
-
-  const url = new URL(DEFAULT_DELHIVERY_TRACKING_ENDPOINT);
-  url.searchParams.set("token", token);
-  url.searchParams.set("waybill", trackingNumber);
+function buildDelhiveryEndpoint(trackingNumber:string):string {
+  const template=process.env.DELHIVERY_TRACKING_ENDPOINT?.trim()||DEFAULT_DELHIVERY_TRACKING_ENDPOINT;
+  const url=new URL(template.replace(/\{(?:trackingNumber|waybill|awb)\}/g,encodeURIComponent(trackingNumber)));
+  if(url.protocol!=='https:')throw new Error('HTTPS is required');
+  url.searchParams.delete('token');
+  url.searchParams.set('waybill',trackingNumber);
   return url.toString();
 }
 
@@ -182,25 +146,18 @@ function setupNeededResult(trackingNumber: string, checkedAt: string): TrackingR
 }
 
 function toTrackingResult(trackingNumber: string, payload: unknown, checkedAt: string): TrackingResult {
-  const shipment = getShipmentPayload(payload);
+  const shipment = getShipmentPayload(payload,trackingNumber);
   const awb = cleanTrackingNumber(deepPickString(shipment, ["awb", "waybill", "trackingnumber"]) ?? trackingNumber);
   const timeline = parseTimeline(shipment);
-  const statusText =
-    deepPickString(shipment, ["currentstatus", "lateststatus", "shipmentstatus", "status", "statustype", "instructions"]) ??
-    timeline[0]?.label ??
-    "Unknown";
-  const status = normalizeTrackingStatus(statusText);
-  const lastScan =
-    deepPickString(shipment, ["statusdatetime", "scandatetime", "lastupdated", "updatedat", "timestamp"]) ??
-    timeline[0]?.time ??
-    null;
-  const location =
-    deepPickString(shipment, ["statuslocation", "scannedlocation", "scanlocation", "currentlocation", "location"]) ??
-    timeline[0]?.location ??
-    null;
+  const current=isRecord(shipment)&&isRecord(shipment.Status)?shipment.Status:null;
+  const statusText=pickString(current,['Status','Instructions'])??pickString(shipment,['CurrentStatus','LatestStatus','ShipmentStatus','Status'])??timeline[0]?.label??'Unknown';
+  const statusType=pickString(current,['StatusType']);
+  const status=statusType==='RT'?'returned':statusType==='DL'?'delivered':/^dispatched$/i.test(statusText)?'out_for_delivery':normalizeTrackingStatus(statusText);
+  const lastScan=carrierTime(pickString(current,['StatusDateTime']))??timeline[0]?.time??null;
+  const location=pickString(current,['StatusLocation'])??timeline[0]?.location??null;
 
   if (!isRecord(shipment) || (!timeline.length && status === "unknown")) {
-    const errorMessage = deepPickString(payload, ["error", "message", "remark", "remarks"]);
+
     return {
       carrier: "delhivery",
       trackingNumber: awb,
@@ -210,9 +167,8 @@ function toTrackingResult(trackingNumber: string, payload: unknown, checkedAt: s
       officialUrl: getOfficialTrackingUrl("delhivery"),
       checkedAt,
       timeline: [],
-      message: errorMessage || "No Delhivery shipment was found for this AWB yet.",
+      message: "No Delhivery shipment was found for this AWB yet.",
       nextAction: "Check the AWB or try again after Delhivery receives the shipment.",
-      rawSummary: JSON.stringify(payload).slice(0, 300),
     };
   }
 
@@ -227,10 +183,9 @@ function toTrackingResult(trackingNumber: string, payload: unknown, checkedAt: s
     lastScan,
     location,
     destination: getCarrierDestination(shipment),
-    expectedDelivery: deepPickString(shipment, ["expecteddeliverydate", "expecteddate", "promiseddeliverydate", "edd"]),
+    expectedDelivery: carrierTime(pickString(shipment, ["ExpectedDeliveryDate", "ExpectedDate", "PromisedDeliveryDate", "EDD", "DeliveryDate"])),
     timeline,
-    message: timeline[0]?.label || statusText || "Delhivery returned a live tracking response.",
-    rawSummary: JSON.stringify(payload).slice(0, 300),
+    message: statusText,
   };
 }
 
@@ -245,51 +200,18 @@ export async function trackDelhiveryWaybill(value: string): Promise<TrackingResu
 
   if (!token) return setupNeededResult(trackingNumber, checkedAt);
 
-  const response = await fetch(buildDelhiveryEndpoint(trackingNumber, token), {
-    method: "GET",
-    headers: {
-      accept: "application/json, text/plain;q=0.8, */*;q=0.5",
-      Authorization: `Token ${token}`,
-    },
-    cache: "no-store",
-    signal: AbortSignal.timeout(12000),
-  });
-  const text = await response.text();
-
-  if (!response.ok) {
-    return {
-      carrier: "delhivery",
-      trackingNumber,
-      status: response.status === 401 || response.status === 403 ? "needs_setup" : "exception",
-      statusLabel:
-        response.status === 401 || response.status === 403
-          ? TRACKING_STATUS_META.needs_setup.label
-          : TRACKING_STATUS_META.exception.label,
-      source: "api",
-      officialUrl: getOfficialTrackingUrl("delhivery"),
-      checkedAt,
-      timeline: [],
-      message: `Delhivery tracking returned HTTP ${response.status}.`,
-      nextAction: "Check the Delhivery API token or try again shortly.",
-      rawSummary: text.slice(0, 300),
-    };
-  }
-
+  const failure=(message:string,status:TrackingResult['status']='exception'):TrackingResult=>({carrier:'delhivery',trackingNumber,status,statusLabel:TRACKING_STATUS_META[status].label,source:'api',officialUrl:getOfficialTrackingUrl('delhivery'),checkedAt,timeline:[],message});
   try {
-    return toTrackingResult(trackingNumber, JSON.parse(text), checkedAt);
+    const response=await fetch(buildDelhiveryEndpoint(trackingNumber),{
+      method:'GET',headers:{accept:'application/json',Authorization:`Token ${token}`},
+      next:{revalidate:60},signal:AbortSignal.timeout(12000),
+    });
+    if(response.status===401||response.status===403)return failure('Delhivery authentication needs to be checked.','needs_setup');
+    if(response.status===404)return failure('No Delhivery shipment was found for this AWB yet.','not_found');
+    if(response.status===429)return failure('Carrier tracking is busy. Please try again in a minute.');
+    if(!response.ok)return failure('Carrier tracking is temporarily unavailable. Please try again shortly.');
+    return toTrackingResult(trackingNumber,await response.json(),checkedAt);
   } catch {
-    return {
-      carrier: "delhivery",
-      trackingNumber,
-      status: normalizeTrackingStatus(text),
-      statusLabel: TRACKING_STATUS_META[normalizeTrackingStatus(text)].label,
-      source: "api",
-      officialUrl: getOfficialTrackingUrl("delhivery"),
-      checkedAt,
-      timeline: [],
-      message: text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 160) ||
-        "Delhivery returned a tracking response.",
-      rawSummary: text.slice(0, 300),
-    };
+    return failure('Unable to reach Delhivery right now. Please try again shortly or use the official tracker.');
   }
 }
