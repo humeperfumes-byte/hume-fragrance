@@ -168,7 +168,7 @@ export default function InvoicePage({suggestions=[]}:{suggestions?:InvoiceSugges
   }
   function startNewInvoice() {
     if (saving || (dirty && !window.confirm("Start a new invoice? Unsaved changes will be lost."))) return;
-    applyInvoice({ ...invoiceData, ...rememberedDefaults.current, ...newInvoiceIdentity(), customerId:undefined, separateShipping:false, shippingName:"", shippingAddress:"", shippingPhone:"", buyerName: "", buyerAddress: "", buyerEmail: "", buyerPhone: "", buyerGstin: "", paymentStatus: "Unpaid", lifecycle:"draft", issuedAt:undefined, amountReceived:0, showPaymentStatus:rememberedDefaults.current.showPaymentStatus??false, notes:"", items: [{ id: crypto.randomUUID(), name: "", category: "other", unit: "pcs", quantity: 1, price: 0, gstPercent: 18 }], shippingFee: 0, targetGrandTotal: "" });
+    applyInvoice({ ...invoiceData, ...rememberedDefaults.current, ...newInvoiceIdentity(), customerId:undefined, separateShipping:false, shippingName:"", shippingAddress:"", shippingPhone:"", buyerName: "", buyerAddress: "", buyerEmail: "", buyerPhone: "", buyerAlternativePhone:undefined, buyerGstin: "", paymentStatus: "Unpaid", lifecycle:"draft", issuedAt:undefined, amountReceived:0, showPaymentStatus:rememberedDefaults.current.showPaymentStatus??false, notes:"", items: [{ id: crypto.randomUUID(), name: "", category: "other", unit: "pcs", quantity: 1, price: 0, gstPercent: 18 }], shippingFee: 0, targetGrandTotal: "" });
     setCancelled(false);setEditorInitialSection("Items");
     initialSnapshot.current = null;
     setValidationErrors([]);
@@ -369,6 +369,7 @@ export default function InvoicePage({suggestions=[]}:{suggestions?:InvoiceSugges
                     {buyerAddress && <p className="leading-relaxed whitespace-pre-line">{buyerAddress}</p>}
                     {buyerEmail && <p>Email: {buyerEmail}</p>}
                     {buyerPhone && <p>Phone: {buyerPhone}</p>}
+                    {invoiceData.buyerAlternativePhone?.trim() && <p>Alt. phone: {invoiceData.buyerAlternativePhone}</p>}
                     {!noGst && invoiceData.placeOfSupply&&<p>Place of supply: {invoiceData.placeOfSupply} ({invoiceData.placeOfSupplyCode})</p>}
                     {!noGst && buyerGstin && <p className="font-semibold mt-1 text-black">GSTIN: {buyerGstin}</p>}
                   </div>

@@ -44,3 +44,13 @@ test("separate shipping survives saving, editing and duplication while older inv
   assert.equal(invoiceOptions(invoice).separateShipping, false);
   assert.equal(invoiceOptions(invoice).shippingAddress, "");
 });
+
+test("optional alternative phone survives save, edit options and repeat invoices", () => {
+ const document=invoiceDocumentSchema.parse({...invoice,buyerAlternativePhone:"+91 90000 00002"});
+ assert.equal(invoiceDocumentSchema.parse(JSON.parse(JSON.stringify(document))).buyerAlternativePhone,"+91 90000 00002");
+ assert.equal(invoiceOptions(document).buyerAlternativePhone,"+91 90000 00002");
+ assert.equal(duplicateInvoice(document).buyerAlternativePhone,"+91 90000 00002");
+ assert.equal(invoiceOptions(invoice).buyerAlternativePhone,undefined);
+ assert.equal('buyerAlternativePhone' in JSON.parse(JSON.stringify({...invoice,...invoiceOptions(invoice)})),false);
+ assert.equal(invoiceDocumentSchema.parse({...invoice,buyerAlternativePhone:"   "}).buyerAlternativePhone,"");
+});

@@ -62,7 +62,7 @@ export async function renderInvoicePdf(data:InvoiceDocument):Promise<Buffer> {
   text(data.separateShipping?'BILLED TO:':'BILLED & SHIPPING TO:',left,y,270,8,'#777',true);
   const billingTop=y;let buyerY=y+20;
   text(data.buyerName,left,buyerY,270,12,'#111',true);buyerY+=height(data.buyerName,12,270,true)+4;
-  for(const value of [data.buyerAddress,data.buyerEmail?`Email: ${data.buyerEmail}`:'',data.buyerPhone?`Phone: ${data.buyerPhone}`:'',!noGst&&data.placeOfSupply?`Place of supply: ${data.placeOfSupply} (${data.placeOfSupplyCode||'not set'})`:'',!noGst&&data.buyerGstin?`GSTIN: ${data.buyerGstin}`:'']){
+  for(const value of [data.buyerAddress,data.buyerEmail?`Email: ${data.buyerEmail}`:'',data.buyerPhone?`Phone: ${data.buyerPhone}`:'',data.buyerAlternativePhone?.trim()?`Alt. phone: ${data.buyerAlternativePhone}`:'',!noGst&&data.placeOfSupply?`Place of supply: ${data.placeOfSupply} (${data.placeOfSupplyCode||'not set'})`:'',!noGst&&data.buyerGstin?`GSTIN: ${data.buyerGstin}`:'']){
    if(!value)continue;text(value,left,buyerY,270,9.5,'#444');buyerY+=height(value,9.5,270)+3;
   }
   let shippingY=billingTop;
