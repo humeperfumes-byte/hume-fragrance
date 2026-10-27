@@ -1,4 +1,5 @@
-import { pgTable, text, varchar, decimal, jsonb, boolean, timestamp, pgEnum, integer, serial, index } from "drizzle-orm/pg-core";
+import {sql} from "drizzle-orm";
+import { pgTable, text, varchar, decimal, jsonb, boolean, timestamp, pgEnum, integer, serial, index, uniqueIndex } from "drizzle-orm/pg-core";
 
 // Enums
 export const secureCheckoutSessions = pgTable("secure_checkout_sessions", {
@@ -748,3 +749,11 @@ export const invoiceItemSuggestions = pgTable('invoice_item_suggestions', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+// Private Google backup connection. Never include these tables in business exports.
+export const googleBackupConnections=pgTable('google_backup_connections',{
+ id:varchar('id',{length:20}).primaryKey(),googleSub:varchar('google_sub',{length:255}).notNull(),accountEmail:varchar('account_email',{length:320}).notNull(),folderId:varchar('folder_id',{length:255}).notNull(),refreshCiphertext:text('refresh_ciphertext').notNull(),connected:boolean('connected').notNull().default(true),weeklyEnabled:boolean('weekly_enabled').notNull().default(false),verifiedAt:timestamp('verified_at',{withTimezone:true}),createdAt:timestamp('created_at',{withTimezone:true}).defaultNow().notNull(),updatedAt:timestamp('updated_at',{withTimezone:true}).defaultNow().notNull(),
+}).enableRLS();
+export const googleBackupRuns=pgTable('google_backup_runs',{
+ id:varchar('id',{length:36}).primaryKey(),googleSub:varchar('google_sub',{length:255}).notNull(),trigger:varchar('trigger',{length:20}).notNull(),scheduledFor:timestamp('scheduled_for',{withTimezone:true}),status:varchar('status',{length:20}).notNull(),leaseUntil:timestamp('lease_until',{withTimezone:true}).notNull(),startedAt:timestamp('started_at',{withTimezone:true}).defaultNow().notNull(),completedAt:timestamp('completed_at',{withTimezone:true}),spreadsheetId:varchar('spreadsheet_id',{length:255}),spreadsheetUrl:text('spreadsheet_url'),errorCode:varchar('error_code',{length:80}),recordCount:integer('record_count'),sourceBytes:integer('source_bytes'),cells:integer('cells'),tableCounts:jsonb('table_counts').$type<Record<string,number>>(),
+},table=>[uniqueIndex('google_backup_one_running').on(sql`(true)`).where(sql`${table.status} = 'running'`),uniqueIndex('google_backup_occurrence').on(table.googleSub,table.scheduledFor).where(sql`${table.trigger} = 'scheduled'`),index('google_backup_runs_started').on(table.startedAt,table.id)]).enableRLS();

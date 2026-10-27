@@ -1,0 +1,3 @@
+export function lastWeeklyOccurrence(now=new Date()):Date{const start=new Date(now);start.setUTCHours(22,0,0,0);start.setUTCDate(start.getUTCDate()-((start.getUTCDay()+1)%7));if(start>now)start.setUTCDate(start.getUTCDate()-7);return start;}
+export function nextWeeklyOccurrence(now=new Date()):Date{const date=lastWeeklyOccurrence(now);date.setUTCDate(date.getUTCDate()+7);return date;}
+export function isStale(lastScheduled:string|null,enabled:boolean,now=new Date()):boolean{return enabled&&now.getTime()>lastWeeklyOccurrence(now).getTime()+90*60_000&&(!lastScheduled||new Date(lastScheduled)<lastWeeklyOccurrence(now));}

@@ -1,5 +1,6 @@
 "use client";
 
+import {GoogleBackups} from "@/components/admin/GoogleBackups";
 import { useState, useCallback } from "react";
 import {
   FileJson,
@@ -119,6 +120,8 @@ export default function DataExportPage() {
         </p>
         <p className="ml-11 text-xs text-white/35">Exports include all captured data.</p>
       </div>
+
+      <GoogleBackups/>
 
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-4">

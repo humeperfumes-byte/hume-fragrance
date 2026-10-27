@@ -1,0 +1,5 @@
+import {NextRequest,NextResponse} from 'next/server';import {requireAdminToken} from '@/lib/admin-auth';import {BackupError} from './format';
+import {messages} from './messages';
+export function authorize(request:NextRequest){if(!process.env.ADMIN_API_TOKEN)return NextResponse.json({error:'Admin authentication must be configured.'},{status:503});const denied=requireAdminToken(request);if(denied)return denied;if(request.method==='POST'){const origin=request.headers.get('origin');if(origin&&origin!==request.nextUrl.origin||!origin&&!request.headers.get('x-admin-token')&&!request.headers.get('authorization'))return NextResponse.json({error:'Invalid request origin'},{status:403});}return null;}
+export function failure(error:unknown){const code=error instanceof BackupError?error.code:'BACKUP_FAILED';return NextResponse.json({error:messages[code]||messages.BACKUP_FAILED,code},{status:code==='BACKUP_ALREADY_RUNNING_OR_DONE'?409:503});}
+export function json(value:unknown,status=200){return NextResponse.json(value,{status,headers:{'Cache-Control':'private, no-store'}});}
