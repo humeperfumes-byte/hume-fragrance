@@ -54,3 +54,6 @@ next-env.d.ts
 
 # Browser verification artifacts (exclude from source scanning and commits)
 /.playwright-cli/
+
+# Local database permission snapshots
+/output/security/
