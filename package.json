@@ -6,7 +6,7 @@
     "dev": "next dev --webpack --port 3002",
     "prebuild": "node scripts/clean-next-dev-types.mjs",
     "build": "next build",
-    "build:cf": "opennextjs-cloudflare build",
+    "build:cf": "opennextjs-cloudflare build && node scripts/fix-cloudflare-bundle.mjs",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",

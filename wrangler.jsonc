@@ -17,6 +17,12 @@
   "observability": {
     "enabled": true
   },
+  "routes": [
+    { "pattern": "humefragrance.com", "custom_domain": true },
+    { "pattern": "www.humefragrance.com", "custom_domain": true },
+    { "pattern": "humefragrance.in", "custom_domain": true },
+    { "pattern": "www.humefragrance.in", "custom_domain": true }
+  ],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
