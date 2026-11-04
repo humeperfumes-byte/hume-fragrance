@@ -10,7 +10,8 @@
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
-      "id": "4a05896cbc694e9f99033c7374ec7358"
+      "id": "4a05896cbc694e9f99033c7374ec7358",
+      "localConnectionString": "postgres://postgres:postgres@127.0.0.1:5432/postgres"
     }
   ],
   "observability": {
