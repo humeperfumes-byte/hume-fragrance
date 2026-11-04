@@ -1,5 +1,6 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import * as schema from "./schema";
 
 if (!process.env.DATABASE_URL) {
@@ -36,4 +37,38 @@ const poolOptions = {
 const client = cachedClient || postgres(connectionString, poolOptions);
 if (process.env.NODE_ENV !== "production") developmentState.humeDevelopmentPool = { url: connectionString, client };
 
-export const db = drizzle(client, { schema });
+const defaultDb = drizzle(client, { schema });
+const requestDatabases = new WeakMap<object, typeof defaultDb>();
+
+function databaseForRequest(): typeof defaultDb {
+  // Workers sockets belong to their originating request. Hyperdrive pools the
+  // upstream connections; each request gets its own short-lived driver client.
+  let context: ReturnType<typeof getCloudflareContext>;
+  try {
+    context = getCloudflareContext();
+  } catch {
+    return defaultDb; // Next.js builds, local Node.js, and Vercel.
+  }
+  const hyperdrive = (context.env as { HYPERDRIVE?: { connectionString: string } }).HYPERDRIVE;
+  if (!hyperdrive || typeof context.ctx !== "object" || context.ctx === null) return defaultDb;
+  let database = requestDatabases.get(context.ctx);
+  if (!database) {
+    const requestClient = postgres(hyperdrive.connectionString, {
+      ...poolOptions,
+      prepare: true,
+      fetch_types: false,
+      idle_timeout: 1,
+    });
+    database = drizzle(requestClient, { schema });
+    requestDatabases.set(context.ctx, database);
+  }
+  return database;
+}
+
+export const db = new Proxy(defaultDb, {
+  get(_target, property) {
+    const database = databaseForRequest();
+    const value = Reflect.get(database, property, database);
+    return typeof value === "function" ? value.bind(database) : value;
+  },
+});

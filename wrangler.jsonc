@@ -2,11 +2,20 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "hume-fragrance",
   "main": ".open-next/worker.js",
-  "compatibility_date": "2024-12-30",
+  "compatibility_date": "2025-09-15",
   "compatibility_flags": [
     "nodejs_compat",
     "nodejs_compat_populate_process_env"
   ],
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "4a05896cbc694e9f99033c7374ec7358"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
