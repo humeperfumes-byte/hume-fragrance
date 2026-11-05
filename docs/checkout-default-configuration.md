@@ -1,6 +1,6 @@
 # Checkout configuration without extra Vercel variables
 
-Checkout and privacy-safe error monitoring now default to enabled. No `ENABLE_SECURE_CHECKOUT` or `ENABLE_ERROR_MONITORING` setting is required. Existing explicit `false` values still disable the corresponding feature; remove them if enabling the feature.
+Secure checkout, customer order links, checkout resume links and privacy-safe error monitoring are enabled in `lib/checkout-settings.ts`. These are fixed product settings; the four former `ENABLE_*` environment variables are ignored and can be removed from deployment settings.
 
 No additional signing secret is required. Visit-discount cookie signatures use an HMAC-derived key from the existing server-only `RAZORPAY_KEY_SECRET`, with a distinct HUME signing context. An existing dedicated `CHECKOUT_SESSION_SIGNING_SECRET` remains supported and takes precedence. Neither key is exposed to the browser. Changing the source secret invalidates old visit rewards; saved checkout ownership and order capabilities are independent random tokens and are unaffected.
 

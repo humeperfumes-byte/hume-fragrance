@@ -22,8 +22,8 @@ The new flow is implemented and enabled in `.env.local` for local review. Produc
 ## Configuration and rollout
 
 - Apply `sql/add_customer_access_links.sql` and `sql/add_secure_checkout_sessions.sql` before enabling the new flow. These tables are additive; existing customer/product/order rows are not migrated.
-- Set `ENABLE_SECURE_CHECKOUT=true`, `ENABLE_ERROR_MONITORING=true` and a strong random `CHECKOUT_SESSION_SIGNING_SECRET` on the intended environment. The signing secret must stay server-only and stable across instances. Separate admin link flags remain available.
-- Default production behaviour remains the legacy flow until the flag is enabled. Do not disable the new flow while unresolved secure checkouts exist; recover those orders first. Keep webhook/reconciliation enabled.
+- Checkout, customer order links, checkout resume links and diagnostics are enabled in `lib/checkout-settings.ts`; no feature-switch environment variables are used. Keep existing signing and payment secrets server-only and stable.
+- Production uses secure checkout. Keep payment webhooks enabled. Scheduled reconciliation is separate and requires scheduling configuration.
 - Complete a real Razorpay test-mode browser checkout and staging webhook delivery before production rollout. Local automated tests mock the provider and do not contact Razorpay or send customer notifications.
 - Personal data restoration across another device requires customer authentication/OTP. A shared link alone restores selection only.
 - The currently advertised kit builder is marked coming soon; historical supported five-fragrance kits are validated at the configured existing ₹999 price. Unsupported selections fail closed.

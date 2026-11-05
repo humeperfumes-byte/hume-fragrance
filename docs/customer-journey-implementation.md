@@ -12,7 +12,7 @@ The initial implementation below has now been extended into automatic token chec
 
 ## Flags and rollback
 
-All three flags default to disabled: `ENABLE_CUSTOMER_ORDER_LINKS`, `ENABLE_CHECKOUT_RESUME_LINKS`, `ENABLE_ERROR_MONITORING`. Set individual flags to `true` only in a controlled test environment first. Disabling either link flag immediately makes that scope unavailable. The empty additive `customer_access_links` table has been created; existing order/product rows were not migrated or rewritten.
+Customer order links, checkout resume links and error monitoring are enabled in code in `lib/checkout-settings.ts`. The former feature-switch environment variables are no longer used.
 
 The current checkout redirects, Razorpay amounts and public purchase endpoints are preserved. No live payment or customer notification was generated during implementation.
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { secureCheckoutConfigured, errorMonitoringConfigured } from "../lib/checkout-settings";
+import { CHECKOUT_FEATURES, secureCheckoutConfigured, errorMonitoringConfigured } from "../lib/checkout-settings";
 import { checkoutSigningSecret } from "../lib/checkout-signing-secret";
 test("default settings and stable domain-separated signing reuse existing server configuration", () => {
   const names = ["ENABLE_SECURE_CHECKOUT", "ENABLE_ERROR_MONITORING", "CHECKOUT_SESSION_SIGNING_SECRET", "RAZORPAY_KEY_SECRET"] as const;
@@ -21,8 +21,10 @@ test("default settings and stable domain-separated signing reuse existing server
     assert.equal(checkoutSigningSecret(), "dedicated-fixture-secret");
     process.env.ENABLE_SECURE_CHECKOUT = "false";
     process.env.ENABLE_ERROR_MONITORING = "false";
-    assert.equal(secureCheckoutConfigured(), false);
-    assert.equal(errorMonitoringConfigured(), false);
+    assert.equal(secureCheckoutConfigured(), true);
+    assert.equal(errorMonitoringConfigured(), true);
+    assert.equal(CHECKOUT_FEATURES.customerOrderLinks, true);
+    assert.equal(CHECKOUT_FEATURES.checkoutResumeLinks, true);
   } finally {
     names.forEach((name, i) => { if (original[i] === undefined) delete process.env[name]; else process.env[name] = original[i]; });
   }
