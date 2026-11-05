@@ -40,10 +40,10 @@ import { AdminAiInsightDock } from "@/components/admin/AdminAiInsights";
 
 const navItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
-  { title: "QR Campaigns", url: "/admin/flyer-campaigns", icon: QrCode },
-  { title: "QR Studio", url: "/admin/qr-generator", icon: QrCode },
+  { title: "QR Codes", url: "/admin/qr-generator", icon: QrCode },
   { title: "AI Visibility", url: "/admin/ai-visibility", icon: Sparkles },
   { title: "Catalog", url: "/admin/products", icon: Package },
+  { title: "Categories", url: "/admin/categories", icon: Package },
   { title: "Content", url: "/admin/blogs", icon: FileText },
   { title: "Images", url: "/admin/images", icon: ImageIcon },
   { title: "Reviews", url: "/admin/reviews", icon: MessageSquareText },
@@ -59,7 +59,7 @@ const navItems = [
   { title: "Checkouts", url: "/admin/checkouts", icon: ShoppingCart },
   { title: "Diagnostics", url: "/admin/diagnostics", icon: ShoppingCart },
   { title: "Cart Leads", url: "/admin/cart", icon: ShoppingBasket },
-  { title: "Coupons", url: "/admin/coupon-leads", icon: Ticket },
+  { title: "Offers & Rewards", url: "/admin/growth", icon: Ticket },
   { title: "Customers", url: "/admin/customers", icon: Users },
   { title: "Login Activity", url: "/admin/login-activity", icon: LogIn },
   { title: "Settings", url: "/admin/settings", icon: Settings },
@@ -72,10 +72,10 @@ const navGroups = [
     items: navItems.filter((item) =>
       [
         "Dashboard",
-        "QR Campaigns",
-        "QR Studio",
+        "QR Codes",
         "AI Visibility",
         "Catalog",
+        "Categories",
         "Content",
         "Images",
         "Reviews",
@@ -94,7 +94,7 @@ const navGroups = [
         "Tracking",
         "Checkouts",
         "Cart Leads",
-        "Coupons",
+        "Offers & Rewards",
       ].includes(item.title),
     ),
   },

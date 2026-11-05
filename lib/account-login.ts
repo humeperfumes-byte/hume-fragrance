@@ -1,3 +1,4 @@
+import {customerKey as growthCustomerKey} from "./growth/rules";
 import { createHash, randomBytes, randomInt } from "crypto";
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
@@ -278,10 +279,13 @@ export async function createAccountSession(input: {
     phone: input.profile.phone,
     expiresAt: addDays(now, SESSION_TTL_DAYS),
     lastUsedAt: now,
+    lastLoginAt:now,
     ipAddress: input.ipAddress ?? null,
     userAgent: input.userAgent ?? null,
   });
 
+  const key=growthCustomerKey(input.profile.phone,input.profile.email);
+  if(key)try{await db.execute(sql`insert into growth_accounts(customer_key,phone,email,name,referral_code,last_login_at,last_activity_at) values (${key},${input.profile.phone},${input.profile.email||null},${input.profile.fullName||''},${'HUME'+randomBytes(5).toString('hex').toUpperCase()},now(),now()) on conflict(customer_key) do update set last_login_at=now(),last_activity_at=now(),updated_at=now()`);}catch{console.warn('Account login recorded; growth profile sync needs retry.');}
   return token;
 }
 
@@ -301,6 +305,7 @@ export async function findAccountSession(token: string) {
     .set({ lastUsedAt: new Date() })
     .where(eq(customerAccountSessions.id, session.id));
 
+  try{const key=growthCustomerKey(session.phone,session.email||session.identifier);if(key)await db.execute(sql`update growth_accounts set last_activity_at=now() where customer_key=${key} and (last_activity_at is null or last_activity_at<now()-interval '1 minute')`);}catch{}
   return {
     ...session,
     identity: {

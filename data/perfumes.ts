@@ -1,3 +1,4 @@
+import type { CategoryTag } from "@/lib/product-categories";
 const IMG = "/images";
 const p1 = `${IMG}/perfume-1.jpg`;
 const p2 = `${IMG}/perfume-2.jpg`;
@@ -31,9 +32,9 @@ export interface PerfumeData {
   category: string;
   categoryId: string;
   categoryIds?: string[];
-  categoryTags?: Array<{ id: string; label: string }>;
+  categoryTags?: Array<CategoryTag & {label:string}>;
   dbCategoryIds?: string[];
-  dbCategoryTags?: Array<{ id: string; label?: string }>;
+  dbCategoryTags?: CategoryTag[];
   gender: Gender;
   images: string[];
   videos?: string[];

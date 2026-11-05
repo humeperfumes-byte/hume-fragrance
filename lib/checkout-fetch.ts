@@ -1,3 +1,4 @@
+import {getStoredAccountLoginToken} from "./customer-account";
 /** Bound both the HTTP request and response body, including an unresponsive server. */
 export async function checkoutFetch(input: RequestInfo | URL, init?: RequestInit, timeoutMs = 30000, timeoutMessage = "The connection took too long. Please tap Place Order to try again. Your checkout details are saved."): Promise<Response> {
   const controller = new AbortController();
@@ -5,7 +6,8 @@ export async function checkoutFetch(input: RequestInfo | URL, init?: RequestInit
   try {
     return await Promise.race([
       (async () => {
-        const response = await fetch(input, { ...init, signal: controller.signal });
+        const headers=new Headers(init?.headers);if(typeof window!=='undefined'&&typeof input==='string'&&input.startsWith('/api/')){try{const token=getStoredAccountLoginToken(localStorage);if(token)headers.set('x-hume-account-token',token);}catch{}}
+        const response = await fetch(input, { ...init, headers,signal: controller.signal });
         const body = await response.text();
         return new Response([204, 205, 304].includes(response.status) ? null : body, { status: response.status, statusText: response.statusText, headers: response.headers });
       })(),

@@ -5,6 +5,8 @@ export type CouponLike = {
   value: number;
   minSubtotal: number;
   welcomeBackMode?: string | null;
+  maxDiscount?: number;
+  eligibleProductIds?: string[];
 };
 
 export type CartDiscountItem = {
@@ -118,8 +120,9 @@ export function calculateCouponDiscount(
   const buyGetConfig = parseBuyGetConfig(coupon);
 
   if (coupon.type === "percent") {
+    const eligibleSubtotal = coupon.eligibleProductIds ? items.filter(item=>!item.isGift&&coupon.eligibleProductIds!.includes(item.id)).reduce((n,item)=>n+item.price*item.quantity,0) : subtotal;
     return {
-      discount: (subtotal * coupon.value) / 100,
+      discount: Math.min(coupon.maxDiscount ?? Infinity, (eligibleSubtotal * coupon.value) / 100),
       freeUnitByItemId: emptyFreeUnitMap,
       buyGetConfig,
       buyGetEligible: false,
@@ -129,7 +132,7 @@ export function calculateCouponDiscount(
 
   if (coupon.type === "fixed") {
     return {
-      discount: coupon.value,
+      discount: Math.min(coupon.value,coupon.maxDiscount??Infinity,coupon.eligibleProductIds?items.filter(item=>!item.isGift&&coupon.eligibleProductIds!.includes(item.id)).reduce((n,item)=>n+item.price*item.quantity,0):subtotal),
       freeUnitByItemId: emptyFreeUnitMap,
       buyGetConfig,
       buyGetEligible: false,

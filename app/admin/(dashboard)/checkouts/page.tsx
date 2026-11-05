@@ -1,153 +1,46 @@
-import { db } from "@/db";
-import { checkoutDrafts, orders } from "@/db/schema";
-import { and, desc, gte, inArray, lte, or, sql } from "drizzle-orm";
-import { CheckoutsTable } from "./CheckoutsTable";
-import { formatINR } from "@/lib/currency";
-import { filterExcludedAdminRows, collectExcludedSessionIds } from "@/lib/admin-data-filters";
-import { parseAdminTimeWindow } from "@/lib/admin-time-window";
-import { parseAdminMarket, isIndiaCheckoutSignal } from "@/lib/admin-market";
-import { RotateCcw } from "lucide-react";
-
-export const dynamic = "force-dynamic";
-
-type AdminPageProps = {
-  searchParams?: Promise<{ hours?: string; market?: string; from?: string; to?: string }>;
-};
-
-export default async function CheckoutsPage({ searchParams }: AdminPageProps) {
-  const params = await searchParams;
-  const timeWindow = parseAdminTimeWindow(params?.hours, params?.from, params?.to);
-  let drafts: Array<typeof checkoutDrafts.$inferSelect & { hasOrderRecord: boolean; hasConfirmedOrder: boolean; linkedOrderNumber: string | null; linkedOrderStatus: string | null }> = [];
-  let dbError = false;
-
-  try {
-    const checkoutWindow = timeWindow.isCustom
-      ? and(gte(checkoutDrafts.updatedAt, timeWindow.since), lte(checkoutDrafts.updatedAt, timeWindow.until))
-      : sql`${checkoutDrafts.updatedAt} >= (now() - (${timeWindow.hours} * interval '1 hour'))::timestamp
-          and ${checkoutDrafts.updatedAt} <= now()::timestamp`;
-    const checkoutRows = await db
-      .select()
-      .from(checkoutDrafts)
-      .where(checkoutWindow)
-      .orderBy(desc(checkoutDrafts.updatedAt))
-      .limit(500);
-    const sessionIds = checkoutRows.map((draft) => draft.sessionId).filter((value): value is string => Boolean(value));
-    const emails = checkoutRows.map((draft) => draft.email?.trim().toLowerCase()).filter((value): value is string => Boolean(value));
-    const phones = checkoutRows.map((draft) => draft.phone?.replace(/\D/g, "")).filter((value): value is string => Boolean(value));
-    const matchConditions = [];
-    if (sessionIds.length) matchConditions.push(inArray(orders.sessionId, sessionIds));
-    if (emails.length) matchConditions.push(inArray(orders.email, emails));
-    if (phones.length) matchConditions.push(inArray(orders.phone, phones));
-    const linkedOrders = matchConditions.length
-      ? await db.select({ sessionId: orders.sessionId, email: orders.email, phone: orders.phone, orderNumber: orders.orderNumber, status: orders.status, createdAt: orders.createdAt })
-          .from(orders).where(or(...matchConditions)).orderBy(desc(orders.createdAt))
-      : [];
-    const bySession = new Map(linkedOrders.filter((order) => order.sessionId).map((order) => [order.sessionId, order]));
-    const byEmail = new Map(linkedOrders.filter((order) => order.email).map((order) => [order.email!.trim().toLowerCase(), order]));
-    const byPhone = new Map(linkedOrders.filter((order) => order.phone).map((order) => [order.phone!.replace(/\D/g, ""), order]));
-    const confirmedStatuses = new Set(["payment_authorized", "processing", "shipped", "delivered", "complete"]);
-    drafts = checkoutRows.map((draft) => {
-      const linkedOrder = bySession.get(draft.sessionId)
-        || (draft.email ? byEmail.get(draft.email.trim().toLowerCase()) : undefined)
-        || (draft.phone ? byPhone.get(draft.phone.replace(/\D/g, "")) : undefined);
-      return {
-        ...draft,
-        hasOrderRecord: Boolean(linkedOrder),
-        hasConfirmedOrder: Boolean(linkedOrder && confirmedStatuses.has(linkedOrder.status)),
-        linkedOrderNumber: linkedOrder?.orderNumber || null,
-        linkedOrderStatus: linkedOrder?.status || null,
-      };
+import { db } from '@/db';
+import { checkoutDrafts, orders } from '@/db/schema';
+import { and, desc, gte, inArray, lte, ne, or } from 'drizzle-orm';
+import { CheckoutsTable } from './CheckoutsTable';
+import { formatINR } from '@/lib/currency';
+import { filterExcludedAdminRows, collectExcludedSessionIds } from '@/lib/admin-data-filters';
+import { parseAdminTimeWindow } from '@/lib/admin-time-window';
+import { parseAdminMarket, isIndiaCheckoutSignal } from '@/lib/admin-market';
+import { matchCheckoutOrder, recoveredOrder, recoveryState, checkoutValue, type RecoveryDraft } from '@/lib/checkout-recovery';
+import { RotateCcw } from 'lucide-react';
+export const dynamic='force-dynamic';
+type AdminPageProps={searchParams?:Promise<{hours?:string;market?:string;from?:string;to?:string}>};
+export default async function CheckoutsPage({searchParams}:AdminPageProps){
+  const params=await searchParams;
+  const timeWindow=parseAdminTimeWindow(params?.hours,params?.from,params?.to);
+  let drafts:RecoveryDraft[]=[];let capped=false;
+  try{
+    const window=and(gte(checkoutDrafts.updatedAt,timeWindow.since),lte(checkoutDrafts.updatedAt,timeWindow.until));
+    // Scheduled overdue work stays visible even when the customer last visited earlier.
+    const overdue=and(lte(checkoutDrafts.nextFollowUpAt,new Date()),ne(checkoutDrafts.leadStatus,'lost'),ne(checkoutDrafts.leadStatus,'converted'));
+    const rows=await db.select().from(checkoutDrafts).where(timeWindow.isCustom?window:or(window,overdue)).orderBy(desc(checkoutDrafts.createdAt),desc(checkoutDrafts.id)).limit(501);
+    capped=rows.length>500;
+    const checkoutRows=rows.slice(0,500);
+    const sessionIds=checkoutRows.map(row=>row.sessionId);
+    const linkedOrders=sessionIds.length?await db.select({id:orders.id,sessionId:orders.sessionId,orderNumber:orders.orderNumber,status:orders.status,createdAt:orders.createdAt,paymentCapturedAt:orders.paymentCapturedAt,paymentSyncStatus:orders.paymentSyncStatus}).from(orders).where(inArray(orders.sessionId,sessionIds)):[];
+    drafts=checkoutRows.map(draft=>{
+      const order=matchCheckoutOrder(draft.sessionId,linkedOrders);
+      return {...draft,hasOrderRecord:!!order,hasConfirmedOrder:!!order&&recoveredOrder(order),linkedOrderId:order?.id||null,linkedOrderNumber:order?.orderNumber||null,linkedOrderStatus:order?.status||null,linkedOrderNeedsReview:!!order&&(['payment_authorized','refunded','partially_refunded','disputed'].includes(order.status)||['creating','switching','payment_review','payment_mismatch','multiple_captures'].includes(order.paymentSyncStatus||''))};
     });
-    drafts = filterExcludedAdminRows(drafts, collectExcludedSessionIds(drafts));
-
-    const market = parseAdminMarket(params?.market);
-    if (market === "india") {
-      drafts = drafts.filter(isIndiaCheckoutSignal);
-    } else if (market === "out_of_india") {
-      drafts = drafts.filter((row) => !isIndiaCheckoutSignal(row));
-    }
-  } catch (error) {
-    console.error("Checkouts page DB error:", error);
-    dbError = true;
+    drafts=filterExcludedAdminRows(drafts,collectExcludedSessionIds(drafts));
+    const market=parseAdminMarket(params?.market);
+    if(market==='india')drafts=drafts.filter(isIndiaCheckoutSignal);
+    else if(market==='out_of_india')drafts=drafts.filter(row=>!isIndiaCheckoutSignal(row));
+  }catch{
+    return <div className="admin-page-layout mx-auto max-w-7xl space-y-5"><h1 className="text-2xl font-semibold text-white">Checkout Recovery</h1><div role="alert" className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-8 text-amber-100"><h2 className="font-semibold">Checkouts could not be loaded</h2><p className="mt-2 text-sm text-white/50">Please refresh this page. Your saved checkouts have not been changed.</p></div></div>;
   }
-
-  if (dbError) {
-    return (
-      <div className="admin-page-layout mx-auto max-w-7xl space-y-6">
-        <div className="admin-page-intro-copy">
-          <h1 className="text-2xl font-semibold text-white">Abandoned Checkouts CRM</h1>
-        </div>
-        <div className="rounded-xl border border-dashed border-amber-500/30 bg-amber-500/[0.04] p-12 text-center">
-          <div className="mx-auto max-w-md space-y-4">
-            <h3 className="text-lg font-medium text-amber-300">Database Sync Required</h3>
-            <p className="text-sm text-white/50">
-              The checkout_drafts table is missing columns. Run{" "}
-              <code className="rounded bg-white/10 px-2 py-1 text-xs">npm run db:push</code>{" "}
-              in your terminal to sync the schema, then refresh this page.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const activeDrafts = drafts.filter((d) => !d.hasConfirmedOrder).length;
-  const recoverable = drafts.filter(
-    (d) => !d.hasConfirmedOrder && d.status !== "whatsapp_initiated" && (d.phone || d.email || d.fullName),
-  ).length;
-  const whatsappInitiated = drafts.filter((d) => !d.hasConfirmedOrder && d.status === "whatsapp_initiated").length;
-  const totalAbandonedValue = drafts
-    .filter((d) => !d.hasConfirmedOrder)
-    .reduce((acc, d) => acc + Number.parseFloat(String(d.grandTotal ?? "0")), 0);
-
-  return (
-    <div className="admin-page-layout mx-auto max-w-7xl space-y-5">
-      <div className="admin-page-intro-copy flex flex-col justify-between gap-5 md:flex-row md:items-center">
-        <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#f2d56b]/20 bg-[#f2d56b]/10 shadow-[inset_0_1px_rgba(255,255,255,.08)]">
-            <RotateCcw className="h-5 w-5 text-[#f2d56b]" />
-          </div>
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#f2d56b]/60">Revenue recovery</p>
-          <h1 className="mt-1 text-2xl font-semibold text-white">Abandoned Checkouts</h1>
-          <p className="mt-1 text-sm text-white/45">
-            Recover lost sales. Carts are scored by value and likelihood of recovery.
-          </p>
-          <p className="mt-1 text-xs text-white/35">Showing checkout leads from {timeWindow.label.toLowerCase()}.</p>
-        </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <div className="relative overflow-hidden rounded-[20px] border border-white/10 bg-[#19191c] p-4 shadow-[inset_0_1px_rgba(255,255,255,.04)] sm:p-5">
-          <div className="absolute -right-5 -top-8 h-24 w-24 rounded-full bg-[#c5a9ff]/10 blur-2xl" />
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">Active Drafts</p>
-          <div className="mt-2 flex items-baseline gap-2">
-            <p className="text-2xl font-semibold text-white">{activeDrafts}</p>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400">Live</span>
-          </div>
-        </div>
-        <div className="relative overflow-hidden rounded-[20px] border border-amber-400/15 bg-[#19191c] p-4 shadow-[inset_0_1px_rgba(255,255,255,.04)] sm:p-5">
-          <div className="absolute -right-5 -top-8 h-24 w-24 rounded-full bg-amber-400/10 blur-2xl" />
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200/45">Recoverable Leads</p>
-          <div className="mt-2 flex items-baseline gap-2">
-            <p className="text-2xl font-semibold text-amber-200">{recoverable}</p>
-            <div className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-          </div>
-        </div>
-        <div className="relative overflow-hidden rounded-[20px] border border-emerald-400/15 bg-[#19191c] p-4 shadow-[inset_0_1px_rgba(255,255,255,.04)] sm:p-5">
-          <div className="absolute -right-5 -top-8 h-24 w-24 rounded-full bg-emerald-400/10 blur-2xl" />
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-200/45">WhatsApp Pending</p>
-          <p className="mt-2 text-2xl font-semibold text-emerald-200">{whatsappInitiated}</p>
-        </div>
-        <div className="relative overflow-hidden rounded-[20px] border border-[#c5a9ff]/15 bg-[#19191c] p-4 shadow-[inset_0_1px_rgba(255,255,255,.04)] sm:p-5">
-          <div className="absolute -right-5 -top-8 h-24 w-24 rounded-full bg-[#c5a9ff]/10 blur-2xl" />
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">Total Recovery Value</p>
-          <p className="mt-2 text-2xl font-semibold tracking-tight text-white">{formatINR(totalAbandonedValue)}</p>
-        </div>
-      </div>
-
-      <CheckoutsTable initialDrafts={drafts} />
-    </div>
-  );
+  const now=Date.now();const states=drafts.map(draft=>recoveryState(draft,now));
+  const summaries=[{label:'Needs follow-up',value:String(states.filter(state=>!state.recovered&&!state.lost&&!state.active&&state.hasContact&&!state.review).length)},{label:'Follow-up overdue',value:String(states.filter(state=>state.due).length)},{label:'Payment needs attention',value:String(states.filter(state=>state.payment).length)},{label:'Open checkout value',value:formatINR(drafts.filter((draft,index)=>!draft.hasOrderRecord&&!states[index].recovered&&!states[index].lost).reduce((sum,draft)=>sum+checkoutValue(draft),0))}];
+  return <div className="admin-page-layout mx-auto max-w-7xl space-y-5">
+    <header className="flex items-center gap-4"><span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#f2d56b]/20 bg-[#f2d56b]/10"><RotateCcw className="h-5 w-5 text-[#f2d56b]"/></span><div><p className="text-[10px] font-semibold uppercase tracking-[.2em] text-[#f2d56b]/60">A thoughtful follow-up</p><h1 className="mt-1 text-2xl font-semibold text-white">Checkout Recovery</h1><p className="mt-1 text-sm text-white/45">See who needs help, prepare a personal message, and help them pick up where they left off.</p><p className="mt-1 text-xs text-white/35">{timeWindow.label}{!timeWindow.isCustom?' · Includes older overdue follow-ups.':''}</p></div></header>
+    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">{summaries.map(item=><div key={item.label} className="rounded-2xl border border-white/10 bg-[#19191c] p-4"><p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">{item.label}</p><p className="mt-2 text-2xl font-semibold text-white">{item.value}</p></div>)}</div>
+    {capped&&<p role="status" className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-200">Showing the most recent 500 checkouts. Narrow the date or market filter to see a complete result. Counters cover only the loaded records.</p>}
+    <CheckoutsTable initialDrafts={drafts}/>
+    <p className="text-xs leading-5 text-white/30">Open checkout value is potential order value, not collected revenue. Recovered checkouts have a linked order; this does not establish that a reminder caused the order. Priority is a rule-based work queue, not a prediction of purchase.</p>
+  </div>;
 }

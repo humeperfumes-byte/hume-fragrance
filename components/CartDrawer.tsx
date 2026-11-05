@@ -1,5 +1,7 @@
 "use client";
 
+import CoinRedemption from "@/components/growth/CoinRedemption";
+import {growthHeaders} from "@/lib/growth/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -181,6 +183,7 @@ const CartDrawer = () => {
   const pathname = usePathname();
   const {
     items,
+    growthQuote,growthQuotePending,growthQuoteError,
     hydrated,
     appliedCouponCode,
     setAppliedCouponCode,
@@ -246,7 +249,7 @@ const CartDrawer = () => {
     [appliedCoupon, items, subtotal],
   );
 
-  const normalizedCouponDiscount = Math.min(subtotal, couponResult.discount);
+  const normalizedCouponDiscount = growthQuote?.couponDiscount ?? Math.min(subtotal, couponResult.discount);
 
   const isWelcomeRewardBlocked = useMemo(() => {
     return items.length > 0 && items.every((item) => item.isGift || isDiscoverySetCartItem(item));
@@ -254,7 +257,7 @@ const CartDrawer = () => {
 
   const activeWelcomeReward = !isWelcomeRewardBlocked ? welcomeBackReward : null;
 
-  const welcomeBackDiscount = calculateWelcomeBackDiscount(
+  const welcomeBackDiscount = growthQuote?.welcomeDiscount ?? calculateWelcomeBackDiscount(
     activeWelcomeReward,
     subtotal,
     normalizedCouponDiscount,
@@ -275,14 +278,14 @@ const CartDrawer = () => {
     appliedCoupon,
     subtotal,
   );
-  const hasWelcomeBackBenefit = effectiveWelcomeBackPercent > 0;
-  const shippingFee = hasWelcomeBackBenefit ? 0 : regularShippingFee;
+  const hasWelcomeBackBenefit = effectiveWelcomeBackPercent > 0 && (!growthQuote || growthQuote.welcomeDiscount > 0);
+  const shippingFee = growthQuote?.shippingFee ?? (hasWelcomeBackBenefit ? 0 : regularShippingFee);
   const shippingSavings = Math.max(0, regularShippingFee - shippingFee);
-  const grandTotal =
+  const grandTotal = growthQuote?.grandTotal ?? (
     Math.max(0, subtotal - normalizedCouponDiscount - welcomeBackDiscount) +
-    shippingFee;
+    shippingFee);
   const totalSavings =
-    normalizedCouponDiscount + welcomeBackDiscount + shippingSavings;
+    normalizedCouponDiscount + welcomeBackDiscount + shippingSavings + (growthQuote?.coins||0)+(growthQuote?.referralDiscount||0);
   const pricingBreakdown = useMemo(
     () => ({
       subtotal,
@@ -435,10 +438,11 @@ const CartDrawer = () => {
 
   useEffect(() => {
     let active = true;
+    setCouponsLoaded(false);
     const loadCoupons = async () => {
       const [visibleResult, allResult] = await Promise.allSettled([
         fetch("/api/coupons"),
-        fetch("/api/coupons?includeHidden=1"),
+        fetch("/api/coupons"+(appliedCouponCode?"?code="+encodeURIComponent(appliedCouponCode):""),{headers:growthHeaders()}),
       ]);
 
       if (!active) return;
@@ -450,7 +454,7 @@ const CartDrawer = () => {
 
       if (allResult.status === "fulfilled" && allResult.value.ok) {
         const allData = (await allResult.value.json()) as Coupon[];
-        setAllCoupons(Array.isArray(allData) ? allData : []);
+        setAllCoupons(previous => [...previous.filter(c => c.code !== appliedCouponCode), ...(Array.isArray(allData) ? allData : [])]);
         setCouponsLoaded(true);
       }
     };
@@ -458,7 +462,7 @@ const CartDrawer = () => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [appliedCouponCode]);
 
   useEffect(() => {
     if (!isCartOpen || items.length === 0) return;
@@ -558,10 +562,7 @@ const CartDrawer = () => {
 
   useEffect(() => {
     if (!hydrated || !couponsLoaded || !appliedCouponCode) return;
-    if (!appliedCoupon) {
-      queueMicrotask(() => setAppliedCouponCode(null));
-      return;
-    }
+    if (!appliedCoupon) return;
     if (
       subtotal < appliedCoupon.minSubtotal ||
       !isCouponEligible(appliedCoupon)
@@ -660,55 +661,9 @@ const CartDrawer = () => {
     });
   };
 
-  const handleApplyCouponFromInput = () => {
-    const code = couponInput.trim().toUpperCase();
-    if (!code) {
-      toast({
-        title: "Enter a coupon code",
-        description: "Type a valid coupon code to apply.",
-      });
-      return;
-    }
-
-    let coupon = allCoupons.find((c) => c.code.toUpperCase() === code);
-    if (!coupon) {
-      coupon = fallbackCoupons.find((c) => c.code.toUpperCase() === code);
-      if (coupon) {
-        setAllCoupons((prev) => [...prev, coupon!]);
-      }
-    }
-
-    if (!coupon) {
-      toast({
-        title: "Invalid coupon",
-        description: "This coupon code is not available right now.",
-      });
-      return;
-    }
-
-    if (!isCouponEligible(coupon)) {
-      const buyGet = parseBuyGetConfig(coupon);
-      if (buyGet && paidItemCount < buyGet.buy + buyGet.get) {
-        const requiredItems = buyGet.buy + buyGet.get;
-        toast({
-          title: "Coupon not eligible",
-          description: `Add ${requiredItems - paidItemCount} more item(s) to unlock ${coupon.code}.`,
-        });
-        return;
-      }
-      toast({
-        title: "Coupon not eligible",
-        description: `Add ${formatINR(coupon.minSubtotal - subtotal)} more to apply ${coupon.code}.`,
-      });
-      return;
-    }
-
-    setAppliedCouponCode(coupon.code);
-    setCouponInput("");
-    setExpandedCouponCode(null);
-    toast({
-      title: "Coupon applied",
-    });
+  const handleApplyCouponFromInput = async () => {
+    const code=couponInput.trim().toUpperCase();if(!code)return;
+    try{const response=await fetch('/api/coupons?code='+encodeURIComponent(code),{headers:growthHeaders()});const data=await response.json();if(!response.ok)throw new Error(data.error||'This offer is unavailable.');const coupon=(data as Coupon[]).find(c=>c.code===code);if(!coupon)throw new Error('This code is unavailable.');setAllCoupons(previous=>[...previous.filter(c=>c.code!==code),coupon]);setAppliedCouponCode(code);setCouponInput('');setExpandedCouponCode(null);toast({title:'Offer applied'});}catch(e){toast({title:(e as Error).message,variant:'destructive'});}
   };
 
   const handleContinueCheckout = () => {
@@ -1278,6 +1233,7 @@ const CartDrawer = () => {
       </div>
 
       <footer className="shrink-0 border-t border-black/10 bg-[#fbfaf8] px-5 py-4">
+          <CoinRedemption/>
           <div className="text-sm">
             <button
               type="button"
@@ -1361,7 +1317,7 @@ const CartDrawer = () => {
             <motion.button
               type="button"
               onClick={handleContinueCheckout}
-              disabled={isEmptyCart}
+              disabled={isEmptyCart||growthQuotePending||Boolean(growthQuoteError)}
               whileHover={{ scale: isEmptyCart ? 1 : 1.015 }}
               whileTap={{ scale: isEmptyCart ? 1 : 0.98 }}
               className="group relative flex h-13 w-full items-center justify-center gap-2.5 overflow-hidden rounded-full bg-black px-6 text-sm font-semibold tracking-[0.14em] text-white transition-all duration-300 disabled:opacity-50"

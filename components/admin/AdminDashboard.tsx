@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import type { PerfumeData } from "@/data/perfumes";
 import type { BlogPost } from "@/data/blogPosts";
-import { isVisibleNatureCategory } from "@/lib/nature-categories";
+import { ProductCategoryPicker } from "@/components/admin/ProductCategoryPicker";
+import type { CategoryDefinition } from "@/lib/product-categories";
 import { formatINR } from "@/lib/currency";
 import { toast } from "@/hooks/use-toast";
 import { displayPhoneNumber } from "@/lib/phone";
@@ -245,7 +246,8 @@ function scoreCheckoutDraft(draft: CheckoutDraftRecord): number {
   if (draft.status === "complete") score += 10;
   if (draft.status === "whatsapp_initiated") score -= 20;
 
-  const hoursSinceUpdate = (Date.now() - new Date(draft.updatedAt).getTime()) / (1000 * 60 * 60);
+  const hoursSinceUpdate =
+    (Date.now() - new Date(draft.updatedAt).getTime()) / (1000 * 60 * 60);
   if (hoursSinceUpdate <= 1) score += 15;
   else if (hoursSinceUpdate <= 24) score += 8;
   else if (hoursSinceUpdate <= 72) score += 3;
@@ -290,13 +292,19 @@ export default function AdminDashboard() {
   const [adminToken, setAdminToken] = useState("");
   const [products, setProducts] = useState<PerfumeData[]>([]);
   const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [checkoutDrafts, setCheckoutDrafts] = useState<CheckoutDraftRecord[]>([]);
-  const [dashboardAnalytics, setDashboardAnalytics] = useState<DashboardAnalytics | null>(null);
+  const [checkoutDrafts, setCheckoutDrafts] = useState<CheckoutDraftRecord[]>(
+    [],
+  );
+  const [dashboardAnalytics, setDashboardAnalytics] =
+    useState<DashboardAnalytics | null>(null);
   const [timeWindowHours, setTimeWindowHours] = useState("720");
-  const [breakdownTab, setBreakdownTab] = useState<"paths" | "referrers" | "countries" | "browsers" | "os">("paths");
+  const [breakdownTab, setBreakdownTab] = useState<
+    "paths" | "referrers" | "countries" | "browsers" | "os"
+  >("paths");
   const [testPreorderEmail, setTestPreorderEmail] = useState("");
   const [sendingPreorder, setSendingPreorder] = useState(false);
-  const [productForm, setProductForm] = useState<ProductForm>(initialProductForm);
+  const [productForm, setProductForm] =
+    useState<ProductForm>(initialProductForm);
   const [blogForm, setBlogForm] = useState<BlogForm>(initialBlogForm);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
@@ -306,27 +314,37 @@ export default function AdminDashboard() {
     if (stored) setAdminToken(stored);
   }, []);
 
-  const dbCategoryOptions = useMemo(() => {
-    const map = new Map<string, string>();
-    products.forEach((product) => {
-      (product.dbCategoryTags ?? product.categoryTags ?? []).forEach((tag) => {
-        if (!tag?.id) return;
-        if (!isVisibleNatureCategory(tag.id) || !isVisibleNatureCategory(tag.label || tag.id)) return;
-        map.set(tag.id, tag.label || tag.id);
+  const [managedCategories, setManagedCategories] = useState<
+    CategoryDefinition[]
+  >([]);
+  const [managedCategoryError, setManagedCategoryError] = useState<
+    string | null
+  >(null);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/admin/categories?definitions=1", {
+      headers: adminToken ? { "x-admin-token": adminToken } : {},
+    })
+      .then(async (r) => {
+        if (!r.ok) throw Error("Categories unavailable");
+        return r.json();
+      })
+      .then((data) => {
+        if (active) {
+          setManagedCategories(data.categories);
+          setManagedCategoryError(null);
+        }
+      })
+      .catch(() => {
+        if (active)
+          setManagedCategoryError(
+            "Categories could not load. Open Catalog → Categories to try again.",
+          );
       });
-      (product.dbCategoryIds ?? product.categoryIds ?? []).forEach((id) => {
-        if (!id || map.has(id)) return;
-        if (!isVisibleNatureCategory(id)) return;
-        map.set(
-          id,
-          id.replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-        );
-      });
-    });
-    return Array.from(map.entries())
-      .map(([id, label]) => ({ id, label }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [products]);
+    return () => {
+      active = false;
+    };
+  }, [adminToken]);
 
   useEffect(() => {
     window.localStorage.setItem("admin_api_token", adminToken);
@@ -342,7 +360,10 @@ export default function AdminDashboard() {
           "Content-Type": "application/json",
           "x-admin-token": adminToken.trim(),
         },
-        body: JSON.stringify({ email: testPreorderEmail.trim(), sendToAll: false }),
+        body: JSON.stringify({
+          email: testPreorderEmail.trim(),
+          sendToAll: false,
+        }),
       });
       const data = await response.json();
       if (response.ok && data.ok) {
@@ -365,7 +386,11 @@ export default function AdminDashboard() {
   };
 
   const sendPreorderToAllLeads = async () => {
-    if (!confirm(`Are you sure you want to broadcast this pre-order campaign email to all ${checkoutDrafts.length} checkout leads?`)) {
+    if (
+      !confirm(
+        `Are you sure you want to broadcast this pre-order campaign email to all ${checkoutDrafts.length} checkout leads?`,
+      )
+    ) {
       return;
     }
     setSendingPreorder(true);
@@ -449,10 +474,14 @@ export default function AdminDashboard() {
   }, [adminToken, timeWindowHours]);
 
   const loadAll = useCallback(async () => {
-    const productEndpoint = adminToken.trim() ? "/api/products?includeHidden=1" : "/api/products";
+    const productEndpoint = adminToken.trim()
+      ? "/api/products?includeHidden=1"
+      : "/api/products";
     const [productsRes, postsRes] = await Promise.all([
       fetch(productEndpoint, {
-        headers: adminToken.trim() ? { "x-admin-token": adminToken.trim() } : undefined,
+        headers: adminToken.trim()
+          ? { "x-admin-token": adminToken.trim() }
+          : undefined,
       }),
       fetch("/api/blog"),
     ]);
@@ -655,10 +684,16 @@ export default function AdminDashboard() {
   }
 
   const checkoutDraftStats = useMemo(() => {
-    const active = checkoutDrafts.filter((draft) => draft.status !== "started").length;
-    const whatsappInitiated = checkoutDrafts.filter((draft) => draft.status === "whatsapp_initiated").length;
+    const active = checkoutDrafts.filter(
+      (draft) => draft.status !== "started",
+    ).length;
+    const whatsappInitiated = checkoutDrafts.filter(
+      (draft) => draft.status === "whatsapp_initiated",
+    ).length;
     const recoverable = checkoutDrafts.filter(
-      (draft) => draft.status !== "whatsapp_initiated" && (draft.phone || draft.fullName || draft.email),
+      (draft) =>
+        draft.status !== "whatsapp_initiated" &&
+        (draft.phone || draft.fullName || draft.email),
     ).length;
 
     return { active, whatsappInitiated, recoverable };
@@ -685,13 +720,18 @@ export default function AdminDashboard() {
         })
         .sort((a, b) => {
           if (b.leadScore !== a.leadScore) return b.leadScore - a.leadScore;
-          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+          return (
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          );
         }),
     [checkoutDrafts],
   );
 
   const checkoutSourceInsights = useMemo(() => {
-    const map = new Map<string, { source: string; drafts: number; value: number }>();
+    const map = new Map<
+      string,
+      { source: string; drafts: number; value: number }
+    >();
     scoredCheckoutDrafts.forEach((draft) => {
       const source = draft.acquisitionSource || "Unknown";
       const existing = map.get(source);
@@ -704,7 +744,9 @@ export default function AdminDashboard() {
       map.set(source, { source, drafts: 1, value });
     });
 
-    return Array.from(map.values()).sort((a, b) => b.drafts - a.drafts || b.value - a.value);
+    return Array.from(map.values()).sort(
+      (a, b) => b.drafts - a.drafts || b.value - a.value,
+    );
   }, [scoredCheckoutDrafts]);
 
   const handleCopyRecoveryMessage = async (draft: CheckoutDraftRecord) => {
@@ -726,7 +768,9 @@ export default function AdminDashboard() {
   const handleWhatsAppRecovery = (draft: CheckoutDraftRecord) => {
     const phone = normalizeWhatsAppNumber(draft.phone);
     const message = encodeURIComponent(buildRecoveryMessage(draft));
-    const url = phone ? `https://wa.me/${phone}?text=${message}` : `https://wa.me/?text=${message}`;
+    const url = phone
+      ? `https://wa.me/${phone}?text=${message}`
+      : `https://wa.me/?text=${message}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
@@ -758,7 +802,9 @@ export default function AdminDashboard() {
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="products">Products</TabsTrigger>
             <TabsTrigger value="blogs">Blog Posts</TabsTrigger>
-            <TabsTrigger value="checkout-drafts">Abandoned Checkouts</TabsTrigger>
+            <TabsTrigger value="checkout-drafts">
+              Abandoned Checkouts
+            </TabsTrigger>
           </TabsList>
 
           <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card px-4 py-2">
@@ -783,56 +829,79 @@ export default function AdminDashboard() {
             <CardHeader className="border-b border-border/60 bg-gradient-to-r from-secondary/50 via-background to-secondary/20">
               <CardTitle className=" text-2xl">HUME Control Room</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Your live snapshot of traffic, cart intent, product interest, and recovery opportunities.
+                Your live snapshot of traffic, cart intent, product interest,
+                and recovery opportunities.
               </p>
             </CardHeader>
             <CardContent className="space-y-6 p-6">
               {!adminToken.trim() ? (
                 <div className="rounded-2xl border border-dashed border-border p-6 text-sm text-muted-foreground">
-                  Add your admin token above to unlock dashboard analytics and checkout recovery data.
+                  Add your admin token above to unlock dashboard analytics and
+                  checkout recovery data.
                 </div>
               ) : (
                 <>
                   {/* Overview Cards (Cloudflare style) */}
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <div className="rounded-2xl border border-border/70 bg-card p-5">
-                      <p className="text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground">Page load time</p>
-                      <p className="mt-2 text-2xl font-semibold">
-                        {dashboardAnalytics?.overview.averageLoadTimeMs ?? 2180}ms
+                      <p className="text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground">
+                        Page load time
                       </p>
-                      <p className="mt-1 text-xs text-muted-foreground">Average initial page request to load duration.</p>
+                      <p className="mt-2 text-2xl font-semibold">
+                        {dashboardAnalytics?.overview.averageLoadTimeMs ?? 2180}
+                        ms
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Average initial page request to load duration.
+                      </p>
                     </div>
                     <div className="rounded-2xl border border-border/70 bg-card p-5">
-                      <p className="text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground">Page views</p>
+                      <p className="text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground">
+                        Page views
+                      </p>
                       <p className="mt-2 text-2xl font-semibold">
                         {dashboardAnalytics?.overview.totalPageViews ?? 0}
                       </p>
-                      <p className="mt-1 text-xs text-muted-foreground">Total page hit events tracked across all paths.</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Total page hit events tracked across all paths.
+                      </p>
                     </div>
                     <div className="rounded-2xl border border-border/70 bg-card p-5">
-                      <p className="text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground">Visits</p>
+                      <p className="text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground">
+                        Visits
+                      </p>
                       <p className="mt-2 text-2xl font-semibold">
                         {dashboardAnalytics?.overview.uniqueViewers ?? 0}
                       </p>
-                      <p className="mt-1 text-xs text-muted-foreground">Distinct visitor sessions recorded in this time window.</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Distinct visitor sessions recorded in this time window.
+                      </p>
                     </div>
                     <div className="rounded-2xl border border-border/70 bg-card p-5">
-                      <p className="text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground">Abandoned Draft Value</p>
-                      <p className="mt-2 text-2xl font-semibold">
-                        INR {Math.round(dashboardAnalytics?.overview.abandonedDraftValue ?? 0)}
+                      <p className="text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground">
+                        Abandoned Draft Value
                       </p>
-                      <p className="mt-1 text-xs text-muted-foreground">Potential checkout value currently incomplete.</p>
+                      <p className="mt-2 text-2xl font-semibold">
+                        INR{" "}
+                        {Math.round(
+                          dashboardAnalytics?.overview.abandonedDraftValue ?? 0,
+                        )}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Potential checkout value currently incomplete.
+                      </p>
                     </div>
                   </div>
 
                   {/* Cloudflare Page views summary SVG line chart */}
                   {(() => {
-                    const timelinePoints = dashboardAnalytics?.timelineChart || [];
+                    const timelinePoints =
+                      dashboardAnalytics?.timelineChart || [];
                     const maxVal = Math.max(
                       ...timelinePoints.map((p) => Math.max(p.views, p.visits)),
-                      10
+                      10,
                     );
-                    
+
                     const svgW = 800;
                     const svgH = 220;
                     const padX = 40;
@@ -841,40 +910,59 @@ export default function AdminDashboard() {
                     const chartH = svgH - padY * 2;
 
                     const viewsPoints = timelinePoints.map((p, i) => {
-                      const x = padX + (i / Math.max(1, timelinePoints.length - 1)) * chartW;
+                      const x =
+                        padX +
+                        (i / Math.max(1, timelinePoints.length - 1)) * chartW;
                       const y = padY + chartH - (p.views / maxVal) * chartH;
                       return `${x},${y}`;
                     });
 
                     const visitsPoints = timelinePoints.map((p, i) => {
-                      const x = padX + (i / Math.max(1, timelinePoints.length - 1)) * chartW;
+                      const x =
+                        padX +
+                        (i / Math.max(1, timelinePoints.length - 1)) * chartW;
                       const y = padY + chartH - (p.visits / maxVal) * chartH;
                       return `${x},${y}`;
                     });
 
-                    const viewsPath = viewsPoints.length > 0 ? `M ${viewsPoints.join(" L ")}` : "";
-                    const visitsPath = visitsPoints.length > 0 ? `M ${visitsPoints.join(" L ")}` : "";
+                    const viewsPath =
+                      viewsPoints.length > 0
+                        ? `M ${viewsPoints.join(" L ")}`
+                        : "";
+                    const visitsPath =
+                      visitsPoints.length > 0
+                        ? `M ${visitsPoints.join(" L ")}`
+                        : "";
 
                     // Filled area under views (blue glow)
-                    const viewsAreaPath = viewsPoints.length > 0
-                      ? `${viewsPath} L ${padX + chartW},${padY + chartH} L ${padX},${padY + chartH} Z`
-                      : "";
+                    const viewsAreaPath =
+                      viewsPoints.length > 0
+                        ? `${viewsPath} L ${padX + chartW},${padY + chartH} L ${padX},${padY + chartH} Z`
+                        : "";
 
                     return (
                       <div className="rounded-2xl border border-border/70 bg-card p-5">
                         <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
                           <div>
-                            <h3 className="text-lg font-semibold">Page views summary</h3>
-                            <p className="text-xs text-muted-foreground">Visitor sessions and pages loaded over time.</p>
+                            <h3 className="text-lg font-semibold">
+                              Page views summary
+                            </h3>
+                            <p className="text-xs text-muted-foreground">
+                              Visitor sessions and pages loaded over time.
+                            </p>
                           </div>
                           <div className="flex items-center gap-4 text-xs">
                             <div className="flex items-center gap-2">
                               <span className="h-3 w-3 rounded-full bg-blue-500" />
-                              <span className="text-muted-foreground">Total page views</span>
+                              <span className="text-muted-foreground">
+                                Total page views
+                              </span>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="h-3 w-3 rounded-full bg-emerald-500" />
-                              <span className="text-muted-foreground">Unique visits</span>
+                              <span className="text-muted-foreground">
+                                Unique visits
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -885,41 +973,101 @@ export default function AdminDashboard() {
                           </div>
                         ) : (
                           <div className="w-full overflow-hidden">
-                            <svg viewBox={`0 0 ${svgW} ${svgH}`} width="100%" height="100%" className="overflow-visible">
+                            <svg
+                              viewBox={`0 0 ${svgW} ${svgH}`}
+                              width="100%"
+                              height="100%"
+                              className="overflow-visible"
+                            >
                               {/* Horizontal Gridlines */}
                               {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
                                 const y = padY + ratio * chartH;
-                                const labelVal = Math.round(maxVal - ratio * maxVal);
+                                const labelVal = Math.round(
+                                  maxVal - ratio * maxVal,
+                                );
                                 return (
                                   <g key={ratio} className="opacity-10">
-                                    <line x1={padX} y1={y} x2={padX + chartW} y2={y} stroke="white" strokeWidth="1" strokeDasharray="4 4" />
-                                    <text x={padX - 8} y={y + 4} fill="white" fontSize="9" textAnchor="end">{labelVal}</text>
+                                    <line
+                                      x1={padX}
+                                      y1={y}
+                                      x2={padX + chartW}
+                                      y2={y}
+                                      stroke="white"
+                                      strokeWidth="1"
+                                      strokeDasharray="4 4"
+                                    />
+                                    <text
+                                      x={padX - 8}
+                                      y={y + 4}
+                                      fill="white"
+                                      fontSize="9"
+                                      textAnchor="end"
+                                    >
+                                      {labelVal}
+                                    </text>
                                   </g>
                                 );
                               })}
 
                               {/* Page Views Area Fill */}
                               {viewsAreaPath && (
-                                <path d={viewsAreaPath} fill="url(#blueGlow)" opacity="0.06" />
+                                <path
+                                  d={viewsAreaPath}
+                                  fill="url(#blueGlow)"
+                                  opacity="0.06"
+                                />
                               )}
 
                               {/* Page Views Line */}
                               {viewsPath && (
-                                <path d={viewsPath} fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                                <path
+                                  d={viewsPath}
+                                  fill="none"
+                                  stroke="#3b82f6"
+                                  strokeWidth="2.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
                               )}
 
                               {/* Unique Visits Line */}
                               {visitsPath && (
-                                <path d={visitsPath} fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="3 3" />
+                                <path
+                                  d={visitsPath}
+                                  fill="none"
+                                  stroke="#10b981"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeDasharray="3 3"
+                                />
                               )}
 
                               {/* X Axis Labels */}
                               {timelinePoints.map((p, i) => {
-                                const step = Math.max(1, Math.floor(timelinePoints.length / 5));
-                                if (i % step !== 0 && i !== timelinePoints.length - 1) return null;
-                                const x = padX + (i / Math.max(1, timelinePoints.length - 1)) * chartW;
+                                const step = Math.max(
+                                  1,
+                                  Math.floor(timelinePoints.length / 5),
+                                );
+                                if (
+                                  i % step !== 0 &&
+                                  i !== timelinePoints.length - 1
+                                )
+                                  return null;
+                                const x =
+                                  padX +
+                                  (i / Math.max(1, timelinePoints.length - 1)) *
+                                    chartW;
                                 return (
-                                  <text key={i} x={x} y={padY + chartH + 16} fill="white" className="opacity-35" fontSize="9" textAnchor="middle">
+                                  <text
+                                    key={i}
+                                    x={x}
+                                    y={padY + chartH + 16}
+                                    fill="white"
+                                    className="opacity-35"
+                                    fontSize="9"
+                                    textAnchor="middle"
+                                  >
                                     {p.label}
                                   </text>
                                 );
@@ -927,9 +1075,19 @@ export default function AdminDashboard() {
 
                               {/* Gradients */}
                               <defs>
-                                <linearGradient id="blueGlow" x1="0" y1="0" x2="0" y2="1">
+                                <linearGradient
+                                  id="blueGlow"
+                                  x1="0"
+                                  y1="0"
+                                  x2="0"
+                                  y2="1"
+                                >
                                   <stop offset="0%" stopColor="#3b82f6" />
-                                  <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                                  <stop
+                                    offset="100%"
+                                    stopColor="#3b82f6"
+                                    stopOpacity="0"
+                                  />
                                 </linearGradient>
                               </defs>
                             </svg>
@@ -945,28 +1103,56 @@ export default function AdminDashboard() {
                     if (!funnel) return null;
                     const steps = [
                       { label: "Visits", value: funnel.visitors, rate: "100%" },
-                      { label: "Add to Cart", value: funnel.addToCart, rate: `${funnel.visitorToCartRate}%` },
-                      { label: "Checkout Drafts", value: funnel.checkoutDrafts, rate: `${funnel.cartToDraftRate}%` },
-                      { label: "Orders", value: funnel.orders, rate: `${funnel.visitorToOrderRate}%` },
+                      {
+                        label: "Add to Cart",
+                        value: funnel.addToCart,
+                        rate: `${funnel.visitorToCartRate}%`,
+                      },
+                      {
+                        label: "Checkout Drafts",
+                        value: funnel.checkoutDrafts,
+                        rate: `${funnel.cartToDraftRate}%`,
+                      },
+                      {
+                        label: "Orders",
+                        value: funnel.orders,
+                        rate: `${funnel.visitorToOrderRate}%`,
+                      },
                     ];
 
                     return (
                       <div className="rounded-2xl border border-border/70 bg-card p-5">
-                        <h3 className="text-lg font-semibold">Conversion rate funnel</h3>
-                        <p className="text-xs text-muted-foreground">Percentage drop-off and conversion rates across checkout milestones.</p>
-                        
+                        <h3 className="text-lg font-semibold">
+                          Conversion rate funnel
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          Percentage drop-off and conversion rates across
+                          checkout milestones.
+                        </p>
+
                         <div className="mt-6 grid gap-4 sm:grid-cols-4">
                           {steps.map((step, idx) => (
-                            <div key={step.label} className="relative rounded-xl border border-border/60 bg-background/30 p-4">
-                              <p className="text-[0.62rem] uppercase tracking-widest text-muted-foreground">{step.label}</p>
-                              <p className="mt-2 text-2xl font-bold">{step.value}</p>
+                            <div
+                              key={step.label}
+                              className="relative rounded-xl border border-border/60 bg-background/30 p-4"
+                            >
+                              <p className="text-[0.62rem] uppercase tracking-widest text-muted-foreground">
+                                {step.label}
+                              </p>
+                              <p className="mt-2 text-2xl font-bold">
+                                {step.value}
+                              </p>
                               <div className="mt-2 flex items-center justify-between text-xs">
-                                <span className="text-muted-foreground">Conversion</span>
-                                <span className="font-semibold text-emerald-400">{step.rate}</span>
+                                <span className="text-muted-foreground">
+                                  Conversion
+                                </span>
+                                <span className="font-semibold text-emerald-400">
+                                  {step.rate}
+                                </span>
                               </div>
 
                               <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-secondary/50">
-                                <div 
+                                <div
                                   className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
                                   style={{ width: step.rate }}
                                 />
@@ -992,16 +1178,24 @@ export default function AdminDashboard() {
                     ] as const;
 
                     const data = breakdowns[breakdownTab] || [];
-                    const totalCount = data.reduce((sum, item) => sum + item.count, 0);
+                    const totalCount = data.reduce(
+                      (sum, item) => sum + item.count,
+                      0,
+                    );
 
                     return (
                       <div className="rounded-2xl border border-border/70 bg-card p-5">
                         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
-                            <h3 className="text-lg font-semibold">Web analytics breakdowns</h3>
-                            <p className="text-xs text-muted-foreground">Geographic, device, and acquisition channel breakdowns.</p>
+                            <h3 className="text-lg font-semibold">
+                              Web analytics breakdowns
+                            </h3>
+                            <p className="text-xs text-muted-foreground">
+                              Geographic, device, and acquisition channel
+                              breakdowns.
+                            </p>
                           </div>
-                          
+
                           <div className="flex flex-wrap gap-1 rounded-xl bg-secondary/20 p-1">
                             {tabList.map((t) => (
                               <button
@@ -1026,19 +1220,32 @@ export default function AdminDashboard() {
                         ) : (
                           <div className="space-y-2.5">
                             {data.map((item, idx) => {
-                              const percent = totalCount > 0 ? Math.round((item.count / totalCount) * 100) : 0;
+                              const percent =
+                                totalCount > 0
+                                  ? Math.round((item.count / totalCount) * 100)
+                                  : 0;
                               return (
-                                <div key={idx} className="relative overflow-hidden rounded-lg border border-border/40 bg-background/20 px-4 py-3">
-                                  <div 
-                                    className="absolute inset-y-0 left-0 bg-blue-500/10 transition-all duration-500" 
+                                <div
+                                  key={idx}
+                                  className="relative overflow-hidden rounded-lg border border-border/40 bg-background/20 px-4 py-3"
+                                >
+                                  <div
+                                    className="absolute inset-y-0 left-0 bg-blue-500/10 transition-all duration-500"
                                     style={{ width: `${percent}%` }}
                                   />
-                                  
+
                                   <div className="relative flex items-center justify-between text-xs">
-                                    <span className="font-mono text-muted-foreground truncate pr-4">{item.key || "/"}</span>
+                                    <span className="font-mono text-muted-foreground truncate pr-4">
+                                      {item.key || "/"}
+                                    </span>
                                     <div className="flex items-center gap-4 shrink-0 font-medium">
-                                      <span className="text-muted-foreground">{percent}%</span>
-                                      <span className="text-foreground">{item.count} view{item.count === 1 ? "" : "s"}</span>
+                                      <span className="text-muted-foreground">
+                                        {percent}%
+                                      </span>
+                                      <span className="text-foreground">
+                                        {item.count} view
+                                        {item.count === 1 ? "" : "s"}
+                                      </span>
                                     </div>
                                   </div>
                                 </div>
@@ -1052,11 +1259,14 @@ export default function AdminDashboard() {
 
                   {/* Pre-Order Email Campaign */}
                   <div className="rounded-2xl border border-border/70 bg-card p-5">
-                    <h3 className="text-lg font-semibold">Pre-order Email Campaign</h3>
+                    <h3 className="text-lg font-semibold">
+                      Pre-order Email Campaign
+                    </h3>
                     <p className="text-xs text-muted-foreground">
-                      Send a sleek pre-order newsletter about the Discovery Set to your checkout leads.
+                      Send a sleek pre-order newsletter about the Discovery Set
+                      to your checkout leads.
                     </p>
-                    
+
                     <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
                       <input
                         type="email"
@@ -1068,7 +1278,9 @@ export default function AdminDashboard() {
                       <Button
                         type="button"
                         size="sm"
-                        disabled={sendingPreorder || !testPreorderEmail.includes("@")}
+                        disabled={
+                          sendingPreorder || !testPreorderEmail.includes("@")
+                        }
                         onClick={sendTestPreorderEmail}
                         className="h-9 shrink-0 px-4 text-xs"
                       >
@@ -1091,14 +1303,22 @@ export default function AdminDashboard() {
                     <div className="rounded-2xl border border-border/70 bg-card p-5">
                       <div className="mb-4 flex items-center justify-between">
                         <div>
-                          <h3 className="text-xl font-semibold">Top Product Interest</h3>
-                          <p className="text-sm text-muted-foreground">Only products with real clicks or add-to-cart events are shown.</p>
+                          <h3 className="text-xl font-semibold">
+                            Top Product Interest
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            Only products with real clicks or add-to-cart events
+                            are shown.
+                          </p>
                         </div>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            Promise.all([loadDashboardAnalytics(), loadCheckoutDrafts()]).catch((error) => {
+                            Promise.all([
+                              loadDashboardAnalytics(),
+                              loadCheckoutDrafts(),
+                            ]).catch((error) => {
                               console.error(error);
                               setStatus(getErrorMessage(error));
                             });
@@ -1110,23 +1330,35 @@ export default function AdminDashboard() {
 
                       {meaningfulProductPerformance.length === 0 ? (
                         <div className="rounded-xl border border-dashed border-border p-5 text-sm text-muted-foreground">
-                          No product click data yet. Once visitors start tapping product cards, the leaders will appear here.
+                          No product click data yet. Once visitors start tapping
+                          product cards, the leaders will appear here.
                         </div>
                       ) : (
                         <div className="space-y-3">
                           {meaningfulProductPerformance.map((product) => (
-                            <div key={product.productId} className="grid gap-3 rounded-xl border border-border/60 p-4 md:grid-cols-[1fr_auto_auto] md:items-center">
+                            <div
+                              key={product.productId}
+                              className="grid gap-3 rounded-xl border border-border/60 p-4 md:grid-cols-[1fr_auto_auto] md:items-center"
+                            >
                               <div>
                                 <p className="font-medium">{product.name}</p>
-                                <p className="text-xs text-muted-foreground">{product.productId}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {product.productId}
+                                </p>
                               </div>
                               <div className="text-sm">
                                 <p className="text-muted-foreground">Clicks</p>
-                                <p className="text-lg font-semibold">{product.clicks}</p>
+                                <p className="text-lg font-semibold">
+                                  {product.clicks}
+                                </p>
                               </div>
                               <div className="text-sm">
-                                <p className="text-muted-foreground">Add to Cart</p>
-                                <p className="text-lg font-semibold">{product.addToCart}</p>
+                                <p className="text-muted-foreground">
+                                  Add to Cart
+                                </p>
+                                <p className="text-lg font-semibold">
+                                  {product.addToCart}
+                                </p>
                               </div>
                             </div>
                           ))}
@@ -1136,87 +1368,150 @@ export default function AdminDashboard() {
 
                     <div className="space-y-6">
                       <div className="rounded-2xl border border-border/70 bg-card p-5">
-                        <h3 className="text-xl font-semibold">Acquisition Sources</h3>
+                        <h3 className="text-xl font-semibold">
+                          Acquisition Sources
+                        </h3>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          Best-known source based on UTM parameters first, then referrer fallback.
+                          Best-known source based on UTM parameters first, then
+                          referrer fallback.
                         </p>
                         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                          {(dashboardAnalytics?.highlightedSources ?? []).map((source) => (
-                            <div key={source.source} className="rounded-xl border border-border/60 p-3">
-                              <p className="text-[0.68rem] uppercase tracking-[0.18em] text-muted-foreground">
-                                {source.category}
-                              </p>
-                              <p className="mt-1 font-medium">{source.source}</p>
-                              <p className="mt-1 text-sm text-muted-foreground">{source.count} visits</p>
-                            </div>
-                          ))}
+                          {(dashboardAnalytics?.highlightedSources ?? []).map(
+                            (source) => (
+                              <div
+                                key={source.source}
+                                className="rounded-xl border border-border/60 p-3"
+                              >
+                                <p className="text-[0.68rem] uppercase tracking-[0.18em] text-muted-foreground">
+                                  {source.category}
+                                </p>
+                                <p className="mt-1 font-medium">
+                                  {source.source}
+                                </p>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                  {source.count} visits
+                                </p>
+                              </div>
+                            ),
+                          )}
                         </div>
                       </div>
 
                       <div className="rounded-2xl border border-border/70 bg-card p-5">
-                        <h3 className="text-xl font-semibold">Traffic Quality</h3>
+                        <h3 className="text-xl font-semibold">
+                          Traffic Quality
+                        </h3>
                         <div className="mt-4 space-y-3 text-sm">
                           <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Total Page Views</span>
-                            <span>{dashboardAnalytics?.overview.totalPageViews ?? 0}</span>
+                            <span className="text-muted-foreground">
+                              Total Page Views
+                            </span>
+                            <span>
+                              {dashboardAnalytics?.overview.totalPageViews ?? 0}
+                            </span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Cart Opens</span>
-                            <span>{dashboardAnalytics?.overview.totalCartOpens ?? 0}</span>
+                            <span className="text-muted-foreground">
+                              Cart Opens
+                            </span>
+                            <span>
+                              {dashboardAnalytics?.overview.totalCartOpens ?? 0}
+                            </span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Quantity Updates</span>
-                            <span>{dashboardAnalytics?.overview.totalQuantityUpdates ?? 0}</span>
+                            <span className="text-muted-foreground">
+                              Quantity Updates
+                            </span>
+                            <span>
+                              {dashboardAnalytics?.overview
+                                .totalQuantityUpdates ?? 0}
+                            </span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Remove from Cart</span>
-                            <span>{dashboardAnalytics?.overview.totalRemoveFromCart ?? 0}</span>
+                            <span className="text-muted-foreground">
+                              Remove from Cart
+                            </span>
+                            <span>
+                              {dashboardAnalytics?.overview
+                                .totalRemoveFromCart ?? 0}
+                            </span>
                           </div>
                         </div>
                       </div>
 
                       <div className="rounded-2xl border border-border/70 bg-card p-5">
-                        <h3 className="text-xl font-semibold">Checkout Recovery</h3>
+                        <h3 className="text-xl font-semibold">
+                          Checkout Recovery
+                        </h3>
                         <div className="mt-4 space-y-3 text-sm">
                           <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Active Drafts</span>
-                            <span>{dashboardAnalytics?.overview.activeDrafts ?? 0}</span>
+                            <span className="text-muted-foreground">
+                              Active Drafts
+                            </span>
+                            <span>
+                              {dashboardAnalytics?.overview.activeDrafts ?? 0}
+                            </span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Recoverable Leads</span>
+                            <span className="text-muted-foreground">
+                              Recoverable Leads
+                            </span>
                             <span>{checkoutDraftStats.recoverable}</span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">WhatsApp Initiated</span>
-                            <span>{dashboardAnalytics?.overview.whatsappInitiatedDrafts ?? 0}</span>
+                            <span className="text-muted-foreground">
+                              WhatsApp Initiated
+                            </span>
+                            <span>
+                              {dashboardAnalytics?.overview
+                                .whatsappInitiatedDrafts ?? 0}
+                            </span>
                           </div>
                         </div>
                       </div>
 
                       <div className="rounded-2xl border border-border/70 bg-card p-5">
-                        <h3 className="text-xl font-semibold">Top Viewed Pages</h3>
+                        <h3 className="text-xl font-semibold">
+                          Top Viewed Pages
+                        </h3>
                         <div className="mt-4 space-y-3">
-                          {(dashboardAnalytics?.topViewedPages ?? []).slice(0, 6).map((page) => (
-                            <div key={page.path} className="flex items-center justify-between text-sm">
-                              <span className="max-w-[75%] truncate text-muted-foreground">{page.path}</span>
-                              <span className="font-medium">{page.views}</span>
-                            </div>
-                          ))}
+                          {(dashboardAnalytics?.topViewedPages ?? [])
+                            .slice(0, 6)
+                            .map((page) => (
+                              <div
+                                key={page.path}
+                                className="flex items-center justify-between text-sm"
+                              >
+                                <span className="max-w-[75%] truncate text-muted-foreground">
+                                  {page.path}
+                                </span>
+                                <span className="font-medium">
+                                  {page.views}
+                                </span>
+                              </div>
+                            ))}
                         </div>
                       </div>
 
                       <div className="rounded-2xl border border-border/70 bg-card p-5">
                         <h3 className="text-xl font-semibold">All Sources</h3>
                         <div className="mt-4 space-y-3">
-                          {(dashboardAnalytics?.sourceBreakdown ?? []).slice(0, 10).map((source) => (
-                            <div key={`${source.source}-${source.category}`} className="flex items-center justify-between text-sm">
-                              <div>
-                                <p className="font-medium">{source.source}</p>
-                                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{source.category}</p>
+                          {(dashboardAnalytics?.sourceBreakdown ?? [])
+                            .slice(0, 10)
+                            .map((source) => (
+                              <div
+                                key={`${source.source}-${source.category}`}
+                                className="flex items-center justify-between text-sm"
+                              >
+                                <div>
+                                  <p className="font-medium">{source.source}</p>
+                                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                                    {source.category}
+                                  </p>
+                                </div>
+                                <span>{source.count}</span>
                               </div>
-                              <span>{source.count}</span>
-                            </div>
-                          ))}
+                            ))}
                         </div>
                       </div>
                     </div>
@@ -1234,74 +1529,223 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <form onSubmit={onCreateProductSubmit} className="grid gap-3">
-                <Input placeholder="Name" value={productForm.name} onChange={(e) => setProductForm((s) => ({ ...s, name: e.target.value }))} required />
-                <Input placeholder="Inspiration" value={productForm.inspiration} onChange={(e) => setProductForm((s) => ({ ...s, inspiration: e.target.value }))} required />
-                <Input placeholder="Inspiration Brand" value={productForm.inspirationBrand} onChange={(e) => setProductForm((s) => ({ ...s, inspirationBrand: e.target.value }))} required />
+                <Input
+                  placeholder="Name"
+                  value={productForm.name}
+                  onChange={(e) =>
+                    setProductForm((s) => ({ ...s, name: e.target.value }))
+                  }
+                  required
+                />
+                <Input
+                  placeholder="Inspiration"
+                  value={productForm.inspiration}
+                  onChange={(e) =>
+                    setProductForm((s) => ({
+                      ...s,
+                      inspiration: e.target.value,
+                    }))
+                  }
+                  required
+                />
+                <Input
+                  placeholder="Inspiration Brand"
+                  value={productForm.inspirationBrand}
+                  onChange={(e) =>
+                    setProductForm((s) => ({
+                      ...s,
+                      inspirationBrand: e.target.value,
+                    }))
+                  }
+                  required
+                />
                 <Input
                   placeholder="Visibility: public or seo_only"
                   value={productForm.visibility}
                   onChange={(e) =>
                     setProductForm((s) => ({
                       ...s,
-                      visibility: (e.target.value as ProductForm["visibility"]) || "public",
+                      visibility:
+                        (e.target.value as ProductForm["visibility"]) ||
+                        "public",
                     }))
                   }
                   required
                 />
-                <Input placeholder="Worn by (optional celeb name)" value={productForm.woreBy} onChange={(e) => setProductForm((s) => ({ ...s, woreBy: e.target.value }))} />
-                <Input placeholder="Worn by image URL (Cloudinary)" value={productForm.woreByImageUrl} onChange={(e) => setProductForm((s) => ({ ...s, woreByImageUrl: e.target.value }))} required />
                 <Input
-                  list="admin-category-labels"
-                  placeholder="Category (e.g., Fresh)"
-                  value={productForm.category}
-                  onChange={(e) => setProductForm((s) => ({ ...s, category: e.target.value }))}
-                  required
+                  placeholder="Worn by (optional celeb name)"
+                  value={productForm.woreBy}
+                  onChange={(e) =>
+                    setProductForm((s) => ({ ...s, woreBy: e.target.value }))
+                  }
                 />
-                <datalist id="admin-category-labels">
-                  {dbCategoryOptions.map((item) => (
-                    <option key={`label-${item.id}`} value={item.label} />
-                  ))}
-                </datalist>
                 <Input
-                  list="admin-category-ids"
-                  placeholder="Category ID (e.g., fresh)"
-                  value={productForm.categoryId}
-                  onChange={(e) => {
-                    const nextId = e.target.value;
-                    const matched = dbCategoryOptions.find((item) => item.id === nextId);
+                  placeholder="Worn by image URL (Cloudinary)"
+                  value={productForm.woreByImageUrl}
+                  onChange={(e) =>
                     setProductForm((s) => ({
                       ...s,
-                      categoryId: nextId,
-                      category: matched?.label || s.category,
-                    }));
-                  }}
+                      woreByImageUrl: e.target.value,
+                    }))
+                  }
                   required
                 />
-                <datalist id="admin-category-ids">
-                  {dbCategoryOptions.map((item) => (
-                    <option key={`id-${item.id}`} value={item.id} />
-                  ))}
-                </datalist>
+                <div className="col-span-full">
+                  <ProductCategoryPicker
+                    categories={managedCategories}
+                    primaryId={productForm.categoryId}
+                    selectedIds={splitCsv(productForm.categoryIdsCsv)}
+                    error={managedCategoryError}
+                    onChange={(primary, ids, label) =>
+                      setProductForm((previous) => ({
+                        ...previous,
+                        categoryId: primary,
+                        category: label,
+                        categoryIdsCsv: ids.join(", "),
+                      }))
+                    }
+                  />
+                </div>
                 <Input
-                  placeholder="Additional category IDs CSV (e.g., woody,smoky)"
-                  value={productForm.categoryIdsCsv}
-                  onChange={(e) => setProductForm((s) => ({ ...s, categoryIdsCsv: e.target.value }))}
+                  placeholder="Gender: Men, Women, Unisex"
+                  value={productForm.gender}
+                  onChange={(e) =>
+                    setProductForm((s) => ({
+                      ...s,
+                      gender:
+                        (e.target.value as ProductForm["gender"]) || "Unisex",
+                    }))
+                  }
+                  required
                 />
-                <Input placeholder="Gender: Men, Women, Unisex" value={productForm.gender} onChange={(e) => setProductForm((s) => ({ ...s, gender: (e.target.value as ProductForm["gender"]) || "Unisex" }))} required />
-                <Input placeholder="Price in INR (e.g., 1499)" value={productForm.price} onChange={(e) => setProductForm((s) => ({ ...s, price: e.target.value }))} required />
-                <Input placeholder="Size (e.g., 50ml)" value={productForm.size} onChange={(e) => setProductForm((s) => ({ ...s, size: e.target.value }))} required />
-                <Input placeholder="Images CSV (https://res.cloudinary.com/.../img1.jpg, https://res.cloudinary.com/.../img2.jpg)" value={productForm.imagesCsv} onChange={(e) => setProductForm((s) => ({ ...s, imagesCsv: e.target.value }))} required />
-                <Input placeholder="SEO Keywords CSV" value={productForm.seoKeywordsCsv} onChange={(e) => setProductForm((s) => ({ ...s, seoKeywordsCsv: e.target.value }))} required />
-                <Input placeholder="Top Notes CSV" value={productForm.notesTopCsv} onChange={(e) => setProductForm((s) => ({ ...s, notesTopCsv: e.target.value }))} required />
-                <Input placeholder="Heart Notes CSV" value={productForm.notesHeartCsv} onChange={(e) => setProductForm((s) => ({ ...s, notesHeartCsv: e.target.value }))} required />
-                <Input placeholder="Base Notes CSV" value={productForm.notesBaseCsv} onChange={(e) => setProductForm((s) => ({ ...s, notesBaseCsv: e.target.value }))} required />
-                <Input placeholder="Longevity Duration (e.g., 8-10 hours)" value={productForm.duration} onChange={(e) => setProductForm((s) => ({ ...s, duration: e.target.value }))} required />
-                <Input placeholder="Sillage" value={productForm.sillage} onChange={(e) => setProductForm((s) => ({ ...s, sillage: e.target.value }))} required />
-                <Input placeholder="Season CSV" value={productForm.seasonCsv} onChange={(e) => setProductForm((s) => ({ ...s, seasonCsv: e.target.value }))} required />
-                <Input placeholder="Occasion CSV" value={productForm.occasionCsv} onChange={(e) => setProductForm((s) => ({ ...s, occasionCsv: e.target.value }))} required />
-                <Textarea placeholder="Description" value={productForm.description} onChange={(e) => setProductForm((s) => ({ ...s, description: e.target.value }))} required />
-                <Textarea placeholder="SEO Description" value={productForm.seoDescription} onChange={(e) => setProductForm((s) => ({ ...s, seoDescription: e.target.value }))} required />
-                <Button type="submit" disabled={busy}>Create Product</Button>
+                <Input
+                  placeholder="Price in INR (e.g., 1499)"
+                  value={productForm.price}
+                  onChange={(e) =>
+                    setProductForm((s) => ({ ...s, price: e.target.value }))
+                  }
+                  required
+                />
+                <Input
+                  placeholder="Size (e.g., 50ml)"
+                  value={productForm.size}
+                  onChange={(e) =>
+                    setProductForm((s) => ({ ...s, size: e.target.value }))
+                  }
+                  required
+                />
+                <Input
+                  placeholder="Images CSV (https://res.cloudinary.com/.../img1.jpg, https://res.cloudinary.com/.../img2.jpg)"
+                  value={productForm.imagesCsv}
+                  onChange={(e) =>
+                    setProductForm((s) => ({ ...s, imagesCsv: e.target.value }))
+                  }
+                  required
+                />
+                <Input
+                  placeholder="SEO Keywords CSV"
+                  value={productForm.seoKeywordsCsv}
+                  onChange={(e) =>
+                    setProductForm((s) => ({
+                      ...s,
+                      seoKeywordsCsv: e.target.value,
+                    }))
+                  }
+                  required
+                />
+                <Input
+                  placeholder="Top Notes CSV"
+                  value={productForm.notesTopCsv}
+                  onChange={(e) =>
+                    setProductForm((s) => ({
+                      ...s,
+                      notesTopCsv: e.target.value,
+                    }))
+                  }
+                  required
+                />
+                <Input
+                  placeholder="Heart Notes CSV"
+                  value={productForm.notesHeartCsv}
+                  onChange={(e) =>
+                    setProductForm((s) => ({
+                      ...s,
+                      notesHeartCsv: e.target.value,
+                    }))
+                  }
+                  required
+                />
+                <Input
+                  placeholder="Base Notes CSV"
+                  value={productForm.notesBaseCsv}
+                  onChange={(e) =>
+                    setProductForm((s) => ({
+                      ...s,
+                      notesBaseCsv: e.target.value,
+                    }))
+                  }
+                  required
+                />
+                <Input
+                  placeholder="Longevity Duration (e.g., 8-10 hours)"
+                  value={productForm.duration}
+                  onChange={(e) =>
+                    setProductForm((s) => ({ ...s, duration: e.target.value }))
+                  }
+                  required
+                />
+                <Input
+                  placeholder="Sillage"
+                  value={productForm.sillage}
+                  onChange={(e) =>
+                    setProductForm((s) => ({ ...s, sillage: e.target.value }))
+                  }
+                  required
+                />
+                <Input
+                  placeholder="Season CSV"
+                  value={productForm.seasonCsv}
+                  onChange={(e) =>
+                    setProductForm((s) => ({ ...s, seasonCsv: e.target.value }))
+                  }
+                  required
+                />
+                <Input
+                  placeholder="Occasion CSV"
+                  value={productForm.occasionCsv}
+                  onChange={(e) =>
+                    setProductForm((s) => ({
+                      ...s,
+                      occasionCsv: e.target.value,
+                    }))
+                  }
+                  required
+                />
+                <Textarea
+                  placeholder="Description"
+                  value={productForm.description}
+                  onChange={(e) =>
+                    setProductForm((s) => ({
+                      ...s,
+                      description: e.target.value,
+                    }))
+                  }
+                  required
+                />
+                <Textarea
+                  placeholder="SEO Description"
+                  value={productForm.seoDescription}
+                  onChange={(e) =>
+                    setProductForm((s) => ({
+                      ...s,
+                      seoDescription: e.target.value,
+                    }))
+                  }
+                  required
+                />
+                <Button type="submit" disabled={busy}>
+                  Create Product
+                </Button>
               </form>
             </CardContent>
           </Card>
@@ -1312,15 +1756,25 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent className="space-y-2">
               {products.map((product) => (
-                <div key={product.id} className="flex items-center justify-between border border-border p-3">
+                <div
+                  key={product.id}
+                  className="flex items-center justify-between border border-border p-3"
+                >
                   <div>
                     <p className="font-medium">{product.name}</p>
-                    <p className="text-sm text-muted-foreground">{product.id}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {product.id}
+                    </p>
                     <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
                       {product.visibility ?? "public"}
                     </p>
                   </div>
-                  <Button variant="destructive" size="sm" onClick={() => onDeleteProduct(product.id)} disabled={busy}>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => onDeleteProduct(product.id)}
+                    disabled={busy}
+                  >
                     Delete
                   </Button>
                 </div>
@@ -1348,24 +1802,108 @@ export default function AdminDashboard() {
                   }
                   required
                 />
-                <Input placeholder="Slug" value={blogForm.slug} onChange={(e) => setBlogForm((s) => ({ ...s, slug: slugify(e.target.value) }))} required />
-                <Input placeholder="Category" value={blogForm.category} onChange={(e) => setBlogForm((s) => ({ ...s, category: e.target.value }))} required />
-                <Input placeholder="Author" value={blogForm.author} onChange={(e) => setBlogForm((s) => ({ ...s, author: e.target.value }))} required />
-                <Input type="date" value={blogForm.date} onChange={(e) => setBlogForm((s) => ({ ...s, date: e.target.value }))} required />
-                <Input placeholder="Read Time" value={blogForm.readTime} onChange={(e) => setBlogForm((s) => ({ ...s, readTime: e.target.value }))} required />
-                <Input placeholder="SEO Title" value={blogForm.seoTitle} onChange={(e) => setBlogForm((s) => ({ ...s, seoTitle: e.target.value }))} required />
-                <Input placeholder="SEO Keywords CSV" value={blogForm.seoKeywordsCsv} onChange={(e) => setBlogForm((s) => ({ ...s, seoKeywordsCsv: e.target.value }))} required />
+                <Input
+                  placeholder="Slug"
+                  value={blogForm.slug}
+                  onChange={(e) =>
+                    setBlogForm((s) => ({
+                      ...s,
+                      slug: slugify(e.target.value),
+                    }))
+                  }
+                  required
+                />
+                <Input
+                  placeholder="Category"
+                  value={blogForm.category}
+                  onChange={(e) =>
+                    setBlogForm((s) => ({ ...s, category: e.target.value }))
+                  }
+                  required
+                />
+                <Input
+                  placeholder="Author"
+                  value={blogForm.author}
+                  onChange={(e) =>
+                    setBlogForm((s) => ({ ...s, author: e.target.value }))
+                  }
+                  required
+                />
+                <Input
+                  type="date"
+                  value={blogForm.date}
+                  onChange={(e) =>
+                    setBlogForm((s) => ({ ...s, date: e.target.value }))
+                  }
+                  required
+                />
+                <Input
+                  placeholder="Read Time"
+                  value={blogForm.readTime}
+                  onChange={(e) =>
+                    setBlogForm((s) => ({ ...s, readTime: e.target.value }))
+                  }
+                  required
+                />
+                <Input
+                  placeholder="SEO Title"
+                  value={blogForm.seoTitle}
+                  onChange={(e) =>
+                    setBlogForm((s) => ({ ...s, seoTitle: e.target.value }))
+                  }
+                  required
+                />
+                <Input
+                  placeholder="SEO Keywords CSV"
+                  value={blogForm.seoKeywordsCsv}
+                  onChange={(e) =>
+                    setBlogForm((s) => ({
+                      ...s,
+                      seoKeywordsCsv: e.target.value,
+                    }))
+                  }
+                  required
+                />
                 <div className="flex items-center space-x-2">
                   <Switch
                     checked={blogForm.featured}
-                    onCheckedChange={(checked) => setBlogForm((s) => ({ ...s, featured: checked }))}
+                    onCheckedChange={(checked) =>
+                      setBlogForm((s) => ({ ...s, featured: checked }))
+                    }
                   />
                   <Label>Featured</Label>
                 </div>
-                <Textarea placeholder="Excerpt" value={blogForm.excerpt} onChange={(e) => setBlogForm((s) => ({ ...s, excerpt: e.target.value }))} required />
-                <Textarea placeholder="SEO Description" value={blogForm.seoDescription} onChange={(e) => setBlogForm((s) => ({ ...s, seoDescription: e.target.value }))} required />
-                <Textarea placeholder="Content (markdown/plain text)" className="min-h-[180px]" value={blogForm.content} onChange={(e) => setBlogForm((s) => ({ ...s, content: e.target.value }))} required />
-                <Button type="submit" disabled={busy}>Create Blog Post</Button>
+                <Textarea
+                  placeholder="Excerpt"
+                  value={blogForm.excerpt}
+                  onChange={(e) =>
+                    setBlogForm((s) => ({ ...s, excerpt: e.target.value }))
+                  }
+                  required
+                />
+                <Textarea
+                  placeholder="SEO Description"
+                  value={blogForm.seoDescription}
+                  onChange={(e) =>
+                    setBlogForm((s) => ({
+                      ...s,
+                      seoDescription: e.target.value,
+                    }))
+                  }
+                  required
+                />
+                <Textarea
+                  placeholder="Content (markdown/plain text)"
+                  className="min-h-[180px]"
+                  value={blogForm.content}
+                  onChange={(e) =>
+                    setBlogForm((s) => ({ ...s, content: e.target.value }))
+                  }
+                  required
+                />
+                <Button type="submit" disabled={busy}>
+                  Create Blog Post
+                </Button>
               </form>
             </CardContent>
           </Card>
@@ -1376,12 +1914,20 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent className="space-y-2">
               {posts.map((post) => (
-                <div key={post.slug} className="flex items-center justify-between border border-border p-3">
+                <div
+                  key={post.slug}
+                  className="flex items-center justify-between border border-border p-3"
+                >
                   <div>
                     <p className="font-medium">{post.title}</p>
                     <p className="text-sm text-muted-foreground">{post.slug}</p>
                   </div>
-                  <Button variant="destructive" size="sm" onClick={() => onDeletePost(post.slug)} disabled={busy}>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => onDeletePost(post.slug)}
+                    disabled={busy}
+                  >
                     Delete
                   </Button>
                 </div>
@@ -1397,7 +1943,9 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                These are saved checkout drafts captured while customers type delivery details, so we can understand intent and recover serious leads faster.
+                These are saved checkout drafts captured while customers type
+                delivery details, so we can understand intent and recover
+                serious leads faster.
               </p>
 
               {!adminToken.trim() ? (
@@ -1408,16 +1956,28 @@ export default function AdminDashboard() {
                 <>
                   <div className="grid gap-3 md:grid-cols-3">
                     <div className="rounded-lg border border-border p-4">
-                      <p className="text-sm text-muted-foreground">Active Drafts</p>
-                      <p className="mt-1 text-2xl font-semibold">{checkoutDraftStats.active}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Active Drafts
+                      </p>
+                      <p className="mt-1 text-2xl font-semibold">
+                        {checkoutDraftStats.active}
+                      </p>
                     </div>
                     <div className="rounded-lg border border-border p-4">
-                      <p className="text-sm text-muted-foreground">Recoverable Leads</p>
-                      <p className="mt-1 text-2xl font-semibold">{checkoutDraftStats.recoverable}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Recoverable Leads
+                      </p>
+                      <p className="mt-1 text-2xl font-semibold">
+                        {checkoutDraftStats.recoverable}
+                      </p>
                     </div>
                     <div className="rounded-lg border border-border p-4">
-                      <p className="text-sm text-muted-foreground">WhatsApp Initiated</p>
-                      <p className="mt-1 text-2xl font-semibold">{checkoutDraftStats.whatsappInitiated}</p>
+                      <p className="text-sm text-muted-foreground">
+                        WhatsApp Initiated
+                      </p>
+                      <p className="mt-1 text-2xl font-semibold">
+                        {checkoutDraftStats.whatsappInitiated}
+                      </p>
                     </div>
                   </div>
 
@@ -1425,9 +1985,12 @@ export default function AdminDashboard() {
                     <div className="rounded-2xl border border-border/70 bg-card p-5">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <h3 className="text-lg font-semibold">Source-Based Recovery Insights</h3>
+                          <h3 className="text-lg font-semibold">
+                            Source-Based Recovery Insights
+                          </h3>
                           <p className="text-sm text-muted-foreground">
-                            See which channels are bringing the strongest abandoned checkout intent.
+                            See which channels are bringing the strongest
+                            abandoned checkout intent.
                           </p>
                         </div>
                         <span className="rounded-full bg-secondary px-3 py-1 text-[0.65rem] uppercase tracking-[0.2em] text-muted-foreground">
@@ -1438,7 +2001,8 @@ export default function AdminDashboard() {
                       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                         {checkoutSourceInsights.length === 0 ? (
                           <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground sm:col-span-2 xl:col-span-3">
-                            Source insights will appear once checkout drafts are captured.
+                            Source insights will appear once checkout drafts are
+                            captured.
                           </div>
                         ) : (
                           checkoutSourceInsights.slice(0, 6).map((source) => (
@@ -1446,13 +2010,20 @@ export default function AdminDashboard() {
                               key={source.source}
                               className="rounded-xl border border-border/70 bg-secondary/20 p-4"
                             >
-                              <p className="text-sm font-medium">{source.source}</p>
-                              <p className="mt-1 text-2xl font-semibold">{source.drafts}</p>
+                              <p className="text-sm font-medium">
+                                {source.source}
+                              </p>
+                              <p className="mt-1 text-2xl font-semibold">
+                                {source.drafts}
+                              </p>
                               <p className="mt-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
                                 Drafts
                               </p>
                               <p className="mt-3 text-sm text-muted-foreground">
-                                Value: <span className="font-medium text-foreground">{formatINR(source.value)}</span>
+                                Value:{" "}
+                                <span className="font-medium text-foreground">
+                                  {formatINR(source.value)}
+                                </span>
                               </p>
                             </div>
                           ))
@@ -1462,46 +2033,58 @@ export default function AdminDashboard() {
 
                     <div className="rounded-2xl border border-border/70 bg-card p-5">
                       <div>
-                        <h3 className="text-lg font-semibold">Lead Scoring Guide</h3>
+                        <h3 className="text-lg font-semibold">
+                          Lead Scoring Guide
+                        </h3>
                         <p className="text-sm text-muted-foreground">
-                          Scores consider order value, form completion, cart size, and freshness of the lead.
+                          Scores consider order value, form completion, cart
+                          size, and freshness of the lead.
                         </p>
                       </div>
 
                       <div className="mt-4 space-y-3">
                         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold text-emerald-800">Hot Lead</span>
+                            <span className="text-sm font-semibold text-emerald-800">
+                              Hot Lead
+                            </span>
                             <span className="rounded-full bg-emerald-600 px-2.5 py-1 text-[0.65rem] uppercase tracking-[0.18em] text-white">
                               70+
                             </span>
                           </div>
                           <p className="mt-2 text-sm text-emerald-900">
-                            High cart value, strong contact info, and recent activity. Recover first.
+                            High cart value, strong contact info, and recent
+                            activity. Recover first.
                           </p>
                         </div>
 
                         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold text-amber-800">Warm Lead</span>
+                            <span className="text-sm font-semibold text-amber-800">
+                              Warm Lead
+                            </span>
                             <span className="rounded-full bg-amber-500 px-2.5 py-1 text-[0.65rem] uppercase tracking-[0.18em] text-white">
                               40-69
                             </span>
                           </div>
                           <p className="mt-2 text-sm text-amber-900">
-                            Useful contact data and visible interest. Good for soft follow-up.
+                            Useful contact data and visible interest. Good for
+                            soft follow-up.
                           </p>
                         </div>
 
                         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold text-slate-800">Cold Lead</span>
+                            <span className="text-sm font-semibold text-slate-800">
+                              Cold Lead
+                            </span>
                             <span className="rounded-full bg-slate-500 px-2.5 py-1 text-[0.65rem] uppercase tracking-[0.18em] text-white">
                               0-39
                             </span>
                           </div>
                           <p className="mt-2 text-sm text-slate-800">
-                            Low completion or weak intent so far. Keep for observation or later nurture.
+                            Low completion or weak intent so far. Keep for
+                            observation or later nurture.
                           </p>
                         </div>
                       </div>
@@ -1532,11 +2115,20 @@ export default function AdminDashboard() {
                       scoredCheckoutDrafts.map((draft) => {
                         const cartSummary = Array.isArray(draft.cartSnapshot)
                           ? draft.cartSnapshot
-                              .map((item) => `${item.name} x${item.quantity}${item.isGift ? " [gift]" : ""}`)
+                              .map(
+                                (item) =>
+                                  `${item.name} x${item.quantity}${item.isGift ? " [gift]" : ""}`,
+                              )
                               .join(", ")
                           : "";
 
-                        const location = [draft.city, draft.state, draft.pincode].filter(Boolean).join(", ");
+                        const location = [
+                          draft.city,
+                          draft.state,
+                          draft.pincode,
+                        ]
+                          .filter(Boolean)
+                          .join(", ");
                         const leadToneStyles =
                           draft.leadTemperature === "Hot"
                             ? "bg-emerald-600 text-white"
@@ -1545,17 +2137,25 @@ export default function AdminDashboard() {
                               : "bg-slate-500 text-white";
 
                         return (
-                          <div key={draft.id} className="rounded-xl border border-border p-4">
+                          <div
+                            key={draft.id}
+                            className="rounded-xl border border-border p-4"
+                          >
                             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                               <div className="space-y-2">
                                 <div className="flex flex-wrap items-center gap-2">
                                   <p className="font-semibold">
-                                    {draft.fullName || displayPhoneNumber(draft.phone) || draft.email || "Anonymous draft"}
+                                    {draft.fullName ||
+                                      displayPhoneNumber(draft.phone) ||
+                                      draft.email ||
+                                      "Anonymous draft"}
                                   </p>
                                   <span className="rounded-full bg-secondary px-2.5 py-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
                                     {draft.status.replace(/_/g, " ")}
                                   </span>
-                                  <span className={`rounded-full px-2.5 py-1 text-xs uppercase tracking-[0.18em] ${leadToneStyles}`}>
+                                  <span
+                                    className={`rounded-full px-2.5 py-1 text-xs uppercase tracking-[0.18em] ${leadToneStyles}`}
+                                  >
                                     {draft.leadTemperature}
                                   </span>
                                 </div>
@@ -1563,28 +2163,60 @@ export default function AdminDashboard() {
                                   {draft.acquisitionSource ? (
                                     <p>
                                       Source: {draft.acquisitionSource}
-                                      {draft.acquisitionCategory ? ` (${draft.acquisitionCategory})` : ""}
+                                      {draft.acquisitionCategory
+                                        ? ` (${draft.acquisitionCategory})`
+                                        : ""}
                                     </p>
                                   ) : null}
-                                  {draft.phone ? <p>Phone: {displayPhoneNumber(draft.phone)}</p> : null}
-                                  {draft.email ? <p>Email: {draft.email}</p> : null}
-                                  {location ? <p>Location: {location}</p> : null}
-                                  {draft.path ? <p>Path: {draft.path}</p> : null}
-                                  {draft.lastEditedField ? <p>Last edited field: {draft.lastEditedField}</p> : null}
+                                  {draft.phone ? (
+                                    <p>
+                                      Phone: {displayPhoneNumber(draft.phone)}
+                                    </p>
+                                  ) : null}
+                                  {draft.email ? (
+                                    <p>Email: {draft.email}</p>
+                                  ) : null}
+                                  {location ? (
+                                    <p>Location: {location}</p>
+                                  ) : null}
+                                  {draft.path ? (
+                                    <p>Path: {draft.path}</p>
+                                  ) : null}
+                                  {draft.lastEditedField ? (
+                                    <p>
+                                      Last edited field: {draft.lastEditedField}
+                                    </p>
+                                  ) : null}
                                 </div>
                               </div>
 
                               <div className="min-w-[220px] rounded-lg bg-secondary/40 p-3 text-sm">
-                                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Lead Score</p>
-                                <p className="mt-1 text-xl font-semibold">{draft.leadScore}/100</p>
-                                <p className="mt-3 text-xs uppercase tracking-[0.18em] text-muted-foreground">Order Value</p>
-                                <p className="mt-1 text-xl font-semibold">{draft.grandTotal ? `INR ${draft.grandTotal}` : "—"}</p>
+                                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                                  Lead Score
+                                </p>
+                                <p className="mt-1 text-xl font-semibold">
+                                  {draft.leadScore}/100
+                                </p>
+                                <p className="mt-3 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                                  Order Value
+                                </p>
+                                <p className="mt-1 text-xl font-semibold">
+                                  {draft.grandTotal
+                                    ? `INR ${draft.grandTotal}`
+                                    : "—"}
+                                </p>
                                 <p className="mt-2 text-muted-foreground">
-                                  Updated: {new Date(draft.updatedAt).toLocaleString("en-IN")}
+                                  Updated:{" "}
+                                  {new Date(draft.updatedAt).toLocaleString(
+                                    "en-IN",
+                                  )}
                                 </p>
                                 {draft.whatsappInitiatedAt ? (
                                   <p className="mt-1 text-emerald-700">
-                                    WhatsApp started: {new Date(draft.whatsappInitiatedAt).toLocaleString("en-IN")}
+                                    WhatsApp started:{" "}
+                                    {new Date(
+                                      draft.whatsappInitiatedAt,
+                                    ).toLocaleString("en-IN")}
                                   </p>
                                 ) : null}
                               </div>
@@ -1592,19 +2224,31 @@ export default function AdminDashboard() {
 
                             {cartSummary ? (
                               <div className="mt-4 rounded-lg border border-border/70 p-3 text-sm">
-                                <p className="mb-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">Cart Snapshot</p>
+                                <p className="mb-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                                  Cart Snapshot
+                                </p>
                                 <p>{cartSummary}</p>
                               </div>
                             ) : null}
 
-                            {draft.addressLine1 || draft.addressLine2 || draft.notes ? (
+                            {draft.addressLine1 ||
+                            draft.addressLine2 ||
+                            draft.notes ? (
                               <div className="mt-4 grid gap-3 md:grid-cols-2">
                                 <div className="rounded-lg border border-border/70 p-3 text-sm">
-                                  <p className="mb-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">Address</p>
-                                  <p>{[draft.addressLine1, draft.addressLine2].filter(Boolean).join(", ") || "—"}</p>
+                                  <p className="mb-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                                    Address
+                                  </p>
+                                  <p>
+                                    {[draft.addressLine1, draft.addressLine2]
+                                      .filter(Boolean)
+                                      .join(", ") || "—"}
+                                  </p>
                                 </div>
                                 <div className="rounded-lg border border-border/70 p-3 text-sm">
-                                  <p className="mb-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">Notes</p>
+                                  <p className="mb-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                                    Notes
+                                  </p>
                                   <p>{draft.notes || "—"}</p>
                                 </div>
                               </div>
@@ -1622,7 +2266,9 @@ export default function AdminDashboard() {
                                 type="button"
                                 variant="outline"
                                 className="rounded-full px-5"
-                                onClick={() => void handleCopyRecoveryMessage(draft)}
+                                onClick={() =>
+                                  void handleCopyRecoveryMessage(draft)
+                                }
                               >
                                 Copy Reminder
                               </Button>

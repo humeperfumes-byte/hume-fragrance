@@ -20,9 +20,9 @@ import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 
 const navItems = [
+ {title:"Offers & Rewards",url:"/admin/growth",icon:ShoppingBag},
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
-  { title: "QR Campaigns", url: "/admin/flyer-campaigns", icon: QrCode },
-  { title: "QR Studio", url: "/admin/qr-generator", icon: QrCode },
+  { title: "QR Codes", url: "/admin/qr-generator", icon: QrCode },
   { title: "AI Visibility", url: "/admin/ai-visibility", icon: Sparkles },
   { title: "Orders", url: "/admin/orders", icon: ShoppingBag },
   { title: "Invoice Engine", url: "/bill", icon: FileText },
@@ -31,6 +31,7 @@ const navItems = [
   { title: "Stock", url: "/admin/stock", icon: Warehouse },
   { title: "Checkouts", url: "/admin/checkouts", icon: ShoppingCart },
   { title: "Catalog", url: "/admin/products", icon: Package },
+  { title: "Categories", url: "/admin/categories", icon: Package },
   { title: "Content", url: "/admin/blogs", icon: FileText },
   { title: "Images", url: "/admin/images", icon: ImageIcon },
   { title: "Partnerships", url: "/admin/partnerships", icon: Handshake },

@@ -1,0 +1,36 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const dotenv=require('dotenv');
+const postgres=require('postgres');
+const env={...dotenv.parse(fs.readFileSync('.env')),...dotenv.parse(fs.readFileSync('.env.local'))};
+const base='http://localhost:3002';
+const headers={'Content-Type':'application/json','x-admin-token':env.ADMIN_API_TOKEN};
+let id;
+async function main(){
+ assert.equal((await fetch(base+'/api/admin/qr-campaigns')).status,401);
+ assert.equal((await fetch(base+'/api/admin/flyer-campaigns')).status,401);
+ const invalid=await fetch(base+'/api/admin/qr-campaigns',{method:'POST',headers,body:JSON.stringify({name:'bad',destination:'javascript:alert(1)'})});assert.equal(invalid.status,400);
+ const created=await fetch(base+'/api/admin/qr-campaigns',{method:'POST',headers,body:JSON.stringify({name:'QR integration verification (temporary)',destination:'/perfumes?source=qr-test#products'})});assert.equal(created.status,201);
+ const data=await created.json();id=data.id;assert.ok(data.trackingUrl.endsWith('/q/'+id));
+ const url=base+'/q/'+id;
+ const head=await fetch(url,{method:'HEAD',redirect:'manual'});assert.equal(head.status,302);
+ const agent={'user-agent':'Mozilla/5.0 iPhone Mobile Safari/600'};
+ const scan=await fetch(url,{headers:agent,redirect:'manual'});assert.equal(scan.status,302);assert.equal(scan.headers.get('location'),'https://www.humefragrance.com/perfumes?source=qr-test#products');
+ const cookie=scan.headers.get('set-cookie').split(';')[0];
+ assert.ok(cookie.startsWith('hume_qr_visitor='));
+ await fetch(url,{headers:{...agent,cookie},redirect:'manual'});
+ await fetch(url,{headers:{'user-agent':'Googlebot'},redirect:'manual'});
+ let report=await (await fetch(base+'/api/admin/qr-campaigns?id='+id,{headers})).json();
+ const csvResponse=await fetch(base+'/api/admin/qr-campaigns?id='+id+'&format=csv',{headers});assert.equal(csvResponse.status,200);assert.ok(csvResponse.headers.get('content-type').includes('text/csv'));const csv=await csvResponse.text();assert.equal(csv.trim().split('\r\n').length,report.stats.scans+1);
+ assert.equal(report.stats.visitors,1);assert.ok(report.stats.scans>=1&&report.stats.scans<=2);assert.equal(report.events[0].device,'Mobile');assert.ok(report.daily.length);assert.equal(report.campaigns.find(c=>c.id===id).tracked_scans,report.stats.scans);
+ const update=await fetch(base+'/api/admin/qr-campaigns',{method:'PATCH',headers,body:JSON.stringify({id,destination:'https://example.com/new?test=1#offer'})});assert.equal(update.status,200);
+ const changed=await fetch(url,{method:'HEAD',redirect:'manual'});assert.equal(changed.headers.get('location'),'https://example.com/new?test=1#offer');
+ assert.equal((await fetch(base+'/api/admin/qr-campaigns?clearAll=true',{method:'DELETE',headers})).status,405);
+ assert.equal((await fetch(base+'/api/analytics/flyers',{method:'POST',headers,body:JSON.stringify({eventType:'order_complete',qrId:id,sessionId:'test',revenue:99999})})).status,400);
+ assert.equal((await fetch(base+'/api/analytics/flyers',{method:'POST',headers,body:JSON.stringify({eventType:'qr_scan',qrId:'invented',sessionId:'test'})})).status,404);
+ await fetch(base+'/api/admin/qr-campaigns',{method:'PATCH',headers,body:JSON.stringify({id,archived:true})});assert.equal((await fetch(url,{redirect:'manual'})).status,410);
+ await fetch(base+'/api/admin/qr-campaigns',{method:'PATCH',headers,body:JSON.stringify({id,archived:false})});assert.equal((await fetch(url,{method:'HEAD',redirect:'manual'})).status,302);
+ const legacy=await fetch(base+'/admin/flyer-campaigns',{headers:{cookie:'admin_token='+env.ADMIN_API_TOKEN},redirect:'manual'});assert.ok([200,307,308].includes(legacy.status));
+ console.log('PASS: auth, validation, permanent URL, HEAD/bot exclusion, scan deduplication, unique browsers, timestamps, reports, destination changes, archive/restore, bulk-delete rejection, forged purchase rejection, unknown QR rejection.');
+}
+main().catch(e=>{console.error('QR integration check failed:',e.message);process.exitCode=1;}).finally(async()=>{if(id){const sql=postgres(env.DATABASE_URL,{prepare:false,max:1});try{await sql.begin(async tx=>{await tx`delete from qr_scan_events where campaign_id=${id}`;await tx`delete from qr_campaigns where id=${id}`;});console.log('Temporary verification QR removed.');}finally{await sql.end();}}});

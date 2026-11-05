@@ -1,47 +1,35 @@
 "use client";
-import { CustomerLinkButton } from "@/components/admin/CustomerLinkButton";
+import {customerKey as growthCustomerKey} from "@/lib/growth/rules";
+import CheckoutActivityTimeline from "@/components/admin/CheckoutActivityTimeline";
+import CheckoutRecoveryMessage, { type PreparedRecovery } from "@/components/admin/CheckoutRecoveryMessage";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { getSiteUrlFromHost } from "@/lib/site";
+import { checkoutValue, customerActivityAt, matchesRecoveryQueue, recoveryPriority, recoveryState, RECOVERY_QUEUES, formatRecoveryDue, type RecoveryDraft, type RecoveryQueue } from "@/lib/checkout-recovery";
 
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { CheckoutDraft } from "@/db/schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
-  ArrowUpRight,
-  CalendarDays,
-  Clock,
   Copy,
-  ExternalLink,
   Globe2,
-  Mail,
   MessageCircle,
   Package,
-  Phone,
   ReceiptText,
   Save,
-  ShoppingCart,
   Tag,
-  User,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatINR } from "@/lib/currency";
-import { buildAdminEmailHref, buildAdminLeadMessage, buildAdminWhatsAppHref } from "@/lib/admin-message-templates";
 import { getCapturedDomainInfo, type CapturedDomainKind } from "@/lib/captured-domain";
 import { normalizeSavedPricingBreakdown, type SavedPricingBreakdown } from "@/lib/saved-pricing-breakdown";
 import { displayPhoneNumber } from "@/lib/phone";
 
-function getDraftValue(draft: CheckoutDraft): number {
-  return Number.parseFloat(String(draft.grandTotal ?? "0") || "0");
-}
-
-type CheckoutDraftWithOrder = CheckoutDraft & {
-  hasOrderRecord: boolean;
-  hasConfirmedOrder: boolean;
-  linkedOrderNumber: string | null;
-  linkedOrderStatus: string | null;
-};
+type CheckoutDraftWithOrder = RecoveryDraft;
 
 type ScoredCheckoutDraft = CheckoutDraftWithOrder & {
   leadScore: number;
@@ -91,7 +79,7 @@ function getCheckoutPricingRows(
   savedBreakdown: SavedPricingBreakdown | null,
   fallback: ReturnType<typeof getCheckoutBreakdown>,
 ) {
-  if (savedBreakdown) {
+  if (savedBreakdown && Math.abs(savedBreakdown.subtotal + savedBreakdown.shippingFee - savedBreakdown.couponDiscount - savedBreakdown.welcomeBackDiscount - savedBreakdown.grandTotal) < 0.02) {
     return {
       subtotal: savedBreakdown.subtotal,
       shippingFee: savedBreakdown.shippingFee,
@@ -179,40 +167,13 @@ function getDomainClassName(kind: CapturedDomainKind) {
   }
 }
 
-function scoreCheckoutDraft(draft: CheckoutDraft): number {
-  let score = 0;
-  const value = getDraftValue(draft);
-
-  if (value >= 2500) score += 40;
-  else if (value >= 1500) score += 30;
-  else if (value >= 1000) score += 20;
-  else if (value >= 500) score += 10;
-
-  if (draft.phone) score += 25;
-  if (draft.fullName) score += 10;
-  if (draft.email) score += 5;
-  if (draft.city && draft.state) score += 10;
-  if (draft.addressLine1) score += 10;
-  if (draft.pincode) score += 5;
-  if ((draft.cartSnapshot?.length || 0) >= 2) score += 5;
-  if (draft.status === "complete") score += 10;
-  if (draft.status === "whatsapp_initiated") score -= 20;
-
-  const hoursSinceUpdate = (Date.now() - new Date(draft.updatedAt).getTime()) / (1000 * 60 * 60);
-  if (hoursSinceUpdate <= 1) score += 15;
-  else if (hoursSinceUpdate <= 24) score += 8;
-  else if (hoursSinceUpdate <= 72) score += 3;
-
-  return Math.max(0, Math.min(100, Math.round(score)));
-}
-
 function getLeadTemperature(score: number): "Hot" | "Warm" | "Cold" {
   if (score >= 70) return "Hot";
   if (score >= 40) return "Warm";
   return "Cold";
 }
 
-const leadStatusOptions = ["new", "contacted", "replied", "converted", "lost"] as const;
+const leadStatusOptions = ["new", "contacted", "replied", "lost"] as const;
 type LeadStatus = (typeof leadStatusOptions)[number];
 
 function formatDateTimeLocal(value: Date | string | null): string {
@@ -252,9 +213,10 @@ function getStatusClassName(status: string) {
 type CheckoutDetailSheetProps = {
   draft: ScoredCheckoutDraft | null;
   onOpenChange: (open: boolean) => void;
-  onCopyRecoveryMessage: (draft: CheckoutDraft) => void;
-  onPromoteToOrder: (draft: CheckoutDraft) => void;
-  onWhatsAppRecovery: (draft: CheckoutDraft) => void;
+  workflowEditor?: React.ReactNode;
+  onCopyRecoveryMessage: (draft: ScoredCheckoutDraft) => void;
+  onPromoteToOrder: (draft: ScoredCheckoutDraft) => void;
+  onWhatsAppRecovery: (draft: ScoredCheckoutDraft) => void;
 };
 
 function CheckoutDetailSheet({
@@ -263,6 +225,7 @@ function CheckoutDetailSheet({
   onCopyRecoveryMessage,
   onPromoteToOrder,
   onWhatsAppRecovery,
+  workflowEditor,
 }: CheckoutDetailSheetProps) {
   if (!draft) {
     return null;
@@ -270,7 +233,9 @@ function CheckoutDetailSheet({
 
   const breakdown = getCheckoutBreakdown(draft);
   const savedBreakdown = normalizeSavedPricingBreakdown(draft.pricingBreakdown);
-  const pricingRows = getCheckoutPricingRows(savedBreakdown, breakdown);
+  const savedRows = getCheckoutPricingRows(savedBreakdown, breakdown);
+  const approvedAdjustment = checkoutValue(draft) - savedRows.grandTotal;
+  const pricingRows = { ...savedRows, grandTotal: checkoutValue(draft) };
   const domain = getCapturedDomainInfo(draft.path);
   const itemCount = breakdown.items.reduce((sum, item) => sum + getItemQuantity(item), 0);
   const addressLines = getAddressLines(draft);
@@ -280,6 +245,7 @@ function CheckoutDetailSheet({
     <Sheet open={Boolean(draft)} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto border-white/10 bg-[#151517] p-0 text-white shadow-[-28px_0_80px_rgba(0,0,0,.45)] sm:max-w-2xl">
         <div className="space-y-5 p-5 sm:p-6">
+          {growthCustomerKey(draft.phone,draft.email) && <Link className="inline-flex rounded-xl border border-white/15 px-4 py-2 text-sm text-white" href={"/admin/growth?customer="+encodeURIComponent(growthCustomerKey(draft.phone,draft.email)!)}>Create offer</Link>}
           <SheetHeader className="space-y-2 text-left">
             <div className="flex items-start justify-between gap-4 pr-8">
               <div>
@@ -294,7 +260,8 @@ function CheckoutDetailSheet({
             </div>
           </SheetHeader>
 
-          <CustomerLinkButton key={draft.id} scope="checkout" resourceId={draft.id} />
+          <CheckoutActivityTimeline sessionId={draft.sessionId} />
+          {workflowEditor}
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-4">
               <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-200/60">
@@ -371,6 +338,7 @@ function CheckoutDetailSheet({
                   <dd className="font-medium text-emerald-300">-{formatINR(pricingRows.inferredDiscount)}</dd>
                 </div>
               ) : null}
+              {Math.abs(approvedAdjustment) >= 0.01 && <div className="flex items-center justify-between gap-4"><dt className="text-white/50">Approved total adjustment</dt><dd className="font-medium text-white">{approvedAdjustment < 0 ? '−' : '+'}{formatINR(Math.abs(approvedAdjustment))}</dd></div>}
               <div className="mt-3 flex items-center justify-between gap-4 border-t border-white/10 pt-3">
                 <dt className="text-base font-semibold text-white">Grand total</dt>
                 <dd className="text-xl font-semibold text-white">{formatINR(pricingRows.grandTotal)}</dd>
@@ -538,55 +506,10 @@ function CheckoutDetailSheet({
             )}
           </section>
 
-          <div className="grid gap-2 sm:grid-cols-4">
-            <Button
-              type="button"
-              onClick={() => onWhatsAppRecovery(draft)}
-              disabled={!draft.phone}
-              className="h-10 rounded-lg border border-emerald-500/20 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25 disabled:opacity-40"
-            >
-              <MessageCircle className="mr-2 h-4 w-4" />
-              WhatsApp
-            </Button>
-            {draft.email ? (
-              <a
-                href={buildAdminEmailHref(draft.email, {
-                  template: "checkout_abandoned",
-                  name: draft.fullName,
-                  products: (draft.cartSnapshot || []).map((item) => item.name),
-                  value: getDraftValue(draft),
-                  checkoutField: draft.lastEditedField,
-                })}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex h-10 items-center justify-center rounded-lg border border-blue-500/20 bg-blue-500/15 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/25"
-              >
-                <Mail className="mr-2 h-4 w-4" />
-                Email
-              </a>
-            ) : (
-              <Button type="button" disabled className="h-10 rounded-lg opacity-40">
-                <Mail className="mr-2 h-4 w-4" />
-                Email
-              </Button>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onCopyRecoveryMessage(draft)}
-              className="h-10 rounded-lg border-white/10 bg-white/[0.03] text-white/80 hover:bg-white/[0.08] hover:text-white"
-            >
-              <Copy className="mr-2 h-4 w-4" />
-              Copy
-            </Button>
-            <Button
-              type="button"
-              onClick={() => onPromoteToOrder(draft)}
-              className="h-10 rounded-lg bg-white text-black hover:bg-white/90"
-            >
-              <ArrowUpRight className="mr-2 h-4 w-4" />
-              Order
-            </Button>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <Button type="button" onClick={() => onWhatsAppRecovery(draft)} disabled={draft.hasConfirmedOrder || draft.linkedOrderNeedsReview} className="gap-2"><MessageCircle className="h-4 w-4"/>Recovery message</Button>
+            <Button type="button" variant="outline" onClick={() => onCopyRecoveryMessage(draft)} className="gap-2 border-white/15 bg-white/5 text-white"><Copy className="h-4 w-4"/>Prepare to copy</Button>
+            <Button type="button" variant="outline" disabled={draft.hasOrderRecord} onClick={() => onPromoteToOrder(draft)} className="border-white/15 bg-white/5 text-white">Create unpaid order</Button>
           </div>
         </div>
       </SheetContent>
@@ -594,447 +517,85 @@ function CheckoutDetailSheet({
   );
 }
 
-export function CheckoutsTable({ initialDrafts }: { initialDrafts: CheckoutDraftWithOrder[] }) {
-  const [workflowById, setWorkflowById] = useState<
-    Record<string, { leadStatus: LeadStatus; leadNotes: string; nextFollowUpAt: string; overrideTotal: string }>
-  >({});
-  const [savingDraftId, setSavingDraftId] = useState<string | null>(null);
-  const [selectedDraft, setSelectedDraft] = useState<ScoredCheckoutDraft | null>(null);
-
-  const scoredDrafts = useMemo<ScoredCheckoutDraft[]>(() => {
-    return initialDrafts
-      .filter((d) => d.status !== "promoted")
-      .map((draft) => {
-        const leadScore = scoreCheckoutDraft(draft);
-        return {
-          ...draft,
-          leadScore,
-          leadTemperature: getLeadTemperature(leadScore),
-        };
-      })
-      .sort((a, b) => b.leadScore - a.leadScore || new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-  }, [initialDrafts]);
-
-  const getWorkflow = (draft: CheckoutDraft) =>
-    workflowById[draft.id] ?? {
-      leadStatus: ((draft.leadStatus as LeadStatus | null) || "new") as LeadStatus,
-      leadNotes: draft.leadNotes || "",
-      nextFollowUpAt: formatDateTimeLocal(draft.nextFollowUpAt),
-      overrideTotal: String(draft.pricingBreakdown?.overrideTotal ?? ""),
-    };
-
-  const updateWorkflow = (
-    draft: CheckoutDraft,
-    patch: Partial<{ leadStatus: LeadStatus; leadNotes: string; nextFollowUpAt: string; overrideTotal: string }>,
-  ) => {
-    setWorkflowById((prev) => ({
-      ...prev,
-      [draft.id]: {
-        ...getWorkflow(draft),
-        ...patch,
-      },
-    }));
-  };
-
-  const saveWorkflow = async (draft: CheckoutDraft, markContacted = false) => {
-    const workflow = getWorkflow(draft);
-    setSavingDraftId(draft.id);
-    
-    const parsedOverride = parseFloat(workflow.overrideTotal);
-    const overrideTotal = Number.isFinite(parsedOverride) && parsedOverride > 0
-      ? parsedOverride
-      : null;
-
-    try {
-      const response = await fetch("/api/admin/checkout-drafts", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: draft.id,
-          leadStatus: workflow.leadStatus,
-          leadNotes: workflow.leadNotes,
-          markContacted,
-          nextFollowUpAt: workflow.nextFollowUpAt
-            ? new Date(workflow.nextFollowUpAt).toISOString()
-            : null,
-          overrideTotal,
-        }),
-      });
-
-      if (!response.ok) throw new Error("Failed to update lead");
-      toast({
-        title: markContacted ? "Lead marked contacted" : "Lead updated",
-        description: "Recovery workflow has been saved.",
-      });
-      window.location.reload();
-    } catch (error) {
-      toast({
-        title: "Update failed",
-        description: error instanceof Error ? error.message : "Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setSavingDraftId(null);
-    }
-  };
-
-  const handleCopyRecoveryMessage = async (draft: CheckoutDraft) => {
-    try {
-      const products = (draft.cartSnapshot || []).map((item) => item.name);
-      await navigator.clipboard.writeText(
-        buildAdminLeadMessage({
-          template: "checkout_abandoned",
-          name: draft.fullName,
-          products,
-          value: getDraftValue(draft),
-          checkoutField: draft.lastEditedField,
-        }).body,
-      );
-      toast({ title: "Message copied", description: "Recovery message is ready to paste." });
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" });
-    }
-  };
-
-  const handleWhatsAppRecovery = (draft: CheckoutDraft) => {
-    const url = buildAdminWhatsAppHref(draft.phone, {
-      template: "checkout_abandoned",
-      name: draft.fullName,
-      products: (draft.cartSnapshot || []).map((item) => item.name),
-      value: getDraftValue(draft),
-      checkoutField: draft.lastEditedField,
-    });
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
-
-  const handlePromoteToOrder = async (draft: CheckoutDraft) => {
-    if (!confirm(`Convert this checkout from ${draft.fullName || "Unknown"} into an official order?`)) return;
-
-    try {
-      const res = await fetch("/api/admin/convert-to-order", {
-        method: "POST",
-        body: JSON.stringify({ draftId: draft.id }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        toast({ title: "Order created", description: `Order ${data.orderNumber} has been generated.` });
-        window.location.reload();
-      } else {
-        throw new Error(data.error);
-      }
-    } catch (error) {
-      toast({ title: "Promotion failed", description: String(error), variant: "destructive" });
-    }
-  };
-
-  if (scoredDrafts.length === 0) {
-    return (
-      <div className="rounded-[22px] border border-dashed border-white/10 bg-[#19191c] p-12 text-center shadow-[inset_0_1px_rgba(255,255,255,.04)]">
-        <div className="mx-auto flex max-w-sm flex-col items-center gap-3">
-          <div className="rounded-full border border-white/10 bg-white/[0.04] p-4">
-            <ShoppingCart className="h-7 w-7 text-white/35" />
-          </div>
-          <p className="text-lg font-medium text-white/65">No abandoned checkouts</p>
-          <p className="text-sm text-white/35">New checkout leads will appear here as customers start entering details.</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <div className="overflow-hidden rounded-[22px] border border-white/10 bg-[#19191c] shadow-[inset_0_1px_rgba(255,255,255,.04),0_24px_55px_rgba(0,0,0,.16)]">
-      <div className="hidden grid-cols-[110px_minmax(190px,0.8fr)_minmax(220px,1fr)_320px] border-b border-white/10 bg-[#222226] px-5 py-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/55 xl:grid">
-        <div>Priority</div>
-        <div>Customer</div>
-        <div>Cart</div>
-        <div>Recovery Workflow</div>
-      </div>
-
-      <div className="divide-y divide-white/[0.07]">
-        {scoredDrafts.map((draft) => {
-          const workflow = getWorkflow(draft);
-          const isRecoverable = !!draft.phone;
-          const value = getDraftValue(draft);
-          const items = draft.cartSnapshot || [];
-          const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-          const domain = getCapturedDomainInfo(draft.path);
-          const hasConfirmedOrder = draft.hasConfirmedOrder;
-
-          return (
-            <div
-              key={draft.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => setSelectedDraft(draft)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  setSelectedDraft(draft);
-                }
-              }}
-              className={`group grid cursor-pointer gap-5 border-l-2 p-5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-inset xl:grid-cols-[110px_minmax(190px,0.8fr)_minmax(220px,1fr)_320px] ${hasConfirmedOrder ? "border-l-emerald-400/80 bg-[linear-gradient(90deg,rgba(16,185,129,.105),rgba(16,185,129,.035)_42%,rgba(23,23,25,.96))] hover:bg-[linear-gradient(90deg,rgba(16,185,129,.14),rgba(16,185,129,.05)_42%,rgba(31,31,34,.98))] focus:ring-emerald-400/30" : "border-l-transparent bg-[#171719] hover:border-l-[#f2d56b]/60 hover:bg-[#202024] focus:border-l-[#f2d56b]/60 focus:ring-[#f2d56b]/30"}`}
-            >
-              <div className="flex items-start justify-between gap-3 xl:block">
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge className={`${getTemperatureClassName(draft.leadTemperature)} shadow-none`}>
-                      {draft.leadTemperature}
-                    </Badge>
-                    <Badge className="border-white/10 bg-white/[0.04] text-white/45 shadow-none hover:bg-white/[0.04] xl:hidden">
-                      Score {draft.leadScore}
-                    </Badge>
-                  </div>
-                  <div className="hidden min-w-[70px] rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 shadow-[inset_0_1px_rgba(255,255,255,.04)] xl:block">
-                    <p className="text-2xl font-semibold text-white">{draft.leadScore}</p>
-                    <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/40">Score</p>
-                  </div>
-                  <Badge className={`${getStatusClassName(workflow.leadStatus)} capitalize shadow-none`}>
-                    {workflow.leadStatus}
-                  </Badge>
-                </div>
-                <p className="text-right text-sm font-semibold text-white xl:hidden">{formatINR(value)}</p>
-              </div>
-
-              <div className="min-w-0 space-y-2">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.05]"><User className="h-3.5 w-3.5 text-white/50" /></span>
-                    <p className="truncate text-base font-semibold text-white transition-colors group-hover:text-[#d9c8ff]">
-                      {draft.fullName || "Unknown guest"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid gap-1 text-xs text-white/45 sm:grid-cols-2 xl:grid-cols-1">
-                  {draft.phone ? (
-                    <div className="flex min-w-0 items-center gap-2">
-                      <Phone className="h-3.5 w-3.5 shrink-0 text-white/25" />
-                      <span className="truncate">{displayPhoneNumber(draft.phone)}</span>
-                    </div>
-                  ) : null}
-                  {draft.email ? (
-                    <div className="flex min-w-0 items-center gap-2">
-                      <Mail className="h-3.5 w-3.5 shrink-0 text-white/25" />
-                      <span className="truncate">{draft.email}</span>
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 text-xs text-white/45">
-                  <Clock className="h-3.5 w-3.5" />
-                  <span>{formatDistanceToNow(new Date(draft.updatedAt), { addSuffix: true })}</span>
-                  <span className="text-white/15">/</span>
-                  <span>{format(new Date(draft.updatedAt), "MMM d, h:mm a")}</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge className={`${getDomainClassName(domain.kind)} shadow-none`} title={domain.host ?? getDraftHost(draft)}>
-                    {domain.label}
-                  </Badge>
-                  <span className="max-w-full truncate text-xs text-white/30">
-                    {domain.host ?? getDraftHost(draft)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xl font-semibold text-white">{formatINR(value)}</p>
-                    <p className="mt-1 text-xs text-white/45">{itemCount} item{itemCount === 1 ? "" : "s"} in abandoned cart</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <Badge className="rounded-full border-white/15 bg-white/[0.055] px-2.5 py-1 text-white/65 shadow-none hover:bg-white/[0.07]">
-                      {draft.status.replace("_", " ")}
-                    </Badge>
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setSelectedDraft(draft);
-                      }}
-                      className="rounded-lg border border-[#c5a9ff]/20 bg-[#c5a9ff]/10 px-2.5 py-1.5 text-[11px] font-semibold text-[#dacaff] transition hover:border-[#c5a9ff]/35 hover:bg-[#c5a9ff]/15"
-                    >
-                      Details
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-1.5">
-                  {items.length > 0 ? (
-                    items.slice(0, 3).map((item, index) => (
-                      <span
-                        key={`${item.id}-${index}`}
-                        className="rounded-lg border border-white/10 bg-white/[0.045] px-2.5 py-1.5 text-xs text-white/65"
-                      >
-                        {item.name}{item.quantity > 1 ? ` x${item.quantity}` : ""}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-white/35">
-                      No cart snapshot
-                    </span>
-                  )}
-                  {items.length > 3 ? (
-                    <span className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-white/35">
-                      +{items.length - 3} more
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-
-              <div
-                className="space-y-2 rounded-2xl border border-white/10 bg-black/20 p-3 shadow-[inset_0_1px_rgba(255,255,255,.025)]"
-                onClick={(event) => event.stopPropagation()}
-                onKeyDown={(event) => event.stopPropagation()}
-              >
-
-                <div className="grid gap-2 sm:grid-cols-[130px_150px_1fr]">
-                  <select
-                    value={workflow.leadStatus}
-                    onChange={(event) =>
-                      updateWorkflow(draft, { leadStatus: event.target.value as LeadStatus })
-                    }
-                    className="h-10 rounded-xl border border-white/10 bg-[#111113] px-3 text-xs font-medium capitalize text-white outline-none transition focus:border-[#c5a9ff]/40"
-                  >
-                    {leadStatusOptions.map((status) => (
-                      <option key={status} value={status}>
-                        {status}
-                      </option>
-                    ))}
-                  </select>
-
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Override Total (₹)"
-                      value={workflow.overrideTotal}
-                      onChange={(event) =>
-                        updateWorkflow(draft, { overrideTotal: event.target.value })
-                      }
-                      className="h-10 w-full rounded-xl border border-white/10 bg-[#111113] px-3 text-xs text-white outline-none transition focus:border-[#c5a9ff]/40"
-                    />
-                  </div>
-
-                  <div className="relative">
-                    <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/25" />
-                    <input
-                      type="datetime-local"
-                      value={workflow.nextFollowUpAt}
-                      onChange={(event) =>
-                        updateWorkflow(draft, { nextFollowUpAt: event.target.value })
-                      }
-                      className="h-10 w-full rounded-xl border border-white/10 bg-[#111113] pl-9 pr-3 text-xs text-white outline-none transition focus:border-[#c5a9ff]/40"
-                    />
-                  </div>
-                </div>
-
-                <details className="group rounded-xl border border-white/10 bg-[#111113]">
-                  <summary className="flex h-9 cursor-pointer list-none items-center justify-between px-3 text-xs font-medium text-white/55 transition-colors hover:text-white">
-                    <span>{workflow.leadNotes ? "Edit notes" : "Add notes"}</span>
-                    <span className="text-white/25 transition-transform group-open:rotate-180">v</span>
-                  </summary>
-                  <textarea
-                    value={workflow.leadNotes}
-                    onChange={(event) => updateWorkflow(draft, { leadNotes: event.target.value })}
-                    placeholder="Lead notes, objection, promised follow-up..."
-                    className="min-h-16 w-full resize-y border-t border-white/10 bg-transparent px-3 py-2 text-xs text-white outline-none placeholder:text-white/25"
-                  />
-                </details>
-
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={() => handleWhatsAppRecovery(draft)}
-                    disabled={!isRecoverable}
-                    className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-300 transition-all hover:bg-emerald-500/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-35 disabled:grayscale"
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    WhatsApp
-                    <ExternalLink className="h-3.5 w-3.5 opacity-60" />
-                  </button>
-                  {draft.email ? (
-                    <a
-                      href={buildAdminEmailHref(draft.email, {
-                        template: "checkout_abandoned",
-                        name: draft.fullName,
-                        products: (draft.cartSnapshot || []).map((item) => item.name),
-                        value: getDraftValue(draft),
-                        checkoutField: draft.lastEditedField,
-                      })}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/10 px-3 text-xs font-semibold text-blue-300 transition-all hover:bg-blue-500/20 active:scale-[0.98]"
-                    >
-                      <Mail className="h-4 w-4" />
-                      Email
-                      <ExternalLink className="h-3.5 w-3.5 opacity-60" />
-                    </a>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled
-                      className="inline-flex h-9 cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 text-xs font-semibold text-white/25"
-                    >
-                      <Mail className="h-4 w-4" />
-                      No Email
-                    </button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-[40px_1fr_1fr_44px] gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-9 rounded-lg border-white/10 bg-white/[0.03] text-white/70 hover:bg-white/8 hover:text-white"
-                    onClick={() => handleCopyRecoveryMessage(draft)}
-                    aria-label="Copy recovery message"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={savingDraftId === draft.id}
-                    onClick={() => saveWorkflow(draft, true)}
-                    className="h-9 rounded-lg border-white/10 bg-white/[0.03] text-xs font-semibold text-white/75 hover:bg-white/8 hover:text-white"
-                  >
-                    Contacted
-                  </Button>
-                  <Button
-                    onClick={() => handlePromoteToOrder(draft)}
-                    variant="secondary"
-                    className="h-9 rounded-lg border border-white/10 bg-white/[0.06] text-xs font-semibold text-white hover:bg-white/10"
-                  >
-                    <ArrowUpRight className="mr-2 h-4 w-4" />
-                    Order
-                  </Button>
-                  <Button
-                    type="button"
-                    disabled={savingDraftId === draft.id}
-                    onClick={() => saveWorkflow(draft)}
-                    className="h-9 rounded-lg px-0 text-xs font-semibold"
-                    aria-label="Save lead workflow"
-                  >
-                    <Save className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      </div>
-
-      <CheckoutDetailSheet
-        draft={selectedDraft}
-        onOpenChange={(open) => {
-          if (!open) setSelectedDraft(null);
-        }}
-        onCopyRecoveryMessage={handleCopyRecoveryMessage}
-        onPromoteToOrder={handlePromoteToOrder}
-        onWhatsAppRecovery={handleWhatsAppRecovery}
-      />
-    </>
-  );
+type Workflow={leadStatus:LeadStatus;leadNotes:string;nextFollowUpAt:string;overrideTotal:string;overrideReason:string};
+export function CheckoutsTable({initialDrafts}:{initialDrafts:CheckoutDraftWithOrder[]}){
+ const router=useRouter();
+ const [drafts,setDrafts]=useState(initialDrafts);
+ useEffect(()=>setDrafts(initialDrafts),[initialDrafts]);
+ const [query,setQuery]=useState('');const [queue,setQueue]=useState<RecoveryQueue>('open');
+ const [sort,setSort]=useState('recent');const [page,setPage]=useState(1);
+ const [selectedId,setSelectedId]=useState<string|null>(null);
+ const [workflowById,setWorkflowById]=useState<Record<string,Workflow>>({});
+ const [busyId,setBusyId]=useState<string|null>(null);
+ const [prepared,setPrepared]=useState<PreparedRecovery|null>(null);
+ const [now,setNow]=useState(()=>Date.now());
+ useEffect(()=>{const timer=window.setInterval(()=>setNow(Date.now()),60000);return()=>window.clearInterval(timer);},[]);
+ const scored=useMemo<ScoredCheckoutDraft[]>(()=>drafts.map(draft=>{const leadScore=recoveryPriority(draft,now);return {...draft,leadScore,leadTemperature:getLeadTemperature(leadScore)};}),[drafts,now]);
+ const selected=scored.find(draft=>draft.id===selectedId)||null;
+ const filtered=useMemo(()=>{
+  const needle=query.trim().toLowerCase();const digits=needle.replace(/\D/g,'');
+  return scored.filter(draft=>matchesRecoveryQueue(draft,queue,now)).filter(draft=>!needle||[draft.fullName,draft.phone,draft.email,draft.linkedOrderNumber,...draft.cartSnapshot.map(item=>item.name)].some(value=>value?.toLowerCase().includes(needle))||(digits.length>=4&&(draft.phone||'').replace(/\D/g,'').includes(digits))).sort((a,b)=>sort==='recent'?new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime():sort==='activity'?customerActivityAt(b).getTime()-customerActivityAt(a).getTime():sort==='value'?checkoutValue(b)-checkoutValue(a):sort==='follow_up'?(a.nextFollowUpAt?new Date(a.nextFollowUpAt).getTime():Infinity)-(b.nextFollowUpAt?new Date(b.nextFollowUpAt).getTime():Infinity):b.leadScore-a.leadScore||customerActivityAt(b).getTime()-customerActivityAt(a).getTime());
+ },[scored,queue,query,sort,now]);
+ const pages=Math.max(1,Math.ceil(filtered.length/25));const currentPage=Math.min(page,pages);const visible=filtered.slice((currentPage-1)*25,currentPage*25);
+ const getWorkflow=(draft:CheckoutDraft):Workflow=>workflowById[draft.id]||{leadStatus:(leadStatusOptions.includes(draft.leadStatus as LeadStatus)?draft.leadStatus:'new') as LeadStatus,leadNotes:draft.leadNotes||'',nextFollowUpAt:formatDateTimeLocal(draft.nextFollowUpAt),overrideTotal:String(draft.pricingBreakdown.overrideTotal??''),overrideReason:String(draft.pricingBreakdown.overrideReason||'')};
+ const updateWorkflow=(draft:CheckoutDraft,patch:Partial<Workflow>)=>setWorkflowById(previous=>({...previous,[draft.id]:{...getWorkflow(draft),...patch}}));
+ async function saveWorkflow(draft:CheckoutDraft,markContacted=false){
+  if(busyId)return;const workflow=getWorkflow(draft);setBusyId(draft.id);
+  try{
+   const response=await fetch('/api/admin/checkout-drafts',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:draft.id,leadStatus:workflow.leadStatus,leadNotes:workflow.leadNotes,markContacted,nextFollowUpAt:workflow.nextFollowUpAt?new Date(workflow.nextFollowUpAt).toISOString():null,overrideTotal:workflow.overrideTotal.trim()?Number(workflow.overrideTotal):null,overrideReason:workflow.overrideReason,expectedWorkflowUpdatedAt:typeof draft.pricingBreakdown.workflowUpdatedAt==='string'?draft.pricingBreakdown.workflowUpdatedAt:null}),signal:AbortSignal.timeout(20000)});
+   const data=await response.json();if(!response.ok||!data.draft)throw Error(data.error||'Could not save this lead.');
+   setDrafts(previous=>previous.map(row=>row.id===draft.id?{...row,...data.draft}:row));
+   setWorkflowById(previous=>{const next={...previous};delete next[draft.id];return next;});
+   toast({title:markContacted?'Contact recorded':'Lead saved',description:markContacted?'The contact time and lead status were updated.':'Customer activity time was preserved.'});router.refresh();
+  }catch(error){toast({title:'Could not save',description:error instanceof Error?error.message:'Please retry.',variant:'destructive'});}finally{setBusyId(null);}
+ }
+ async function prepareRecovery(draft:ScoredCheckoutDraft){
+  if(busyId)return;const state=recoveryState(draft,now);
+  if(state.recovered||state.review||state.lost||!state.hasContact){toast({title:state.review?'Check this payment in Orders first':'This checkout is not ready for a reminder',description:'Review its status and contact details before preparing a recovery message.'});return;}
+  if(state.active){toast({title:'The customer was recently active',description:'Allow them time to finish checkout before following up.'});return;}
+  setBusyId(draft.id);
+  try{
+   const response=await fetch('/api/admin/customer-links',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scope:'checkout',resourceId:draft.id}),signal:AbortSignal.timeout(20000)});
+   const data=await response.json();if(!response.ok)throw Error(data.error||'Could not create a secure recovery link.');
+   if(typeof data.path!=='string'||!/^\/checkout\/[A-Za-z0-9_-]{43}(\?resume=1)?$/.test(data.path)||!Number.isFinite(Date.parse(data.expiresAt)))throw Error('The recovery link could not be verified.');
+   const recovery={draft,id:String(data.id),url:new URL(data.path,getSiteUrlFromHost(draft.path)).href,expiresAt:data.expiresAt};
+   setPrepared(recovery);
+  }catch(error){toast({title:'Message not prepared',description:error instanceof Error?error.message:'Please retry.',variant:'destructive'});}finally{setBusyId(null);}
+ }
+ async function promote(draft:ScoredCheckoutDraft){
+  if(busyId||draft.hasOrderRecord)return;
+  if(!window.confirm(`Create an unpaid order for ${formatINR(checkoutValue(draft))}? Prices and delivery details will be checked. This does not record a payment.`))return;
+  setBusyId(draft.id);
+  try{
+   const response=await fetch('/api/admin/convert-to-order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({draftId:draft.id,expectedUpdatedAt:new Date(draft.updatedAt).toISOString()}),signal:AbortSignal.timeout(30000)});
+   const data=await response.json();if(!response.ok||!data.ok)throw Error(data.error||'Could not create an order.');
+   setDrafts(previous=>previous.map(row=>row.id===draft.id?{...row,hasOrderRecord:true,linkedOrderId:data.orderId,linkedOrderNumber:data.orderNumber,linkedOrderStatus:'payment_pending'}:row));
+   toast({title:data.existing?'An order already exists':'Unpaid order created',description:`${data.orderNumber} · Review payment in Orders.`});router.refresh();
+  }catch(error){toast({title:'Order not created',description:error instanceof Error?error.message:'Refresh before retrying.',variant:'destructive'});}finally{setBusyId(null);}
+ }
+ function workflowEditor(draft:ScoredCheckoutDraft){const workflow=getWorkflow(draft);const history=Array.isArray(draft.pricingBreakdown.recoveryHistory)?draft.pricingBreakdown.recoveryHistory.slice(-5).reverse():[];
+  return <section className="space-y-3 rounded-2xl border border-[#c5a9ff]/15 bg-[#c5a9ff]/5 p-4"><div className="flex items-center justify-between"><h3 className="text-sm font-semibold text-white">Follow-up plan</h3><span className="text-xs text-white/40">Last contacted: {formatRecoveryDue(draft.lastContactedAt)}</span></div>
+   {draft.linkedOrderNumber&&<Link href="/admin/orders?hours=2160" className="block text-sm text-[#d9c8ff] underline underline-offset-4">Open Orders · {draft.linkedOrderNumber} ({draft.linkedOrderStatus})</Link>}
+   <div className="grid gap-3 sm:grid-cols-2"><label className="space-y-1 text-xs text-white/50">Lead status<select aria-label="Lead status" value={workflow.leadStatus} onChange={event=>updateWorkflow(draft,{leadStatus:event.target.value as LeadStatus})} className="h-10 w-full rounded-lg border border-white/10 bg-[#111113] px-3 text-sm text-white">{leadStatusOptions.map(status=><option key={status} value={status}>{status[0].toUpperCase()+status.slice(1)}</option>)}</select></label><label className="space-y-1 text-xs text-white/50">Next follow-up (your local time)<input aria-label="Next follow-up" type="datetime-local" value={workflow.nextFollowUpAt} onChange={event=>updateWorkflow(draft,{nextFollowUpAt:event.target.value})} className="h-10 w-full rounded-lg border border-white/10 bg-[#111113] px-3 text-sm text-white"/></label></div>
+   <label className="block space-y-1 text-xs text-white/50">Notes<textarea aria-label="Lead notes" value={workflow.leadNotes} onChange={event=>updateWorkflow(draft,{leadNotes:event.target.value})} placeholder="What did the customer say? What happens next?" className="min-h-20 w-full rounded-lg border border-white/10 bg-[#111113] p-3 text-sm text-white outline-none"/></label>
+   {!draft.hasOrderRecord&&<details className="rounded-lg border border-white/10 p-3"><summary className="cursor-pointer text-xs text-white/50">Approved total adjustment</summary><div className="mt-3 grid gap-2"><label className="text-xs text-white/45">Final total (leave blank for standard pricing)<input aria-label="Approved final total" type="number" min="0.01" step="0.01" value={workflow.overrideTotal} onChange={event=>updateWorkflow(draft,{overrideTotal:event.target.value})} className="mt-1 h-10 w-full rounded-lg border border-white/10 bg-black/20 px-3 text-sm text-white"/></label><input aria-label="Total adjustment reason" value={workflow.overrideReason} onChange={event=>updateWorkflow(draft,{overrideReason:event.target.value})} placeholder="Reason for changing or clearing the total" className="h-10 rounded-lg border border-white/10 bg-black/20 px-3 text-sm text-white"/></div></details>}
+   <div className="flex flex-wrap gap-2"><Button type="button" disabled={!!busyId} onClick={()=>saveWorkflow(draft)} className="gap-2"><Save className="h-4 w-4"/>Save follow-up</Button><Button type="button" disabled={!!busyId} variant="outline" onClick={()=>saveWorkflow(draft,true)} className="border-white/15 bg-white/5 text-white">Mark contacted</Button></div>
+   {history.length>0&&<div className="border-t border-white/10 pt-3"><p className="text-[10px] uppercase tracking-widest text-white/35">Recent follow-up history</p><ul className="mt-2 space-y-1">{history.map((event,index)=><li key={index} className="text-xs text-white/50">{event.action==='contacted'?'Contact recorded':event.action==='price_adjusted'?'Total adjusted':event.action==='order_created'?'Unpaid order created':'Follow-up saved'} · {typeof event.at==='string'?formatRecoveryDue(event.at):''}</li>)}</ul></div>}
+  </section>;
+ }
+ return <>
+  <section className="space-y-3 rounded-2xl border border-white/10 bg-[#19191c] p-3 sm:p-4" aria-label="Checkout recovery filters"><div className="flex flex-col gap-3 sm:flex-row"><input aria-label="Search checkouts" placeholder="Search name, mobile, email, product or order…" value={query} onChange={event=>{setQuery(event.target.value);setPage(1);}} className="h-11 min-w-0 flex-1 rounded-xl border border-white/10 bg-black/20 px-4 text-sm text-white outline-none focus:border-[#c5a9ff]/40"/><select aria-label="Sort checkouts" value={sort} onChange={event=>{setSort(event.target.value);setPage(1);}} className="h-11 rounded-xl border border-white/10 bg-[#111113] px-3 text-sm text-white"><option value="priority">Priority first</option><option value="recent">Newest first</option><option value="activity">Recent customer activity</option><option value="follow_up">Next follow-up</option><option value="value">Highest value</option></select><Button type="button" variant="outline" onClick={()=>router.refresh()} className="h-11 border-white/15 bg-white/5 text-white">Refresh</Button></div><nav aria-label="Recovery queues" className="flex flex-wrap gap-2">{RECOVERY_QUEUES.map(item=><button key={item.key} type="button" aria-pressed={queue===item.key} onClick={()=>{setQueue(item.key);setPage(1);}} className={`rounded-full border px-3 py-2 text-xs transition ${queue===item.key?'border-[#c5a9ff]/40 bg-[#c5a9ff]/15 text-[#e3d5ff]':'border-white/10 text-white/45 hover:bg-white/5'}`}>{item.label}<span className="ml-2 text-[10px] opacity-60">{scored.filter(draft=>matchesRecoveryQueue(draft,item.key,now)).length}</span></button>)}</nav></section>
+  <section aria-label="Checkout recovery queue" className="overflow-hidden rounded-2xl border border-white/10 bg-[#19191c]"><div className="flex items-center justify-between border-b border-white/10 px-4 py-3 text-xs text-white/40"><span>{filtered.length} checkout{filtered.length===1?'':'s'} · {RECOVERY_QUEUES.find(item=>item.key===queue)?.label}</span><span>Customer activity · IST</span></div>
+   {visible.length===0?<div className="p-10 text-center text-sm text-white/40">No checkouts match this view. Try another queue or search.</div>:visible.map(draft=>{const state=recoveryState(draft,now);const units=draft.cartSnapshot.filter(item=>!item.isGift).reduce((sum,item)=>sum+item.quantity,0);const canRemind=state.hasContact&&!state.recovered&&!state.lost&&!state.review&&!state.active;return <article key={draft.id} className={`grid items-center gap-3 border-b border-white/[.06] p-4 last:border-0 xl:grid-cols-[minmax(170px,1fr)_minmax(160px,1fr)_100px_160px_190px] ${state.review?'bg-amber-500/[.04]':state.recovered?'bg-emerald-500/[.03]':''}`}>
+    <div className="min-w-0"><button type="button" onClick={()=>setSelectedId(draft.id)} className="max-w-full truncate text-left text-sm font-semibold text-white hover:text-[#d9c8ff]">{draft.fullName||'Guest checkout'}</button><p className="mt-1 truncate text-xs text-white/40">{displayPhoneNumber(draft.phone)||draft.email||'No contact details'}</p><p className={`mt-1 text-[11px] ${state.review?'text-amber-200':state.recovered?'text-emerald-300':'text-white/40'}`}>{state.label}</p></div>
+    <div className="min-w-0"><p className="truncate text-xs text-white/65">{draft.cartSnapshot.filter(item=>!item.isGift).map(item=>item.name).join(', ')||'No products saved'}</p><p className="mt-1 text-[11px] text-white/35">{units} item{units===1?'':'s'} · {getDraftHost(draft)}</p>{draft.linkedOrderNumber&&<Link href="/admin/orders?hours=2160" className="mt-1 block text-[11px] text-[#c5a9ff]">{draft.linkedOrderNumber} ↗</Link>}</div>
+    <div><p className="text-sm font-semibold text-white">{formatINR(checkoutValue(draft))}</p><p className="mt-1 text-[10px] text-white/35">{draft.leadScore>=90?'Review first':state.active?'Still shopping':draft.leadStatus||'New'}</p></div>
+    <div className="space-y-1 text-[11px] text-white/40"><p title={formatRecoveryDue(customerActivityAt(draft))}>{formatDistanceToNow(customerActivityAt(draft),{addSuffix:true})}</p><p className={state.due?'text-amber-200':''}>{draft.nextFollowUpAt?`Follow up: ${formatRecoveryDue(draft.nextFollowUpAt)}`:'No follow-up scheduled'}</p></div>
+    <div className="flex gap-2"><Button type="button" disabled={!!busyId||!canRemind} onClick={()=>prepareRecovery(draft)} className="h-9 flex-1 gap-1.5 text-xs" title={state.review?'Check payment in Orders before requesting another payment':state.active?'Customer was active within the last 15 minutes':!state.hasContact?'No valid contact details':undefined}><MessageCircle className="h-3.5 w-3.5"/>{busyId===draft.id?'Working…':'Recovery'}</Button><Button type="button" variant="outline" onClick={()=>setSelectedId(draft.id)} className="h-9 border-white/15 bg-white/5 px-3 text-xs text-white/70">Details</Button></div>
+   </article>;})}
+   <div className="flex items-center justify-between gap-3 px-4 py-3 text-xs text-white/40"><span>Page {currentPage} of {pages}</span><div className="flex gap-2"><Button type="button" size="sm" variant="outline" disabled={currentPage===1} onClick={()=>setPage(currentPage-1)} className="border-white/10 bg-white/5 text-white/65">Previous</Button><Button type="button" size="sm" variant="outline" disabled={currentPage===pages} onClick={()=>setPage(currentPage+1)} className="border-white/10 bg-white/5 text-white/65">Next</Button></div></div>
+  </section>
+  <CheckoutDetailSheet draft={selected} onOpenChange={open=>{if(!open)setSelectedId(null);}} onCopyRecoveryMessage={prepareRecovery} onWhatsAppRecovery={prepareRecovery} onPromoteToOrder={promote} workflowEditor={selected?workflowEditor(selected):null}/>
+  <CheckoutRecoveryMessage recovery={prepared} onClose={()=>setPrepared(null)}/>
+ </>;
 }

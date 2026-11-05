@@ -8,6 +8,10 @@ import { formatINR } from "@/lib/currency";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getProductPath } from "@/lib/product-route";
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
+import {
+  productCategoryTags,
+  type CategoryTag,
+} from "@/lib/product-categories";
 
 interface CelebrityFavoriteCardProps {
   id: string;
@@ -15,7 +19,7 @@ interface CelebrityFavoriteCardProps {
   inspiration: string;
   inspirationBrand?: string;
   category: string;
-  categoryTags?: Array<{ id: string; label?: string }>;
+  categoryTags?: CategoryTag[];
   categoryIds?: string[];
   image: string;
   price: number;
@@ -28,7 +32,10 @@ function getStyleTags(category: string, inspiration: string) {
   const tags = [category.toUpperCase()];
   const spicyKeywords = ["spice", "pepper", "khamrah", "viking"];
   const source = `${category} ${inspiration}`.toLowerCase();
-  if (spicyKeywords.some((token) => source.includes(token)) && !tags.includes("SPICY")) {
+  if (
+    spicyKeywords.some((token) => source.includes(token)) &&
+    !tags.includes("SPICY")
+  ) {
     tags.push("SPICY");
   }
   return tags;
@@ -36,29 +43,17 @@ function getStyleTags(category: string, inspiration: string) {
 
 function getDisplayCategories(
   category: string,
-  categoryTags: Array<{ id: string; label?: string }> = [],
-  categoryIds: string[] = []
+  categoryTags: CategoryTag[] = [],
+  categoryIds: string[] = [],
 ) {
-  const labelSet = new Set<string>();
-
-  categoryTags.forEach((tag) => {
-    const value = (tag.label || tag.id || "").trim();
-    if (value) labelSet.add(value.toUpperCase());
-  });
-
-  categoryIds.forEach((id) => {
-    const value = id
-      .replace(/[-_]+/g, " ")
-      .replace(/\b\w/g, (char) => char.toUpperCase())
-      .trim();
-    if (value) labelSet.add(value.toUpperCase());
-  });
-
-  if (labelSet.size === 0 && category) {
-    labelSet.add(category.toUpperCase());
-  }
-
-  return Array.from(labelSet).slice(0, 3);
+  const labels = productCategoryTags({ categoryTags, categoryIds })
+    .filter((tag) => tag.visible !== false)
+    .map((tag) => (tag.label || tag.id).toUpperCase());
+  return labels.length
+    ? labels.slice(0, 3)
+    : categoryTags.length || categoryIds.length
+      ? []
+      : [category.toUpperCase()];
 }
 
 export default function CelebrityFavoriteCard({
@@ -78,13 +73,24 @@ export default function CelebrityFavoriteCard({
   const router = useRouter();
   const { addItem } = useCart();
   const mappedTags = getDisplayCategories(category, categoryTags, categoryIds);
-  const tags = mappedTags.length > 0 ? mappedTags : getStyleTags(category, inspiration);
+  const tags =
+    mappedTags.length > 0 ? mappedTags : getStyleTags(category, inspiration);
   const productFirst = index % 2 === 0;
-  const productPath = getProductPath({ id, name, inspirationBrand, inspiration });
-  const productImage = withCloudinaryTransforms(image, { width: index === 0 ? 560 : 480 });
-  const celebPortrait = withCloudinaryTransforms(celebrityImage || "https://placehold.co/600x600?text=Celeb", {
+  const productPath = getProductPath({
+    id,
+    name,
+    inspirationBrand,
+    inspiration,
+  });
+  const productImage = withCloudinaryTransforms(image, {
     width: index === 0 ? 560 : 480,
   });
+  const celebPortrait = withCloudinaryTransforms(
+    celebrityImage || "https://placehold.co/600x600?text=Celeb",
+    {
+      width: index === 0 ? 560 : 480,
+    },
+  );
   const displayPrice = formatINR(price);
   const prioritizeMedia = index === 0;
 
@@ -112,10 +118,16 @@ export default function CelebrityFavoriteCard({
         }
       }}
     >
-      {celebrityName && <p className="mb-3 font-serif text-[1.2rem] leading-none">{celebrityName}</p>}
+      {celebrityName && (
+        <p className="mb-3 font-serif text-[1.2rem] leading-none">
+          {celebrityName}
+        </p>
+      )}
 
       <div className="mb-5 grid grid-cols-2 gap-4">
-        <div className={`relative block aspect-[3/4] bg-[#efefef] ${productFirst ? "order-1" : "order-2"}`}>
+        <div
+          className={`relative block aspect-[3/4] bg-[#efefef] ${productFirst ? "order-1" : "order-2"}`}
+        >
           <Image
             src={productImage}
             alt={name}
@@ -128,7 +140,9 @@ export default function CelebrityFavoriteCard({
           />
         </div>
 
-        <div className={`relative aspect-[3/4] bg-[#efefef] ${productFirst ? "order-2" : "order-1"}`}>
+        <div
+          className={`relative aspect-[3/4] bg-[#efefef] ${productFirst ? "order-2" : "order-1"}`}
+        >
           <Image
             src={celebPortrait}
             alt={celebrityName || "Celebrity"}
@@ -146,10 +160,10 @@ export default function CelebrityFavoriteCard({
         </p>
 
         <div className="mt-2 flex items-end justify-between gap-3">
-          <p className="font-serif text-[2.05rem] leading-none font-light">{name}</p>
-          <p className="text-[2rem] leading-none font-light">
-            {displayPrice}
+          <p className="font-serif text-[2.05rem] leading-none font-light">
+            {name}
           </p>
+          <p className="text-[2rem] leading-none font-light">{displayPrice}</p>
         </div>
 
         <p className="mt-2 text-[0.96rem] italic leading-snug text-muted-foreground/90">

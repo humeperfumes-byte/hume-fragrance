@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Sparkles, Copy, Check, ShoppingBag, Truck, Lock, Unlock, Zap, RotateCcw } from "lucide-react";
 import type { CityFlyerConfig } from "@/lib/flyer-cities";
@@ -9,6 +9,11 @@ interface FlyerHeroBannerProps {
   config: CityFlyerConfig;
   mode: "perfumes" | "discovery-set";
 }
+
+const subscribeToVoucherStorage = (notify: () => void) => {
+  window.addEventListener("storage", notify);
+  return () => window.removeEventListener("storage", notify);
+};
 
 // Antigravity Spectrum Confetti Particle
 interface ConfettiParticle {
@@ -25,7 +30,11 @@ interface ConfettiParticle {
 
 export default function FlyerHeroBanner({ config, mode }: FlyerHeroBannerProps) {
   const [copied, setCopied] = useState(false);
-  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [unlockedHere, setIsUnlocked] = useState(false);
+  const storedUnlocked = useSyncExternalStore(subscribeToVoucherStorage, () => {
+    try { return sessionStorage.getItem(`hume_unlocked_${config.slug}`) === "true"; } catch { return false; }
+  }, () => false);
+  const isUnlocked = unlockedHere || storedUnlocked;
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [unlockStep, setUnlockStep] = useState<1 | 2 | 3>(1);
   const [progress, setProgress] = useState(0);
@@ -34,12 +43,6 @@ export default function FlyerHeroBanner({ config, mode }: FlyerHeroBannerProps) 
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-
-    // Check if user already unlocked voucher in this session
-    const alreadyUnlocked = sessionStorage.getItem(`hume_unlocked_${config.slug}`);
-    if (alreadyUnlocked === "true") {
-      setIsUnlocked(true);
-    }
 
     const urlParams = new URLSearchParams(window.location.search);
     const qrId = urlParams.get("qr_id");
@@ -76,24 +79,8 @@ export default function FlyerHeroBanner({ config, mode }: FlyerHeroBannerProps) 
     if (qrId) {
       logScanEvent(qrId);
     } else {
-      // Auto-resolve campaign ID if scanned from bare URL
-      fetch("/api/admin/qr-campaigns")
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.success && Array.isArray(data.campaigns)) {
-            const matched = data.campaigns.find(
-              (c: any) =>
-                c.city.toLowerCase() === config.slug.toLowerCase() &&
-                (c.targetPage === mode ||
-                  (mode === "discovery-set" && (c.name.toLowerCase().includes("discovery") || c.name.toLowerCase().includes("discovey"))))
-            );
-            const resolvedId = matched?.id;
-            logScanEvent(resolvedId);
-          } else {
-            logScanEvent();
-          }
-        })
-        .catch(() => logScanEvent());
+      // A bare destination cannot identify a printed batch. Never guess one.
+      sessionStorage.removeItem("hume_flyer_qr_id");
     }
   }, [config.slug, config.couponCode, mode]);
 

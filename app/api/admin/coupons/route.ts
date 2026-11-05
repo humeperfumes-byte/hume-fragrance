@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
         active: input.active,
         displayInCart: input.displayInCart,
         welcomeBackMode: input.welcomeBackMode,
+        rules: input.rules,
       })
       .returning({
         id: coupons.id,

@@ -6,7 +6,16 @@ import ImageWithFallback from "@/components/ImageWithFallback";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ChevronRight, Menu, X, Search, Sparkles, ExternalLink, UserRound } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronRight,
+  Menu,
+  X,
+  Search,
+  Sparkles,
+  ExternalLink,
+  UserRound,
+} from "lucide-react";
 import { HiOutlineShoppingBag } from "react-icons/hi2";
 import { useCart } from "@/context/CartContext";
 import ShopMegaMenu from "./ShopMegaMenu";
@@ -19,14 +28,38 @@ import { DISCOVERY_SET_PATH } from "@/lib/discovery-set";
 import BuyThreeGetOneButton from "./BuyThreeGetOneButton";
 import AnnouncementBar from "./AnnouncementBar";
 import { useSiteControls } from "@/hooks/use-site-controls";
-import { prepareOverlayNavigation, useOverlayHistory } from "@/hooks/use-overlay-history";
-import { getMobileBackFallback, getStorefrontBreadcrumbs, readMobileNavigationStack, recordMobileNavigation } from "@/lib/mobile-navigation";
+import {
+  prepareOverlayNavigation,
+  useOverlayHistory,
+} from "@/hooks/use-overlay-history";
+import { categoryOptions } from "@/lib/product-categories";
+import { getClientCachedProducts } from "@/lib/client-products-cache";
+import {
+  getMobileBackFallback,
+  getStorefrontBreadcrumbs,
+  readMobileNavigationStack,
+  recordMobileNavigation,
+} from "@/lib/mobile-navigation";
 
 // The mobile Raksha Bandhan takeover expires at the end of 26 August 2026 in India.
-const RAKSHA_BANDHAN_MENU_END_AT = new Date("2026-08-26T23:59:59+05:30").getTime();
+const RAKSHA_BANDHAN_MENU_END_AT = new Date(
+  "2026-08-26T23:59:59+05:30",
+).getTime();
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [mobileCategoryOptions, setMobileCategoryOptions] = useState<
+    ReturnType<typeof categoryOptions>
+  >([]);
+  useEffect(() => {
+    let active = true;
+    getClientCachedProducts().then((products) => {
+      if (active) setMobileCategoryOptions(categoryOptions(products));
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileGiftingOpen, setIsMobileGiftingOpen] = useState(false);
@@ -117,448 +150,577 @@ const Header = () => {
     return () => window.clearTimeout(expiryTimer);
   }, []);
 
-  const handleMobileFilterClick = (filterType: FilterType, value: string, href?: string) => {
+  const handleMobileFilterClick = (
+    filterType: FilterType,
+    value: string,
+    href?: string,
+  ) => {
     setIsMenuOpen(false);
     if (href) {
       navigateTo(href);
       return;
     }
     if (filterType === "celebrity") {
-      navigateTo(`/celebrities-favorites?celebrity=${encodeURIComponent(value)}`);
+      navigateTo(
+        `/celebrities-favorites?celebrity=${encodeURIComponent(value)}`,
+      );
       return;
     }
     navigateTo(`/shop?filter=${filterType}&value=${encodeURIComponent(value)}`);
   };
 
   const genderMenuItems = [
-    { label: "Men", className: "bg-[#f4f8ff]", icon: "/images/icons/men-icon.png" },
-    { label: "Women", className: "bg-[#fff6f7]", icon: "/images/icons/women-icon.png" },
+    {
+      label: "Men",
+      className: "bg-[#f4f8ff]",
+      icon: "/images/icons/men-icon.png",
+    },
+    {
+      label: "Women",
+      className: "bg-[#fff6f7]",
+      icon: "/images/icons/women-icon.png",
+    },
     { label: "Unisex", className: "bg-[#f8fbf6]" },
   ];
 
   return (
     <>
-    <header 
-      className="fixed left-0 right-0 z-50 bg-background/95 backdrop-blur-sm transition-[top] duration-100 ease-out"
-      style={{ top: `${topOffset}px` }}
-    >
-      <style dangerouslySetInnerHTML={{ __html: `
+      <header
+        className="fixed left-0 right-0 z-50 bg-background/95 backdrop-blur-sm transition-[top] duration-100 ease-out"
+        style={{ top: `${topOffset}px` }}
+      >
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
         body {
           transition: padding-top 0.15s ease-out;
           padding-top: ${isShown ? "30px" : "0px"};
         }
-      `}} />
-      <AnnouncementBar isVisible={isShown} onClose={() => setIsAnnouncementVisible(false)} />
-      <div className="container-luxury">
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center py-5 md:flex md:justify-between">
-          <div className="flex items-center justify-self-start gap-1.5 md:gap-6">
-            <button
-              onClick={() => {
-                setIsSearchOpen(false);
-                setIsCartOpen(false);
-                setIsMenuOpen(!isMenuOpen);
-              }}
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/25 md:hidden"
-              aria-label="Toggle menu"
-            >
-              {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
-            </button>
-            <div className="hidden md:block">
-              <ShopMegaMenu
-                isOpen={isShopOpen}
-                onOpen={() => setIsShopOpen(true)}
-                onClose={() => setIsShopOpen(false)}
-              />
+      `,
+          }}
+        />
+        <AnnouncementBar
+          isVisible={isShown}
+          onClose={() => setIsAnnouncementVisible(false)}
+        />
+        <div className="container-luxury">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center py-5 md:flex md:justify-between">
+            <div className="flex items-center justify-self-start gap-1.5 md:gap-6">
+              <button
+                onClick={() => {
+                  setIsSearchOpen(false);
+                  setIsCartOpen(false);
+                  setIsMenuOpen(!isMenuOpen);
+                }}
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/25 md:hidden"
+                aria-label="Toggle menu"
+              >
+                {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
+              </button>
+              <div className="hidden md:block">
+                <ShopMegaMenu
+                  isOpen={isShopOpen}
+                  onOpen={() => setIsShopOpen(true)}
+                  onClose={() => setIsShopOpen(false)}
+                />
+              </div>
+              <nav className="hidden md:flex items-center gap-5">
+                <Link
+                  href="/hume-special"
+                  className="relative text-[11px] uppercase tracking-[0.22em] text-muted-foreground hover:text-foreground transition-colors after:absolute after:left-0 after:-bottom-1 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-current after:transition-transform after:duration-300 hover:after:scale-x-100"
+                >
+                  Hume Special
+                </Link>
+                <Link
+                  href="/bestseller"
+                  className="relative text-[11px] uppercase tracking-[0.22em] text-muted-foreground hover:text-foreground transition-colors after:absolute after:left-0 after:-bottom-1 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-current after:transition-transform after:duration-300 hover:after:scale-x-100"
+                >
+                  Best Seller
+                </Link>
+              </nav>
             </div>
-            <nav className="hidden md:flex items-center gap-5">
-              <Link
-                href="/hume-special"
-                className="relative text-[11px] uppercase tracking-[0.22em] text-muted-foreground hover:text-foreground transition-colors after:absolute after:left-0 after:-bottom-1 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-current after:transition-transform after:duration-300 hover:after:scale-x-100"
-              >
-                Hume Special
-              </Link>
-              <Link
-                href="/bestseller"
-                className="relative text-[11px] uppercase tracking-[0.22em] text-muted-foreground hover:text-foreground transition-colors after:absolute after:left-0 after:-bottom-1 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-current after:transition-transform after:duration-300 hover:after:scale-x-100"
-              >
-                Best Seller
-              </Link>
-            </nav>
-          </div>
 
-          <Link href="/" className="flex items-center gap-1.5 leading-none md:absolute md:left-1/2 md:-translate-x-1/2">
-            <span className="font-serif text-2xl md:text-3xl font-light leading-none tracking-widest">
-              HUME
-            </span>
-            <span className="text-caption text-muted-foreground hidden leading-none sm:inline">
-              Fragrance
-            </span>
-          </Link>
+            <Link
+              href="/"
+              className="flex items-center gap-1.5 leading-none md:absolute md:left-1/2 md:-translate-x-1/2"
+            >
+              <span className="font-serif text-2xl md:text-3xl font-light leading-none tracking-widest">
+                HUME
+              </span>
+              <span className="text-caption text-muted-foreground hidden leading-none sm:inline">
+                Fragrance
+              </span>
+            </Link>
 
-          <div className="flex items-center justify-self-end gap-1.5 md:gap-5">
-            <nav className="hidden md:flex items-center gap-5">
-              <Link
-                href={DISCOVERY_SET_PATH}
-                className="relative text-[11px] font-semibold uppercase tracking-[0.22em] text-black/80 transition-colors hover:text-black after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-[40%] after:bg-current after:transition-all after:duration-300 hover:after:w-full"
+            <div className="flex items-center justify-self-end gap-1.5 md:gap-5">
+              <nav className="hidden md:flex items-center gap-5">
+                <Link
+                  href={DISCOVERY_SET_PATH}
+                  className="relative text-[11px] font-semibold uppercase tracking-[0.22em] text-black/80 transition-colors hover:text-black after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-[40%] after:bg-current after:transition-all after:duration-300 hover:after:w-full"
+                >
+                  DISCOVERY SET
+                </Link>
+                <Link
+                  href="/spaces"
+                  className="relative text-[11px] font-semibold uppercase tracking-[0.22em] text-black/80 transition-colors hover:text-black after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-[40%] after:bg-current after:transition-all after:duration-300 hover:after:w-full"
+                >
+                  SPACES
+                </Link>
+              </nav>
+              <button
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setIsCartOpen(false);
+                  setIsSearchOpen(true);
+                }}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/25"
+                aria-label="Search"
               >
-                DISCOVERY SET
-              </Link>
-              <Link
-                href="/spaces"
-                className="relative text-[11px] font-semibold uppercase tracking-[0.22em] text-black/80 transition-colors hover:text-black after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-[40%] after:bg-current after:transition-all after:duration-300 hover:after:w-full"
+                <Search size={18} />
+              </button>
+              <button
+                onClick={() => navigateTo("/account")}
+                className="hidden h-9 w-9 items-center justify-center hover:bg-muted transition-colors md:inline-flex"
+                aria-label="Open account"
               >
-                SPACES
-              </Link>
-            </nav>
-            <button
-              onClick={() => {
-                setIsMenuOpen(false);
-                setIsCartOpen(false);
-                setIsSearchOpen(true);
-              }}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/25"
-              aria-label="Search"
-            >
-              <Search size={18} />
-            </button>
-            <button
-              onClick={() => navigateTo("/account")}
-              className="hidden h-9 w-9 items-center justify-center hover:bg-muted transition-colors md:inline-flex"
-              aria-label="Open account"
-            >
-              <UserRound size={18} />
-            </button>
-            <button
-              onClick={() => {
-                if (typeof window !== "undefined") {
-                  window.dispatchEvent(
-                    new CustomEvent("hume:tracking", {
-                      detail: { eventType: "cart_open", payload: { source: "header", itemCount: totalItems } },
-                    })
-                  );
-                }
-                setIsMenuOpen(false);
-                setIsSearchOpen(false);
-                setIsCartOpen(true);
-              }}
-              className="relative inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/25"
-              aria-label="Open cart"
-            >
-              <motion.span
-                initial={{ x: 0, rotate: 0 }}
-                animate={
-                  totalItems > 0
-                    ? {
-                        x: [0, 0, 0, -2, 2, -1, 1, 0],
-                        rotate: [0, 0, 0, -6, 6, -3, 3, 0],
-                      }
-                    : { x: 0, rotate: 0 }
-                }
-                transition={
-                  totalItems > 0
-                    ? {
-                        duration: 2.4,
-                        delay: 0.8,
-                        repeat: Infinity,
-                        repeatDelay: 0,
-                        times: [0, 0.62, 0.74, 0.82, 0.88, 0.93, 0.97, 1],
-                      }
-                    : { duration: 0.2 }
-                }
-                className="inline-flex"
+                <UserRound size={18} />
+              </button>
+              <button
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(
+                      new CustomEvent("hume:tracking", {
+                        detail: {
+                          eventType: "cart_open",
+                          payload: { source: "header", itemCount: totalItems },
+                        },
+                      }),
+                    );
+                  }
+                  setIsMenuOpen(false);
+                  setIsSearchOpen(false);
+                  setIsCartOpen(true);
+                }}
+                className="relative inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/25"
+                aria-label="Open cart"
               >
-                <HiOutlineShoppingBag size={18} />
-              </motion.span>
-              {totalItems > 0 && (
                 <motion.span
-                  key={`badge-desktop-${totalItems}`}
-                  initial={{ scale: 0.85 }}
-                  animate={{ scale: [1, 1.24, 1] }}
-                  transition={{ duration: 0.25 }}
-                  className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white text-[10px] font-semibold flex items-center justify-center shadow-[0_3px_10px_rgba(16,185,129,0.45)] ring-2 ring-background"
+                  initial={{ x: 0, rotate: 0 }}
+                  animate={
+                    totalItems > 0
+                      ? {
+                          x: [0, 0, 0, -2, 2, -1, 1, 0],
+                          rotate: [0, 0, 0, -6, 6, -3, 3, 0],
+                        }
+                      : { x: 0, rotate: 0 }
+                  }
+                  transition={
+                    totalItems > 0
+                      ? {
+                          duration: 2.4,
+                          delay: 0.8,
+                          repeat: Infinity,
+                          repeatDelay: 0,
+                          times: [0, 0.62, 0.74, 0.82, 0.88, 0.93, 0.97, 1],
+                        }
+                      : { duration: 0.2 }
+                  }
+                  className="inline-flex"
                 >
-                  {displayCartCount}
+                  <HiOutlineShoppingBag size={18} />
                 </motion.span>
-              )}
-            </button>
+                {totalItems > 0 && (
+                  <motion.span
+                    key={`badge-desktop-${totalItems}`}
+                    initial={{ scale: 0.85 }}
+                    animate={{ scale: [1, 1.24, 1] }}
+                    transition={{ duration: 0.25 }}
+                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white text-[10px] font-semibold flex items-center justify-center shadow-[0_3px_10px_rgba(16,185,129,0.45)] ring-2 ring-background"
+                  >
+                    {displayCartCount}
+                  </motion.span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {typeof document !== "undefined" ? createPortal(<AnimatePresence>
-        {isMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.25 }}
-            className="fixed inset-0 z-[200] h-[100dvh] w-screen overflow-hidden bg-background md:hidden"
-          >
-            <div className="h-[100dvh] overflow-y-auto overscroll-contain bg-background text-foreground">
-              <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/98 px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur-xl">
-                <button
-                  onClick={() => setIsMenuOpen(false)}
-                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/15 bg-[#f2eee8] text-[#171717] shadow-[0_6px_18px_rgba(23,23,23,.14)] transition hover:border-black/25 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
-                  aria-label="Close menu"
-                >
-                  <X className="h-5 w-5 stroke-[2.5]" />
-                </button>
-                <span className="font-serif text-[1.65rem] leading-none tracking-[0.2em]">HUME</span>
-                <button
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    navigateTo("/account");
-                  }}
-                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/15 bg-[#f2eee8] text-[#171717] shadow-[0_6px_18px_rgba(23,23,23,.14)] transition hover:border-black/25 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
-                  aria-label="Open account"
-                >
-                  <UserRound className="h-5 w-5 stroke-[2.25]" />
-                </button>
-              </div>
-
-              <div className="px-4 py-5 space-y-6">
-
-                <section>
-                  <div className="space-y-3">
-                    <button
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        navigateTo("/shop");
-                      }}
-                      className="w-full border-b border-border pb-2 text-left"
-                    >
-                      <span className="inline-flex w-full items-center justify-between font-serif text-[1.45rem] italic leading-none">
-                        <span>Shop All</span>
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        navigateTo("/hume-special");
-                      }}
-                      className="w-full border-b border-border pb-2 text-left"
-                    >
-                      <span className="inline-flex w-full items-center justify-between font-serif text-[1.45rem] italic leading-none">
-                        <span>HUME Specials</span>
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        navigateTo("/bestseller");
-                      }}
-                      className="w-full border-b border-border pb-2 text-left"
-                    >
-                      <span className="inline-flex w-full items-center justify-between font-serif text-[1.45rem] italic leading-none">
-                        <span>Best Sellers</span>
-                      </span>
-                    </button>
-                    <motion.button
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        navigateTo(DISCOVERY_SET_PATH);
-                      }}
-                      className="w-full border border-[#2a2116] bg-[#2a2116] px-3 py-2.5 text-left text-[#f7d79b] relative overflow-hidden group"
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
-                    >
-                      {/* Subtly moving golden sheen sweep across button in a loop */}
-                      <motion.div
-                        className="absolute inset-0 w-[50%] h-full bg-gradient-to-r from-transparent via-[#f7d79b]/12 to-transparent pointer-events-none skew-x-12"
-                        animate={{ x: ["-100%", "250%"] }}
-                        transition={{
-                          repeat: Infinity,
-                          duration: 2.5,
-                          ease: "easeInOut",
-                          repeatDelay: 2.0,
-                        }}
-                      />
-
-                      <div className="flex items-center justify-between relative z-10">
-                        <div className="font-serif text-[1.18rem] flex items-center gap-2">
-                          {/* Animated Sparkle Icon */}
-                          <motion.span
-                            animate={{ scale: [0.9, 1.25, 0.9], rotate: [0, 180, 360] }}
-                            transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
-                            className="inline-block text-[#f7d79b]/90 shrink-0"
-                          >
-                            <Sparkles className="h-4.5 w-4.5" />
-                          </motion.span>
-
-                          <span className="flex items-center gap-2">
-                            Discovery Set{" "}
-                            {/* Pulsing Pill Badge */}
-                            <motion.span
-                              animate={{
-                                scale: [1, 1.05, 1],
-                                borderColor: ["rgba(247, 215, 155, 0.18)", "rgba(247, 215, 155, 0.65)", "rgba(247, 215, 155, 0.18)"],
-                                boxShadow: [
-                                  "0 0 0px rgba(247, 215, 155, 0)",
-                                  "0 0 8px rgba(247, 215, 155, 0.3)",
-                                  "0 0 0px rgba(247, 215, 155, 0)"
-                                ]
-                              }}
-                              transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
-                              className="inline-flex items-center rounded-full border border-[#f7d79b]/18 bg-white/8 px-1.5 py-0.5 font-sans text-[0.5em] font-medium uppercase tracking-[0.08em] text-[#f7d79b]/90 not-italic align-middle"
-                            >
-                              15 testers
-                            </motion.span>
-                          </span>
-                        </div>
-
-                        {/* Animated Bouncing Arrow */}
-                        <motion.span
-                          animate={{ x: [0, 5, 0] }}
-                          transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
-                          className="text-[1.45rem] opacity-85 text-[#f7d79b]"
-                        >
-                          →
-                        </motion.span>
-                      </div>
-                    </motion.button>
-                    <button
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        navigateTo("/spaces");
-                      }}
-                      className="w-full border border-[#2a2116] bg-[#2a2116] px-3.5 py-3 text-left text-[#f7d79b]"
-                    >
-                      <div className="flex items-center justify-between">
-                        <p className="font-serif text-[1.25rem]">
-                          Spaces
-                        </p>
-                        <span className="text-[1.25rem]">→</span>
-                      </div>
-                    </button>
-                    <BuyThreeGetOneButton onNavigate={() => { setIsMenuOpen(false); navigateTo("/buy-3-get-1"); }} />
-                    <button
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        navigateTo("/scent-quiz");
-                      }}
-                      className="mt-3 flex w-full items-center justify-between rounded-full border border-[#e5ddd1] bg-[#fbf8f2] px-3 py-2.5 text-left text-[#171717] shadow-[0_8px_18px_rgba(42,33,22,0.06)] transition-luxury hover:border-[#2a2116]/25 hover:bg-white"
-                    >
-                      <div className="flex min-w-0 items-center gap-2.5">
-                        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#2a2116] text-[#f7d79b]">
-                          <Sparkles size={13} />
-                        </span>
-                        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.22em]">
-                          Scent Quiz
-                        </p>
-                        <span className="rounded-full border border-[#e1d7c8] bg-white/70 px-2 py-0.5 text-[10px] font-medium lowercase tracking-normal text-muted-foreground">
-                          60s
-                        </span>
-                      </div>
-                      <ArrowRight size={16} className="shrink-0 text-[#8b806f]" />
-                    </button>
-                  </div>
-                </section>
-
-                <section>
-                  <div className="grid grid-cols-3 gap-2">
-                    {genderMenuItems.map((item) => (
-                      <button
-                        key={item.label}
-                        onClick={() => handleMobileFilterClick("gender", item.label)}
-                        className={`group flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-full border border-[#e6e0d8] ${item.className} px-2 text-[#1f2933] transition-luxury hover:border-foreground/30 hover:bg-white max-[400px]:gap-1 max-[400px]:px-1.5 max-[350px]:gap-0.5 max-[350px]:px-1`}
-                      >
-                        {item.icon ? (
-                          <ImageWithFallback
-                            src={item.icon}
-                            fallbackSrc={item.icon}
-                            alt=""
-                            width={500}
-                            height={500}
-                            sizes="26px"
-                            className="pointer-events-none h-6 w-6 shrink-0 object-contain opacity-90 transition-transform duration-300 group-hover:scale-105"
-                            loading="lazy"
-                          />
-                        ) : null}
-                        <span className="truncate text-[12px] font-medium leading-none tracking-[0.01em]">
-                          {item.label}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-
-                <section>
-                  <button
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      navigateTo("/celebrities-favorites");
-                    }}
-                    className="mb-5 flex w-full  items-center justify-between text-left"
-                    aria-label="Open celebrities favorite"
+        {typeof document !== "undefined"
+          ? createPortal(
+              <AnimatePresence>
+                {isMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -12 }}
+                    transition={{ duration: 0.25 }}
+                    className="fixed inset-0 z-[200] h-[100dvh] w-screen overflow-hidden bg-background md:hidden"
                   >
-                    <p className="text-[11px] uppercase tracking-[0.38em] text-muted-foreground">
-                      Celebrities&apos; Favorite
-                    </p>
-                    <span className="text-muted-foreground">
-                      <ExternalLink size={16} />
-                    </span>
-                  </button>
-                  <div className="grid grid-cols-2 gap-4">
-                    {celebrityFavorites.slice(0, 2).map((celeb) => (
-                      <button
-                        key={celeb.label}
-                        onClick={() => {
-                          setIsMenuOpen(false);
-                          navigateTo(`/celebrities-favorites?celebrity=${encodeURIComponent(celeb.label)}`);
-                        }}
-                        className="text-left"
-                      >
-                        <ImageWithFallback
-                          src={withCloudinaryTransforms(celeb.image, { width: 320 })}
-                          fallbackSrc="/images/celebrities/srk.png"
-                          alt={celeb.label}
-                          width={320}
-                          height={427}
-                          sizes="50vw"
-                          className="aspect-[3/4] w-full object-cover border border-border/60"
-                          loading="lazy"
-                        />
-                        <p className="mt-2 text-[14px] text-gray-700 leading-none">{celeb.label}</p>
-                        <p className="mt-1 text-[5px] uppercase tracking-[0.14em] text-muted-foreground">
-                          {celeb.description}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>, document.body) : null}
+                    <div className="h-[100dvh] overflow-y-auto overscroll-contain bg-background text-foreground">
+                      <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/98 px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur-xl">
+                        <button
+                          onClick={() => setIsMenuOpen(false)}
+                          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/15 bg-[#f2eee8] text-[#171717] shadow-[0_6px_18px_rgba(23,23,23,.14)] transition hover:border-black/25 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
+                          aria-label="Close menu"
+                        >
+                          <X className="h-5 w-5 stroke-[2.5]" />
+                        </button>
+                        <span className="font-serif text-[1.65rem] leading-none tracking-[0.2em]">
+                          HUME
+                        </span>
+                        <button
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            navigateTo("/account");
+                          }}
+                          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/15 bg-[#f2eee8] text-[#171717] shadow-[0_6px_18px_rgba(23,23,23,.14)] transition hover:border-black/25 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
+                          aria-label="Open account"
+                        >
+                          <UserRound className="h-5 w-5 stroke-[2.25]" />
+                        </button>
+                      </div>
 
-      <SearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
-    </header>
-    {showBreadcrumbs ? (
-      <nav aria-label="Breadcrumb" className="-mb-20 mt-[84px] border-y border-black/[0.07] bg-background md:mt-[84px]">
-        <div className="container-luxury flex h-[52px] min-w-0 items-center gap-2 sm:gap-3">
-          <button
-            type="button"
-            onClick={handleBreadcrumbBack}
-            aria-label="Go back"
-            className="-mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-start text-black transition-opacity hover:opacity-60 focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/25"
-          >
-            <span className="text-[1.55rem] font-light leading-none" aria-hidden="true">
-              ←
-            </span>
-          </button>
-          <span aria-hidden="true" className="h-5 w-px shrink-0 bg-black/10" />
-          <ol className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden text-[10px] font-medium uppercase tracking-[0.13em] sm:gap-2 sm:text-[11px]">
-            {breadcrumbs.map((crumb, index) => (
-              <li key={`${crumb.label}-${index}`} className={`flex min-w-0 items-center gap-1.5 sm:gap-2 ${index === breadcrumbs.length - 1 ? "flex-1" : "shrink-0"}`}>
-                {index > 0 ? <ChevronRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-black/25" /> : null}
-                {crumb.href ? <Link href={crumb.href} className="shrink-0 text-muted-foreground transition hover:text-foreground">{crumb.label}</Link> : <span aria-current="page" className="min-w-0 truncate font-semibold text-foreground">{crumb.label}</span>}
-              </li>
-            ))}
-          </ol>
-        </div>
-      </nav>
-    ) : null}
+                      <div className="px-4 py-5 space-y-6">
+                        {mobileCategoryOptions.length > 0 && (
+                          <section>
+                            <h3 className="mb-3 text-[10px] uppercase tracking-[.2em] text-muted-foreground">
+                              Shop by scent family
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                              {mobileCategoryOptions.slice(0, 8).map((c) => (
+                                <button
+                                  key={c.id}
+                                  onClick={() => {
+                                    setIsMenuOpen(false);
+                                    navigateTo(
+                                      "/shop?filter=nature&value=" +
+                                        encodeURIComponent(c.id),
+                                    );
+                                  }}
+                                  className="rounded-full border border-border px-3 py-2 text-xs"
+                                >
+                                  {c.label}
+                                  <span className="ml-1.5 text-muted-foreground">
+                                    {c.count}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </section>
+                        )}
+
+                        <section>
+                          <div className="space-y-3">
+                            <button
+                              onClick={() => {
+                                setIsMenuOpen(false);
+                                navigateTo("/shop");
+                              }}
+                              className="w-full border-b border-border pb-2 text-left"
+                            >
+                              <span className="inline-flex w-full items-center justify-between font-serif text-[1.45rem] italic leading-none">
+                                <span>Shop All</span>
+                              </span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setIsMenuOpen(false);
+                                navigateTo("/hume-special");
+                              }}
+                              className="w-full border-b border-border pb-2 text-left"
+                            >
+                              <span className="inline-flex w-full items-center justify-between font-serif text-[1.45rem] italic leading-none">
+                                <span>HUME Specials</span>
+                              </span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setIsMenuOpen(false);
+                                navigateTo("/bestseller");
+                              }}
+                              className="w-full border-b border-border pb-2 text-left"
+                            >
+                              <span className="inline-flex w-full items-center justify-between font-serif text-[1.45rem] italic leading-none">
+                                <span>Best Sellers</span>
+                              </span>
+                            </button>
+                            <motion.button
+                              onClick={() => {
+                                setIsMenuOpen(false);
+                                navigateTo(DISCOVERY_SET_PATH);
+                              }}
+                              className="w-full border border-[#2a2116] bg-[#2a2116] px-3 py-2.5 text-left text-[#f7d79b] relative overflow-hidden group"
+                              whileHover={{ scale: 1.01 }}
+                              whileTap={{ scale: 0.99 }}
+                            >
+                              {/* Subtly moving golden sheen sweep across button in a loop */}
+                              <motion.div
+                                className="absolute inset-0 w-[50%] h-full bg-gradient-to-r from-transparent via-[#f7d79b]/12 to-transparent pointer-events-none skew-x-12"
+                                animate={{ x: ["-100%", "250%"] }}
+                                transition={{
+                                  repeat: Infinity,
+                                  duration: 2.5,
+                                  ease: "easeInOut",
+                                  repeatDelay: 2.0,
+                                }}
+                              />
+
+                              <div className="flex items-center justify-between relative z-10">
+                                <div className="font-serif text-[1.18rem] flex items-center gap-2">
+                                  {/* Animated Sparkle Icon */}
+                                  <motion.span
+                                    animate={{
+                                      scale: [0.9, 1.25, 0.9],
+                                      rotate: [0, 180, 360],
+                                    }}
+                                    transition={{
+                                      repeat: Infinity,
+                                      duration: 4,
+                                      ease: "linear",
+                                    }}
+                                    className="inline-block text-[#f7d79b]/90 shrink-0"
+                                  >
+                                    <Sparkles className="h-4.5 w-4.5" />
+                                  </motion.span>
+
+                                  <span className="flex items-center gap-2">
+                                    Discovery Set {/* Pulsing Pill Badge */}
+                                    <motion.span
+                                      animate={{
+                                        scale: [1, 1.05, 1],
+                                        borderColor: [
+                                          "rgba(247, 215, 155, 0.18)",
+                                          "rgba(247, 215, 155, 0.65)",
+                                          "rgba(247, 215, 155, 0.18)",
+                                        ],
+                                        boxShadow: [
+                                          "0 0 0px rgba(247, 215, 155, 0)",
+                                          "0 0 8px rgba(247, 215, 155, 0.3)",
+                                          "0 0 0px rgba(247, 215, 155, 0)",
+                                        ],
+                                      }}
+                                      transition={{
+                                        repeat: Infinity,
+                                        duration: 2.2,
+                                        ease: "easeInOut",
+                                      }}
+                                      className="inline-flex items-center rounded-full border border-[#f7d79b]/18 bg-white/8 px-1.5 py-0.5 font-sans text-[0.5em] font-medium uppercase tracking-[0.08em] text-[#f7d79b]/90 not-italic align-middle"
+                                    >
+                                      15 testers
+                                    </motion.span>
+                                  </span>
+                                </div>
+
+                                {/* Animated Bouncing Arrow */}
+                                <motion.span
+                                  animate={{ x: [0, 5, 0] }}
+                                  transition={{
+                                    repeat: Infinity,
+                                    duration: 1.4,
+                                    ease: "easeInOut",
+                                  }}
+                                  className="text-[1.45rem] opacity-85 text-[#f7d79b]"
+                                >
+                                  →
+                                </motion.span>
+                              </div>
+                            </motion.button>
+                            <button
+                              onClick={() => {
+                                setIsMenuOpen(false);
+                                navigateTo("/spaces");
+                              }}
+                              className="w-full border border-[#2a2116] bg-[#2a2116] px-3.5 py-3 text-left text-[#f7d79b]"
+                            >
+                              <div className="flex items-center justify-between">
+                                <p className="font-serif text-[1.25rem]">
+                                  Spaces
+                                </p>
+                                <span className="text-[1.25rem]">→</span>
+                              </div>
+                            </button>
+                            <BuyThreeGetOneButton
+                              onNavigate={() => {
+                                setIsMenuOpen(false);
+                                navigateTo("/buy-3-get-1");
+                              }}
+                            />
+                            <button
+                              onClick={() => {
+                                setIsMenuOpen(false);
+                                navigateTo("/scent-quiz");
+                              }}
+                              className="mt-3 flex w-full items-center justify-between rounded-full border border-[#e5ddd1] bg-[#fbf8f2] px-3 py-2.5 text-left text-[#171717] shadow-[0_8px_18px_rgba(42,33,22,0.06)] transition-luxury hover:border-[#2a2116]/25 hover:bg-white"
+                            >
+                              <div className="flex min-w-0 items-center gap-2.5">
+                                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#2a2116] text-[#f7d79b]">
+                                  <Sparkles size={13} />
+                                </span>
+                                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.22em]">
+                                  Scent Quiz
+                                </p>
+                                <span className="rounded-full border border-[#e1d7c8] bg-white/70 px-2 py-0.5 text-[10px] font-medium lowercase tracking-normal text-muted-foreground">
+                                  60s
+                                </span>
+                              </div>
+                              <ArrowRight
+                                size={16}
+                                className="shrink-0 text-[#8b806f]"
+                              />
+                            </button>
+                          </div>
+                        </section>
+
+                        <section>
+                          <div className="grid grid-cols-3 gap-2">
+                            {genderMenuItems.map((item) => (
+                              <button
+                                key={item.label}
+                                onClick={() =>
+                                  handleMobileFilterClick("gender", item.label)
+                                }
+                                className={`group flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-full border border-[#e6e0d8] ${item.className} px-2 text-[#1f2933] transition-luxury hover:border-foreground/30 hover:bg-white max-[400px]:gap-1 max-[400px]:px-1.5 max-[350px]:gap-0.5 max-[350px]:px-1`}
+                              >
+                                {item.icon ? (
+                                  <ImageWithFallback
+                                    src={item.icon}
+                                    fallbackSrc={item.icon}
+                                    alt=""
+                                    width={500}
+                                    height={500}
+                                    sizes="26px"
+                                    className="pointer-events-none h-6 w-6 shrink-0 object-contain opacity-90 transition-transform duration-300 group-hover:scale-105"
+                                    loading="lazy"
+                                  />
+                                ) : null}
+                                <span className="truncate text-[12px] font-medium leading-none tracking-[0.01em]">
+                                  {item.label}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </section>
+
+                        <section>
+                          <button
+                            onClick={() => {
+                              setIsMenuOpen(false);
+                              navigateTo("/celebrities-favorites");
+                            }}
+                            className="mb-5 flex w-full  items-center justify-between text-left"
+                            aria-label="Open celebrities favorite"
+                          >
+                            <p className="text-[11px] uppercase tracking-[0.38em] text-muted-foreground">
+                              Celebrities&apos; Favorite
+                            </p>
+                            <span className="text-muted-foreground">
+                              <ExternalLink size={16} />
+                            </span>
+                          </button>
+                          <div className="grid grid-cols-2 gap-4">
+                            {celebrityFavorites.slice(0, 2).map((celeb) => (
+                              <button
+                                key={celeb.label}
+                                onClick={() => {
+                                  setIsMenuOpen(false);
+                                  navigateTo(
+                                    `/celebrities-favorites?celebrity=${encodeURIComponent(celeb.label)}`,
+                                  );
+                                }}
+                                className="text-left"
+                              >
+                                <ImageWithFallback
+                                  src={withCloudinaryTransforms(celeb.image, {
+                                    width: 320,
+                                  })}
+                                  fallbackSrc="/images/celebrities/srk.png"
+                                  alt={celeb.label}
+                                  width={320}
+                                  height={427}
+                                  sizes="50vw"
+                                  className="aspect-[3/4] w-full object-cover border border-border/60"
+                                  loading="lazy"
+                                />
+                                <p className="mt-2 text-[14px] text-gray-700 leading-none">
+                                  {celeb.label}
+                                </p>
+                                <p className="mt-1 text-[5px] uppercase tracking-[0.14em] text-muted-foreground">
+                                  {celeb.description}
+                                </p>
+                              </button>
+                            ))}
+                          </div>
+                        </section>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>,
+              document.body,
+            )
+          : null}
+
+        <SearchOverlay
+          isOpen={isSearchOpen}
+          onClose={() => setIsSearchOpen(false)}
+        />
+      </header>
+      {showBreadcrumbs ? (
+        <nav
+          aria-label="Breadcrumb"
+          className="-mb-20 mt-[84px] border-y border-black/[0.07] bg-background md:mt-[84px]"
+        >
+          <div className="container-luxury flex h-[52px] min-w-0 items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={handleBreadcrumbBack}
+              aria-label="Go back"
+              className="-mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-start text-black transition-opacity hover:opacity-60 focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/25"
+            >
+              <span
+                className="text-[1.55rem] font-light leading-none"
+                aria-hidden="true"
+              >
+                ←
+              </span>
+            </button>
+            <span
+              aria-hidden="true"
+              className="h-5 w-px shrink-0 bg-black/10"
+            />
+            <ol className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden text-[10px] font-medium uppercase tracking-[0.13em] sm:gap-2 sm:text-[11px]">
+              {breadcrumbs.map((crumb, index) => (
+                <li
+                  key={`${crumb.label}-${index}`}
+                  className={`flex min-w-0 items-center gap-1.5 sm:gap-2 ${index === breadcrumbs.length - 1 ? "flex-1" : "shrink-0"}`}
+                >
+                  {index > 0 ? (
+                    <ChevronRight
+                      aria-hidden="true"
+                      className="h-3.5 w-3.5 shrink-0 text-black/25"
+                    />
+                  ) : null}
+                  {crumb.href ? (
+                    <Link
+                      href={crumb.href}
+                      className="shrink-0 text-muted-foreground transition hover:text-foreground"
+                    >
+                      {crumb.label}
+                    </Link>
+                  ) : (
+                    <span
+                      aria-current="page"
+                      className="min-w-0 truncate font-semibold text-foreground"
+                    >
+                      {crumb.label}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
+        </nav>
+      ) : null}
     </>
   );
 };

@@ -1,321 +1,164 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { qrCampaigns, flyerCampaignEvents } from "@/db/schema";
-import { sql, desc, eq } from "drizzle-orm";
-
-async function ensureQRCampaignsTable() {
+import { sql } from "drizzle-orm";
+import { requireAdminToken } from "@/lib/admin-auth";
+import { normalizeQrDestination, QR_ORIGIN, qrScanCsv } from "@/lib/qr-system";
+export const dynamic = "force-dynamic";
+const response = (data: unknown, status = 200) =>
+  NextResponse.json(data, {
+    status,
+    headers: { "Cache-Control": "private, no-store" },
+  });
+export async function GET(req: NextRequest) {
+  const denied = requireAdminToken(req);
+  if (denied) return denied;
   try {
-    await db.execute(sql`
-      create table if not exists qr_campaigns (
-        id varchar(255) primary key,
-        name varchar(255) not null,
-        city varchar(100) not null,
-        target_page varchar(100) not null,
-        target_url varchar(2048) not null,
-        body_type varchar(50) default 'stars' not null,
-        eye_style varchar(50) default 'rounded' not null,
-        logo_type varchar(50) default 'hf-cursive' not null,
-        qr_code_svg text,
-        scan_count integer default 0 not null,
-        last_scanned_at timestamp,
-        created_at timestamp default now() not null
+    const id = req.nextUrl.searchParams.get("id");
+    const days = Math.trunc(
+      Math.min(
+        365,
+        Math.max(1, Number(req.nextUrl.searchParams.get("days")) || 30),
+      ),
+    );
+    const page = Math.trunc(
+      Math.max(
+        1,
+        Math.min(100000, Number(req.nextUrl.searchParams.get("page")) || 1),
+      ),
+    );
+    const campaigns = await db.execute(sql`
+   select c.id, c.name, c.target_url, c.target_page, c.archived_at, c.created_at, c.scan_count,
+   (select count(*)::int from qr_scan_events e where e.campaign_id=c.id) as tracked_scans,
+   (select count(distinct visitor_id)::int from qr_scan_events e where e.campaign_id=c.id) as unique_visitors,
+   (select max(scanned_at) from qr_scan_events e where e.campaign_id=c.id) as tracked_last_scan
+   from qr_campaigns c order by c.created_at desc`);
+    if (!id) return response({ success: true, campaigns });
+    if (!campaigns.some((c) => c.id === id))
+      return response({ error: "QR code not found" }, 404);
+    if (req.nextUrl.searchParams.get("format") === "csv") {
+      const rows = await db.execute(
+        sql`select scanned_at, device, browser, referrer_host from qr_scan_events where campaign_id=${id} and scanned_at >= now() - ${days} * interval '1 day' order by scanned_at desc, id desc`,
       );
-
-      alter table qr_campaigns add column if not exists qr_code_svg text;
-
-      create table if not exists flyer_campaign_events (
-        id varchar(255) primary key,
-        qr_id varchar(255),
-        city varchar(100) not null,
-        target_page varchar(100) not null,
-        event_type varchar(50) not null,
-        coupon_code varchar(50),
-        session_id varchar(255),
-        order_id varchar(255),
-        revenue numeric(10, 2),
-        created_at timestamp default now() not null
-      );
-
-      alter table flyer_campaign_events add column if not exists qr_id varchar(255);
-
-      -- Auto-repair legacy campaign target_page mismatches based on campaign title
-      update qr_campaigns 
-      set target_page = 'discovery-set' 
-      where (lower(name) like '%discovery%' or lower(name) like '%discovey%') 
-        and target_page != 'discovery-set';
-    `);
-  } catch (err) {
-    console.error("Error ensuring qr_campaigns table:", err);
-  }
-}
-
-function isMatchingEvent(
-  e: { qrId?: string | null; city: string; targetPage: string },
-  c: { id: string; city: string; targetPage: string; name: string }
-) {
-  if (e.qrId) {
-    return e.qrId === c.id;
-  }
-  if (e.city.toLowerCase() !== c.city.toLowerCase()) return false;
-  if (e.targetPage.toLowerCase() === c.targetPage.toLowerCase()) return true;
-
-  const cName = c.name.toLowerCase();
-  const eTarget = e.targetPage.toLowerCase();
-
-  if (
-    (eTarget === "discovery-set" || eTarget === "discovery") &&
-    (c.targetPage === "discovery-set" || cName.includes("discovery") || cName.includes("discovey"))
-  ) {
-    return true;
-  }
-  if (
-    (eTarget === "perfumes" || eTarget === "catalog") &&
-    (c.targetPage === "perfumes" || cName.includes("50ml") || cName.includes("perfume"))
-  ) {
-    return true;
-  }
-  return false;
-}
-
-export async function GET(req: Request) {
-  try {
-    await ensureQRCampaignsTable();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-
-    // Single Campaign Drill-down View
-    if (id) {
-      const [campaign] = await db
-        .select()
-        .from(qrCampaigns)
-        .where(eq(qrCampaigns.id, id))
-        .limit(1);
-
-      if (!campaign) {
-        return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
-      }
-
-      // Fetch all events for city and filter using intelligent matcher
-      const allCityEvents = await db
-        .select()
-        .from(flyerCampaignEvents)
-        .where(sql`city = ${campaign.city} or qr_id = ${id}`)
-        .orderBy(desc(flyerCampaignEvents.createdAt))
-        .limit(200);
-
-      const events = allCityEvents.filter((e) => isMatchingEvent(e, campaign));
-
-      // Compute exact campaign-specific funnel metrics
-      const totalScans = events.filter((e) => e.eventType === "qr_scan").length;
-      const couponCopies = events.filter((e) => e.eventType === "coupon_copy").length;
-      const cartAdds = events.filter((e) => e.eventType === "add_to_cart").length;
-      const checkouts = events.filter((e) => e.eventType === "checkout_start").length;
-      const orderEvents = events.filter((e) => e.eventType === "order_complete");
-      const totalOrders = orderEvents.length;
-      const totalRevenue = orderEvents.reduce((sum, e) => sum + (parseFloat(e.revenue || "0") || 0), 0);
-      const conversionRate = totalScans > 0 ? (totalOrders / totalScans) * 100 : 0;
-      const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-
-      const lastScanEvent = events.find((e) => e.eventType === "qr_scan");
-
-      const enrichedCampaign = {
-        ...campaign,
-        scanCount: Math.max(campaign.scanCount || 0, totalScans),
-        lastScannedAt: campaign.lastScannedAt || lastScanEvent?.createdAt || null,
-        metrics: {
-          totalScans,
-          couponCopies,
-          cartAdds,
-          checkouts,
-          totalOrders,
-          totalRevenue,
-          conversionRate: parseFloat(conversionRate.toFixed(1)),
-          averageOrderValue: parseFloat(averageOrderValue.toFixed(2)),
+      return new NextResponse(
+        qrScanCsv(
+          rows.map((row) => ({
+            scanned_at: String(row.scanned_at),
+            device: String(row.device),
+            browser: String(row.browser),
+            referrer_host: row.referrer_host ? String(row.referrer_host) : null,
+          })),
+        ),
+        {
+          headers: {
+            "Cache-Control": "private, no-store",
+            "Content-Type": "text/csv; charset=utf-8",
+            "Content-Disposition": `attachment; filename="${id.replace(/[^a-zA-Z0-9-]/g, "")}-${days}days.csv"`,
+          },
         },
-        funnelStages: [
-          { stage: "1. Flyer QR Scanned", count: totalScans, percentage: 100, color: "bg-blue-500" },
-          { stage: "2. Coupon Code Copied", count: couponCopies, percentage: totalScans > 0 ? (couponCopies / totalScans) * 100 : 0, color: "bg-amber-500" },
-          { stage: "3. Added to Cart", count: cartAdds, percentage: totalScans > 0 ? (cartAdds / totalScans) * 100 : 0, color: "bg-purple-500" },
-          { stage: "4. Checkout Initiated", count: checkouts, percentage: totalScans > 0 ? (checkouts / totalScans) * 100 : 0, color: "bg-indigo-500" },
-          { stage: "5. Paid Order Completed", count: totalOrders, percentage: totalScans > 0 ? (totalOrders / totalScans) * 100 : 0, color: "bg-emerald-500" },
-        ],
-      };
-
-      return NextResponse.json({ success: true, campaign: enrichedCampaign, events });
+      );
     }
-
-    // List all campaigns enriched with distinct scan event counts
-    const campaigns = await db
-      .select()
-      .from(qrCampaigns)
-      .orderBy(desc(qrCampaigns.createdAt));
-
-    // Fetch total scan events
-    const scanEvents = await db
-      .select()
-      .from(flyerCampaignEvents)
-      .where(eq(flyerCampaignEvents.eventType, "qr_scan"));
-
-    const enrichedCampaigns = campaigns.map((c) => {
-      const matchingScans = scanEvents.filter((e) => isMatchingEvent(e, c));
-      const totalScans = matchingScans.length;
-      const lastScan = matchingScans.sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )[0];
-
-      return {
-        ...c,
-        scanCount: Math.max(c.scanCount || 0, totalScans),
-        lastScannedAt: c.lastScannedAt || lastScan?.createdAt || null,
-      };
+    const stats = await db.execute(
+      sql`select count(*)::int as scans, count(distinct visitor_id)::int as visitors, max(scanned_at) as last_scan from qr_scan_events where campaign_id=${id} and scanned_at >= now() - ${days} * interval '1 day'`,
+    );
+    const daily = await db.execute(
+      sql`select to_char(scanned_at at time zone 'Asia/Kolkata', 'YYYY-MM-DD') as day, count(*)::int as scans from qr_scan_events where campaign_id=${id} and scanned_at >= now() - ${days} * interval '1 day' group by 1 order by 1`,
+    );
+    const devices = await db.execute(
+      sql`select device, count(*)::int as scans from qr_scan_events where campaign_id=${id} and scanned_at >= now() - ${days} * interval '1 day' group by device order by scans desc`,
+    );
+    const events = await db.execute(
+      sql`select id, scanned_at, device, browser, referrer_host from qr_scan_events where campaign_id=${id} and scanned_at >= now() - ${days} * interval '1 day' order by scanned_at desc, id desc limit 50 offset ${(page - 1) * 50}`,
+    );
+    return response({
+      success: true,
+      campaigns,
+      stats: stats[0],
+      daily,
+      devices,
+      events,
+      page,
     });
-
-    return NextResponse.json({ success: true, campaigns: enrichedCampaigns });
   } catch (error) {
-    console.error("Error fetching QR campaigns:", error);
-    return NextResponse.json({ error: "Failed to fetch QR campaigns" }, { status: 500 });
+    console.error("QR read failed", error);
+    return response(
+      {
+        error:
+          "Could not load QR data. Ensure the QR database migration has been applied.",
+      },
+      500,
+    );
   }
 }
-
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const denied = requireAdminToken(req);
+  if (denied) return denied;
   try {
-    await ensureQRCampaignsTable();
     const body = await req.json();
-
-    const city = String(body.city || "ahmedabad").trim().toLowerCase();
-    const targetPage = String(body.targetPage || "perfumes").trim();
-    const name = String(body.name || `${city.toUpperCase()} ${targetPage === "perfumes" ? "Catalog" : "Discovery Set"} Flyer`).trim();
-    const bodyType = String(body.bodyType || "stars").trim();
-    const eyeStyle = String(body.eyeStyle || "rounded").trim();
-    const logoType = String(body.logoType || "hf-cursive").trim();
-    const qrCodeSvg = body.qrCodeSvg ? String(body.qrCodeSvg).trim() : null;
-
-    // Convert campaign name to a clean, human-readable batch slug
-    const cleanSlug = name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-
-    // Generate unique ID using clean slug + timestamp suffix to avoid primary key conflict
-    const timestampSuffix = Date.now().toString(36).slice(-4);
-    const campaignId = body.batchTag?.trim()
-      ? `qr-${city}-${targetPage}-${body.batchTag.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-")}`
-      : `qr-${cleanSlug || `${city}-${targetPage}`}-${timestampSuffix}`;
-
-    const baseDomain = "https://www.humefragrance.com";
-    const targetUrl = body.customUrl?.trim()
-      ? `${body.customUrl.trim()}${body.customUrl.includes("?") ? "&" : "?"}qr_id=${campaignId}`
-      : `${baseDomain}/flyers/${city}/${targetPage}?qr_id=${campaignId}`;
-
-    // Execute SQL UPSERT to handle primary key conflicts smoothly
-    await db.execute(sql`
-      insert into qr_campaigns (id, name, city, target_page, target_url, body_type, eye_style, logo_type, qr_code_svg, scan_count, created_at)
-      values (${campaignId}, ${name}, ${city}, ${targetPage}, ${targetUrl}, ${bodyType}, ${eyeStyle}, ${logoType}, ${qrCodeSvg}, 0, now())
-      on conflict (id) do update set
-        name = excluded.name,
-        target_url = excluded.target_url,
-        body_type = excluded.body_type,
-        eye_style = excluded.eye_style,
-        logo_type = excluded.logo_type,
-        qr_code_svg = excluded.qr_code_svg;
-    `);
-
-    const newCampaign = {
-      id: campaignId,
-      name,
-      city,
-      targetPage,
-      targetUrl,
-      bodyType,
-      eyeStyle,
-      logoType,
-      qrCodeSvg,
-      scanCount: 0,
-      createdAt: new Date().toISOString(),
-    };
-
-    return NextResponse.json({ success: true, campaign: newCampaign });
-  } catch (error) {
-    console.error("Error creating QR campaign:", error);
-    return NextResponse.json({ error: String(error) || "Failed to create QR campaign" }, { status: 500 });
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    if (!name || name.length > 255)
+      return response({ error: "Enter a name up to 255 characters." }, 400);
+    let destination: string;
+    try {
+      destination = normalizeQrDestination(String(body.destination || ""));
+    } catch (e) {
+      return response({ error: (e as Error).message }, 400);
+    }
+    const id = `qr-${crypto.randomUUID()}`;
+    await db.execute(
+      sql`insert into qr_campaigns(id,name,city,target_page,target_url,body_type,eye_style,logo_type) values (${id},${name},'general','custom',${destination},'squares','square','none')`,
+    );
+    return response(
+      { success: true, id, trackingUrl: `${QR_ORIGIN}/q/${id}` },
+      201,
+    );
+  } catch {
+    return response({ error: "Could not create QR code." }, 500);
   }
 }
-
-export async function PATCH(req: Request) {
+export async function PATCH(req: NextRequest) {
+  const denied = requireAdminToken(req);
+  if (denied) return denied;
   try {
-    await ensureQRCampaignsTable();
     const body = await req.json();
-
-    const id = String(body.id || "").trim();
-    const name = body.name ? String(body.name).trim() : undefined;
-    const targetUrl = body.targetUrl ? String(body.targetUrl).trim() : undefined;
-
-    if (!id || (!name && !targetUrl)) {
-      return NextResponse.json({ error: "ID and at least name or targetUrl are required for updating campaign" }, { status: 400 });
+    if (typeof body.id !== "string")
+      return response({ error: "QR ID required." }, 400);
+    const rows = await db.execute(
+      sql`select * from qr_campaigns where id=${body.id}`,
+    );
+    if (!rows.length) return response({ error: "QR code not found." }, 404);
+    const name =
+      typeof body.name === "string" ? body.name.trim() : String(rows[0].name);
+    if (!name || name.length > 255)
+      return response({ error: "Enter a name up to 255 characters." }, 400);
+    let destination = String(rows[0].target_url);
+    if (body.destination !== undefined) {
+      try {
+        destination = normalizeQrDestination(String(body.destination));
+      } catch (e) {
+        return response({ error: (e as Error).message }, 400);
+      }
     }
-
-    const updates: any = {};
-    if (name) updates.name = name;
-    if (targetUrl) updates.targetUrl = targetUrl;
-
-    await db
-      .update(qrCampaigns)
-      .set(updates)
-      .where(eq(qrCampaigns.id, id));
-
-    return NextResponse.json({ success: true, id, ...updates });
-  } catch (error) {
-    console.error("Error updating campaign:", error);
-    return NextResponse.json({ error: "Failed to update campaign" }, { status: 500 });
+    const archivedAt =
+      typeof body.archived === "boolean"
+        ? body.archived
+          ? new Date().toISOString()
+          : null
+        : rows[0].archived_at
+          ? new Date(String(rows[0].archived_at)).toISOString()
+          : null;
+    await db.execute(
+      sql`update qr_campaigns set name=${name}, target_url=${destination}, archived_at=${archivedAt} where id=${body.id}`,
+    );
+    return response({ success: true });
+  } catch {
+    return response({ error: "Could not update QR code." }, 500);
   }
 }
-
-export async function DELETE(req: Request) {
-  try {
-    await ensureQRCampaignsTable();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-    const clearAll = searchParams.get("clearAll") === "true";
-
-    // Wipe all test campaigns & events if requested
-    if (clearAll) {
-      await db.execute(sql`truncate table qr_campaigns cascade;`);
-      await db.execute(sql`truncate table flyer_campaign_events cascade;`);
-      return NextResponse.json({ success: true, message: "Cleared all test campaigns and funnel scan events." });
-    }
-
-    if (!id) {
-      return NextResponse.json({ error: "ID is required" }, { status: 400 });
-    }
-
-    // Fetch target campaign to get city & target_page for complete cleanup
-    const [targetCampaign] = await db
-      .select()
-      .from(qrCampaigns)
-      .where(eq(qrCampaigns.id, id))
-      .limit(1);
-
-    // Delete associated scan and funnel events from database
-    if (targetCampaign) {
-      await db.execute(sql`
-        delete from flyer_campaign_events 
-        where qr_id = ${id} 
-           or (city = ${targetCampaign.city} and target_page = ${targetCampaign.targetPage})
-           or session_id like ${`%${id}%`}
-           or coupon_code like ${`%${id}%`};
-      `);
-    } else {
-      await db.execute(sql`
-        delete from flyer_campaign_events where qr_id = ${id};
-      `);
-    }
-
-    // Delete the campaign record
-    await db.delete(qrCampaigns).where(eq(qrCampaigns.id, id));
-
-    return NextResponse.json({ success: true, deletedId: id });
-  } catch (error) {
-    console.error("Error deleting QR campaign:", error);
-    return NextResponse.json({ error: "Failed to delete QR campaign" }, { status: 500 });
-  }
+export async function DELETE(req: NextRequest) {
+  const denied = requireAdminToken(req);
+  if (denied) return denied;
+  return response(
+    { error: "Archive QR codes instead. Historical data is preserved." },
+    405,
+  );
 }

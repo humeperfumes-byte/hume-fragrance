@@ -1,3 +1,4 @@
+import GrowthCenter from "@/components/admin/GrowthCenter";
 import { db } from "@/db";
 import { checkoutDrafts, orders, products, type CheckoutDraft, type Order } from "@/db/schema";
 import { and, asc, desc, gte, lte } from "drizzle-orm";
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
 type CustomerSource = Order | CheckoutDraft;
 
 type AdminPageProps = {
-  searchParams?: Promise<{ hours?: string; market?: string; from?: string; to?: string }>;
+  searchParams?: Promise<{ view?:string; hours?: string; market?: string; from?: string; to?: string }>;
 };
 
 function getIdentityKeys(row: CustomerSource): string[] {
@@ -107,6 +108,7 @@ function createCustomerFromDraft(key: string, draft: CheckoutDraft): CustomerRec
 }
 
 export default async function CustomersPage({ searchParams }: AdminPageProps) {
+  if((await searchParams)?.view!=="orders")return <GrowthCenter initialTab="customers"/>;
   const productOptions = await db.select().from(products).orderBy(asc(products.name));
   const params = await searchParams;
   const timeWindow = parseAdminTimeWindow(params?.hours, params?.from, params?.to);

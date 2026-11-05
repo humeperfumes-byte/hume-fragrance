@@ -1,10 +1,26 @@
+import {
+  productCategoryTags,
+  matchesProductCategory,
+  type CategoryDefinition,
+} from "@/lib/product-categories";
 import { db } from "@/db";
-import { products, reviews, productCategories } from "@/db/schema";
+import {
+  products,
+  reviews,
+  productCategories,
+  catalogCategories,
+} from "@/db/schema";
 import { inArray, sql } from "drizzle-orm";
-import { perfumes as catalogueFallback, type PerfumeData } from "@/data/perfumes";
+import {
+  perfumes as catalogueFallback,
+  type PerfumeData,
+} from "@/data/perfumes";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getProductSeoSlug } from "@/lib/product-route";
-import { PRODUCT_ID_ALIASES, PRODUCT_ROUTE_ALIASES } from "@/lib/product-route-aliases";
+import {
+  PRODUCT_ID_ALIASES,
+  PRODUCT_ROUTE_ALIASES,
+} from "@/lib/product-route-aliases";
 import {
   DISCOVERY_SET_DESCRIPTION,
   DISCOVERY_SET_IMAGES,
@@ -74,14 +90,21 @@ function readExecuteRows<T>(result: unknown): T[] {
   return [];
 }
 
-async function fetchReviewsByProductIds(productIds: string[]): Promise<ReviewRow[]> {
+async function fetchReviewsByProductIds(
+  productIds: string[],
+): Promise<ReviewRow[]> {
   if (productIds.length === 0) return [];
   try {
-    return await db.select().from(reviews).where(inArray(reviews.productId, productIds));
+    return await db
+      .select()
+      .from(reviews)
+      .where(inArray(reviews.productId, productIds));
   } catch {
     if (!hasLoggedLegacyReviewsFallback) {
       hasLoggedLegacyReviewsFallback = true;
-      console.warn("Using legacy reviews query until new review profile columns are added in DB.");
+      console.warn(
+        "Using legacy reviews query until new review profile columns are added in DB.",
+      );
     }
     const result = await db.execute(sql`
       select
@@ -101,7 +124,7 @@ async function fetchReviewsByProductIds(productIds: string[]): Promise<ReviewRow
       from reviews
       where product_id in (${sql.join(
         productIds.map((productId) => sql`${productId}`),
-        sql`, `
+        sql`, `,
       )})
     `);
     return readExecuteRows<ReviewRow>(result);
@@ -109,12 +132,15 @@ async function fetchReviewsByProductIds(productIds: string[]): Promise<ReviewRow
 }
 
 function getStringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
 }
 
 function getCustomerFacingSize(product: ProductRow): string {
   if (isDiscoverySetProductId(product.id)) return DISCOVERY_SET_SIZE;
-  if (["rose-water", "car-fragrance"].includes(product.categoryId)) return product.size;
+  if (["rose-water", "car-fragrance"].includes(product.categoryId))
+    return product.size;
   return "50ml";
 }
 
@@ -122,13 +148,21 @@ function getCustomerFacingSize(product: ProductRow): string {
 function transformProduct(
   product: ProductRow,
   productReviews: ReviewRow[],
-  mappedCategories: CategoryMapping[] = []
+  mappedCategories: CategoryMapping[] = [],
+  definitions: CategoryDefinition[] = [],
 ): PerfumeData {
   const defaultCelebImage = "https://placehold.co/600x600?text=Celeb";
   const badges = (product.badges ?? {}) as ProductBadges;
   const isDiscoverySet = isDiscoverySetProductId(product.id);
   const imageUrls = getStringArray(product.images);
   const seoKeywords = getStringArray(product.seoKeywords);
+  const resolvedCategories = productCategoryTags(
+    {
+      categoryId: product.categoryId,
+      categoryIds: mappedCategories.map((c) => c.id),
+    },
+    definitions,
+  );
 
   const mappedReviews = productReviews.map((r) => ({
     id: r.id,
@@ -153,36 +187,32 @@ function transformProduct(
     inspirationBrand: product.inspirationBrand,
     visibility: (product.visibility ?? "public") as ProductVisibility,
     woreBy: product.woreBy ?? undefined,
-    woreByImageUrl: withCloudinaryTransforms(product.woreByImageUrl ?? defaultCelebImage),
-    category: product.category,
+    woreByImageUrl: withCloudinaryTransforms(
+      product.woreByImageUrl ?? defaultCelebImage,
+    ),
+    category:
+      resolvedCategories.find((c) => c.id === product.categoryId)?.label ||
+      product.category,
     categoryId: product.categoryId,
-    categoryIds:
-      mappedCategories.length > 0
-        ? Array.from(
-            new Set([product.categoryId, ...mappedCategories.map((c) => c.id)].filter(Boolean))
-          )
-        : [product.categoryId],
-    dbCategoryIds: mappedCategories.map((c) => c.id).filter(Boolean),
-    categoryTags:
-      mappedCategories.length > 0
-        ? Array.from(
-            new Map(
-              [{ id: product.categoryId, label: product.category }, ...mappedCategories].map((c) => [
-                c.id,
-                { id: c.id, label: c.label || c.id },
-              ])
-            ).values()
-          )
-        : [{ id: product.categoryId, label: product.category }],
-    dbCategoryTags: mappedCategories.map((c) => ({ id: c.id, label: c.label || c.id })),
+    categoryIds: resolvedCategories.map((c) => c.id),
+    dbCategoryIds: resolvedCategories.map((c) => c.id),
+    categoryTags: resolvedCategories.map((c) => ({
+      ...c,
+      label: c.label || c.id,
+    })),
+    dbCategoryTags: resolvedCategories,
     gender: product.gender,
     images: isDiscoverySet
       ? DISCOVERY_SET_IMAGES
       : imageUrls.map((url) => withCloudinaryTransforms(url)),
     price: isDiscoverySet ? DISCOVERY_SET_PRICE : parseFloat(product.price),
     priceCurrency: "INR",
-    description: isDiscoverySet ? DISCOVERY_SET_SHORT_DESCRIPTION : product.description,
-    seoDescription: isDiscoverySet ? DISCOVERY_SET_DESCRIPTION : product.seoDescription,
+    description: isDiscoverySet
+      ? DISCOVERY_SET_SHORT_DESCRIPTION
+      : product.description,
+    seoDescription: isDiscoverySet
+      ? DISCOVERY_SET_DESCRIPTION
+      : product.seoDescription,
     seoKeywords,
     badges: {
       bestSeller: Boolean(badges.bestSeller),
@@ -207,9 +237,12 @@ async function getAllProductsRaw(): Promise<PerfumeData[]> {
     if (allProducts.length === 0) return [];
 
     const productIds = allProducts.map((product) => product.id);
-    const [allReviews, allCategoryRows] = await Promise.all([
+    const [allReviews, allCategoryRows, definitions] = await Promise.all([
       fetchReviewsByProductIds(productIds).catch((error) => {
-        console.warn("Products loaded without reviews after the reviews query failed:", error);
+        console.warn(
+          "Products loaded without reviews after the reviews query failed:",
+          error,
+        );
         return [] as ReviewRow[];
       }),
       db
@@ -219,8 +252,8 @@ async function getAllProductsRaw(): Promise<PerfumeData[]> {
           categoryLabel: productCategories.categoryLabel,
         })
         .from(productCategories)
-        .where(inArray(productCategories.productId, productIds))
-        .catch(() => [] as Array<{ productId: string; categoryId: string; categoryLabel: string | null }>),
+        .where(inArray(productCategories.productId, productIds)),
+      db.select().from(catalogCategories),
     ]);
 
     const reviewsByProduct = new Map<string, ReviewRow[]>();
@@ -232,7 +265,10 @@ async function getAllProductsRaw(): Promise<PerfumeData[]> {
 
     const categoriesByProduct = new Map<string, CategoryMapping[]>();
     allCategoryRows.forEach((row) => {
-      const mapping = { id: row.categoryId, label: row.categoryLabel ?? undefined };
+      const mapping = {
+        id: row.categoryId,
+        label: row.categoryLabel ?? undefined,
+      };
       const existing = categoriesByProduct.get(row.productId);
       if (existing) existing.push(mapping);
       else categoriesByProduct.set(row.productId, [mapping]);
@@ -242,8 +278,11 @@ async function getAllProductsRaw(): Promise<PerfumeData[]> {
       transformProduct(
         product,
         reviewsByProduct.get(product.id) ?? [],
-        categoriesByProduct.get(product.id) ?? [{ id: product.categoryId, label: product.category }]
-      )
+        categoriesByProduct.get(product.id) ?? [
+          { id: product.categoryId, label: product.category },
+        ],
+        definitions,
+      ),
     );
 
     lastKnownProducts = productsWithReviews;
@@ -255,10 +294,14 @@ async function getAllProductsRaw(): Promise<PerfumeData[]> {
   }
 }
 
-const getAllProductsCached = unstable_cache(getAllProductsRaw, ["products:all"], {
-  revalidate: STOREFRONT_CACHE_SECONDS,
-  tags: ["products"],
-});
+const getAllProductsCached = unstable_cache(
+  getAllProductsRaw,
+  ["products:all:v2"],
+  {
+    revalidate: STOREFRONT_CACHE_SECONDS,
+    tags: ["products"],
+  },
+);
 
 export const getAllProducts = cache(async (): Promise<PerfumeData[]> => {
   return getAllProductsCached();
@@ -287,37 +330,47 @@ export const getAllPublicProducts = cache(async (): Promise<PerfumeData[]> => {
     return fallback;
   }
 
-  const visible = all.filter((product) => (product.visibility ?? "public") === "public");
+  const visible = all.filter(
+    (product) => (product.visibility ?? "public") === "public",
+  );
   return visible.length > 0 ? visible : all;
 });
 
 // Use the shared catalogue for guides as well as product routes. A failed
 // individual database/review query must not become a cached six-hour 404.
-export const getProductById = cache(async (id: string): Promise<PerfumeData | null> => {
-  const all = await getAllProducts();
-  const canonicalId = PRODUCT_ID_ALIASES[id] ?? id;
-  return all.find(product => product.id === canonicalId) ?? null;
-});
+export const getProductById = cache(
+  async (id: string): Promise<PerfumeData | null> => {
+    const all = await getAllProducts();
+    const canonicalId = PRODUCT_ID_ALIASES[id] ?? id;
+    return all.find((product) => product.id === canonicalId) ?? null;
+  },
+);
 
-export const getProductByRouteSegment = cache(async (segment: string): Promise<PerfumeData | null> => {
-  // SEO routes use generated slugs rather than database IDs. Resolve them from
-  // the shared catalogue cache instead of issuing a failed ID query first.
-  const all = await getAllProducts();
-  const lookupId = PRODUCT_ID_ALIASES[segment] ?? PRODUCT_ROUTE_ALIASES[segment] ?? segment;
-  const match = all.find((product) => product.id === lookupId)
-    ?? all.find((product) => getProductSeoSlug(product) === segment);
-  if (!match) return null;
-  const canonicalId = PRODUCT_ID_ALIASES[match.id];
-  return canonicalId ? all.find((product) => product.id === canonicalId) ?? match : match;
-});
+export const getProductByRouteSegment = cache(
+  async (segment: string): Promise<PerfumeData | null> => {
+    // SEO routes use generated slugs rather than database IDs. Resolve them from
+    // the shared catalogue cache instead of issuing a failed ID query first.
+    const all = await getAllProducts();
+    const lookupId =
+      PRODUCT_ID_ALIASES[segment] ?? PRODUCT_ROUTE_ALIASES[segment] ?? segment;
+    const match =
+      all.find((product) => product.id === lookupId) ??
+      all.find((product) => getProductSeoSlug(product) === segment);
+    if (!match) return null;
+    const canonicalId = PRODUCT_ID_ALIASES[match.id];
+    return canonicalId
+      ? (all.find((product) => product.id === canonicalId) ?? match)
+      : match;
+  },
+);
 
 // Get products by category
 export async function getProductsByCategory(
-  categoryId: string
+  categoryId: string,
 ): Promise<PerfumeData[]> {
   try {
     const all = await getAllPublicProducts();
-    return all.filter((p) => (p.categoryIds ?? [p.categoryId]).includes(categoryId));
+    return all.filter((p) => matchesProductCategory(p, categoryId));
   } catch (error) {
     console.error(`Error loading category ${categoryId} from DB:`, error);
     return [];

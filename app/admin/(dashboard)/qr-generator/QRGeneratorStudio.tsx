@@ -1,1066 +1,761 @@
 "use client";
-
-import SiteLoading from "@/components/SiteLoading";
-import { useState, useMemo, useRef, useEffect } from "react";
-import qrcode from "qrcode-generator";
-import { 
-  QrCode, 
-  Download, 
-  Copy, 
-  Check, 
-  Sparkles, 
-  MapPin, 
-  Image as ImageIcon,
-  Sliders,
-  Type,
-  Save,
-  Trash2,
-  ExternalLink,
-  Eye,
-  Pencil,
-  X
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { makeQrSvg } from "@/lib/qr-svg";
+import {
+  QrCode,
+  Plus,
+  ArrowUpRight,
+  Download,
+  Copy,
+  RefreshCw,
+  ScanLine,
+  Users,
+  Clock,
+  Archive,
+  Search,
+  Check,
+  Link2,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { toast } from "@/hooks/use-toast";
-import { HUME_HF_LOGO_BASE64 } from "@/lib/hume-logo-base64";
-import CustomStarQRCode from "@/components/CustomStarQRCode";
+import { QR_ORIGIN } from "@/lib/qr-system";
 
-interface SavedQRCampaign {
+type Campaign = {
   id: string;
   name: string;
-  city: string;
-  targetPage: string;
-  targetUrl: string;
-  bodyType: string;
-  eyeStyle: string;
-  logoType: string;
-  qrCodeSvg?: string | null;
-  scanCount: number;
-  lastScannedAt?: string;
-  createdAt: string;
+  target_url: string;
+  target_page: string;
+  archived_at: string | null;
+  created_at: string;
+  scan_count: number;
+  tracked_scans: number;
+  unique_visitors: number;
+  tracked_last_scan: string | null;
+  qr_code_svg: string | null;
+};
+type Scan = {
+  id: string;
+  scanned_at: string;
+  device: string;
+  browser: string;
+  referrer_host: string | null;
+};
+type Report = {
+  stats: { scans: number; visitors: number; last_scan: string | null };
+  daily: { day: string; scans: number }[];
+  devices: { device: string; scans: number }[];
+  events: Scan[];
+};
+const date = (value: string | null) =>
+  value
+    ? new Date(value).toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        dateStyle: "medium",
+        timeStyle: "short",
+      })
+    : "No scans yet";
+const field =
+  "w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white outline-none focus:border-amber-300";
+const button =
+  "inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 px-3 py-2 text-sm text-stone-200 transition hover:bg-white/10 disabled:opacity-40";
+function download(content: Blob, name: string) {
+  const url = URL.createObjectURL(content);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-
-const CITIES = [
-  { slug: "ahmedabad", name: "Ahmedabad" },
-  { slug: "mumbai", name: "Mumbai" },
-  { slug: "delhi", name: "Delhi NCR" },
-  { slug: "bengaluru", name: "Bengaluru" },
-  { slug: "surat", name: "Surat" },
-  { slug: "vadodara", name: "Vadodara" },
-  { slug: "jaipur", name: "Jaipur" },
-];
-
 export default function QRGeneratorStudio() {
-  const [city, setCity] = useState("ahmedabad");
-  const targetType = "perfumes" as const;
-  const [campaignName, setCampaignName] = useState("Ahmedabad Blinkit Flyer Batch 1");
-  const [customUrl, setCustomUrl] = useState("");
-  const [bodyType, setBodyType] = useState<"stars" | "squares" | "dots" | "diamonds" | "hearts">("stars");
-  const [eyeStyle, setEyeStyle] = useState<"rounded" | "square" | "circle">("rounded");
-  const [logoType, setLogoType] = useState<"hf-cursive" | "custom-image" | "none">("hf-cursive");
-  const [customLogoUrl, setCustomLogoUrl] = useState<string | null>(null);
-  const [logoScale, setLogoScale] = useState(0.16); // 16% size
-  const [copiedUrl, setCopiedUrl] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  const [savedCampaigns, setSavedCampaigns] = useState<SavedQRCampaign[]>([]);
-  const [loadingCampaigns, setLoadingCampaigns] = useState(true);
-
-  const svgRef = useRef<SVGSVGElement | null>(null);
-
-  const fetchSavedCampaigns = async () => {
-    setLoadingCampaigns(true);
-    try {
-      const res = await fetch("/api/admin/qr-campaigns");
-      const data = await res.json();
-      if (data.success) {
-        setSavedCampaigns(data.campaigns || []);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [report, setReport] = useState<Report | null>(null);
+  const [days, setDays] = useState(30);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
+  const [name, setName] = useState("");
+  const [destination, setDestination] = useState("");
+  const [editName, setEditName] = useState("");
+  const [editDestination, setEditDestination] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [copied, setCopied] = useState(false);
+  const current = campaigns.find((c) => c.id === selected);
+  const trackingUrl = current ? `${QR_ORIGIN}/q/${current.id}` : "";
+  const svg = useMemo(
+    () => (trackingUrl ? makeQrSvg(trackingUrl) : ""),
+    [trackingUrl],
+  );
+  const load = useCallback(
+    async (signal?: AbortSignal) => {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await fetch(
+          `/api/admin/qr-campaigns?days=${days}&page=${page}${selected ? `&id=${encodeURIComponent(selected)}` : ""}`,
+          { signal },
+        );
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Could not load QR codes");
+        setCampaigns(data.campaigns);
+        setReport(selected ? data : null);
+      } catch (e) {
+        if ((e as Error).name !== "AbortError") setError((e as Error).message);
+      } finally {
+        if (!signal?.aborted) setLoading(false);
       }
-    } catch (err) {
-      console.error("Failed to load saved QR campaigns:", err);
-    } finally {
-      setLoadingCampaigns(false);
-    }
-  };
-
+    },
+    [days, page, selected],
+  );
   useEffect(() => {
-    fetchSavedCampaigns();
-  }, []);
-
-  // Compute final URL for rendering
-  const activeUrl = customUrl.trim() || `https://www.humefragrance.com/flyers/${city}/${targetType}`;
-
-  // SVG Matrix Generator logic
-  const svgData = useMemo(() => {
-    const qr = qrcode(0, "H");
-    qr.addData(activeUrl);
-    qr.make();
-
-    const moduleCount = qr.getModuleCount();
-    const cellSize = 10;
-    const padding = 24;
-    const viewSize = moduleCount * cellSize + padding * 2;
-
-    const isFinderPattern = (r: number, c: number) => {
-      if (r < 7 && c < 7) return true;
-      if (r < 7 && c >= moduleCount - 7) return true;
-      if (r >= moduleCount - 7 && c < 7) return true;
-      return false;
-    };
-
-    const centerMatrixIndex = moduleCount / 2;
-    const maskRadiusMatrix = logoType === "none" ? 0 : moduleCount * (logoScale * 1.05);
-
-    const isCenterMask = (r: number, c: number) => {
-      if (logoType === "none") return false;
-      const dist = Math.hypot(r + 0.5 - centerMatrixIndex, c + 0.5 - centerMatrixIndex);
-      return dist < maskRadiusMatrix;
-    };
-
-    const getStarPath = (cx: number, cy: number, outerR: number, innerR: number) => {
-      const points = [];
-      const numPoints = 5;
-      for (let i = 0; i < numPoints * 2; i++) {
-        const radius = i % 2 === 0 ? outerR : innerR;
-        const angle = (i * Math.PI) / numPoints - Math.PI / 2;
-        const x = cx + radius * Math.cos(angle);
-        const y = cy + radius * Math.sin(angle);
-        points.push(`${i === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`);
-      }
-      points.push("Z");
-      return points.join(" ");
-    };
-
-    const getHeartPath = (cx: number, cy: number, size: number) => {
-      const s = size * 0.5;
-      return `M ${cx} ${cy + s * 0.5} 
-              C ${cx - s} ${cy - s * 0.5}, ${cx - s * 1.2} ${cy - s * 1.3}, ${cx} ${cy - s * 0.6}
-              C ${cx + s * 1.2} ${cy - s * 1.3}, ${cx + s} ${cy - s * 0.5}, ${cx} ${cy + s * 0.5} Z`;
-    };
-
-    const paths: string[] = [];
-    const circles: { cx: number; cy: number; r: number }[] = [];
-    const rects: { x: number; y: number; width: number; height: number }[] = [];
-
-    for (let r = 0; r < moduleCount; r++) {
-      for (let c = 0; c < moduleCount; c++) {
-        if (qr.isDark(r, c) && !isFinderPattern(r, c) && !isCenterMask(r, c)) {
-          const cx = padding + c * cellSize + cellSize / 2;
-          const cy = padding + r * cellSize + cellSize / 2;
-
-          if (bodyType === "stars") {
-            const outerR = cellSize * 0.58;
-            paths.push(getStarPath(cx, cy, outerR, outerR * 0.42));
-          } else if (bodyType === "dots") {
-            circles.push({ cx, cy, r: cellSize * 0.38 });
-          } else if (bodyType === "squares") {
-            rects.push({
-              x: padding + c * cellSize + cellSize * 0.1,
-              y: padding + r * cellSize + cellSize * 0.1,
-              width: cellSize * 0.8,
-              height: cellSize * 0.8,
-            });
-          } else if (bodyType === "diamonds") {
-            const rVal = cellSize * 0.48;
-            paths.push(`M ${cx} ${cy - rVal} L ${cx + rVal} ${cy} L ${cx} ${cy + rVal} L ${cx - rVal} ${cy} Z`);
-          } else if (bodyType === "hearts") {
-            paths.push(getHeartPath(cx, cy, cellSize));
-          }
-        }
-      }
-    }
-
-    const eyes = [
-      { r: 0, c: 0 },
-      { r: 0, c: moduleCount - 7 },
-      { r: moduleCount - 7, c: 0 },
-    ];
-
-    return {
-      viewSize,
-      cellSize,
-      padding,
-      moduleCount,
-      paths,
-      circles,
-      rects,
-      eyes,
-      centerCx: viewSize / 2,
-      centerCy: viewSize / 2,
-      centerRadius: (moduleCount * cellSize) * logoScale,
-    };
-  }, [activeUrl, bodyType, logoType, logoScale]);
-
-  const [selectedCampaignDetails, setSelectedCampaignDetails] = useState<SavedQRCampaign | null>(null);
-  const [copiedDetailsUrl, setCopiedDetailsUrl] = useState(false);
-
-  const handleCopyUrl = async () => {
+    const controller = new AbortController();
+    void load(controller.signal);
+    return () => controller.abort();
+  }, [load]);
+  useEffect(() => {
+    setEditName(current?.name || "");
+    setEditDestination(current?.target_url || "");
+  }, [current?.id, current?.name, current?.target_url]);
+  async function mutate(method: string, body: unknown) {
+    setBusy(true);
+    setError("");
+    setNotice("");
     try {
-      await navigator.clipboard.writeText(activeUrl);
-      setCopiedUrl(true);
-      setTimeout(() => setCopiedUrl(false), 2000);
-    } catch {}
-  };
-
-  const handleCopyDetailsUrl = async (url: string) => {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopiedDetailsUrl(true);
-      setTimeout(() => setCopiedDetailsUrl(false), 2000);
-    } catch {}
-  };
-
-  const handleDownloadSavedPng = (campaign: SavedQRCampaign) => {
-    if (!campaign.qrCodeSvg) return;
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    const img = new Image();
-
-    img.onload = () => {
-      canvas.width = 1200;
-      canvas.height = 1200;
-      if (ctx) {
-        ctx.fillStyle = "#FFFFFF";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0, 1200, 1200);
-
-        const pngUrl = canvas.toDataURL("image/png");
-        const downloadLink = document.createElement("a");
-        downloadLink.href = pngUrl;
-        downloadLink.download = `HUME-QR-${campaign.city.toUpperCase()}-${campaign.targetPage}-${campaign.id}.png`;
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-      }
-    };
-
-    img.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(campaign.qrCodeSvg)))}`;
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setCustomLogoUrl(event.target?.result as string);
-        setLogoType("custom-image");
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // Register & Save QR Campaign in System
-  const handleSaveCampaign = async () => {
-    setSaving(true);
-    try {
-      const qrCodeSvg = svgRef.current
-        ? new XMLSerializer().serializeToString(svgRef.current)
-        : undefined;
-
       const res = await fetch("/api/admin/qr-campaigns", {
-        method: "POST",
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: campaignName,
-          city,
-          targetPage: targetType,
-          customUrl: customUrl.trim() || undefined,
-          bodyType,
-          eyeStyle,
-          logoType,
-          qrCodeSvg,
-        }),
+        body: JSON.stringify(body),
       });
-
       const data = await res.json();
-      if (data.success) {
-        toast({
-          title: "QR Campaign Registered! 🎉",
-          description: `Saved "${campaignName}" in system with unique tracking ID.`,
-        });
-        fetchSavedCampaigns();
-      } else {
-        toast({ title: "Failed to save QR campaign", variant: "destructive" });
-      }
-    } catch {
-      toast({ title: "Error saving QR campaign", variant: "destructive" });
+      if (!res.ok) throw new Error(data.error || "Could not save");
+      await load();
+      return data;
+    } catch (e) {
+      setError((e as Error).message);
+      return null;
     } finally {
-      setSaving(false);
+      setBusy(false);
     }
-  };
-
-  const handleRenameCampaign = async (id: string, currentName: string) => {
-    const newName = prompt("Enter new campaign name:", currentName);
-    if (!newName || newName.trim() === "" || newName.trim() === currentName) return;
-
+  }
+  async function create(event: React.FormEvent) {
+    event.preventDefault();
+    const data = await mutate("POST", { name, destination });
+    if (data) {
+      setSelected(data.id);
+      setPage(1);
+      setName("");
+      setDestination("");
+      setNotice(
+        "QR created. Download the image below and test it before printing.",
+      );
+    }
+  }
+  async function exportPng() {
     try {
-      const res = await fetch("/api/admin/qr-campaigns", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, name: newName.trim() }),
-      });
-
-      if (res.ok) {
-        toast({ title: "Campaign Renamed! ✏️", description: `Updated name to "${newName.trim()}". QR code remains unchanged.` });
-        fetchSavedCampaigns();
-      } else {
-        toast({ title: "Failed to rename campaign", variant: "destructive" });
+      const img = new Image();
+      const url = URL.createObjectURL(
+        new Blob([svg], { type: "image/svg+xml" }),
+      );
+      try {
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error("Image export failed"));
+          img.src = url;
+        });
+        const canvas = document.createElement("canvas");
+        canvas.width = 1600;
+        canvas.height = 1600;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) throw new Error("PNG export unavailable");
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, 1600, 1600);
+        ctx.drawImage(img, 0, 0, 1600, 1600);
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, "image/png"),
+        );
+        if (!blob) throw new Error("PNG export failed");
+        download(blob, `${current?.id}.png`);
+      } finally {
+        URL.revokeObjectURL(url);
       }
-    } catch {
-      toast({ title: "Error renaming campaign", variant: "destructive" });
+    } catch (e) {
+      setError((e as Error).message);
     }
-  };
-
-  const handleDeleteCampaign = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}" and all associated scan/funnel data from database?`)) return;
+  }
+  async function exportCsv() {
+    if (!current || !report) return;
+    setBusy(true);
+    setError("");
     try {
-      const res = await fetch(`/api/admin/qr-campaigns?id=${id}`, { method: "DELETE" });
-      if (res.ok) {
-        toast({ title: "Campaign & Scan Data Deleted", description: `Removed "${name}" and cleared scan metrics.` });
-        fetchSavedCampaigns();
-      }
-    } catch {
-      toast({ title: "Failed to delete", variant: "destructive" });
+      const res = await fetch(
+        `/api/admin/qr-campaigns?id=${encodeURIComponent(current.id)}&days=${days}&format=csv`,
+      );
+      if (!res.ok) throw new Error("Could not export scan history.");
+      download(await res.blob(), `${current.id}-${days}days.csv`);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
     }
-  };
-
-  const handleClearAllTestCampaigns = async () => {
-    if (!confirm("CAUTION: This will delete ALL test QR campaigns and clear ALL scan/funnel events from the database. Proceed?")) return;
-    try {
-      const res = await fetch("/api/admin/qr-campaigns?clearAll=true", { method: "DELETE" });
-      if (res.ok) {
-        toast({ title: "Database Cleared! 🧹", description: "Wiped all test campaigns and funnel scan events." });
-        fetchSavedCampaigns();
-      }
-    } catch {
-      toast({ title: "Failed to clear test data", variant: "destructive" });
-    }
-  };
-
-  const handleDownloadPng = () => {
-    if (!svgRef.current) return;
-
-    const svgElement = svgRef.current;
-    const svgString = new XMLSerializer().serializeToString(svgElement);
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    const img = new Image();
-
-    canvas.width = 1200;
-    canvas.height = 1200;
-
-    const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(svgBlob);
-
-    img.onload = () => {
-      if (ctx) {
-        ctx.fillStyle = "#FFFFFF";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const pngUrl = canvas.toDataURL("image/png");
-        const downloadLink = document.createElement("a");
-        downloadLink.href = pngUrl;
-        downloadLink.download = `HUME-QR-${city.toUpperCase()}-${targetType.toUpperCase()}-${bodyType}.png`;
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-      }
-      URL.revokeObjectURL(url);
-    };
-    img.src = url;
-  };
-
-  const handleDownloadSvg = () => {
-    if (!svgRef.current) return;
-    const svgElement = svgRef.current;
-    const svgString = new XMLSerializer().serializeToString(svgElement);
-    const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const downloadLink = document.createElement("a");
-    downloadLink.href = url;
-    downloadLink.download = `HUME-QR-${city.toUpperCase()}-${targetType.toUpperCase()}-${bodyType}.svg`;
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-    document.body.removeChild(downloadLink);
-    URL.revokeObjectURL(url);
-  };
-
+  }
+  const visible = campaigns.filter(
+    (c) =>
+      (showArchived || !c.archived_at) &&
+      `${c.name} ${c.target_url}`.toLowerCase().includes(search.toLowerCase()),
+  );
+  const total = campaigns.reduce((n, c) => n + Number(c.tracked_scans), 0);
   return (
-    <div className="admin-page-layout mx-auto max-w-7xl space-y-6 text-white">
-      {/* Studio Header */}
-      <div className="admin-page-intro-copy flex flex-col gap-2 border-b border-white/10 pb-6">
-        <div className="flex items-center gap-2 text-amber-400 text-xs font-semibold uppercase tracking-wider">
-          <QrCode className="h-4 w-4" />
-          <span>Brand QR Generator Studio</span>
+    <div className="mx-auto max-w-7xl space-y-6 p-1 text-stone-100">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[.2em] text-amber-300">
+            HUME / MARKETING
+          </p>
+          <h1 className="text-3xl font-semibold tracking-tight">QR codes</h1>
+          <p className="mt-2 text-sm text-stone-400">
+            Every destination. One place to create, manage and measure.
+          </p>
         </div>
-        <h1 className="text-2xl md:text-3xl font-serif font-bold text-white">
-          Custom Star QR Code Designer & Campaign Register
-        </h1>
-        <p className="text-sm text-stone-400">
-          Design high-resolution custom vector QR codes, register them in your database, and track exact real-life pamphlet scans.
-        </p>
-      </div>
-
-      <div className="grid gap-8 lg:grid-cols-12">
-        {/* Controls Column (7 Cols) */}
-        <div className="lg:col-span-7 space-y-6">
-          {/* Campaign Batch Name */}
-          <div className="rounded-2xl border border-stone-800 bg-stone-900/80 p-5 space-y-3 backdrop-blur-xl">
-            <div className="flex items-center gap-2 text-sm font-bold text-amber-400">
-              <Type className="h-4 w-4" />
-              <span>Campaign Batch / Pamphlet Name</span>
-            </div>
-            <input
-              type="text"
-              value={campaignName}
-              onChange={(e) => setCampaignName(e.target.value)}
-              placeholder="e.g. Ahmedabad Blinkit Flyer Batch 1"
-              className="w-full bg-stone-950 border border-stone-800 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-white placeholder-stone-600 focus:outline-none focus:border-amber-500"
-            />
-          </div>
-
-          {/* Section 1: Campaign Target Link */}
-          <div className="rounded-2xl border border-stone-800 bg-stone-900/80 p-5 space-y-4 backdrop-blur-xl">
-            <div className="flex items-center gap-2 text-sm font-bold text-amber-400">
-              <MapPin className="h-4 w-4" />
-              <span>1. Target Campaign Destination</span>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="text-xs font-medium text-stone-300 block mb-1">Select City</label>
-                <select
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  className="w-full bg-stone-950 border border-stone-800 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none"
-                >
-                  {CITIES.map((c) => (
-                    <option key={c.slug} value={c.slug}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-stone-300 block mb-1">Destination Page Path or Custom URL</label>
-                <input
-                  type="text"
-                  value={customUrl}
-                  onChange={(e) => setCustomUrl(e.target.value)}
-                  placeholder="e.g. /diwali-gifts, /offers/50-off, /perfumes, /discovery-set"
-                  className="w-full bg-stone-950 border border-stone-800 rounded-xl px-3 py-2 text-xs font-mono text-white placeholder-stone-600 focus:outline-none focus:border-amber-500"
-                />
-              </div>
-            </div>
-
-            {/* Active URL Copy Box */}
-            <div className="flex items-center justify-between gap-3 bg-stone-950 border border-stone-800 rounded-xl p-3">
-              <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-semibold uppercase text-stone-500 block">Encoded Destination URL</span>
-                <p className="text-xs font-mono text-stone-300 truncate">{activeUrl}</p>
-              </div>
-              <button
-                type="button"
-                onClick={handleCopyUrl}
-                className="inline-flex items-center gap-1 text-xs font-semibold bg-stone-800 hover:bg-stone-700 text-white px-3 py-1.5 rounded-lg transition-colors shrink-0"
-              >
-                {copiedUrl ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                <span>{copiedUrl ? "Copied" : "Copy"}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Section 2: Body Type Pattern Selector */}
-          <div className="rounded-2xl border border-stone-800 bg-stone-900/80 p-5 space-y-3 backdrop-blur-xl">
-            <div className="flex items-center gap-2 text-sm font-bold text-amber-400">
-              <Sparkles className="h-4 w-4" />
-              <span>2. Body Module Pattern</span>
-            </div>
-
-            <div className="grid grid-cols-5 gap-3">
-              <button
-                type="button"
-                onClick={() => setBodyType("stars")}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
-                  bodyType === "stars"
-                    ? "border-amber-500 bg-amber-500/10 text-white ring-2 ring-amber-500/40"
-                    : "border-stone-800 bg-stone-950 text-stone-400 hover:border-stone-700"
-                }`}
-              >
-                <span className="text-xl">★</span>
-                <span className="text-[10px] font-bold mt-1">Stars</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setBodyType("squares")}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
-                  bodyType === "squares"
-                    ? "border-amber-500 bg-amber-500/10 text-white ring-2 ring-amber-500/40"
-                    : "border-stone-800 bg-stone-950 text-stone-400 hover:border-stone-700"
-                }`}
-              >
-                <span className="text-xl">■</span>
-                <span className="text-[10px] font-bold mt-1">Squares</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setBodyType("dots")}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
-                  bodyType === "dots"
-                    ? "border-amber-500 bg-amber-500/10 text-white ring-2 ring-amber-500/40"
-                    : "border-stone-800 bg-stone-950 text-stone-400 hover:border-stone-700"
-                }`}
-              >
-                <span className="text-xl">●</span>
-                <span className="text-[10px] font-bold mt-1">Dots</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setBodyType("diamonds")}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
-                  bodyType === "diamonds"
-                    ? "border-amber-500 bg-amber-500/10 text-white ring-2 ring-amber-500/40"
-                    : "border-stone-800 bg-stone-950 text-stone-400 hover:border-stone-700"
-                }`}
-              >
-                <span className="text-xl">◆</span>
-                <span className="text-[10px] font-bold mt-1">Diamonds</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setBodyType("hearts")}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
-                  bodyType === "hearts"
-                    ? "border-amber-500 bg-amber-500/10 text-white ring-2 ring-amber-500/40"
-                    : "border-stone-800 bg-stone-950 text-stone-400 hover:border-stone-700"
-                }`}
-              >
-                <span className="text-xl">♥</span>
-                <span className="text-[10px] font-bold mt-1">Hearts</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Section 3: Corner Eye / Edges Style */}
-          <div className="rounded-2xl border border-stone-800 bg-stone-900/80 p-5 space-y-3 backdrop-blur-xl">
-            <div className="flex items-center gap-2 text-sm font-bold text-amber-400">
-              <Sliders className="h-4 w-4" />
-              <span>3. Corner Eyes / Edges</span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <button
-                type="button"
-                onClick={() => setEyeStyle("rounded")}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
-                  eyeStyle === "rounded"
-                    ? "border-amber-500 bg-amber-500/10 text-white ring-2 ring-amber-500/40"
-                    : "border-stone-800 bg-stone-950 text-stone-400 hover:border-stone-700"
-                }`}
-              >
-                <span className="text-xl">🔲</span>
-                <span className="text-[10px] font-bold mt-1">Rounded Square</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setEyeStyle("square")}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
-                  eyeStyle === "square"
-                    ? "border-amber-500 bg-amber-500/10 text-white ring-2 ring-amber-500/40"
-                    : "border-stone-800 bg-stone-950 text-stone-400 hover:border-stone-700"
-                }`}
-              >
-                <span className="text-xl">⬛</span>
-                <span className="text-[10px] font-bold mt-1">Sharp Square</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setEyeStyle("circle")}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
-                  eyeStyle === "circle"
-                    ? "border-amber-500 bg-amber-500/10 text-white ring-2 ring-amber-500/40"
-                    : "border-stone-800 bg-stone-950 text-stone-400 hover:border-stone-700"
-                }`}
-              >
-                <span className="text-xl">⭕</span>
-                <span className="text-[10px] font-bold mt-1">Concentric Circle</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Section 4: Logo & Emblem Customization */}
-          <div className="rounded-2xl border border-stone-800 bg-stone-900/80 p-5 space-y-4 backdrop-blur-xl">
-            <div className="flex items-center gap-2 text-sm font-bold text-amber-400">
-              <Type className="h-4 w-4" />
-              <span>4. Center Emblem & Logo</span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <button
-                type="button"
-                onClick={() => setLogoType("hf-cursive")}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
-                  logoType === "hf-cursive"
-                    ? "border-amber-500 bg-amber-500/10 text-white ring-2 ring-amber-500/40"
-                    : "border-stone-800 bg-stone-950 text-stone-400 hover:border-stone-700"
-                }`}
-              >
-                <span className="font-serif italic text-lg text-amber-300">hf</span>
-                <span className="text-[10px] font-bold mt-1">Cursive Signature</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setLogoType("custom-image")}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
-                  logoType === "custom-image"
-                    ? "border-amber-500 bg-amber-500/10 text-white ring-2 ring-amber-500/40"
-                    : "border-stone-800 bg-stone-950 text-stone-400 hover:border-stone-700"
-                }`}
-              >
-                <ImageIcon className="h-5 w-5 text-amber-400" />
-                <span className="text-[10px] font-bold mt-1">Upload Custom Image</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setLogoType("none")}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
-                  logoType === "none"
-                    ? "border-amber-500 bg-amber-500/10 text-white ring-2 ring-amber-500/40"
-                    : "border-stone-800 bg-stone-950 text-stone-400 hover:border-stone-700"
-                }`}
-              >
-                <span className="text-base text-stone-500">🚫</span>
-                <span className="text-[10px] font-bold mt-1">No Emblem</span>
-              </button>
-            </div>
-
-            {logoType === "custom-image" && (
-              <div className="space-y-2 pt-2 border-t border-stone-800">
-                <label className="text-xs font-semibold text-stone-300 block">Upload Logo PNG/JPG</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="block w-full text-xs text-stone-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-stone-800 file:text-white hover:file:bg-stone-700"
-                />
-              </div>
-            )}
-
-            {logoType !== "none" && (
-              <div className="space-y-1 pt-2">
-                <div className="flex justify-between text-xs text-stone-400 font-semibold">
-                  <span>Emblem Scale Size</span>
-                  <span>{Math.round(logoScale * 100)}%</span>
-                </div>
-                <input
-                  type="range"
-                  min="0.10"
-                  max="0.28"
-                  step="0.01"
-                  value={logoScale}
-                  onChange={(e) => setLogoScale(parseFloat(e.target.value))}
-                  className="w-full accent-amber-500 cursor-pointer"
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Live Vector Preview Column (5 Cols) */}
-        <div className="lg:col-span-5 space-y-6">
-          <div className="rounded-2xl border border-stone-800 bg-stone-900/90 p-6 backdrop-blur-xl flex flex-col items-center justify-center space-y-6">
-            <div className="flex items-center justify-between w-full border-b border-stone-800 pb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-400">Live Vector Canvas</span>
-              <span className="text-[10px] font-mono bg-stone-950 border border-stone-800 px-2.5 py-1 rounded-md text-stone-300">
-                Error Correction: HIGH (30%)
-              </span>
-            </div>
-
-            {/* Rendered SVG Preview */}
-            <div className="p-4 bg-white rounded-2xl shadow-2xl border border-stone-800 flex items-center justify-center">
-              <svg
-                ref={svgRef}
-                viewBox={`0 0 ${svgData.viewSize} ${svgData.viewSize}`}
-                className="w-full max-w-[340px] aspect-square"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <rect x="0" y="0" width={svgData.viewSize} height={svgData.viewSize} fill="#FFFFFF" rx="16" />
-
-                {/* Finder Pattern Eyes */}
-                {svgData.eyes.map((eye, idx) => {
-                  const x = svgData.padding + eye.c * svgData.cellSize;
-                  const y = svgData.padding + eye.r * svgData.cellSize;
-                  const eyeSize = 7 * svgData.cellSize;
-
-                  let outerRx = 0;
-                  let innerRx = 0;
-                  let pupilRx = 0;
-
-                  if (eyeStyle === "rounded") {
-                    outerRx = eyeSize * 0.28;
-                    innerRx = (eyeSize - 2 * svgData.cellSize) * 0.22;
-                    pupilRx = (eyeSize - 4 * svgData.cellSize) * 0.26;
-                  } else if (eyeStyle === "circle") {
-                    outerRx = eyeSize / 2;
-                    innerRx = (eyeSize - 2 * svgData.cellSize) / 2;
-                    pupilRx = (eyeSize - 4 * svgData.cellSize) / 2;
-                  }
-
-                  return (
-                    <g key={idx}>
-                      <rect x={x} y={y} width={eyeSize} height={eyeSize} rx={outerRx} ry={outerRx} fill="#000000" />
-                      <rect
-                        x={x + svgData.cellSize}
-                        y={y + svgData.cellSize}
-                        width={eyeSize - 2 * svgData.cellSize}
-                        height={eyeSize - 2 * svgData.cellSize}
-                        rx={innerRx}
-                        ry={innerRx}
-                        fill="#FFFFFF"
-                      />
-                      <rect
-                        x={x + 2 * svgData.cellSize}
-                        y={y + 2 * svgData.cellSize}
-                        width={eyeSize - 4 * svgData.cellSize}
-                        height={eyeSize - 4 * svgData.cellSize}
-                        rx={pupilRx}
-                        ry={pupilRx}
-                        fill="#000000"
-                      />
-                    </g>
-                  );
-                })}
-
-                {/* Render Body Modules */}
-                {bodyType === "dots" ? (
-                  svgData.circles.map((c, idx) => <circle key={idx} cx={c.cx} cy={c.cy} r={c.r} fill="#000000" />)
-                ) : bodyType === "squares" ? (
-                  svgData.rects.map((r, idx) => (
-                    <rect key={idx} x={r.x} y={r.y} width={r.width} height={r.height} fill="#000000" />
-                  ))
-                ) : (
-                  <path d={svgData.paths.join(" ")} fill="#000000" />
-                )}
-
-                {/* Center Mask & Logo Overlay */}
-                {logoType !== "none" && (
-                  <>
-                    <circle cx={svgData.centerCx} cy={svgData.centerCy} r={svgData.centerRadius} fill="#FFFFFF" />
-
-                    {logoType === "hf-cursive" && (
-                      <image
-                        href={HUME_HF_LOGO_BASE64}
-                        x={svgData.centerCx - svgData.centerRadius * 0.88}
-                        y={svgData.centerCy - svgData.centerRadius * 0.88}
-                        width={svgData.centerRadius * 1.76}
-                        height={svgData.centerRadius * 1.76}
-                        preserveAspectRatio="xMidYMid meet"
-                      />
-                    )}
-
-                    {logoType === "custom-image" && customLogoUrl && (
-                      <image
-                        href={customLogoUrl}
-                        x={svgData.centerCx - svgData.centerRadius * 0.75}
-                        y={svgData.centerCy - svgData.centerRadius * 0.75}
-                        width={svgData.centerRadius * 1.5}
-                        height={svgData.centerRadius * 1.5}
-                        preserveAspectRatio="xMidYMid meet"
-                      />
-                    )}
-                  </>
-                )}
-              </svg>
-            </div>
-
-            {/* Action Buttons: Save & Register Campaign + Downloads */}
-            <div className="flex flex-col gap-3 w-full">
-              <Button
-                onClick={handleSaveCampaign}
-                disabled={saving}
-                className="w-full bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-extrabold gap-2 py-3.5 shadow-lg"
-              >
-                <Save className="h-4 w-4" />
-                <span>{saving ? "Registering Campaign..." : "Save & Register QR Campaign"}</span>
-              </Button>
-
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  onClick={handleDownloadPng}
-                  className="w-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs gap-1.5 py-2.5"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  <span>Download PNG</span>
-                </Button>
-
-                <Button
-                  onClick={handleDownloadSvg}
-                  variant="outline"
-                  className="w-full border-stone-800 bg-stone-950 text-white hover:bg-stone-800 font-bold text-xs gap-1.5 py-2.5"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  <span>Download SVG</span>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Registered Saved QR Campaigns & Real-Time Scan Tracker Table */}
-      <div className="rounded-2xl border border-stone-800 bg-stone-900/80 p-6 backdrop-blur-xl space-y-4">
-        <div className="flex items-center justify-between border-b border-stone-800 pb-4">
-          <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <QrCode className="h-5 w-5 text-amber-400" />
-              <span>Registered Active QR Campaigns & Pamphlet Scans</span>
-            </h2>
-            <p className="text-xs text-stone-400 mt-0.5">
-              Every printed flyer QR code saved here tracks individual scan counts and timestamps in real-life.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleClearAllTestCampaigns}
-              className="border-red-900/50 bg-red-950/40 text-red-300 hover:bg-red-900 hover:text-white text-xs gap-1.5"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              <span>Wipe Test DB</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchSavedCampaigns}
-              className="border-stone-800 bg-stone-950 text-stone-300 hover:text-white"
-            >
-              Refresh List
-            </Button>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-stone-800 text-stone-400 font-semibold uppercase tracking-wider">
-                <th className="pb-3">Campaign Name</th>
-                <th className="pb-3">City</th>
-                <th className="pb-3 text-right">Real-Time Scans</th>
-                <th className="pb-3 text-right">Last Scanned</th>
-                <th className="pb-3 text-right">Created Date</th>
-                <th className="pb-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-stone-800/60">
-              {loadingCampaigns ? (
-                <tr>
-                  <td colSpan={6} className="py-6 text-center text-stone-400"><SiteLoading compact dark title="Opening QR campaigns" description="Gathering your registered campaigns." /></td>
-                </tr>
-              ) : savedCampaigns.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-6 text-center text-stone-400">
-                    No registered QR codes yet. Design a QR code above and click &quot;Save & Register QR Campaign&quot;.
-                  </td>
-                </tr>
-              ) : (
-                savedCampaigns.map((c) => (
-                  <tr key={c.id} className="hover:bg-stone-800/40 cursor-pointer group">
-                    <td className="py-3 font-bold text-white" onClick={() => setSelectedCampaignDetails(c)}>
-                      <div>
-                        <p className="group-hover:text-amber-400 transition-colors flex items-center gap-1.5">
-                          <span>{c.name}</span>
-                          <span className="text-[10px] text-stone-500 font-normal underline">Tap details</span>
-                        </p>
-                        <p className="text-[10px] font-mono text-stone-500">{c.id}</p>
-                      </div>
-                    </td>
-                    <td className="py-3 font-semibold text-amber-400 capitalize" onClick={() => setSelectedCampaignDetails(c)}>{c.city}</td>
-                    <td className="py-3 text-right font-mono font-extrabold text-emerald-400 text-sm" onClick={() => setSelectedCampaignDetails(c)}>
-                      <div className="inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
-                        <Eye className="h-3 w-3 text-emerald-400" />
-                        <span>{c.scanCount} scans</span>
-                      </div>
-                    </td>
-                    <td className="py-3 text-right font-mono text-stone-400" onClick={() => setSelectedCampaignDetails(c)}>
-                      {c.lastScannedAt ? new Date(c.lastScannedAt).toLocaleString() : "Not scanned yet"}
-                    </td>
-                    <td className="py-3 text-right font-mono text-stone-400" onClick={() => setSelectedCampaignDetails(c)}>
-                      {new Date(c.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedCampaignDetails(c)}
-                          className="p-1.5 rounded-lg bg-stone-800 text-stone-300 hover:text-white hover:bg-stone-700 flex items-center gap-1 px-2.5 text-[11px] font-semibold"
-                          title="Inspect Details & Destination URL"
-                        >
-                          <Eye className="h-3.5 w-3.5 text-amber-400" />
-                          <span>Details</span>
-                        </button>
-                        <a
-                          href={c.targetUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="p-1.5 rounded-lg bg-stone-800 text-stone-300 hover:text-white hover:bg-stone-700"
-                          title="Open Campaign Target URL"
-                        >
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => handleRenameCampaign(c.id, c.name)}
-                          className="p-1.5 rounded-lg bg-stone-800 text-amber-400 hover:text-amber-300 hover:bg-stone-700"
-                          title="Rename Campaign"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteCampaign(c.id, c.name)}
-                          className="p-1.5 rounded-lg bg-stone-800 text-red-400 hover:text-red-300 hover:bg-stone-700"
-                          title="Delete Campaign & Clear Scan Data"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* CAMPAIGN DETAILS INSPECTOR MODAL */}
-      {selectedCampaignDetails && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="relative w-full max-w-2xl bg-stone-950 border border-stone-800 rounded-2xl p-6 shadow-2xl space-y-6 text-white">
-            {/* Header */}
-            <div className="flex items-start justify-between border-b border-stone-800 pb-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full">
-                    {selectedCampaignDetails.city.toUpperCase()}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 mt-1.5">
-                  <h2 className="text-xl font-bold text-white font-serif">{selectedCampaignDetails.name}</h2>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const oldId = selectedCampaignDetails.id;
-                      const oldName = selectedCampaignDetails.name;
-                      handleRenameCampaign(oldId, oldName).then(() => {
-                        fetchSavedCampaigns();
-                      });
-                    }}
-                    className="p-1.5 rounded-lg bg-stone-900 border border-stone-800 text-amber-400 hover:text-amber-300 hover:bg-stone-800"
-                    title="Rename Campaign"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-                <p className="text-[11px] font-mono text-stone-400 mt-1">ID: {selectedCampaignDetails.id}</p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setSelectedCampaignDetails(null)}
-                aria-label="Close"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/25 bg-[#29292e] text-white shadow-[0_8px_24px_rgba(0,0,0,.45)] transition hover:border-[#c5a9ff]/45 hover:bg-[#3a3545]"
-              >
-                <X className="h-5 w-5 stroke-[2.5]" />
-              </button>
-            </div>
-
-            {/* Modal Body: QR Code Vector Preview & Destination URL Details */}
-            <div className="grid gap-6 md:grid-cols-12 items-center">
-              {/* QR Vector Preview */}
-              <div className="md:col-span-5 bg-white p-4 rounded-xl shadow-inner border border-stone-800 flex items-center justify-center">
-                {selectedCampaignDetails.qrCodeSvg ? (
-                  <div
-                    className="w-48 h-48 [&>svg]:w-full [&>svg]:h-full"
-                    dangerouslySetInnerHTML={{ __html: selectedCampaignDetails.qrCodeSvg }}
-                  />
-                ) : (
-                  <CustomStarQRCode value={selectedCampaignDetails.targetUrl} size={190} />
-                )}
-              </div>
-
-              {/* Destination URL & Metadata */}
-              <div className="md:col-span-7 space-y-4">
-                <div className="rounded-xl border border-stone-800 bg-stone-900 p-4 space-y-2">
-                  <span className="text-[11px] text-stone-400 font-bold uppercase tracking-wider block">
-                    Exact Redirect Destination URL
-                  </span>
-                  <div className="p-2.5 bg-stone-950 rounded-lg border border-stone-800/80 font-mono text-xs text-amber-300 break-all select-all">
-                    {selectedCampaignDetails.targetUrl}
-                  </div>
-                  <div className="flex gap-2 pt-1">
-                    <Button
-                      onClick={() => handleCopyDetailsUrl(selectedCampaignDetails.targetUrl)}
-                      variant="outline"
-                      className="flex-1 border-stone-800 bg-stone-950 text-stone-300 hover:text-white text-xs gap-1.5"
-                    >
-                      {copiedDetailsUrl ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                      <span>{copiedDetailsUrl ? "Copied!" : "Copy Redirect URL"}</span>
-                    </Button>
-                    <a
-                      href={selectedCampaignDetails.targetUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-3 py-2 rounded-lg bg-stone-800 text-stone-200 hover:text-white hover:bg-stone-700 text-xs font-semibold flex items-center gap-1.5"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                      <span>Test Redirect</span>
-                    </a>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="rounded-xl border border-stone-800 bg-stone-900 p-3">
-                    <span className="text-stone-400 block text-[10px] uppercase font-semibold">Real-Time Scans</span>
-                    <span className="text-lg font-bold text-emerald-400 font-mono mt-0.5 block">
-                      {selectedCampaignDetails.scanCount} scans
-                    </span>
-                  </div>
-                  <div className="rounded-xl border border-stone-800 bg-stone-900 p-3">
-                    <span className="text-stone-400 block text-[10px] uppercase font-semibold">Last Scanned</span>
-                    <span className="text-xs font-mono text-white mt-1 block">
-                      {selectedCampaignDetails.lastScannedAt
-                        ? new Date(selectedCampaignDetails.lastScannedAt).toLocaleString()
-                        : "Not scanned yet"}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    onClick={() => handleDownloadSavedPng(selectedCampaignDetails)}
-                    className="w-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold gap-2 text-xs py-2"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    <span>Download HD Print PNG</span>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
+        <button
+          className={button}
+          onClick={() => void load()}
+          disabled={loading}
+        >
+          <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+          Refresh
+        </button>
+      </header>
+      {error && (
+        <div
+          role="alert"
+          className="rounded-xl border border-red-400/30 bg-red-400/10 p-4 text-sm text-red-200"
+        >
+          {error}
         </div>
       )}
+      {notice && (
+        <div
+          role="status"
+          className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-4 text-sm text-emerald-200"
+        >
+          {notice}
+        </div>
+      )}
+      <div className="grid gap-3 sm:grid-cols-3">
+        {[
+          {
+            label: "Active QR codes",
+            value: campaigns.filter((c) => !c.archived_at).length,
+            Icon: QrCode,
+          },
+          { label: "Tracked visits · all time", value: total, Icon: ScanLine },
+          {
+            label: "Destinations",
+            value: new Set(
+              campaigns.filter((c) => !c.archived_at).map((c) => c.target_url),
+            ).size,
+            Icon: Link2,
+          },
+        ].map(({ label, value, Icon }) => (
+          <div
+            key={label}
+            className="rounded-2xl border border-white/10 bg-white/[.03] p-5"
+          >
+            <div className="flex items-center justify-between text-sm text-stone-400">
+              {label}
+              <Icon size={18} className="text-amber-300" />
+            </div>
+            <div className="mt-3 text-3xl font-semibold">
+              {value.toLocaleString()}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
+        <aside className="min-w-0 space-y-5">
+          <form
+            onSubmit={create}
+            className="space-y-4 rounded-2xl border border-amber-300/20 bg-amber-300/[.04] p-5"
+          >
+            <h2 className="flex items-center gap-2 font-semibold">
+              <Plus size={18} className="text-amber-300" />
+              Create a QR code
+            </h2>
+            <label className="block space-y-2 text-sm">
+              <span>Name</span>
+              <input
+                className={field}
+                required
+                maxLength={255}
+                placeholder="Packaging · winter collection"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </label>
+            <label className="block space-y-2 text-sm">
+              <span>Destination route or URL</span>
+              <input
+                className={field}
+                required
+                maxLength={2048}
+                placeholder="/perfumes or https://example.com"
+                value={destination}
+                onChange={(e) => setDestination(e.target.value)}
+              />
+            </label>
+            <p className="text-xs leading-relaxed text-stone-400">
+              Site routes open on humefragrance.com. You can change the
+              destination later; the printed QR stays the same.
+            </p>
+            <button
+              disabled={busy}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-300 px-4 py-3 text-sm font-semibold text-stone-950 hover:bg-amber-200 disabled:opacity-50"
+            >
+              <Plus size={16} />
+              {busy ? "Saving…" : "Create QR code"}
+            </button>
+          </form>
+          <section className="overflow-hidden rounded-2xl border border-white/10 bg-white/[.02]">
+            <div className="space-y-3 border-b border-white/10 p-4">
+              <div className="flex items-center justify-between">
+                <h2 className="font-semibold">Your QR codes</h2>
+                <span className="text-xs text-stone-500">{visible.length}</span>
+              </div>
+              <label className="relative block">
+                <Search
+                  size={15}
+                  className="absolute left-3 top-3 text-stone-500"
+                />
+                <input
+                  aria-label="Search QR codes"
+                  className={`${field} pl-9`}
+                  placeholder="Search name or destination"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </label>
+              <label className="flex items-center gap-2 text-xs text-stone-400">
+                <input
+                  type="checkbox"
+                  checked={showArchived}
+                  onChange={(e) => setShowArchived(e.target.checked)}
+                />
+                Include archived
+              </label>
+            </div>
+            <div className="max-h-[600px] overflow-auto">
+              {visible.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => {
+                    setSelected(c.id);
+                    setPage(1);
+                    setNotice("");
+                  }}
+                  className={`w-full border-b border-white/5 p-4 text-left transition hover:bg-white/5 ${selected === c.id ? "bg-amber-300/10 ring-1 ring-inset ring-amber-300/20" : ""}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-sm font-medium">
+                      {c.name}
+                    </span>
+                    <span className="shrink-0 text-xs text-amber-200">
+                      {Number(c.tracked_scans)} visits
+                    </span>
+                  </div>
+                  <p className="mt-1 truncate text-xs text-stone-500">
+                    {c.target_url}
+                  </p>
+                  <div className="mt-2 flex gap-2 text-[10px] uppercase tracking-wider text-stone-400">
+                    <span>
+                      {c.archived_at
+                        ? "Archived"
+                        : c.target_page === "custom"
+                          ? "Dynamic"
+                          : "Legacy"}
+                    </span>
+                  </div>
+                </button>
+              ))}
+              {!visible.length && (
+                <p className="p-6 text-sm text-stone-500">
+                  {loading
+                    ? "Loading QR codes…"
+                    : "No QR codes found. Create your first one above."}
+                </p>
+              )}
+            </div>
+          </section>
+        </aside>
+        <main className="min-w-0 space-y-5">
+          {!current ? (
+            <div className="flex min-h-[440px] flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 px-8 text-center">
+              <QrCode size={56} className="mb-5 text-amber-300/60" />
+              <h2 className="text-xl font-medium">
+                A small code. A clear picture.
+              </h2>
+              <p className="mt-3 max-w-sm text-sm leading-relaxed text-stone-400">
+                Create or select a QR code to download its image, update its
+                destination and see when people visit.
+              </p>
+            </div>
+          ) : (
+            <>
+              <section className="rounded-2xl border border-white/10 bg-white/[.03] p-5 sm:p-6">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs text-amber-300">
+                      {current.archived_at
+                        ? "ARCHIVED · LINK PAUSED"
+                        : current.target_page === "custom"
+                          ? "DYNAMIC QR CODE"
+                          : "LEGACY CAMPAIGN"}
+                    </p>
+                    <h2 className="mt-2 break-words text-2xl font-semibold">
+                      {current.name}
+                    </h2>
+                    <p className="mt-1 text-xs text-stone-500">
+                      Created {date(current.created_at)} IST
+                    </p>
+                  </div>
+                  <button
+                    className={button}
+                    disabled={busy}
+                    onClick={async () => {
+                      if (
+                        window.confirm(
+                          current.archived_at
+                            ? "Restore this QR link?"
+                            : "Archive this QR? Its tracking link will be paused; history is kept.",
+                        )
+                      ) {
+                        const result = await mutate("PATCH", {
+                          id: current.id,
+                          archived: !current.archived_at,
+                        });
+                        if (result)
+                          setNotice(
+                            current.archived_at
+                              ? "QR restored."
+                              : "QR archived. Scan history is preserved.",
+                          );
+                      }
+                    }}
+                  >
+                    <Archive size={14} />
+                    {current.archived_at ? "Restore" : "Archive"}
+                  </button>
+                </div>
+                {current.target_page !== "custom" && (
+                  <p className="mt-4 rounded-xl bg-amber-300/10 p-3 text-xs leading-relaxed text-amber-100">
+                    This is a legacy campaign. Existing printed images retain
+                    their original destination and cannot be updated.
+                    Destination changes apply to the new downloadable QR below,
+                    which uses a tracking link. New visits are reported
+                    separately from {current.scan_count || 0} historical scan
+                    counts.
+                  </p>
+                )}
+                <div className="mt-6 grid grid-cols-1 items-start gap-6 sm:grid-cols-[200px_minmax(0,1fr)]">
+                  <div className="w-full max-w-[240px]">
+                    <div
+                      className="rounded-xl bg-white p-1 [&_svg]:h-auto [&_svg]:w-full"
+                      dangerouslySetInnerHTML={{ __html: svg }}
+                    />
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        className={`${button} flex-1`}
+                        onClick={() =>
+                          download(
+                            new Blob([svg], { type: "image/svg+xml" }),
+                            `${current.id}.svg`,
+                          )
+                        }
+                      >
+                        <Download size={14} />
+                        SVG
+                      </button>
+                      <button
+                        className={`${button} flex-1`}
+                        onClick={() => void exportPng()}
+                      >
+                        PNG
+                      </button>
+                    </div>
+                    <p className="mt-2 text-xs text-stone-500">
+                      Black on white, with rounded corner markers. Keep the clear border and test at
+                      the final size.
+                    </p>
+                  </div>
+                  <div className="min-w-0 space-y-4">
+                    <label className="block space-y-2 text-xs text-stone-400">
+                      <span>Permanent tracking link</span>
+                      <div className="flex gap-2">
+                        <input readOnly className={field} value={trackingUrl} />
+                        <button
+                          aria-label="Copy tracking link"
+                          className={button}
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(trackingUrl);
+                              setCopied(true);
+                              setTimeout(() => setCopied(false), 2000);
+                            } catch {
+                              setError(
+                                "Clipboard unavailable. Select and copy the tracking link.",
+                              );
+                            }
+                          }}
+                        >
+                          {copied ? <Check size={16} /> : <Copy size={16} />}
+                        </button>
+                      </div>
+                    </label>
+                    <form
+                      className="space-y-3"
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        const result = await mutate("PATCH", {
+                          id: current.id,
+                          name: editName,
+                          destination: editDestination,
+                        });
+                        if (result)
+                          setNotice(
+                            "QR details saved. The tracking link stays the same.",
+                          );
+                      }}
+                    >
+                      <label className="block space-y-2 text-xs text-stone-400">
+                        <span>Name</span>
+                        <input
+                          required
+                          maxLength={255}
+                          className={field}
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                        />
+                      </label>
+                      <label className="block space-y-2 text-xs text-stone-400">
+                        <span>Destination</span>
+                        <input
+                          required
+                          maxLength={2048}
+                          className={field}
+                          value={editDestination}
+                          onChange={(e) => setEditDestination(e.target.value)}
+                        />
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        <button className={button} disabled={busy}>
+                          Save changes
+                        </button>
+                        <a
+                          className={button}
+                          href={current.target_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Open destination
+                          <ArrowUpRight size={14} />
+                        </a>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </section>
+              <section className="rounded-2xl border border-white/10 bg-white/[.02] p-5 sm:p-6">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="font-semibold">Scan activity</h2>
+                  <div className="flex gap-2">
+                    <select
+                      aria-label="Reporting period"
+                      className="rounded-xl border border-white/15 bg-stone-900 px-3 text-sm"
+                      value={days}
+                      onChange={(e) => {
+                        setDays(Number(e.target.value));
+                        setPage(1);
+                      }}
+                    >
+                      {[7, 30, 90, 365].map((n) => (
+                        <option key={n} value={n}>
+                          Last {n} days
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      className={button}
+                      disabled={busy || !report}
+                      onClick={() => void exportCsv()}
+                    >
+                      <Download size={14} />
+                      CSV
+                    </button>
+                  </div>
+                </div>
+                {loading ? (
+                  <p className="py-8 text-sm text-stone-400">
+                    Loading activity…
+                  </p>
+                ) : (
+                  report && (
+                    <>
+                      <div className="my-5 grid gap-3 sm:grid-cols-3">
+                        {[
+                          {
+                            label: "Tracked visits",
+                            value: report.stats.scans,
+                            Icon: ScanLine,
+                          },
+                          {
+                            label: "Unique browsers",
+                            value: report.stats.visitors,
+                            Icon: Users,
+                          },
+                          {
+                            label: "Last visit · IST",
+                            value: date(report.stats.last_scan),
+                            Icon: Clock,
+                          },
+                        ].map(({ label, value, Icon }) => (
+                          <div
+                            key={label}
+                            className="rounded-xl bg-white/[.04] p-4"
+                          >
+                            <p className="flex items-center gap-2 text-xs text-stone-400">
+                              <Icon size={14} />
+                              {label}
+                            </p>
+                            <p className="mt-3 text-lg font-medium">{value}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mb-5 rounded-xl border border-white/10 p-4">
+                        <div className="mb-4 flex items-center justify-between">
+                          <h3 className="text-sm">Daily visits · IST</h3>
+                          <span className="text-xs text-stone-500">
+                            {report.daily.length} active days
+                          </span>
+                        </div>
+                        {report.daily.length ? (
+                          <div className="space-y-2 max-h-56 overflow-auto">
+                            {report.daily.map((d) => (
+                              <div
+                                key={d.day}
+                                className="flex items-center gap-3 text-xs"
+                              >
+                                <span className="w-20 shrink-0 text-stone-400">
+                                  {d.day}
+                                </span>
+                                <div className="h-2 flex-1 rounded-full bg-white/5">
+                                  <div
+                                    className="h-2 rounded-full bg-amber-300"
+                                    style={{
+                                      width: `${Math.max(2, (d.scans / Math.max(...report.daily.map((x) => x.scans))) * 100)}%`,
+                                    }}
+                                  />
+                                </div>
+                                <span className="w-8 text-right">
+                                  {d.scans}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-stone-500">
+                            No visits in this period. Scans appear after someone
+                            opens the tracking link.
+                          </p>
+                        )}
+                      </div>
+                      <div className="mb-4 flex flex-wrap gap-2">
+                        {report.devices.map((d) => (
+                          <span
+                            key={d.device}
+                            className="rounded-full border border-white/10 px-3 py-1 text-xs text-stone-400"
+                          >
+                            {d.device} · {d.scans}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                          <thead className="border-b border-white/10 text-xs text-stone-500">
+                            <tr>
+                              {[
+                                "Time · IST",
+                                "Device",
+                                "Browser",
+                                "Referrer",
+                              ].map((h) => (
+                                <th
+                                  key={h}
+                                  className="whitespace-nowrap py-3 pr-4 font-normal"
+                                >
+                                  {h}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {report.events.map((e) => (
+                              <tr
+                                key={e.id}
+                                className="border-b border-white/5"
+                              >
+                                <td className="whitespace-nowrap py-3 pr-4 text-xs">
+                                  {date(e.scanned_at)}
+                                </td>
+                                <td className="py-3 pr-4 text-xs text-stone-400">
+                                  {e.device}
+                                </td>
+                                <td className="py-3 pr-4 text-xs text-stone-400">
+                                  {e.browser}
+                                </td>
+                                <td className="py-3 text-xs text-stone-400">
+                                  {e.referrer_host || "Direct / camera"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="mt-4 flex items-center justify-between">
+                        <span className="text-xs text-stone-500">
+                          Page {page} · {report.stats.scans} visits
+                        </span>
+                        <div className="flex gap-2">
+                          <button
+                            className={button}
+                            disabled={page === 1}
+                            onClick={() => setPage((n) => n - 1)}
+                          >
+                            Previous
+                          </button>
+                          <button
+                            className={button}
+                            disabled={page * 50 >= report.stats.scans}
+                            onClick={() => setPage((n) => n + 1)}
+                          >
+                            Next
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )
+                )}
+                <p className="mt-5 text-xs leading-relaxed text-stone-500">
+                  Visits count openings of the tracking link, including shared
+                  links. Known bots and prefetches are excluded. Repeat requests
+                  in the same 10-second window are counted once per browser.
+                  Unique browsers use an anonymous cookie; clearing cookies
+                  changes that count. No IP addresses are stored.
+                </p>
+              </section>
+            </>
+          )}
+        </main>
+      </div>
     </div>
   );
 }

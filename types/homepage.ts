@@ -1,3 +1,4 @@
+import type { CategoryTag } from "@/lib/product-categories";
 export type HomepagePerfumeCardData = {
   id: string;
   name: string;
@@ -6,9 +7,9 @@ export type HomepagePerfumeCardData = {
   visibility?: "public" | "seo_only";
   category: string;
   categoryId: string;
-  categoryTags?: Array<{ id: string; label?: string }>;
+  categoryTags?: CategoryTag[];
   categoryIds?: string[];
-  dbCategoryTags?: Array<{ id: string; label?: string }>;
+  dbCategoryTags?: CategoryTag[];
   dbCategoryIds?: string[];
   images: string[];
   price: number;

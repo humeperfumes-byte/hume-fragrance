@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { products } from "@/db/schema";
+import { products, productCategories, catalogCategories } from "@/db/schema";
 import { desc } from "drizzle-orm";
 import { ProductsTable } from "./ProductsTable";
 import { getKitAvailability } from "@/lib/kit-availability";
@@ -7,15 +7,52 @@ import { getKitAvailability } from "@/lib/kit-availability";
 export const dynamic = "force-dynamic";
 
 export default async function ProductsPage() {
-  let allProducts: (typeof products.$inferSelect)[] = [];
+  let allProducts: (typeof products.$inferSelect & {
+    categoryIds: string[];
+    categoryTags: {
+      id: string;
+      label: string;
+      visible: boolean;
+      sortOrder: number;
+    }[];
+  })[] = [];
   let kitAvailability = { outOfStock: false };
   let dbError = false;
 
   try {
-    [allProducts, kitAvailability] = await Promise.all([
+    const [rows, availability, mappings, definitions] = await Promise.all([
       db.select().from(products).orderBy(desc(products.createdAt)),
       getKitAvailability(),
+      db.select().from(productCategories),
+      db.select().from(catalogCategories),
     ]);
+    kitAvailability = availability;
+    allProducts = rows.map((product) => {
+      const ids = [
+        ...new Set([
+          product.categoryId,
+          ...mappings
+            .filter((m) => m.productId === product.id)
+            .map((m) => m.categoryId),
+        ]),
+      ];
+      return {
+        ...product,
+        category:
+          definitions.find((c) => c.id === product.categoryId)?.name ||
+          product.category,
+        categoryIds: ids,
+        categoryTags: ids.map((id) => {
+          const c = definitions.find((c) => c.id === id);
+          return {
+            id,
+            label: c?.name || id,
+            visible: c?.visible ?? true,
+            sortOrder: c?.sortOrder ?? 200,
+          };
+        }),
+      };
+    });
   } catch (error) {
     console.error("Products page DB error:", error);
     dbError = true;
@@ -29,9 +66,11 @@ export default async function ProductsPage() {
         </div>
         <div className="rounded-2xl border border-dashed border-amber-500/30 bg-amber-500/[0.04] p-12 text-center">
           <div className="max-w-md mx-auto space-y-4">
-            <h3 className="text-lg font-medium text-amber-300">Database Sync Required</h3>
+            <h3 className="text-lg font-medium text-amber-300">
+              Catalog temporarily unavailable
+            </h3>
             <p className="text-sm text-white/50">
-              The products table is missing columns. Run <code className="bg-white/10 px-2 py-1 rounded text-xs">npm run db:push</code> in your terminal to sync the schema, then refresh this page.
+              We could not load your catalog. Please refresh in a moment.
             </p>
           </div>
         </div>
@@ -48,7 +87,10 @@ export default async function ProductsPage() {
         </p>
       </div>
 
-      <ProductsTable initialProducts={allProducts} initialKitOutOfStock={kitAvailability.outOfStock} />
+      <ProductsTable
+        initialProducts={allProducts}
+        initialKitOutOfStock={kitAvailability.outOfStock}
+      />
     </div>
   );
 }

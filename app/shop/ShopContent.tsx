@@ -7,15 +7,29 @@ import { SlidersHorizontal, X } from "lucide-react";
 import PerfumeCard from "@/components/PerfumeCard";
 import type { PerfumeData } from "@/data/perfumes";
 import { celebrityFavorites } from "@/lib/celebrity-favorites";
-import { DISCOVERY_SET_IMAGES, isDiscoverySetProductId } from "@/lib/discovery-set";
-import { isVisibleNatureCategory } from "@/lib/nature-categories";
+import {
+  DISCOVERY_SET_IMAGES,
+  isDiscoverySetProductId,
+} from "@/lib/discovery-set";
+import {
+  categoryOptions,
+  matchesProductCategory,
+  normalizeCategoryId,
+} from "@/lib/product-categories";
+import { usePathname } from "next/navigation";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 
 type FilterType = "nature" | "selection" | "gender" | "occasion" | "celebrity";
 
 interface FilterConfig {
   type: FilterType;
   label: string;
-  options: string[];
+  options: { value: string; label: string; count: number }[];
 }
 
 const baseFilterConfigs: Omit<FilterConfig, "options">[] = [
@@ -25,46 +39,23 @@ const baseFilterConfigs: Omit<FilterConfig, "options">[] = [
   { type: "occasion", label: "By Occasion" },
 ];
 
-const normalizeKey = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
-
 const celebrityMap: Record<string, string[]> = Object.fromEntries(
-  celebrityFavorites.map((c) => [c.label, c.perfumeIds])
+  celebrityFavorites.map((c) => [c.label, c.perfumeIds]),
 );
-
-const prettifyCategory = (value: string) =>
-  value
-    .replace(/[-_]+/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase())
-    .trim();
 
 function filterPerfumes(
   allPerfumes: PerfumeData[],
   filterType: FilterType | null,
-  filterValue: string | null
+  filterValue: string | null,
 ): PerfumeData[] {
   if (!filterType || !filterValue) return allPerfumes;
 
   switch (filterType) {
-    case "nature": {
-      const normalizedSelected = normalizeKey(filterValue);
-      return allPerfumes.filter((p) => {
-        const categoryTokens = new Set<string>();
-
-        (p.dbCategoryTags ?? []).forEach((tag) => {
-          categoryTokens.add(normalizeKey(tag.id));
-          if (tag.label) categoryTokens.add(normalizeKey(tag.label));
-        });
-
-        (p.dbCategoryIds ?? []).forEach((id) => categoryTokens.add(normalizeKey(id)));
-
-        return Array.from(categoryTokens).some(
-          (token) => token === normalizedSelected
-        );
-      });
-    }
+    case "nature":
+      return allPerfumes.filter((p) => matchesProductCategory(p, filterValue));
     case "gender":
       return allPerfumes.filter(
-        (p) => p.gender.toLowerCase() === filterValue.toLowerCase()
+        (p) => p.gender.toLowerCase() === filterValue.toLowerCase(),
       );
     case "selection":
       if (filterValue.toLowerCase() === "best seller") {
@@ -78,11 +69,11 @@ function filterPerfumes(
       return allPerfumes.filter(
         (p) =>
           p.longevity.occasion.some((o) =>
-            o.toLowerCase().includes(filterValue.toLowerCase())
+            o.toLowerCase().includes(filterValue.toLowerCase()),
           ) ||
           p.longevity.season.some((s) =>
-            s.toLowerCase().includes(filterValue.toLowerCase())
-          )
+            s.toLowerCase().includes(filterValue.toLowerCase()),
+          ),
       );
     case "celebrity": {
       const ids = celebrityMap[filterValue] || [];
@@ -93,14 +84,15 @@ function filterPerfumes(
   }
 }
 
-export default function ShopContent({ 
+export default function ShopContent({
   perfumes,
   disableTopPadding = false,
-}: { 
+}: {
   perfumes: PerfumeData[];
   disableTopPadding?: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
@@ -109,106 +101,84 @@ export default function ShopContent({
 
   const filteredPerfumes = useMemo(
     () => filterPerfumes(perfumes, activeFilterType, activeFilterValue),
-    [perfumes, activeFilterType, activeFilterValue]
+    [perfumes, activeFilterType, activeFilterValue],
   );
 
   const displayPerfumes = useMemo(
     () =>
       [...filteredPerfumes].sort(
-        (a, b) => Number(Boolean(a.badges?.soldOut)) - Number(Boolean(b.badges?.soldOut))
+        (a, b) =>
+          Number(Boolean(a.badges?.soldOut)) -
+          Number(Boolean(b.badges?.soldOut)),
       ),
-    [filteredPerfumes]
+    [filteredPerfumes],
   );
 
-  const dynamicNatureOptions = useMemo(() => {
-    const map = new Map<string, string>();
-    perfumes.forEach((perfume) => {
-      const tags = perfume.dbCategoryTags?.length ? perfume.dbCategoryTags : [];
-      tags.forEach((tag) => {
-        const label = (tag.label || prettifyCategory(tag.id)).trim();
-        if (!isVisibleNatureCategory(tag.id) || !isVisibleNatureCategory(label)) return;
-        const key = normalizeKey(label);
-        if (!key) return;
-        if (!map.has(key)) map.set(key, label);
-      });
-      (perfume.dbCategoryIds ?? []).forEach((id) => {
-        const label = prettifyCategory(id);
-        if (!isVisibleNatureCategory(id) || !isVisibleNatureCategory(label)) return;
-        const key = normalizeKey(label);
-        if (!key) return;
-        if (!map.has(key)) map.set(key, label);
-      });
-    });
-
-    const knownOrder = [
-      "Amber",
-      "Animalic",
-      "Aquatic",
-      "Aromatic",
-      "Citrus",
-      "Earthy",
-      "Floral",
-      "Fresh",
-      "Fruity",
-      "Green",
-      "Incense",
-      "Leather",
-      "Musky",
-      "Mysterious",
-      "Oud",
-      "Patchouli",
-      "Smoky",
-      "Spicy",
-      "Tobacco",
-      "Vanilla",
-      "Woody",
-    ];
-
-    const ordered: string[] = [];
-    const usedKeys = new Set<string>();
-    knownOrder.forEach((label) => {
-      const key = normalizeKey(label);
-      if (map.has(key)) {
-        ordered.push(map.get(key)!);
-        usedKeys.add(key);
-      }
-    });
-
-    const rest = Array.from(map.entries())
-      .filter(([key]) => !usedKeys.has(key))
-      .map(([, label]) => label)
-      .sort((a, b) => a.localeCompare(b));
-
-    return [...ordered, ...rest];
-  }, [perfumes]);
-
+  const natureOptions = useMemo(() => categoryOptions(perfumes), [perfumes]);
   const filterConfigs: FilterConfig[] = useMemo(
-    () => [
-      {
-        ...baseFilterConfigs[0],
-        options: ["Best Seller", "HUME Special"],
-      },
-      {
-        ...baseFilterConfigs[1],
-        options: dynamicNatureOptions,
-      },
-      { ...baseFilterConfigs[2], options: ["Men", "Women", "Unisex"] },
-      {
-        ...baseFilterConfigs[3],
-        options: ["Gym", "Daily Wear", "Office", "Date Night", "Party", "Evening", "Formal", "Special Events"],
-      },
-    ],
-    [dynamicNatureOptions]
+    () =>
+      baseFilterConfigs.map((config) => {
+        if (config.type === "nature")
+          return {
+            ...config,
+            label: "Scent families",
+            options: natureOptions.map((c) => ({
+              value: c.id,
+              label: c.label,
+              count: c.count,
+            })),
+          };
+        const labels =
+          config.type === "selection"
+            ? ["Best Seller", "HUME Special"]
+            : config.type === "gender"
+              ? ["Men", "Women", "Unisex"]
+              : [
+                  "Gym",
+                  "Daily Wear",
+                  "Office",
+                  "Date Night",
+                  "Party",
+                  "Evening",
+                  "Formal",
+                  "Special Events",
+                ];
+        return {
+          ...config,
+          options: labels
+            .map((label) => ({
+              value: label,
+              label,
+              count: filterPerfumes(perfumes, config.type, label).length,
+            }))
+            .filter((option) => option.count > 0),
+        };
+      }),
+    [perfumes, natureOptions],
   );
+  const activeFilterLabel =
+    activeFilterType === "nature"
+      ? natureOptions.find(
+          (c) => c.id === normalizeCategoryId(activeFilterValue || ""),
+        )?.label || activeFilterValue
+      : activeFilterValue;
 
   const setFilter = (type: FilterType, value: string) => {
-    router.replace(`/shop?filter=${type}&value=${encodeURIComponent(value)}`);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("filter", type);
+    params.set("value", value);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     setMobileFiltersOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const clearFilter = () => {
-    router.replace("/shop");
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("filter");
+    params.delete("value");
+    router.replace(pathname + (params.size ? `?${params}` : ""), {
+      scroll: false,
+    });
   };
 
   useEffect(() => {
@@ -216,7 +186,7 @@ export default function ShopContent({
   }, []);
 
   return (
-    <main className="pt-24 pb-20">
+    <main className={disableTopPadding ? "pb-20" : "pt-24 pb-20"}>
       <div className="container-luxury">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -224,13 +194,16 @@ export default function ShopContent({
           transition={{ duration: 0.6 }}
           className="text-center mb-12 md:mb-16"
         >
-          <p className="text-caption text-muted-foreground mb-4">The Collection</p>
+          <p className="text-caption text-muted-foreground mb-4">
+            The Collection
+          </p>
           <h1 className="text-headline mb-4">
             Shop All <span className="italic">Fragrances</span>
           </h1>
           <div className="divider-elegant mx-auto mb-6" />
           <p className="text-body text-muted-foreground max-w-xl mx-auto">
-            Discover our curated collection of premium fragrances, inspired by the world&apos;s most iconic scents.
+            Discover our curated collection of premium fragrances, inspired by
+            the world&apos;s most iconic scents.
           </p>
         </motion.div>
 
@@ -242,12 +215,14 @@ export default function ShopContent({
               exit={{ opacity: 0, y: -10 }}
               className="flex items-center justify-center gap-3 mb-8"
             >
-              <span className="text-caption text-muted-foreground">Filtered by:</span>
+              <span className="text-caption text-muted-foreground">
+                Filtered by:
+              </span>
               <button
                 onClick={clearFilter}
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-caption"
               >
-                {activeFilterValue}
+                {activeFilterLabel}
                 <X size={14} />
               </button>
             </motion.div>
@@ -269,16 +244,21 @@ export default function ShopContent({
               </button>
               {filterConfigs.map((config) => (
                 <div key={config.type}>
-                  <h3 className="text-caption text-foreground mb-3">{config.label}</h3>
-                  <ul className="grid grid-cols-2 gap-x-3 gap-y-2">
+                  <h3 className="text-caption text-foreground mb-3">
+                    {config.label}
+                  </h3>
+                  <ul className="grid grid-cols-1 gap-1.5">
                     {config.options.map((option) => {
                       const isActive =
-                        activeFilterType === config.type && activeFilterValue === option;
+                        activeFilterType === config.type &&
+                        normalizeCategoryId(activeFilterValue || "") ===
+                          normalizeCategoryId(option.value);
                       const isSelection = config.type === "selection";
                       return (
-                        <li key={option}>
+                        <li key={option.value}>
                           <button
-                            onClick={() => setFilter(config.type, option)}
+                            aria-pressed={isActive}
+                            onClick={() => setFilter(config.type, option.value)}
                             className={`text-sm tracking-wide transition-luxury block w-full text-left leading-tight ${
                               isSelection
                                 ? `border px-3 py-2 text-[13px] whitespace-nowrap ${
@@ -294,7 +274,10 @@ export default function ShopContent({
                             }`}
                           >
                             {!isSelection && isActive && "- "}
-                            {option}
+                            {option.label}
+                            <span className="ml-2 text-[10px] opacity-50">
+                              {option.count}
+                            </span>
                           </button>
                         </li>
                       );
@@ -315,69 +298,73 @@ export default function ShopContent({
             </button>
           </div>
 
-          <AnimatePresence>
-            {mobileFiltersOpen && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm lg:hidden"
+          <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
+            <SheetContent
+              side="bottom"
+              className="max-h-[88dvh] overflow-y-auto rounded-t-3xl bg-background p-6"
+            >
+              <SheetTitle className="text-xl">Find your fragrance</SheetTitle>
+              <SheetDescription>
+                Choose a scent family or explore by occasion and gender.
+              </SheetDescription>
+              <button
+                onClick={() => {
+                  clearFilter();
+                  setMobileFiltersOpen(false);
+                }}
+                className="my-5 text-sm underline underline-offset-4"
               >
-                <div className="h-full overflow-y-auto p-6">
-                  <div className="flex items-center justify-between mb-8">
-                    <h2 className="text-subheadline">Filters</h2>
-                    <button
-                      onClick={() => setMobileFiltersOpen(false)}
-                      className="p-2 hover:bg-muted transition-colors"
-                    >
-                      <X size={20} />
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => {
-                      clearFilter();
-                      setMobileFiltersOpen(false);
-                    }}
-                    className="text-caption text-foreground mb-8 block"
-                  >
-                    All Fragrances ({perfumes.length})
-                  </button>
-                  <div className="space-y-8">
-                    {filterConfigs.map((config) => (
-                      <div key={config.type}>
-                        <h3 className="text-caption text-foreground mb-3">{config.label}</h3>
-                        <div className="flex flex-wrap gap-2">
-                          {config.options.map((option) => {
-                            const isActive =
-                              activeFilterType === config.type &&
-                              activeFilterValue === option;
-                            return (
-                              <button
-                                key={option}
-                                onClick={() => setFilter(config.type, option)}
-                                className={`text-sm font-light px-3 py-1.5 border transition-luxury ${
-                                  isActive
-                                    ? "bg-primary text-primary-foreground border-primary"
-                                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground"
-                                }`}
-                              >
-                                {option}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                All fragrances ({perfumes.length})
+              </button>
+              <div className="space-y-6 pb-8">
+                {filterConfigs.map((config) => (
+                  <section key={config.type}>
+                    <h3 className="mb-3 text-sm font-medium">{config.label}</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {config.options.map((option) => {
+                        const active =
+                          activeFilterType === config.type &&
+                          normalizeCategoryId(activeFilterValue || "") ===
+                            normalizeCategoryId(option.value);
+                        return (
+                          <button
+                            key={option.value}
+                            aria-pressed={active}
+                            onClick={() => setFilter(config.type, option.value)}
+                            className={`rounded-full border px-4 py-2.5 text-sm ${active ? "border-foreground bg-foreground text-background" : "border-border text-muted-foreground"}`}
+                          >
+                            {option.label}
+                            <span className="ml-2 text-xs opacity-50">
+                              {option.count}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            </SheetContent>
+          </Sheet>
 
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
+            {activeFilterType === "nature" &&
+              natureOptions.find(
+                (c) => c.id === normalizeCategoryId(activeFilterValue || ""),
+              )?.description && (
+                <p className="mb-5 text-sm leading-relaxed text-muted-foreground">
+                  {
+                    natureOptions.find(
+                      (c) =>
+                        c.id === normalizeCategoryId(activeFilterValue || ""),
+                    )?.description
+                  }
+                </p>
+              )}
             <div className="flex items-center justify-between mb-8">
               <p className="text-body text-muted-foreground">
-                {filteredPerfumes.length} fragrance{filteredPerfumes.length !== 1 ? "s" : ""}
+                {filteredPerfumes.length} fragrance
+                {filteredPerfumes.length !== 1 ? "s" : ""}
               </p>
             </div>
 

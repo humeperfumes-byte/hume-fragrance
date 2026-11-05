@@ -25,6 +25,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       value: input.value.toFixed(2), minSubtotal: input.minSubtotal.toFixed(2), active: input.active,
       displayInCart: input.displayInCart, welcomeBackMode: input.welcomeBackMode,
       archivedAt: input.active ? null : undefined, updatedAt: new Date(),
+      rules: input.rules,
     }).where(eq(coupons.id, id)).returning();
     if (!coupon) return NextResponse.json({ error: "Coupon not found" }, { status: 404 });
     return NextResponse.json({ ok: true, coupon });

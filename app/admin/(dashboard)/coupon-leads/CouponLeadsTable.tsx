@@ -1,4 +1,5 @@
 "use client";
+import {customerKey as growthCustomerKey} from "@/lib/growth/rules";
 
 import { useState, useMemo } from "react";
 import { Mail, MessageCircle, Search, Filter, ExternalLink, ShoppingCart, Package, Zap, AlertTriangle } from "lucide-react";
@@ -387,6 +388,7 @@ export function CouponLeadsTable({ events }: { events: EnrichedCouponEvent[] }) 
                       </a>
                     ) : null}
 
+                    {growthCustomerKey(contactPhone,contactEmail) && <a className="rounded-xl border border-white/10 px-3 py-2 text-center text-xs text-white" href={"/admin/growth?customer="+encodeURIComponent(growthCustomerKey(contactPhone,contactEmail)!)}>Create offer</a>}
                     {/* Email contact */}
                     {contactEmail && (
                       <a

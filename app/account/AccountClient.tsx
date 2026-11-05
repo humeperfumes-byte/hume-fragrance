@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import AccountRewards from "@/components/growth/AccountRewards";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
@@ -593,6 +594,8 @@ export default function AccountClient() {
       <div className="pointer-events-none absolute left-[-8rem] top-24 h-72 w-72 rounded-full bg-[#d6b77a]/15 blur-3xl" />
       <div className="pointer-events-none absolute right-[-7rem] top-[28rem] h-80 w-80 rounded-full bg-[#8d5a45]/10 blur-3xl" />
       <div className="relative mx-auto max-w-6xl">
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[310px_minmax(0,1fr)]">
+        <AccountRewards refreshKey={account?.accountLoginToken||account?.sessionId} onVerify={()=>{setLoginIdentifier(account?.email||account?.phone||'');handleSignOut();}}/>
         <div className="relative mb-6 overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_85%_10%,rgba(207,171,103,.2),transparent_34%),linear-gradient(135deg,#241813,#130f0d)] p-6 text-white shadow-[0_30px_90px_rgba(46,30,22,.2)] sm:p-8">
           <div className="absolute -right-10 -top-14 h-40 w-40 rounded-full border border-white/[0.06]" />
           <div className="absolute -right-2 -top-6 h-24 w-24 rounded-full border border-[#d7b979]/15" />
@@ -632,6 +635,8 @@ export default function AccountClient() {
             </Link>
           </Button>
           </div>
+        </div>
+
         </div>
 
         {error ? (

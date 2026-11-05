@@ -62,6 +62,29 @@ export const BACKUP_REGISTRY = [
     ]
   },
   {
+    "name": "catalog_categories",
+    "key": "id",
+    "columns": [
+      "id",
+      "name",
+      "description",
+      "visible",
+      "sort_order",
+      "created_at",
+      "updated_at"
+    ],
+    "json": [],
+    "snapshotKeys": [
+      "id",
+      "name",
+      "description",
+      "visible",
+      "sortOrder",
+      "createdAt",
+      "updatedAt"
+    ]
+  },
+  {
     "name": "product_categories",
     "key": "id",
     "columns": [
@@ -256,9 +279,12 @@ export const BACKUP_REGISTRY = [
       "welcome_back_mode",
       "archived_at",
       "created_at",
-      "updated_at"
+      "updated_at",
+      "rules"
     ],
-    "json": [],
+    "json": [
+      "rules"
+    ],
     "snapshotKeys": [
       "id",
       "code",
@@ -272,7 +298,8 @@ export const BACKUP_REGISTRY = [
       "welcomeBackMode",
       "archivedAt",
       "createdAt",
-      "updatedAt"
+      "updatedAt",
+      "rules"
     ]
   },
   {
@@ -331,7 +358,9 @@ export const BACKUP_REGISTRY = [
       "updated_at",
       "whatsapp_initiated_at",
       "shipped_at",
-      "delivered_at"
+      "delivered_at",
+      "coins_used",
+      "coin_customer_key"
     ],
     "json": [
       "external_payment_receipt",
@@ -391,7 +420,9 @@ export const BACKUP_REGISTRY = [
       "updatedAt",
       "whatsappInitiatedAt",
       "shippedAt",
-      "deliveredAt"
+      "deliveredAt",
+      "coinsUsed",
+      "coinCustomerKey"
     ]
   },
   {
@@ -808,6 +839,7 @@ export const BACKUP_REGISTRY = [
       "qr_code_svg",
       "scan_count",
       "last_scanned_at",
+      "archived_at",
       "created_at"
     ],
     "json": [],
@@ -823,7 +855,33 @@ export const BACKUP_REGISTRY = [
       "qrCodeSvg",
       "scanCount",
       "lastScannedAt",
+      "archivedAt",
       "createdAt"
+    ]
+  },
+  {
+    "name": "qr_scan_events",
+    "key": "id",
+    "columns": [
+      "id",
+      "campaign_id",
+      "visitor_id",
+      "scanned_at",
+      "device",
+      "browser",
+      "referrer_host",
+      "bucket"
+    ],
+    "json": [],
+    "snapshotKeys": [
+      "id",
+      "campaignId",
+      "visitorId",
+      "scannedAt",
+      "device",
+      "browser",
+      "referrerHost",
+      "bucket"
     ]
   },
   {
@@ -841,6 +899,256 @@ export const BACKUP_REGISTRY = [
       "key",
       "value",
       "updatedAt"
+    ]
+  },
+  {
+    "name": "growth_settings",
+    "key": "id",
+    "columns": [
+      "id",
+      "value",
+      "updated_at"
+    ],
+    "json": [
+      "value"
+    ],
+    "snapshotKeys": [
+      "id",
+      "value",
+      "updatedAt"
+    ]
+  },
+  {
+    "name": "growth_accounts",
+    "key": "customer_key",
+    "columns": [
+      "customer_key",
+      "phone",
+      "email",
+      "name",
+      "marketing_opt_in",
+      "consent_source",
+      "consent_at",
+      "referral_code",
+      "last_login_at",
+      "last_activity_at",
+      "created_at",
+      "updated_at"
+    ],
+    "json": [],
+    "snapshotKeys": [
+      "customerKey",
+      "phone",
+      "email",
+      "name",
+      "marketingOptIn",
+      "consentSource",
+      "consentAt",
+      "referralCode",
+      "lastLoginAt",
+      "lastActivityAt",
+      "createdAt",
+      "updatedAt"
+    ]
+  },
+  {
+    "name": "growth_coin_ledger",
+    "key": "id",
+    "columns": [
+      "id",
+      "customer_key",
+      "delta",
+      "source",
+      "order_id",
+      "kind",
+      "note",
+      "available_at",
+      "voided",
+      "created_at"
+    ],
+    "json": [],
+    "snapshotKeys": [
+      "id",
+      "customerKey",
+      "delta",
+      "source",
+      "orderId",
+      "kind",
+      "note",
+      "availableAt",
+      "voided",
+      "createdAt"
+    ]
+  },
+  {
+    "name": "growth_coin_reservations",
+    "key": "id",
+    "columns": [
+      "id",
+      "customer_key",
+      "coins",
+      "order_id",
+      "status",
+      "expires_at",
+      "revision",
+      "created_at",
+      "updated_at"
+    ],
+    "json": [],
+    "snapshotKeys": [
+      "id",
+      "customerKey",
+      "coins",
+      "orderId",
+      "status",
+      "expiresAt",
+      "revision",
+      "createdAt",
+      "updatedAt"
+    ]
+  },
+  {
+    "name": "growth_coupon_uses",
+    "key": "order_id",
+    "columns": [
+      "order_id",
+      "coupon_id",
+      "customer_key",
+      "status",
+      "created_at"
+    ],
+    "json": [],
+    "snapshotKeys": [
+      "orderId",
+      "couponId",
+      "customerKey",
+      "status",
+      "createdAt"
+    ]
+  },
+  {
+    "name": "growth_order_benefits",
+    "key": "order_id",
+    "columns": [
+      "order_id",
+      "customer_key",
+      "reservation_id",
+      "coins",
+      "referral_code",
+      "referral_discount",
+      "created_at"
+    ],
+    "json": [],
+    "snapshotKeys": [
+      "orderId",
+      "customerKey",
+      "reservationId",
+      "coins",
+      "referralCode",
+      "referralDiscount",
+      "createdAt"
+    ]
+  },
+  {
+    "name": "growth_referrals",
+    "key": "id",
+    "columns": [
+      "id",
+      "referrer_key",
+      "referred_key",
+      "order_id",
+      "coins",
+      "status",
+      "created_at"
+    ],
+    "json": [],
+    "snapshotKeys": [
+      "id",
+      "referrerKey",
+      "referredKey",
+      "orderId",
+      "coins",
+      "status",
+      "createdAt"
+    ]
+  },
+  {
+    "name": "growth_campaigns",
+    "key": "id",
+    "columns": [
+      "id",
+      "title",
+      "body",
+      "link",
+      "status",
+      "template_name",
+      "language",
+      "scheduled_at",
+      "created_at",
+      "updated_at"
+    ],
+    "json": [],
+    "snapshotKeys": [
+      "id",
+      "title",
+      "body",
+      "link",
+      "status",
+      "templateName",
+      "language",
+      "scheduledAt",
+      "createdAt",
+      "updatedAt"
+    ]
+  },
+  {
+    "name": "growth_campaign_recipients",
+    "key": "id",
+    "columns": [
+      "id",
+      "campaign_id",
+      "customer_key",
+      "phone",
+      "name",
+      "status",
+      "provider_id",
+      "error_code",
+      "claimed_at",
+      "sent_at",
+      "updated_at"
+    ],
+    "json": [],
+    "snapshotKeys": [
+      "id",
+      "campaignId",
+      "customerKey",
+      "phone",
+      "name",
+      "status",
+      "providerId",
+      "errorCode",
+      "claimedAt",
+      "sentAt",
+      "updatedAt"
+    ]
+  },
+  {
+    "name": "growth_saved_segments",
+    "key": "id",
+    "columns": [
+      "id",
+      "name",
+      "filters",
+      "created_at"
+    ],
+    "json": [
+      "filters"
+    ],
+    "snapshotKeys": [
+      "id",
+      "name",
+      "filters",
+      "createdAt"
     ]
   }
 ] as const;

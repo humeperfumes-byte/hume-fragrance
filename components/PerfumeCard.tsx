@@ -10,8 +10,15 @@ import { toast } from "@/hooks/use-toast";
 import { formatINR } from "@/lib/currency";
 import { withCloudinaryTransforms } from "@/lib/cloudinary";
 import { getProductPath } from "@/lib/product-route";
-import { DISCOVERY_SET_PATH, isDiscoverySetProductId } from "@/lib/discovery-set";
+import {
+  DISCOVERY_SET_PATH,
+  isDiscoverySetProductId,
+} from "@/lib/discovery-set";
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
+import {
+  productCategoryTags,
+  type CategoryTag,
+} from "@/lib/product-categories";
 
 interface PerfumeCardProps {
   id: string;
@@ -19,7 +26,7 @@ interface PerfumeCardProps {
   inspiration: string;
   inspirationBrand?: string;
   category: string;
-  categoryTags?: Array<{ id: string; label?: string }>;
+  categoryTags?: CategoryTag[];
   categoryIds?: string[];
   image: string;
   price: number;
@@ -74,18 +81,33 @@ const PerfumeCard = ({
   });
   const displayPrice = formatINR(price);
   const isPriorityCard = prioritizeImage ?? index === 0;
-  const primaryBadge =
-    soldOut
-      ? { full: "Sold Out", compact: "Sold", className: "bg-red-600 text-white" }
-      : isDiscoverySet
-        ? { full: "Discovery Set", compact: "Set", className: "bg-[#2a2116] text-[#f7d79b]" }
-        : bestSeller
-          ? { full: "Best Seller", compact: "Best Seller", className: "bg-foreground text-background" }
-          : humeSpecial
-            ? { full: "HUME Special", compact: "HUME Special", className: "bg-emerald-100 text-emerald-800" }
-            : limitedStock
-              ? { full: "Only 2 Left", compact: "2 Left", className: "bg-amber-600 text-white font-medium shadow-sm" }
-              : null;
+  const primaryBadge = soldOut
+    ? { full: "Sold Out", compact: "Sold", className: "bg-red-600 text-white" }
+    : isDiscoverySet
+      ? {
+          full: "Discovery Set",
+          compact: "Set",
+          className: "bg-[#2a2116] text-[#f7d79b]",
+        }
+      : bestSeller
+        ? {
+            full: "Best Seller",
+            compact: "Best Seller",
+            className: "bg-foreground text-background",
+          }
+        : humeSpecial
+          ? {
+              full: "HUME Special",
+              compact: "HUME Special",
+              className: "bg-emerald-100 text-emerald-800",
+            }
+          : limitedStock
+            ? {
+                full: "Only 2 Left",
+                compact: "2 Left",
+                className: "bg-amber-600 text-white font-medium shadow-sm",
+              }
+            : null;
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -95,26 +117,13 @@ const PerfumeCard = ({
     return () => window.clearTimeout(timer);
   }, []);
 
-  const categoryLine = (() => {
-    const labels = new Set<string>();
-
-    categoryTags.forEach((tag) => {
-      const value = (tag.label || tag.id || "").trim();
-      if (value) labels.add(value);
-    });
-
-    categoryIds.forEach((id) => {
-      const value = id
-        .replace(/[-_]+/g, " ")
-        .replace(/\b\w/g, (char) => char.toUpperCase())
-        .trim();
-      if (value) labels.add(value);
-    });
-
-    if (labels.size === 0 && category) labels.add(category);
-
-    return Array.from(labels).slice(0, 3).join(" / ");
-  })();
+  const categoryLine =
+    productCategoryTags({ categoryTags, categoryIds })
+      .filter((tag) => tag.visible !== false)
+      .map((tag) => tag.label)
+      .slice(0, 3)
+      .join(" / ") ||
+    (categoryTags.length || categoryIds.length ? "" : category);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -163,7 +172,6 @@ const PerfumeCard = ({
         },
       }),
     );
-
   };
 
   return (
@@ -216,7 +224,9 @@ const PerfumeCard = ({
                 {soldOut && compactBadges ? (
                   <>
                     <span className="sm:hidden">Sold-Out</span>
-                    <span className="hidden sm:inline">{primaryBadge.compact}</span>
+                    <span className="hidden sm:inline">
+                      {primaryBadge.compact}
+                    </span>
                   </>
                 ) : compactBadges ? (
                   primaryBadge.compact
@@ -240,7 +250,13 @@ const PerfumeCard = ({
                   ? `${name} is sold out`
                   : `Add ${name} to bag`
             }
-            title={isDiscoverySet ? "Build Discovery Set" : soldOut ? "Sold out" : "Add to bag"}
+            title={
+              isDiscoverySet
+                ? "Build Discovery Set"
+                : soldOut
+                  ? "Sold out"
+                  : "Add to bag"
+            }
           >
             <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.46)_0%,rgba(255,255,255,0.12)_38%,rgba(255,255,255,0.04)_100%)]" />
             <span className="pointer-events-none absolute -left-5 -top-5 h-12 w-12 rounded-full bg-white/35 blur-xl" />

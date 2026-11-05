@@ -1,3 +1,4 @@
+import GrowthCenter from "@/components/admin/GrowthCenter";
 import { db } from "@/db";
 import { couponCodeEvents, coupons, checkoutDrafts, orders, sessionIntelligence } from "@/db/schema";
 import { and, desc, gte, inArray, lte } from "drizzle-orm";
@@ -11,7 +12,7 @@ import { parseAdminMarket, isIndiaLeadSignal, isIndiaCheckoutSignal } from "@/li
 export const dynamic = "force-dynamic";
 
 type AdminPageProps = {
-  searchParams?: Promise<{ hours?: string; market?: string; from?: string; to?: string }>;
+  searchParams?: Promise<{ view?:string; hours?: string; market?: string; from?: string; to?: string }>;
 };
 
 type CouponEventRow = typeof couponCodeEvents.$inferSelect;
@@ -44,6 +45,7 @@ function dedupeCouponLeadEvents(events: CouponEventRow[]) {
 
 export default async function CouponLeadsPage({ searchParams }: AdminPageProps) {
   const params = await searchParams;
+  if(params?.view!=="leads")return <GrowthCenter initialTab="offers"/>;
   const timeWindow = parseAdminTimeWindow(params?.hours, params?.from, params?.to);
   const market = parseAdminMarket(params?.market);
   let events: CouponEventRow[] = [];

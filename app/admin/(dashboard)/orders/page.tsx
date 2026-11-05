@@ -35,7 +35,7 @@ export default async function OrdersPage({ searchParams }: AdminPageProps) {
       .select()
       .from(orders)
       .where(orderWindow)
-      .orderBy(desc(orders.createdAt))
+      .orderBy(desc(orders.createdAt), desc(orders.id))
       .limit(200);
     allOrders = filterExcludedAdminRows(allOrders, collectExcludedSessionIds(allOrders));
 

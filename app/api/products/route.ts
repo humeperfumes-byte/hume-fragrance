@@ -7,13 +7,22 @@ import { z } from "zod";
 import { requireAdminToken } from "@/lib/admin-auth";
 import { getAllProducts, getAllPublicProducts } from "@/lib/db/products";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { resolveCategorySelection } from "@/lib/db/category-writes";
+import { matchesProductCategory } from "@/lib/product-categories";
 
 const imageUrlSchema = z
   .array(
-    z.string().trim().refine(
-      (val) => val.length > 0 && (val.startsWith("/") || val.startsWith("http://") || val.startsWith("https://")),
-      { message: "Must be a valid URL or path" }
-    )
+    z
+      .string()
+      .trim()
+      .refine(
+        (val) =>
+          val.length > 0 &&
+          (val.startsWith("/") ||
+            val.startsWith("http://") ||
+            val.startsWith("https://")),
+        { message: "Must be a valid URL or path" },
+      ),
   )
   .min(1, "At least one image URL is required");
 const defaultCelebImage = "https://placehold.co/600x600?text=Celeb";
@@ -35,7 +44,9 @@ export async function GET(request: NextRequest) {
     } else if (forDiscoverySet) {
       const rawProducts = await getAllProducts();
       allProducts = rawProducts.filter(
-        (product) => product.visibility === "public" || product.badges?.showInDiscoverySet === true
+        (product) =>
+          product.visibility === "public" ||
+          product.badges?.showInDiscoverySet === true,
       );
     } else {
       allProducts = await getAllPublicProducts();
@@ -45,15 +56,16 @@ export async function GET(request: NextRequest) {
       const byCategory =
         !categoryId ||
         categoryId === "all" ||
-        (product.categoryIds ?? [product.categoryId]).includes(categoryId);
+        matchesProductCategory(product, categoryId);
       const byGender = !gender || product.gender === gender;
       return byCategory && byGender;
     });
 
     return NextResponse.json(filtered, {
-      headers: (includeHidden || forDiscoverySet)
-        ? { "Cache-Control": "private, no-store" }
-        : { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=1800" },
+      headers:
+        includeHidden || forDiscoverySet
+          ? { "Cache-Control": "private, no-store" }
+          : { "Cache-Control": "public, max-age=0, must-revalidate" },
     });
   } catch (error) {
     console.error("Error fetching products:", error);
@@ -121,34 +133,35 @@ export async function POST(request: NextRequest) {
 
     const validatedData = productSchema.parse(body);
 
-    const [newProduct] = await db
-      .insert(products)
-      .values({
-        ...validatedData,
-        price: validatedData.price.toString(),
-      })
-      .returning();
-
-    const categoryIds = Array.from(
-      new Set([validatedData.categoryId, ...(validatedData.categoryIds ?? [])].filter(Boolean))
-    );
-
-    try {
-      if (categoryIds.length > 0) {
-        await db.insert(productCategories).values(
-          categoryIds.map((id) => ({
-            productId: validatedData.id,
-            categoryId: id,
-            categoryLabel: validatedData.category,
-          }))
+    const { categoryIds: requestedIds, ...productValues } = validatedData;
+    const { newProduct, categoryIds } = await db.transaction(async (tx) => {
+      const selection = await resolveCategorySelection(
+        tx,
+        validatedData.categoryId,
+        requestedIds ?? [],
+      );
+      const [newProduct] = await tx
+        .insert(products)
+        .values({
+          ...productValues,
+          categoryId: selection.primaryId,
+          category: selection.primaryName,
+          price: validatedData.price.toString(),
+        })
+        .returning();
+      await tx
+        .insert(productCategories)
+        .values(
+          selection.categories.map((c) => ({
+            productId: newProduct.id,
+            categoryId: c.id,
+            categoryLabel: c.label,
+          })),
         );
-      }
-    } catch (error) {
-      console.error("Failed to save product_categories rows:", error);
-    }
-
+      return { newProduct, categoryIds: selection.categories.map((c) => c.id) };
+    });
     try {
-      revalidateTag("products", "max");
+      revalidateTag("products", { expire: 0 });
       revalidatePath("/", "layout");
     } catch (err) {
       console.warn("Revalidation warning:", err);
@@ -160,19 +173,19 @@ export async function POST(request: NextRequest) {
         price: parseFloat(newProduct.price),
         categoryIds,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Validation error", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
     console.error("Error creating product:", error);
     return NextResponse.json(
       { error: "Failed to create product" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

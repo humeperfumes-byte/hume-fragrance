@@ -4,44 +4,34 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import PerfumeCard from "./PerfumeCard";
-import { isVisibleNatureCategory } from "@/lib/nature-categories";
+import {
+  categoryOptions,
+  matchesProductCategory,
+} from "@/lib/product-categories";
 import type { HomepagePerfumeCardData } from "@/types/homepage";
 
 const Collection = ({ perfumes }: { perfumes: HomepagePerfumeCardData[] }) => {
   const [activeCategory, setActiveCategory] = useState("all");
-  const categories = useMemo(() => {
-    const map = new Map<string, string>();
-    perfumes.forEach((p) => {
-      (p.dbCategoryTags ?? p.categoryTags ?? []).forEach((tag) => {
-        if (!tag?.id) return;
-        if (!isVisibleNatureCategory(tag.id) || !isVisibleNatureCategory(tag.label || tag.id)) return;
-        map.set(tag.id, tag.label || tag.id);
-      });
-      (p.dbCategoryIds ?? p.categoryIds ?? []).forEach((id) => {
-        if (id && !map.has(id) && isVisibleNatureCategory(id)) {
-          map.set(
-            id,
-            id
-              .replace(/[-_]+/g, " ")
-              .replace(/\b\w/g, (c) => c.toUpperCase())
-          );
-        }
-      });
-    });
-
-    const dynamic = Array.from(map.entries())
-      .map(([id, label]) => ({ id, label }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-
-    return [{ id: "all", label: "All Fragrances" }, ...dynamic];
-  }, [perfumes]);
-
+  const [showAllCategories, setShowAllCategories] = useState(false);
+  const categories = useMemo(
+    () => [
+      { id: "all", label: "All fragrances", count: perfumes.length },
+      ...categoryOptions(perfumes),
+    ],
+    [perfumes],
+  );
   const filteredPerfumes =
     activeCategory === "all"
       ? perfumes
-      : perfumes.filter((p) => (p.dbCategoryIds ?? p.categoryIds ?? [p.categoryId]).includes(activeCategory));
+      : perfumes.filter((p) => matchesProductCategory(p, activeCategory));
   const visiblePerfumes = filteredPerfumes.slice(0, 8);
-  const visibleCategories = categories.slice(0, 10);
+  const visibleCategories = showAllCategories
+    ? categories
+    : categories.slice(0, 9);
+  const collectionHref =
+    activeCategory === "all"
+      ? "/shop"
+      : "/shop?filter=nature&value=" + encodeURIComponent(activeCategory);
 
   return (
     <section id="collection" className="py-24 md:py-32">
@@ -73,28 +63,30 @@ const Collection = ({ perfumes }: { perfumes: HomepagePerfumeCardData[] }) => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="flex flex-wrap justify-center gap-2 md:gap-4 mb-12 md:mb-16"
+          className="flex flex-wrap justify-center gap-2 mb-8 md:mb-10"
         >
           {visibleCategories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
-              className={`text-[10px] md:text-caption px-3 md:px-4 py-1.5 md:py-2 transition-all duration-300 ${
-                activeCategory === cat.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-transparent text-muted-foreground hover:text-foreground border border-border hover:border-foreground"
-              }`}
+              aria-pressed={activeCategory === cat.id}
+              className={`inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-xs transition-colors md:text-sm ${activeCategory === cat.id ? "border-foreground bg-foreground text-background" : "border-border bg-background text-muted-foreground hover:border-foreground hover:text-foreground"}`}
             >
               {cat.label}
+              <span className="text-[10px] opacity-60">{cat.count}</span>
             </button>
           ))}
-          {categories.length > 10 && (
-            <Link
-              href="/shop"
-              className="text-[10px] md:text-caption px-3 md:px-4 py-1.5 md:py-2 transition-all duration-300 bg-foreground text-background border border-foreground hover:bg-background hover:text-foreground"
+          {categories.length > 9 && (
+            <button
+              type="button"
+              onClick={() => setShowAllCategories((v) => !v)}
+              aria-expanded={showAllCategories}
+              className="rounded-full border border-dashed border-border px-4 py-2.5 text-xs text-foreground hover:border-foreground"
             >
-              10+
-            </Link>
+              {showAllCategories
+                ? "Show fewer"
+                : "+ " + (categories.length - 9) + " more families"}
+            </button>
           )}
         </motion.div>
 
@@ -132,10 +124,14 @@ const Collection = ({ perfumes }: { perfumes: HomepagePerfumeCardData[] }) => {
 
         <div className="mt-10 flex justify-center">
           <Link
-            href="/shop"
+            href={collectionHref}
             className="inline-flex items-center justify-center px-8 py-3.5 border border-foreground text-caption tracking-[0.2em] uppercase hover:bg-foreground hover:text-background transition-colors"
           >
-            See All Products
+            View{" "}
+            {activeCategory === "all"
+              ? "all fragrances"
+              : categories.find((c) => c.id === activeCategory)?.label +
+                " fragrances"}
           </Link>
         </div>
       </div>

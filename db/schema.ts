@@ -1,5 +1,5 @@
 import {sql} from "drizzle-orm";
-import { pgTable, text, varchar, decimal, jsonb, boolean, timestamp, pgEnum, integer, serial, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, decimal, jsonb, boolean, timestamp, pgEnum, integer, serial, index, uniqueIndex, uuid, bigint } from "drizzle-orm/pg-core";
 
 // Enums
 export const secureCheckoutSessions = pgTable("secure_checkout_sessions", {
@@ -19,6 +19,7 @@ export const safeDiagnostics = pgTable("safe_diagnostics", {
   reference: varchar("reference", { length: 100 }).primaryKey(),
   code: varchar("code", { length: 60 }).notNull(),
   occurredAt: timestamp("occurred_at").defaultNow().notNull(),
+  details: jsonb("details").$type<import("@/lib/safe-error-monitoring").SafeErrorDetails>().notNull().default({}),
 });
 export const customerAccessLinks = pgTable("customer_access_links", {
   id: varchar("id", { length: 100 }).primaryKey(),
@@ -230,12 +231,23 @@ export const coupons = pgTable("coupons", {
   active: boolean("active").notNull().default(true),
   displayInCart: boolean("display_in_cart").notNull().default(true),
   welcomeBackMode: varchar("welcome_back_mode", { length: 30 }).notNull().default("cap_5"),
+  rules: jsonb("rules").$type<import("@/lib/growth/rules").CouponRules>().notNull().default({} as import("@/lib/growth/rules").CouponRules),
   archivedAt: timestamp("archived_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // Product multi-category mapping
+export const catalogCategories = pgTable("catalog_categories", {
+  id: varchar("id", {length:100}).primaryKey(),
+  name: varchar("name", {length:100}).notNull(),
+  description: varchar("description", {length:500}).notNull().default(""),
+  visible: boolean("visible").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(200),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, table=>[uniqueIndex("catalog_categories_name_unique").on(sql`lower(${table.name})`)]);
+
 export const productCategories = pgTable("product_categories", {
   id: serial("id").primaryKey(),
   productId: varchar("product_id", { length: 255 })
@@ -244,7 +256,7 @@ export const productCategories = pgTable("product_categories", {
   categoryId: varchar("category_id", { length: 100 }).notNull(),
   categoryLabel: varchar("category_label", { length: 100 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, table => [uniqueIndex("product_categories_product_category_unique").on(table.productId,table.categoryId)]);
 
 // Consent Capture Events
 export const consentEvents = pgTable("consent_events", {
@@ -351,6 +363,8 @@ export const checkoutDrafts = pgTable("checkout_drafts", {
 
 // Order intents captured when customer proceeds to WhatsApp checkout
 export const orders = pgTable("orders", {
+  coinsUsed: integer("coins_used").notNull().default(0),
+  coinCustomerKey: text("coin_customer_key"),
   id: varchar("id", { length: 255 }).primaryKey(),
   orderNumber: varchar("order_number", { length: 50 }).notNull().unique(),
   sessionId: varchar("session_id", { length: 255 }).notNull(),
@@ -558,6 +572,7 @@ export const customerAccountSessions = pgTable("customer_account_sessions", {
   phone: varchar("phone", { length: 50 }),
   expiresAt: timestamp("expires_at").notNull(),
   lastUsedAt: timestamp("last_used_at").defaultNow().notNull(),
+  lastLoginAt: timestamp("last_login_at",{withTimezone:true}),
   ipAddress: varchar("ip_address", { length: 255 }),
   userAgent: text("user_agent"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -730,8 +745,24 @@ export const qrCampaigns = pgTable("qr_campaigns", {
   qrCodeSvg: text("qr_code_svg"),
   scanCount: integer("scan_count").notNull().default(0),
   lastScannedAt: timestamp("last_scanned_at"),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const qrScanEvents = pgTable("qr_scan_events", {
+  id: uuid("id").primaryKey(),
+  campaignId: varchar("campaign_id", { length: 255 }).notNull().references(() => qrCampaigns.id),
+  visitorId: uuid("visitor_id").notNull(),
+  scannedAt: timestamp("scanned_at", { withTimezone: true }).defaultNow().notNull(),
+  device: varchar("device", { length: 20 }).notNull(),
+  browser: varchar("browser", { length: 20 }).notNull(),
+  referrerHost: varchar("referrer_host", { length: 255 }),
+  bucket: bigint("bucket", { mode: "number" }).notNull(),
+}, table => [
+  uniqueIndex("qr_scan_visitor_bucket").on(table.campaignId, table.visitorId, table.bucket),
+  index("qr_scan_campaign_time").on(table.campaignId, table.scannedAt),
+  index("qr_scan_time").on(table.scannedAt),
+]);
 
 export type QRCampaign = typeof qrCampaigns.$inferSelect;
 export type NewQRCampaign = typeof qrCampaigns.$inferInsert;
@@ -757,3 +788,5 @@ export const googleBackupConnections=pgTable('google_backup_connections',{
 export const googleBackupRuns=pgTable('google_backup_runs',{
  id:varchar('id',{length:36}).primaryKey(),googleSub:varchar('google_sub',{length:255}).notNull(),trigger:varchar('trigger',{length:20}).notNull(),scheduledFor:timestamp('scheduled_for',{withTimezone:true}),status:varchar('status',{length:20}).notNull(),leaseUntil:timestamp('lease_until',{withTimezone:true}).notNull(),startedAt:timestamp('started_at',{withTimezone:true}).defaultNow().notNull(),completedAt:timestamp('completed_at',{withTimezone:true}),spreadsheetId:varchar('spreadsheet_id',{length:255}),spreadsheetUrl:text('spreadsheet_url'),errorCode:varchar('error_code',{length:80}),recordCount:integer('record_count'),sourceBytes:integer('source_bytes'),cells:integer('cells'),tableCounts:jsonb('table_counts').$type<Record<string,number>>(),
 },table=>[uniqueIndex('google_backup_one_running').on(sql`(true)`).where(sql`${table.status} = 'running'`),uniqueIndex('google_backup_occurrence').on(table.googleSub,table.scheduledFor).where(sql`${table.trigger} = 'scheduled'`),index('google_backup_runs_started').on(table.startedAt,table.id)]).enableRLS();
+
+export * from './growth-schema';

@@ -2,6 +2,7 @@
 import { COD_FEE, COD_PAYMENT_METHOD, isCodEligible } from "@/lib/cod-policy";
 import { useCheckoutActivity } from "@/hooks/use-checkout-activity";
 import type { CheckoutEvent } from "@/lib/checkout-activity";
+import CoinRedemption from "@/components/growth/CoinRedemption";
 import { checkoutFetch } from "@/lib/checkout-fetch";
 
 import {
@@ -523,7 +524,7 @@ function PaymentStartNotice({ message }: { message: string }) {
 export default function CheckoutClient({ secureSession, paymentBlocked = false, paymentMode, paymentOptions }: { paymentOptions?: (baseTotal: number) => React.ReactNode; paymentBlocked?: boolean; paymentMode?: RecoveryPaymentMode; secureSession?: { token: string; id: string; orderId: string; orderNumber: string; savedCodFee?: number; savedTotal?: number; savedShippingFee?: number; expectedPaymentMinor?: number } } = {}) {
   const router = useRouter();
   const pathname = usePathname();
-  const { items, totalPrice, clearCart, appliedCouponCode, hydrated } = useCart();
+  const { items, totalPrice, clearCart, appliedCouponCode, hydrated,growthQuote,growthQuotePending,growthQuoteError,coinReservationId } = useCart();
   const settings = useSiteControls();
   const checkoutSessionIdRef = useRef<string | null>(secureSession?.id || null);
   const secureOrderPathRef = useRef<string | null>(null);
@@ -540,7 +541,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
   const [overrideReady, setOverrideReady] = useState(false);
   const [overrideLoadError, setOverrideLoadError] = useState(false);
   const [overrideLoadAttempt, setOverrideLoadAttempt] = useState(0);
-  const pricingReady = hydrated && (secureSession?.savedTotal !== undefined || (couponsLoaded && overrideReady));
+  const pricingReady = hydrated && (secureSession?.savedTotal !== undefined || (couponsLoaded && overrideReady && !growthQuotePending && !growthQuoteError && Boolean(growthQuote)));
   const [welcomeBackReward, setWelcomeBackReward] =
     useState<WelcomeBackReward | null>(null);
   const [isRazorpayAvailable, setIsRazorpayAvailable] = useState(false);
@@ -659,7 +660,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
     () => calculateCouponDiscount(appliedCoupon, items, totalPrice),
     [appliedCoupon, items, totalPrice],
   );
-  const couponDiscount = Math.min(totalPrice, couponResult.discount);
+  const couponDiscount = growthQuote?.couponDiscount ?? Math.min(totalPrice, couponResult.discount);
 
   const isWelcomeRewardBlocked = useMemo(() => {
     return items.length > 0 && items.every((item) => item.isGift || isDiscoverySetCartItem(item));
@@ -667,7 +668,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
 
   const activeWelcomeReward = settings.welcomeBackEnabled && !isWelcomeRewardBlocked ? welcomeBackReward : null;
 
-  const welcomeBackDiscount = calculateWelcomeBackDiscount(
+  const welcomeBackDiscount = growthQuote?.welcomeDiscount ?? calculateWelcomeBackDiscount(
     activeWelcomeReward,
     totalPrice,
     couponDiscount,
@@ -688,18 +689,18 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
     appliedCoupon,
     totalPrice,
   );
-  const hasWelcomeBackBenefit = effectiveWelcomeBackPercent > 0;
+  const hasWelcomeBackBenefit = effectiveWelcomeBackPercent > 0 && (!growthQuote || growthQuote.welcomeDiscount > 0);
   const regularShippingFee =
     totalPrice > 0 && totalPrice < freeDeliveryThreshold
       ? deliveryFeeBelowThreshold
       : 0;
-  const shippingFee = secureSession?.savedShippingFee ?? (hasWelcomeBackBenefit ? 0 : regularShippingFee);
+  const shippingFee = secureSession?.savedShippingFee ?? growthQuote?.shippingFee ?? (hasWelcomeBackBenefit ? 0 : regularShippingFee);
   const shippingSavings = Math.max(0, regularShippingFee - shippingFee);
   const rawGrandTotal =
     Math.max(0, totalPrice - couponDiscount - welcomeBackDiscount) +
     shippingFee;
   const codFee = recoveryPaymentMode === "partial_cod" ? (secureSession?.savedCodFee ?? COD_FEE) : 0;
-  const grandTotal = secureSession?.savedTotal ?? ((adminOverrideTotal !== null ? adminOverrideTotal : rawGrandTotal) + codFee);
+  const grandTotal = secureSession?.savedTotal ?? ((adminOverrideTotal !== null ? adminOverrideTotal : growthQuote?.grandTotal ?? rawGrandTotal) + codFee);
   const appliedOfferCodes = [appliedCouponCode, hasWelcomeBackBenefit ? effectiveWelcomeBackCode : null]
     .filter(Boolean)
     .join(" + ");
@@ -796,7 +797,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
     let active = true;
     const loadCoupons = async () => {
       try {
-        const response = await checkoutFetch("/api/coupons?includeHidden=1", undefined, 15000, "Offers took too long to load. Please retry.");
+        const response = await checkoutFetch("/api/coupons"+(appliedCouponCode?"?code="+encodeURIComponent(appliedCouponCode):""), undefined, 15000, "Offers took too long to load. Please retry.");
         if (!response.ok) throw new Error("Failed to fetch coupons");
         const data = (await response.json()) as Coupon[];
         if (!Array.isArray(data)) throw new Error("Invalid offers response");
@@ -810,7 +811,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
     return () => {
       active = false;
     };
-  }, [couponLoadAttempt]);
+  }, [couponLoadAttempt,appliedCouponCode]);
 
   useEffect(() => {
     if (isPaymentProcessing || secureSession?.savedTotal !== undefined) return;
@@ -1327,6 +1328,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
           utmTerm: firstTouch?.utmTerm,
           utmContent: firstTouch?.utmContent,
           appliedCouponCode: appliedOfferCodes || undefined,
+          coinsUsed:growthQuote?.coins||0,coinReservationId,
           subtotal: totalPrice,
           couponDiscount,
           welcomeBackDiscount,
@@ -1518,7 +1520,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
         method: "POST",
         headers: { "Content-Type": "application/json", ...(secureSession ? { "x-hume-checkout-token": secureSession.token } : {}) },
         body: JSON.stringify({
-          ...(secureSession ? { checkout: { cartSnapshot: items, details, checkoutChannel: "razorpay", paymentMethod: recoveryPaymentMethod, status: "payment_pending", appliedCouponCode: appliedOfferCodes || undefined, grandTotal, shippingFee, whatsappMessage: buildOrderMessage() } } : {}),
+          ...(secureSession ? { checkout: { coinsUsed:growthQuote?.coins||0,coinReservationId,cartSnapshot: items, details, checkoutChannel: "razorpay", paymentMethod: recoveryPaymentMethod, status: "payment_pending", appliedCouponCode: appliedOfferCodes || undefined, grandTotal, shippingFee, whatsappMessage: buildOrderMessage() } } : {}),
           amount,
           currency: "INR",
           receipt: identity.orderNumber.slice(0, 40),
@@ -2390,6 +2392,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
               ))}
             </div>
 
+            {secureSession?.savedTotal===undefined&&adminOverrideTotal===null&&<CoinRedemption/>}
             <div className="mt-5 rounded-2xl bg-[#f7f7f8] p-4">
               <p className="text-[0.62rem] uppercase tracking-[0.24em] text-black/35">
                 Billing Snapshot
@@ -2399,6 +2402,8 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
                   <span className="text-black/45">Subtotal</span>
                   <span>{formatINR(totalPrice)}</span>
                 </div>
+                {growthQuote?.coins&&secureSession?.savedTotal===undefined?<div className="flex justify-between text-sm text-emerald-700"><span>HUME Coins</span><span>−₹{growthQuote.coins}</span></div>:null}
+                {growthQuote?.referralDiscount&&secureSession?.savedTotal===undefined?<div className="flex justify-between text-sm text-emerald-700"><span>Referral offer</span><span>−₹{growthQuote.referralDiscount}</span></div>:null}
                 {codFee > 0 && <div className="flex justify-between text-sm"><span className="text-black/45">COD charge</span><span>{formatINR(codFee)}</span></div>}
                 {couponDiscount > 0 ? (
                   <div className="flex items-center justify-between">

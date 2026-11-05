@@ -1,18 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, desc, eq, gte } from "drizzle-orm";
+import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { checkoutDrafts } from "@/db/schema";
+import { checkoutDrafts, orders } from "@/db/schema";
 import { requireAdminToken } from "@/lib/admin-auth";
 
-const leadUpdateSchema = z.object({
-  id: z.string().min(1).max(255),
-  leadStatus: z.enum(["new", "contacted", "replied", "converted", "lost"]).optional(),
-  leadNotes: z.string().max(10000).optional().nullable(),
-  markContacted: z.boolean().optional(),
-  nextFollowUpAt: z.string().datetime().optional().nullable(),
-  overrideTotal: z.number().optional().nullable(),
-});
+import { recoveryWorkflowSchema, recoveryWorkflowUpdate, RecoveryWorkflowError } from "@/lib/checkout-recovery-workflow";
+import { recoveredOrder } from "@/lib/checkout-recovery";
 
 export async function GET(request: NextRequest) {
   const unauthorized = requireAdminToken(request);
@@ -38,42 +32,25 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const unauthorized = requireAdminToken(request);
-  if (unauthorized) return unauthorized;
-
+  const unauthorized=requireAdminToken(request);if(unauthorized)return unauthorized;
+  if(request.headers.get('origin')!==request.nextUrl.origin)return NextResponse.json({error:'Invalid request origin'},{status:403});
   try {
-    const data = leadUpdateSchema.parse(await request.json());
-    const nextFollowUpAt = data.nextFollowUpAt ? new Date(data.nextFollowUpAt) : null;
-    const shouldUpdateContactedAt = data.markContacted || data.leadStatus === "contacted";
-
-    const existing = await db
-      .select({ pricingBreakdown: checkoutDrafts.pricingBreakdown })
-      .from(checkoutDrafts)
-      .where(eq(checkoutDrafts.id, data.id))
-      .limit(1);
-
-    const pricingBreakdown = existing[0]?.pricingBreakdown || {};
-    const updatedPricingBreakdown = {
-      ...pricingBreakdown,
-      overrideTotal: data.overrideTotal,
-    };
-
-    await db
-      .update(checkoutDrafts)
-      .set({
-        leadStatus: data.leadStatus,
-        leadNotes: data.leadNotes ?? undefined,
-        lastContactedAt: shouldUpdateContactedAt ? new Date() : undefined,
-        nextFollowUpAt:
-          data.nextFollowUpAt === undefined ? undefined : nextFollowUpAt,
-        pricingBreakdown: updatedPricingBreakdown,
-        updatedAt: new Date(),
-      })
-      .where(eq(checkoutDrafts.id, data.id));
-
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error("admin checkout-drafts update error:", error);
-    return NextResponse.json({ error: "Failed to update checkout lead" }, { status: 500 });
+    const data=recoveryWorkflowSchema.parse(await request.json());
+    const [snapshot]=await db.select({sessionId:checkoutDrafts.sessionId}).from(checkoutDrafts).where(eq(checkoutDrafts.id,data.id)).limit(1);
+    if(!snapshot)return NextResponse.json({error:'Checkout not found'},{status:404});
+    const draft=await db.transaction(async tx=>{
+      await tx.execute(sql`SELECT set_config('lock_timeout','3s',true),set_config('statement_timeout','8s',true)`);
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${snapshot.sessionId}))`);
+      const [current]=await tx.select().from(checkoutDrafts).where(eq(checkoutDrafts.id,data.id)).for('update').limit(1);
+      if(!current)throw new RecoveryWorkflowError('Checkout not found',404);
+      const linked=await tx.select({status:orders.status,paymentCapturedAt:orders.paymentCapturedAt,paymentSyncStatus:orders.paymentSyncStatus}).from(orders).where(eq(orders.sessionId,current.sessionId));
+      const patch=recoveryWorkflowUpdate(current,data,linked.length>0,linked.some(recoveredOrder));
+      return (await tx.update(checkoutDrafts).set(patch).where(eq(checkoutDrafts.id,data.id)).returning())[0];
+    });
+    return NextResponse.json({ok:true,draft},{headers:{'Cache-Control':'private, no-store'}});
+  }catch(error){
+    if(error instanceof z.ZodError)return NextResponse.json({error:'Please check the lead fields and try again.'},{status:400});
+    if(error instanceof RecoveryWorkflowError)return NextResponse.json({error:error.message},{status:error.status});
+    return NextResponse.json({error:'The lead could not be saved. Please retry.'},{status:503});
   }
 }

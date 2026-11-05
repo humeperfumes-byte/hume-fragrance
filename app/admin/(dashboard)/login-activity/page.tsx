@@ -334,7 +334,7 @@ export default async function LoginActivityPage({
               ? "expired"
               : "never",
           loginCount: matchedSessions.length,
-          lastLoginAt: latestSession?.lastUsedAt ?? null,
+          lastLoginAt: matchedSessions.length ? new Date(Math.max(...matchedSessions.map(s=>(s.lastLoginAt ?? s.createdAt).getTime()))) : null,
           firstLoginAt,
           latestSession,
         };

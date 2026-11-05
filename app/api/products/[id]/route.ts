@@ -5,13 +5,21 @@ import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { requireAdminToken } from "@/lib/admin-auth";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { resolveCategorySelection } from "@/lib/db/category-writes";
 
 const imageUrlSchema = z
   .array(
-    z.string().trim().refine(
-      (val) => val.length > 0 && (val.startsWith("/") || val.startsWith("http://") || val.startsWith("https://")),
-      { message: "Must be a valid URL or path" }
-    )
+    z
+      .string()
+      .trim()
+      .refine(
+        (val) =>
+          val.length > 0 &&
+          (val.startsWith("/") ||
+            val.startsWith("http://") ||
+            val.startsWith("https://")),
+        { message: "Must be a valid URL or path" },
+      ),
   )
   .min(1, "At least one image URL is required");
 
@@ -24,8 +32,12 @@ const productSchema = z.object({
     .string()
     .trim()
     .refine(
-      (val) => !val || val.startsWith("/") || val.startsWith("http://") || val.startsWith("https://"),
-      { message: "Must be a valid URL or path" }
+      (val) =>
+        !val ||
+        val.startsWith("/") ||
+        val.startsWith("http://") ||
+        val.startsWith("https://"),
+      { message: "Must be a valid URL or path" },
     )
     .optional(),
   category: z.string().optional(),
@@ -69,7 +81,9 @@ const productSchema = z.object({
 });
 
 type ProductUpdateInput = z.infer<typeof productSchema>;
-type ProductUpdateRecord = Partial<typeof products.$inferInsert> & { updatedAt: Date };
+type ProductUpdateRecord = Partial<typeof products.$inferInsert> & {
+  updatedAt: Date;
+};
 
 function readExecuteRows<T>(result: unknown): T[] {
   if (Array.isArray(result)) return result as T[];
@@ -108,7 +122,7 @@ async function fetchProductReviews(id: string) {
 // GET single product by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
@@ -119,10 +133,7 @@ export async function GET(
       .limit(1);
 
     if (!product) {
-      return NextResponse.json(
-        { error: "Product not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
     const productReviews = await fetchProductReviews(id);
@@ -133,7 +144,10 @@ export async function GET(
         .select({ categoryId: productCategories.categoryId })
         .from(productCategories)
         .where(eq(productCategories.productId, id));
-      mappedCategoryIds = rows.length > 0 ? rows.map((row) => row.categoryId) : [product.categoryId];
+      mappedCategoryIds =
+        rows.length > 0
+          ? rows.map((row) => row.categoryId)
+          : [product.categoryId];
     } catch {
       mappedCategoryIds = [product.categoryId];
     }
@@ -141,7 +155,9 @@ export async function GET(
     return NextResponse.json({
       ...product,
       price: parseFloat(product.price),
-      categoryIds: Array.from(new Set([product.categoryId, ...mappedCategoryIds].filter(Boolean))),
+      categoryIds: Array.from(
+        new Set([product.categoryId, ...mappedCategoryIds].filter(Boolean)),
+      ),
       reviews: productReviews.map((r) => ({
         ...r,
         rating: parseFloat(r.rating),
@@ -151,7 +167,7 @@ export async function GET(
     console.error("Error fetching product:", error);
     return NextResponse.json(
       { error: "Failed to fetch product" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -159,7 +175,7 @@ export async function GET(
 // PUT update product
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const unauthorized = requireAdminToken(request);
   if (unauthorized) return unauthorized;
@@ -170,51 +186,63 @@ export async function PUT(
 
     const validatedData = productSchema.parse(body);
 
-    const { price, ...restValidatedData } = validatedData as ProductUpdateInput;
-    const updateData: ProductUpdateRecord = {
-      ...restValidatedData,
-      updatedAt: new Date(),
-      ...(price !== undefined ? { price: price.toString() } : {}),
-    };
-
-    const [updatedProduct] = await db
-      .update(products)
-      .set(updateData)
-      .where(eq(products.id, id))
-      .returning();
-
-    if (!updatedProduct) {
-      return NextResponse.json(
-        { error: "Product not found" },
-        { status: 404 }
-      );
-    }
-
-    try {
-      if (validatedData.categoryId || validatedData.categoryIds) {
-        const resolvedPrimary = validatedData.categoryId ?? updatedProduct.categoryId;
-        const resolvedLabel = validatedData.category ?? updatedProduct.category;
-        const categoryIds = Array.from(
-          new Set([resolvedPrimary, ...(validatedData.categoryIds ?? [])].filter(Boolean))
+    const {
+      price,
+      categoryIds: requestedIds,
+      ...restValidatedData
+    } = validatedData as ProductUpdateInput;
+    const updatedProduct = await db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select()
+        .from(products)
+        .where(eq(products.id, id))
+        .for("update");
+      if (!existing) return null;
+      const updateData: ProductUpdateRecord = {
+        ...restValidatedData,
+        updatedAt: new Date(),
+        ...(price !== undefined ? { price: price.toString() } : {}),
+      };
+      if (
+        validatedData.categoryId !== undefined ||
+        requestedIds !== undefined ||
+        validatedData.category !== undefined
+      ) {
+        const existingMappings = await tx
+          .select()
+          .from(productCategories)
+          .where(eq(productCategories.productId, id));
+        const selection = await resolveCategorySelection(
+          tx,
+          validatedData.categoryId ?? existing.categoryId,
+          requestedIds ?? existingMappings.map((m) => m.categoryId),
         );
-
-        await db.delete(productCategories).where(eq(productCategories.productId, id));
-        if (categoryIds.length > 0) {
-          await db.insert(productCategories).values(
-            categoryIds.map((categoryId) => ({
+        updateData.categoryId = selection.primaryId;
+        updateData.category = selection.primaryName;
+        await tx
+          .delete(productCategories)
+          .where(eq(productCategories.productId, id));
+        await tx
+          .insert(productCategories)
+          .values(
+            selection.categories.map((c) => ({
               productId: id,
-              categoryId,
-              categoryLabel: resolvedLabel,
-            }))
+              categoryId: c.id,
+              categoryLabel: c.label,
+            })),
           );
-        }
       }
-    } catch (error) {
-      console.error("Failed to sync product_categories:", error);
-    }
-
+      const [updated] = await tx
+        .update(products)
+        .set(updateData)
+        .where(eq(products.id, id))
+        .returning();
+      return updated;
+    });
+    if (!updatedProduct)
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
     try {
-      revalidateTag("products", "max");
+      revalidateTag("products", { expire: 0 });
       revalidateTag(`product:${id}`, "max");
       revalidatePath("/", "layout");
       revalidatePath(`/product/${id}`, "page");
@@ -228,7 +256,10 @@ export async function PUT(
         .select({ categoryId: productCategories.categoryId })
         .from(productCategories)
         .where(eq(productCategories.productId, id));
-      mappedCategoryIds = rows.length > 0 ? rows.map((row) => row.categoryId) : [updatedProduct.categoryId];
+      mappedCategoryIds =
+        rows.length > 0
+          ? rows.map((row) => row.categoryId)
+          : [updatedProduct.categoryId];
     } catch {
       mappedCategoryIds = [updatedProduct.categoryId];
     }
@@ -236,19 +267,23 @@ export async function PUT(
     return NextResponse.json({
       ...updatedProduct,
       price: parseFloat(updatedProduct.price),
-      categoryIds: Array.from(new Set([updatedProduct.categoryId, ...mappedCategoryIds].filter(Boolean))),
+      categoryIds: Array.from(
+        new Set(
+          [updatedProduct.categoryId, ...mappedCategoryIds].filter(Boolean),
+        ),
+      ),
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Validation error", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
     console.error("Error updating product:", error);
     return NextResponse.json(
       { error: "Failed to update product" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -256,7 +291,7 @@ export async function PUT(
 // DELETE product
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const unauthorized = requireAdminToken(request);
   if (unauthorized) return unauthorized;
@@ -266,7 +301,9 @@ export async function DELETE(
 
     // Delete reviews first (cascade should handle this, but being explicit)
     await db.delete(reviews).where(eq(reviews.productId, id));
-    await db.delete(productCategories).where(eq(productCategories.productId, id));
+    await db
+      .delete(productCategories)
+      .where(eq(productCategories.productId, id));
 
     const [deletedProduct] = await db
       .delete(products)
@@ -274,14 +311,11 @@ export async function DELETE(
       .returning();
 
     if (!deletedProduct) {
-      return NextResponse.json(
-        { error: "Product not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
     try {
-      revalidateTag("products", "max");
+      revalidateTag("products", { expire: 0 });
       revalidatePath("/", "layout");
     } catch (err) {
       console.warn("Revalidation warning:", err);
@@ -292,7 +326,7 @@ export async function DELETE(
     console.error("Error deleting product:", error);
     return NextResponse.json(
       { error: "Failed to delete product" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

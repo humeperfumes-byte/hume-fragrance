@@ -11,11 +11,13 @@ import { getClientCachedProducts } from "@/lib/client-products-cache";
 import { showNavigationLoadingToast } from "@/lib/navigation-loading";
 import { DISCOVERY_SET_PATH, DISCOVERY_SET_SIZE } from "@/lib/discovery-set";
 import { PERFUME_MATURATION_PATH } from "@/lib/perfume-maturation";
+import { categoryOptions } from "@/lib/product-categories";
 
 type FilterType = "nature" | "gender" | "occasion" | "celebrity";
 
 interface ShopItem {
   label: string;
+  value?: string;
   description: string;
   filterType: FilterType;
   image?: string;
@@ -63,12 +65,36 @@ const shopSections: ShopSection[] = [
     title: "By Occasion",
     icon: Sun,
     items: [
-      { label: "Gym", description: "Fresh and energetic", filterType: "occasion" },
-      { label: "Daily Wear", description: "Clean and versatile", filterType: "occasion" },
-      { label: "Office", description: "Subtle and sophisticated", filterType: "occasion" },
-      { label: "Date Night", description: "Seductive and alluring", filterType: "occasion" },
-      { label: "Party", description: "Bold and unforgettable", filterType: "occasion" },
-      { label: "Formal", description: "Elegant and refined", filterType: "occasion" },
+      {
+        label: "Gym",
+        description: "Fresh and energetic",
+        filterType: "occasion",
+      },
+      {
+        label: "Daily Wear",
+        description: "Clean and versatile",
+        filterType: "occasion",
+      },
+      {
+        label: "Office",
+        description: "Subtle and sophisticated",
+        filterType: "occasion",
+      },
+      {
+        label: "Date Night",
+        description: "Seductive and alluring",
+        filterType: "occasion",
+      },
+      {
+        label: "Party",
+        description: "Bold and unforgettable",
+        filterType: "occasion",
+      },
+      {
+        label: "Formal",
+        description: "Elegant and refined",
+        filterType: "occasion",
+      },
     ],
   },
   {
@@ -91,7 +117,12 @@ interface ShopMegaMenuProps {
 
 const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
   const router = useRouter();
-  const [celebImageByLabel, setCelebImageByLabel] = useState<Record<string, string>>({});
+  const [celebImageByLabel, setCelebImageByLabel] = useState<
+    Record<string, string>
+  >({});
+  const [natureItems, setNatureItems] = useState<
+    ReturnType<typeof categoryOptions>
+  >([]);
   const [dbGenderItems, setDbGenderItems] = useState<ShopItem[]>([]);
   const [dbOccasionItems, setDbOccasionItems] = useState<ShopItem[]>([]);
 
@@ -101,39 +132,59 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
       .then((data) => {
         if (!mounted || !Array.isArray(data)) return;
         const byId = new Map<string, { woreByImageUrl?: string }>(
-          data.map((p: { id: string; woreByImageUrl?: string }) => [p.id, p])
+          data.map((p: { id: string; woreByImageUrl?: string }) => [p.id, p]),
         );
 
         const genderSet = new Set<string>();
         const occasionSet = new Set<string>();
-        data.forEach((p: { gender?: string; longevity?: { occasion?: string[] } }) => {
-          if (p.gender) genderSet.add(p.gender);
-          (p.longevity?.occasion ?? []).forEach((o) => {
-            const v = String(o || "").trim();
-            if (v) occasionSet.add(v);
-          });
-        });
+        data.forEach(
+          (p: { gender?: string; longevity?: { occasion?: string[] } }) => {
+            if (p.gender) genderSet.add(p.gender);
+            (p.longevity?.occasion ?? []).forEach((o) => {
+              const v = String(o || "").trim();
+              if (v) occasionSet.add(v);
+            });
+          },
+        );
 
         const preferredGenderOrder = ["Men", "Women", "Unisex"];
         const genderItems = preferredGenderOrder
           .filter((g) => genderSet.has(g))
-          .map((g) => ({ label: g, description: "", filterType: "gender" as const }));
+          .map((g) => ({
+            label: g,
+            description: "",
+            filterType: "gender" as const,
+          }));
 
-        const preferredOccasionOrder = ["Gym", "Daily Wear", "Office", "Date Night", "Party", "Formal"];
-        const preferredOccasions = preferredOccasionOrder.filter((o) => occasionSet.has(o));
+        const preferredOccasionOrder = [
+          "Gym",
+          "Daily Wear",
+          "Office",
+          "Date Night",
+          "Party",
+          "Formal",
+        ];
+        const preferredOccasions = preferredOccasionOrder.filter((o) =>
+          occasionSet.has(o),
+        );
         const remainingOccasions = Array.from(occasionSet)
           .filter((o) => !preferredOccasionOrder.includes(o))
           .sort((a, b) => a.localeCompare(b));
         const occasionItems = [...preferredOccasions, ...remainingOccasions]
           .slice(0, 6)
-          .map((o) => ({ label: o, description: "", filterType: "occasion" as const }));
+          .map((o) => ({
+            label: o,
+            description: "",
+            filterType: "occasion" as const,
+          }));
 
         const mapped = Object.fromEntries(
           celebrityFavorites.map((c) => [
             c.label,
             byId.get(c.perfumeIds[0])?.woreByImageUrl || c.image,
-          ])
+          ]),
         );
+        setNatureItems(categoryOptions(data));
         setDbGenderItems(genderItems);
         setDbOccasionItems(occasionItems);
         setCelebImageByLabel(mapped);
@@ -155,9 +206,9 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
                 image: celebImageByLabel[item.label] || item.image,
               })),
             }
-          : section
+          : section,
       ),
-    [celebImageByLabel]
+    [celebImageByLabel],
   );
 
   const genderItems =
@@ -174,9 +225,17 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
       ? dbOccasionItems
       : [
           { label: "Gym", description: "", filterType: "occasion" as const },
-          { label: "Daily Wear", description: "", filterType: "occasion" as const },
+          {
+            label: "Daily Wear",
+            description: "",
+            filterType: "occasion" as const,
+          },
           { label: "Office", description: "", filterType: "occasion" as const },
-          { label: "Date Night", description: "", filterType: "occasion" as const },
+          {
+            label: "Date Night",
+            description: "",
+            filterType: "occasion" as const,
+          },
           { label: "Party", description: "", filterType: "occasion" as const },
           { label: "Formal", description: "", filterType: "occasion" as const },
         ];
@@ -190,11 +249,15 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
     }
     if (item.filterType === "celebrity") {
       showNavigationLoadingToast();
-      router.push(`/celebrities-favorites?celebrity=${encodeURIComponent(item.label)}`);
+      router.push(
+        `/celebrities-favorites?celebrity=${encodeURIComponent(item.label)}`,
+      );
       return;
     }
     showNavigationLoadingToast();
-    router.push(`/shop?filter=${item.filterType}&value=${encodeURIComponent(item.label)}`);
+    router.push(
+      `/shop?filter=${item.filterType}&value=${encodeURIComponent(item.value || item.label)}`,
+    );
   };
 
   return (
@@ -217,15 +280,19 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
-            className="fixed left-1/2 top-[72px] z-50 w-[min(1380px,calc(100vw-80px))] -translate-x-1/2 bg-background border border-border shadow-lg"
+            className="fixed left-1/2 top-[72px] z-50 max-h-[calc(100dvh-88px)] overflow-y-auto w-[min(1380px,calc(100vw-80px))] -translate-x-1/2 bg-background border border-border shadow-lg"
           >
             <div className="px-8 py-10">
               <div className="grid grid-cols-3 gap-10">
                 {renderedSections.map((section) => (
                   <div key={section.title}>
                     <div className="flex items-center gap-2 mb-5">
-                      {section.title !== "Discover" && section.title !== "By Occasion" ? (
-                        <section.icon size={16} className="text-muted-foreground" />
+                      {section.title !== "Discover" &&
+                      section.title !== "By Occasion" ? (
+                        <section.icon
+                          size={16}
+                          className="text-muted-foreground"
+                        />
                       ) : null}
                       {section.title === "Celebrities' Favorite" ? (
                         <button
@@ -237,16 +304,52 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
                           className="text-caption text-foreground hover:text-muted-foreground transition-luxury flex items-center gap-1.5 cursor-pointer group"
                         >
                           {section.title}
-                          <ExternalLink size={12} className="transition-transform duration-200 group-hover:translate-x-0.5" />
+                          <ExternalLink
+                            size={12}
+                            className="transition-transform duration-200 group-hover:translate-x-0.5"
+                          />
                         </button>
-                      ) : section.title === "Discover" || section.title === "By Occasion" ? null : (
-                        <h3 className="text-caption text-foreground">{section.title}</h3>
+                      ) : section.title === "Discover" ||
+                        section.title === "By Occasion" ? null : (
+                        <h3 className="text-caption text-foreground">
+                          {section.title}
+                        </h3>
                       )}
                     </div>
                     {section.title === "By Occasion" ? (
                       <div className="space-y-5">
+                        {natureItems.length > 0 && (
+                          <div>
+                            <h4 className="mb-3 text-caption text-foreground">
+                              SCENT FAMILIES
+                            </h4>
+                            <div className="flex flex-wrap gap-2">
+                              {natureItems.slice(0, 8).map((c) => (
+                                <button
+                                  key={c.id}
+                                  onClick={() =>
+                                    handleItemClick({
+                                      label: c.label,
+                                      value: c.id,
+                                      description: "",
+                                      filterType: "nature",
+                                    })
+                                  }
+                                  className="rounded-full border border-border px-3 py-2 text-xs text-foreground hover:bg-secondary/30"
+                                >
+                                  {c.label}
+                                  <span className="ml-1.5 text-muted-foreground">
+                                    {c.count}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         <div>
-                          <h4 className="mb-3 text-caption text-foreground">BY GENDER</h4>
+                          <h4 className="mb-3 text-caption text-foreground">
+                            BY GENDER
+                          </h4>
                           <ul className="grid grid-cols-3 gap-3">
                             {genderItems.map((item) => (
                               <li key={`gender-${item.label}`}>
@@ -262,7 +365,9 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
                         </div>
 
                         <div>
-                          <h4 className="mb-3 text-caption text-foreground">BY OCCASION</h4>
+                          <h4 className="mb-3 text-caption text-foreground">
+                            BY OCCASION
+                          </h4>
                           <ul className="grid grid-cols-2 gap-3">
                             {occasionItems.map((item) => (
                               <li key={item.label}>
@@ -287,7 +392,9 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
                             >
                               {item.image ? (
                                 <ImageWithFallback
-                                  src={withCloudinaryTransforms(item.image, { width: 320 })}
+                                  src={withCloudinaryTransforms(item.image, {
+                                    width: 320,
+                                  })}
                                   fallbackSrc="/images/celebrities/srk.png"
                                   alt={item.label}
                                   width={320}
@@ -309,28 +416,28 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
                         <ul className="space-y-3">
                           {section.items.map((item) => (
                             <li key={item.label}>
-                            {item.href ? (
-                              <button
-                                onClick={() => handleItemClick(item)}
-                                className="group flex w-full items-center justify-between border border-zinc-800 bg-zinc-950 px-4 py-3 text-left text-white cursor-pointer transition-luxury hover:bg-zinc-900"
-                              >
-                                <span className="font-serif text-[1.25rem] leading-none tracking-wide">
-                                  {item.label === "15 ml kit" ? (
-                                    <>
-                                      15 ml kit{" "}
-                                      <span className="text-[0.85rem] align-middle text-white/80">
-                                        (pack of 5)
-                                      </span>
-                                    </>
-                                  ) : (
-                                    item.label
-                                  )}
-                                </span>
-                                <span className="text-[2rem] leading-none text-white/85">
-                                  →
-                                </span>
-                              </button>
-                            ) : (
+                              {item.href ? (
+                                <button
+                                  onClick={() => handleItemClick(item)}
+                                  className="group flex w-full items-center justify-between border border-zinc-800 bg-zinc-950 px-4 py-3 text-left text-white cursor-pointer transition-luxury hover:bg-zinc-900"
+                                >
+                                  <span className="font-serif text-[1.25rem] leading-none tracking-wide">
+                                    {item.label === "15 ml kit" ? (
+                                      <>
+                                        15 ml kit{" "}
+                                        <span className="text-[0.85rem] align-middle text-white/80">
+                                          (pack of 5)
+                                        </span>
+                                      </>
+                                    ) : (
+                                      item.label
+                                    )}
+                                  </span>
+                                  <span className="text-[2rem] leading-none text-white/85">
+                                    →
+                                  </span>
+                                </button>
+                              ) : (
                                 <button
                                   onClick={() => handleItemClick(item)}
                                   className="group block text-left w-full cursor-pointer"
@@ -338,7 +445,10 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
                                   <span className="flex items-center gap-3">
                                     {item.image ? (
                                       <ImageWithFallback
-                                        src={withCloudinaryTransforms(item.image, { width: 120 })}
+                                        src={withCloudinaryTransforms(
+                                          item.image,
+                                          { width: 120 },
+                                        )}
                                         fallbackSrc="/images/celebrities/srk.png"
                                         alt={item.label}
                                         width={48}
@@ -413,4 +523,3 @@ const ShopMegaMenu = ({ isOpen, onOpen, onClose }: ShopMegaMenuProps) => {
 export { shopSections };
 export type { FilterType };
 export default ShopMegaMenu;
-

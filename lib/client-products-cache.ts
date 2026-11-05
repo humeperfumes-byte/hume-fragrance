@@ -1,7 +1,7 @@
 import type { PerfumeData } from "@/data/perfumes";
 
-const CACHE_KEY = "hume:products:public:v1";
-const CACHE_TTL_MS = 10 * 60 * 1000;
+const CACHE_KEY = "hume:products:public:v2";
+const CACHE_TTL_MS = 60 * 1000;
 
 let memoryCache: PerfumeData[] | null = null;
 let memoryCacheAt = 0;

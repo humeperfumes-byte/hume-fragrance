@@ -1,6 +1,8 @@
 "use client";
 
 import SiteLoading from "@/components/SiteLoading";
+import { ProductCategoryPicker } from "@/components/admin/ProductCategoryPicker";
+import type { CategoryDefinition } from "@/lib/product-categories";
 import {
   useEffect,
   useRef,
@@ -202,7 +204,9 @@ function arrayToCsv(value: string[] | null | undefined) {
 }
 
 function uniqueValues(values: string[]) {
-  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+  return Array.from(
+    new Set(values.map((value) => value.trim()).filter(Boolean)),
+  );
 }
 
 function getImageUrlDetails(imageUrl: string) {
@@ -299,10 +303,14 @@ function FormSection({
           {icon ?? <Layers3 className="h-3.5 w-3.5" />}
         </span>
         <div>
-        <h3 className="text-sm font-semibold tracking-[-0.01em] text-white">{title}</h3>
-        {description ? (
-          <p className="mt-1 text-xs leading-5 text-white/35">{description}</p>
-        ) : null}
+          <h3 className="text-sm font-semibold tracking-[-0.01em] text-white">
+            {title}
+          </h3>
+          {description ? (
+            <p className="mt-1 text-xs leading-5 text-white/35">
+              {description}
+            </p>
+          ) : null}
         </div>
       </div>
       <div className="relative space-y-5">{children}</div>
@@ -344,16 +352,52 @@ export function ProductFormSheet({
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [uploadingImages, setUploadingImages] = useState(false);
-  const [importingImageUrl, setImportingImageUrl] = useState<string | null>(null);
+  const [importingImageUrl, setImportingImageUrl] = useState<string | null>(
+    null,
+  );
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [libraryImages, setLibraryImages] = useState<LibraryImage[]>([]);
   const [libraryLoading, setLibraryLoading] = useState(false);
-  const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null);
+  const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(
+    null,
+  );
   const [cloudinaryStatus, setCloudinaryStatus] =
     useState<CloudinaryStatus | null>(null);
   const [form, setForm] = useState<ProductFormState>(() => cloneEmptyForm());
   const productImageInputRef = useRef<HTMLInputElement>(null);
   const isEditing = Boolean(product);
+  const [categoryDefinitions, setCategoryDefinitions] = useState<
+    CategoryDefinition[]
+  >([]);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
+  const [categoriesReady, setCategoriesReady] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    setCategoriesReady(false);
+    setCategoryError(null);
+    fetch("/api/admin/categories?definitions=1", { cache: "no-store" })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Could not load categories");
+        return data;
+      })
+      .then((data) => {
+        if (active) {
+          setCategoryDefinitions(data.categories);
+          setCategoriesReady(true);
+        }
+      })
+      .catch(() => {
+        if (active)
+          setCategoryError(
+            "Categories could not load. Close this editor and try again before saving.",
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -375,13 +419,17 @@ export function ProductFormSheet({
       cache: "no-store",
     })
       .then(async (response) => {
-        if (!response.ok) throw new Error("Could not load full product details");
+        if (!response.ok)
+          throw new Error("Could not load full product details");
         return (await response.json()) as ProductForForm;
       })
       .then((fullProduct) => {
         if (!active) return;
         setForm(
-          createFormFromProduct({ ...(product as ProductForForm), ...fullProduct }),
+          createFormFromProduct({
+            ...(product as ProductForForm),
+            ...fullProduct,
+          }),
         );
       })
       .catch(() => {
@@ -450,7 +498,9 @@ export function ProductFormSheet({
   }, [open]);
 
   const handleChange = (
-    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+    event: ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
     const { id, value } = event.target;
     setForm((current) => ({ ...current, [id]: value }) as ProductFormState);
@@ -499,14 +549,18 @@ export function ProductFormSheet({
       imageIndex >= imageUrls.length ||
       nextIndex >= imageUrls.length ||
       imageIndex === nextIndex
-    ) return;
+    )
+      return;
     const next = [...imageUrls];
     const [moved] = next.splice(imageIndex, 1);
     next.splice(nextIndex, 0, moved);
     updateProductImages(next);
   };
 
-  const dropProductImage = (event: DragEvent<HTMLElement>, targetIndex: number) => {
+  const dropProductImage = (
+    event: DragEvent<HTMLElement>,
+    targetIndex: number,
+  ) => {
     event.preventDefault();
     if (draggedImageIndex === null) return;
     moveProductImage(draggedImageIndex, targetIndex);
@@ -516,14 +570,20 @@ export function ProductFormSheet({
   const addLibraryImage = (imageUrl: string) => {
     setForm((current) => ({
       ...current,
-      imagesCsv: uniqueValues([...csvToArray(current.imagesCsv), imageUrl]).join(", "),
+      imagesCsv: uniqueValues([
+        ...csvToArray(current.imagesCsv),
+        imageUrl,
+      ]).join(", "),
     }));
     toast({ title: "Image added to product gallery" });
   };
 
   const importExternalImage = async (imageUrl: string, imageIndex: number) => {
     if (!/^https?:\/\//i.test(imageUrl)) {
-      toast({ title: "Only full external URLs can be moved to Cloudinary", variant: "destructive" });
+      toast({
+        title: "Only full external URLs can be moved to Cloudinary",
+        variant: "destructive",
+      });
       return;
     }
     setImportingImageUrl(imageUrl);
@@ -538,15 +598,22 @@ export function ProductFormSheet({
           tags: ["product", slugify(form.name)].filter(Boolean),
         }),
       });
-      const result = (await response.json()) as { error?: string; image?: LibraryImage };
-      if (!response.ok || !result.image?.url) throw new Error(result.error || "Image import failed");
+      const result = (await response.json()) as {
+        error?: string;
+        image?: LibraryImage;
+      };
+      if (!response.ok || !result.image?.url)
+        throw new Error(result.error || "Image import failed");
       const imageUrls = csvToArray(form.imagesCsv);
       imageUrls[imageIndex] = result.image.url;
       updateProductImages(imageUrls);
       setLibraryImages((current) => [result.image as LibraryImage, ...current]);
       toast({ title: "External image moved to Cloudinary" });
     } catch (error) {
-      toast({ title: error instanceof Error ? error.message : "Image import failed", variant: "destructive" });
+      toast({
+        title: error instanceof Error ? error.message : "Image import failed",
+        variant: "destructive",
+      });
     } finally {
       setImportingImageUrl(null);
     }
@@ -617,7 +684,8 @@ export function ProductFormSheet({
         uploadedUrls.push(result.image.url);
       }
     } catch (error) {
-      uploadError = error instanceof Error ? error.message : "Image upload failed";
+      uploadError =
+        error instanceof Error ? error.message : "Image upload failed";
     } finally {
       if (uploadedUrls.length > 0) {
         setForm((current) => ({
@@ -654,10 +722,20 @@ export function ProductFormSheet({
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
 
+    if (!categoriesReady) {
+      toast({
+        title: "Categories are not ready",
+        description:
+          categoryError || "Wait for categories to load before saving.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (isEditing && (detailLoading || detailError)) {
       toast({
         title: "Product details are not ready",
-        description: detailError ?? "Wait for the product fields to finish loading.",
+        description:
+          detailError ?? "Wait for the product fields to finish loading.",
         variant: "destructive",
       });
       return;
@@ -690,7 +768,9 @@ export function ProductFormSheet({
     setLoading(true);
 
     const payload = {
-      ...(isEditing ? {} : { id: `${slugify(form.name)}-${Date.now().toString(36)}` }),
+      ...(isEditing
+        ? {}
+        : { id: `${slugify(form.name)}-${Date.now().toString(36)}` }),
       name: form.name.trim(),
       inspiration: form.inspiration.trim(),
       inspirationBrand: form.inspirationBrand.trim(),
@@ -814,7 +894,9 @@ export function ProductFormSheet({
                 </span>
               </div>
               <SheetTitle className="truncate text-xl font-semibold tracking-[-0.035em] text-white sm:text-2xl">
-                {isEditing ? form.name || "Edit fragrance" : "Create new fragrance"}
+                {isEditing
+                  ? form.name || "Edit fragrance"
+                  : "Create new fragrance"}
               </SheetTitle>
               <SheetDescription className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/35">
                 <span>{form.inspirationBrand || "HUME catalog"}</span>
@@ -835,7 +917,12 @@ export function ProductFormSheet({
           <div className="min-h-0 flex-1 overflow-y-auto bg-[radial-gradient(circle_at_100%_0%,rgba(201,179,255,.035),transparent_28%)] px-4 py-4 sm:px-7 sm:py-6">
             {detailLoading ? (
               <div className="mb-4 rounded-lg border border-sky-400/20 bg-sky-400/10 px-4 py-3 text-sm text-sky-100">
-                <SiteLoading compact dark title="Preparing product details" description="Loading the full product before you edit." />
+                <SiteLoading
+                  compact
+                  dark
+                  title="Preparing product details"
+                  description="Loading the full product before you edit."
+                />
               </div>
             ) : null}
             {detailError ? (
@@ -850,25 +937,29 @@ export function ProductFormSheet({
                   value="basic"
                   className="group h-11 gap-2 rounded-[13px] border border-transparent text-[11px] font-semibold text-white/40 shadow-none transition data-[state=active]:border-[#c9b3ff]/15 data-[state=active]:bg-[#c9b3ff] data-[state=active]:text-[#18131f] data-[state=active]:shadow-[0_8px_20px_rgba(201,179,255,.15)]"
                 >
-                  <Box className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Basic</span>
+                  <Box className="h-3.5 w-3.5" />{" "}
+                  <span className="hidden sm:inline">Basic</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="profile"
                   className="group h-11 gap-2 rounded-[13px] border border-transparent text-[11px] font-semibold text-white/40 shadow-none transition data-[state=active]:border-[#c9b3ff]/15 data-[state=active]:bg-[#c9b3ff] data-[state=active]:text-[#18131f] data-[state=active]:shadow-[0_8px_20px_rgba(201,179,255,.15)]"
                 >
-                  <FlaskConical className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Profile</span>
+                  <FlaskConical className="h-3.5 w-3.5" />{" "}
+                  <span className="hidden sm:inline">Profile</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="media"
                   className="group h-11 gap-2 rounded-[13px] border border-transparent text-[11px] font-semibold text-white/40 shadow-none transition data-[state=active]:border-[#c9b3ff]/15 data-[state=active]:bg-[#c9b3ff] data-[state=active]:text-[#18131f] data-[state=active]:shadow-[0_8px_20px_rgba(201,179,255,.15)]"
                 >
-                  <ImageIcon className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Media</span>
+                  <ImageIcon className="h-3.5 w-3.5" />{" "}
+                  <span className="hidden sm:inline">Media</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="seo"
                   className="group h-11 gap-2 rounded-[13px] border border-transparent text-[11px] font-semibold text-white/40 shadow-none transition data-[state=active]:border-[#c9b3ff]/15 data-[state=active]:bg-[#c9b3ff] data-[state=active]:text-[#18131f] data-[state=active]:shadow-[0_8px_20px_rgba(201,179,255,.15)]"
                 >
-                  <Search className="h-3.5 w-3.5" /> <span className="hidden sm:inline">SEO</span>
+                  <Search className="h-3.5 w-3.5" />{" "}
+                  <span className="hidden sm:inline">SEO</span>
                 </TabsTrigger>
               </TabsList>
 
@@ -925,31 +1016,24 @@ export function ProductFormSheet({
                 </FormSection>
 
                 <FormSection
-                  title="Catalog routing"
-                  description="These fields control filters, product pages, and hidden SEO visibility."
+                  title="Categories & visibility"
+                  description="Organize this product and choose where it appears."
                   icon={<Globe2 className="h-3.5 w-3.5" />}
                 >
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field htmlFor="category" label="Category label">
-                      <Input
-                        id="category"
-                        value={form.category}
-                        onChange={handleChange}
-                        className={inputClassName}
-                        required
-                      />
-                    </Field>
-                    <Field htmlFor="categoryId" label="Primary category ID">
-                      <Input
-                        id="categoryId"
-                        value={form.categoryId}
-                        onChange={handleChange}
-                        placeholder="fresh"
-                        className={inputClassName}
-                      />
-                    </Field>
-                  </div>
-
+                  <ProductCategoryPicker
+                    categories={categoryDefinitions}
+                    primaryId={form.categoryId}
+                    selectedIds={csvToArray(form.categoryIdsCsv)}
+                    error={categoryError}
+                    onChange={(primaryId, ids, label) =>
+                      setForm((previous) => ({
+                        ...previous,
+                        categoryId: primaryId,
+                        category: label,
+                        categoryIdsCsv: arrayToCsv(ids),
+                      }))
+                    }
+                  />
                   <div className="overflow-hidden rounded-[18px] border border-white/[0.08] bg-[#111113]">
                     <button
                       type="button"
@@ -957,25 +1041,82 @@ export function ProductFormSheet({
                       className="flex w-full items-center justify-between gap-4 px-4 py-3.5 text-left transition hover:bg-white/[0.025]"
                     >
                       <span className="flex items-center gap-3">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.035] text-white/45"><Library className="h-4 w-4" /></span>
-                        <span><span className="block text-xs font-semibold text-white/72">Choose from image library</span><span className="mt-0.5 block text-[10px] text-white/28">Reuse an existing Cloudinary asset without uploading it again.</span></span>
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.035] text-white/45">
+                          <Library className="h-4 w-4" />
+                        </span>
+                        <span>
+                          <span className="block text-xs font-semibold text-white/72">
+                            Choose from image library
+                          </span>
+                          <span className="mt-0.5 block text-[10px] text-white/28">
+                            Reuse an existing Cloudinary asset without uploading
+                            it again.
+                          </span>
+                        </span>
                       </span>
-                      <ChevronDown className={cn("h-4 w-4 shrink-0 text-white/30 transition", libraryOpen && "rotate-180")} />
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 shrink-0 text-white/30 transition",
+                          libraryOpen && "rotate-180",
+                        )}
+                      />
                     </button>
                     {libraryOpen ? (
                       <div className="border-t border-white/[0.07] p-3">
-                        {libraryLoading ? <div className="flex items-center gap-2 px-2 py-5 text-xs text-white/35"><Loader2 className="h-3.5 w-3.5 animate-spin" />Loading media library…</div> : null}
-                        {!libraryLoading && libraryImages.length === 0 ? <p className="px-2 py-5 text-xs text-white/30">No saved media assets yet.</p> : null}
+                        {libraryLoading ? (
+                          <div className="flex items-center gap-2 px-2 py-5 text-xs text-white/35">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Loading media library…
+                          </div>
+                        ) : null}
+                        {!libraryLoading && libraryImages.length === 0 ? (
+                          <p className="px-2 py-5 text-xs text-white/30">
+                            No saved media assets yet.
+                          </p>
+                        ) : null}
                         <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3">
                           {libraryImages.map((asset) => {
-                            const selected = csvToArray(form.imagesCsv).includes(asset.url);
+                            const selected = csvToArray(
+                              form.imagesCsv,
+                            ).includes(asset.url);
                             return (
-                              <button key={asset.id} type="button" disabled={selected} onClick={() => addLibraryImage(asset.url)} className={cn("group overflow-hidden rounded-xl border bg-black/20 text-left transition", selected ? "border-emerald-300/20 opacity-55" : "border-white/[0.07] hover:border-[#c9b3ff]/30")}>
+                              <button
+                                key={asset.id}
+                                type="button"
+                                disabled={selected}
+                                onClick={() => addLibraryImage(asset.url)}
+                                className={cn(
+                                  "group overflow-hidden rounded-xl border bg-black/20 text-left transition",
+                                  selected
+                                    ? "border-emerald-300/20 opacity-55"
+                                    : "border-white/[0.07] hover:border-[#c9b3ff]/30",
+                                )}
+                              >
                                 <div className="aspect-square overflow-hidden bg-black/25">
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img src={asset.url} alt={asset.label} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+                                  <img
+                                    src={asset.url}
+                                    alt={asset.label}
+                                    className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                                  />
                                 </div>
-                                <div className="p-2"><p className="truncate text-[10px] font-semibold text-white/62">{asset.label}</p><p className="mt-1 text-[8px] uppercase tracking-[.1em] text-white/24">{selected ? "Already selected" : [asset.width && asset.height ? `${asset.width}×${asset.height}` : null, asset.format].filter(Boolean).join(" · ") || asset.usage}</p></div>
+                                <div className="p-2">
+                                  <p className="truncate text-[10px] font-semibold text-white/62">
+                                    {asset.label}
+                                  </p>
+                                  <p className="mt-1 text-[8px] uppercase tracking-[.1em] text-white/24">
+                                    {selected
+                                      ? "Already selected"
+                                      : [
+                                          asset.width && asset.height
+                                            ? `${asset.width}×${asset.height}`
+                                            : null,
+                                          asset.format,
+                                        ]
+                                          .filter(Boolean)
+                                          .join(" · ") || asset.usage}
+                                  </p>
+                                </div>
                               </button>
                             );
                           })}
@@ -983,20 +1124,6 @@ export function ProductFormSheet({
                       </div>
                     ) : null}
                   </div>
-
-                  <Field
-                    htmlFor="categoryIdsCsv"
-                    label="All category IDs"
-                    helper="Comma separated. Keep every related category here so shop filters and SEO pages stay connected."
-                  >
-                    <Input
-                      id="categoryIdsCsv"
-                      value={form.categoryIdsCsv}
-                      onChange={handleChange}
-                      placeholder="fresh, citrus, aquatic"
-                      className={inputClassName}
-                    />
-                  </Field>
 
                   <div className="grid gap-4 sm:grid-cols-3">
                     <Field htmlFor="gender" label="Gender">
@@ -1184,7 +1311,9 @@ export function ProductFormSheet({
                                   : "border-white/[0.08] bg-white/[0.03] text-white/50 hover:border-white/20 hover:text-white",
                               )}
                             >
-                              {active ? <Check className="h-3 w-3 text-[#c9b3ff]" /> : null}
+                              {active ? (
+                                <Check className="h-3 w-3 text-[#c9b3ff]" />
+                              ) : null}
                               {occ}
                             </button>
                           );
@@ -1231,8 +1360,8 @@ export function ProductFormSheet({
                           ) : null}
                         </div>
                         <p className="mt-1 text-[11px] leading-5 text-white/35">
-                          Select multiple files. They upload securely and appear in
-                          the library below.
+                          Select multiple files. They upload securely and appear
+                          in the library below.
                         </p>
                       </div>
                     </div>
@@ -1249,7 +1378,8 @@ export function ProductFormSheet({
                       type="button"
                       onClick={() => productImageInputRef.current?.click()}
                       disabled={
-                        uploadingImages || cloudinaryStatus?.configured === false
+                        uploadingImages ||
+                        cloudinaryStatus?.configured === false
                       }
                       className="h-10 shrink-0 rounded-xl border border-[#c9b3ff]/20 bg-[#c9b3ff] px-4 text-xs font-bold text-[#17121e] hover:bg-[#d5c6ff] disabled:border-white/[0.06] disabled:bg-white/[0.06] disabled:text-white/25"
                     >
@@ -1302,7 +1432,9 @@ export function ProductFormSheet({
                       <div className="grid gap-3 xl:grid-cols-2">
                         {csvToArray(form.imagesCsv).map((imageUrl, index) => {
                           const imageDetails = getImageUrlDetails(imageUrl);
-                          const libraryAsset = libraryImages.find((asset) => asset.url === imageUrl);
+                          const libraryAsset = libraryImages.find(
+                            (asset) => asset.url === imageUrl,
+                          );
 
                           return (
                             <article
@@ -1338,7 +1470,8 @@ export function ProductFormSheet({
                                     <div className="flex flex-wrap items-center gap-1.5">
                                       {index === 0 ? (
                                         <span className="inline-flex items-center gap-1 rounded-full border border-[#c9b3ff]/20 bg-[#c9b3ff]/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[.12em] text-[#ded4ff]">
-                                          <Crown className="h-2.5 w-2.5" /> Primary
+                                          <Crown className="h-2.5 w-2.5" />{" "}
+                                          Primary
                                         </span>
                                       ) : (
                                         <span className="rounded-full border border-white/[0.07] bg-white/[0.03] px-2 py-0.5 text-[8px] font-bold uppercase tracking-[.12em] text-white/30">
@@ -1363,7 +1496,22 @@ export function ProductFormSheet({
                                     >
                                       {imageDetails.fileName}
                                     </p>
-                                    {libraryAsset ? <p className="mt-1 text-[9px] text-white/25">{[libraryAsset.width && libraryAsset.height ? `${libraryAsset.width}×${libraryAsset.height}` : null, libraryAsset.format?.toUpperCase(), libraryAsset.sizeBytes ? `${Math.max(1, Math.round(libraryAsset.sizeBytes / 1024))} KB` : null].filter(Boolean).join(" · ")}</p> : null}
+                                    {libraryAsset ? (
+                                      <p className="mt-1 text-[9px] text-white/25">
+                                        {[
+                                          libraryAsset.width &&
+                                          libraryAsset.height
+                                            ? `${libraryAsset.width}×${libraryAsset.height}`
+                                            : null,
+                                          libraryAsset.format?.toUpperCase(),
+                                          libraryAsset.sizeBytes
+                                            ? `${Math.max(1, Math.round(libraryAsset.sizeBytes / 1024))} KB`
+                                            : null,
+                                        ]
+                                          .filter(Boolean)
+                                          .join(" · ")}
+                                      </p>
+                                    ) : null}
                                   </div>
                                 </div>
 
@@ -1378,8 +1526,33 @@ export function ProductFormSheet({
                                 </div>
 
                                 <div className="mt-auto flex items-center gap-1.5 pt-2">
-                                  <button type="button" onClick={() => moveProductImage(index, index - 1)} disabled={index === 0} title="Move image earlier" aria-label={`Move image ${index + 1} earlier`} className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.025] text-white/35 transition hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-20"><ChevronUp className="h-3.5 w-3.5" /></button>
-                                  <button type="button" onClick={() => moveProductImage(index, index + 1)} disabled={index === csvToArray(form.imagesCsv).length - 1} title="Move image later" aria-label={`Move image ${index + 1} later`} className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.025] text-white/35 transition hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-20"><ChevronDown className="h-3.5 w-3.5" /></button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      moveProductImage(index, index - 1)
+                                    }
+                                    disabled={index === 0}
+                                    title="Move image earlier"
+                                    aria-label={`Move image ${index + 1} earlier`}
+                                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.025] text-white/35 transition hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
+                                  >
+                                    <ChevronUp className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      moveProductImage(index, index + 1)
+                                    }
+                                    disabled={
+                                      index ===
+                                      csvToArray(form.imagesCsv).length - 1
+                                    }
+                                    title="Move image later"
+                                    aria-label={`Move image ${index + 1} later`}
+                                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.025] text-white/35 transition hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
+                                  >
+                                    <ChevronDown className="h-3.5 w-3.5" />
+                                  </button>
                                   {index !== 0 ? (
                                     <button
                                       type="button"
@@ -1389,8 +1562,26 @@ export function ProductFormSheet({
                                       <Crown className="h-3 w-3" /> Make primary
                                     </button>
                                   ) : null}
-                                  {!imageDetails.isCloudinary && /^https?:\/\//i.test(imageUrl) ? (
-                                    <button type="button" onClick={() => void importExternalImage(imageUrl, index)} disabled={Boolean(importingImageUrl)} className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-sky-300/15 bg-sky-300/[0.055] px-2 text-[8px] font-bold uppercase tracking-[.08em] text-sky-200/65 transition hover:bg-sky-300/[0.11] disabled:opacity-35">{importingImageUrl === imageUrl ? <Loader2 className="h-3 w-3 animate-spin" /> : <Cloud className="h-3 w-3" />}Move</button>
+                                  {!imageDetails.isCloudinary &&
+                                  /^https?:\/\//i.test(imageUrl) ? (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        void importExternalImage(
+                                          imageUrl,
+                                          index,
+                                        )
+                                      }
+                                      disabled={Boolean(importingImageUrl)}
+                                      className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-sky-300/15 bg-sky-300/[0.055] px-2 text-[8px] font-bold uppercase tracking-[.08em] text-sky-200/65 transition hover:bg-sky-300/[0.11] disabled:opacity-35"
+                                    >
+                                      {importingImageUrl === imageUrl ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                      ) : (
+                                        <Cloud className="h-3 w-3" />
+                                      )}
+                                      Move
+                                    </button>
                                   ) : null}
                                   <button
                                     type="button"
@@ -1424,7 +1615,8 @@ export function ProductFormSheet({
                         No product images added yet
                       </p>
                       <p className="mt-1 text-[10px] text-white/25">
-                        Paste a Cloudinary or external URL above to preview it here.
+                        Paste a Cloudinary or external URL above to preview it
+                        here.
                       </p>
                     </div>
                   )}
@@ -1500,10 +1692,18 @@ export function ProductFormSheet({
               </Button>
               <Button
                 type="submit"
-                disabled={loading || (isEditing && (detailLoading || Boolean(detailError)))}
+                disabled={
+                  loading ||
+                  !categoriesReady ||
+                  (isEditing && (detailLoading || Boolean(detailError)))
+                }
                 className="group h-12 rounded-xl border border-[#c9b3ff]/20 bg-[#c9b3ff] px-6 text-sm font-bold text-[#17121e] shadow-[0_10px_28px_rgba(201,179,255,.16),inset_0_1px_rgba(255,255,255,.45)] transition hover:-translate-y-0.5 hover:bg-[#d4c4ff] hover:shadow-[0_14px_34px_rgba(201,179,255,.24)] disabled:translate-y-0 disabled:border-white/5 disabled:bg-white/10 disabled:text-white/25 disabled:shadow-none"
               >
-                {loading ? "Saving..." : isEditing ? "Save changes" : "Publish product"}
+                {loading
+                  ? "Saving..."
+                  : isEditing
+                    ? "Save changes"
+                    : "Publish product"}
                 {!loading ? (
                   <ChevronRight className="ml-2 h-4 w-4 transition group-hover:translate-x-0.5" />
                 ) : null}

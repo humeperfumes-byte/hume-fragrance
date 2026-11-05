@@ -9,6 +9,9 @@ const invoiceRule:Rule={...scalars('sellerName sellerAddress sellerEmail sellerP
 const orderSpec=BACKUP_REGISTRY.find(t=>t.name==='orders')!;
 const orderRule:Rule={...scalars(orderSpec.snapshotKeys.filter(k=>!['externalPaymentReceipt','cartSnapshot','giftItems'].includes(k)).join(' ')),externalPaymentReceipt:scalars('amountMinor method reference recordedAt'),cartSnapshot:[cartItem],giftItems:'strings'};
 const rules:Record<string,Record<string,Rule>>={
+ coupons:{rules:{...scalars('startsAt expiresAt maxUses perCustomer customerKey audience maxDiscount sampleProductId stackable'),productIds:'strings',categoryIds:'strings'}},
+ growth_settings:{value:scalars('earningEnabled earnPercent maxRedeemPercent holdDays referralsEnabled referralCoins friendDiscount referralMinSubtotal earnFrom after')},
+ growth_saved_segments:{filters:scalars('q segment sort from to page')},
  products:{images:'strings',seo_keywords:'strings',badges:scalars('bestSeller humeSpecial limitedStock soldOut comingSoon showInDiscoverySet recommendedSample'),notes:{top:'strings',heart:'strings',base:'strings'},longevity:{...scalars('duration sillage'),season:'strings',occasion:'strings'}},
  accessories:{images:'strings'},reviews:{images:'strings'},images:{tags:'strings'},blog_posts:{seo_keywords:'strings'},
  orders:{external_payment_receipt:scalars('amountMinor method reference recordedAt'),cart_snapshot:[cartItem],gift_items:'strings'},

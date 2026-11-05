@@ -16,7 +16,18 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:fix-admin": "tsx scripts/fix-admin-schema.ts",
     "db:setup-live-chat": "tsx scripts/apply-live-chat-schema.ts",
-    "test:ai-media": "node --import tsx --test tests/ai-provider.test.ts tests/cloudinary-media.test.ts"
+    "db:setup-qr": "tsx scripts/apply-qr-schema.ts",
+    "db:setup-categories": "tsx scripts/apply-category-schema.ts",
+    "test:categories": "node --import tsx --test tests/product-categories.test.ts",
+    "test:categories:integration": "node scripts/verify-category-system.cjs",
+    "test:qr": "node --import tsx --test tests/qr-system.test.ts",
+    "test:qr:integration": "node scripts/verify-qr-system.cjs",
+    "test:ai-media": "node --import tsx --test tests/ai-provider.test.ts tests/cloudinary-media.test.ts",
+    "db:setup-growth": "tsx scripts/apply-growth-schema.ts",
+    "test:growth": "node --import tsx --test tests/growth.test.ts tests/growth-backup.test.ts",
+    "test:growth:integration": "node --conditions=react-server --import tsx scripts/verify-growth-system.ts",
+    "test:growth:campaigns": "node --conditions=react-server --import tsx scripts/verify-growth-campaigns.ts",
+    "test:growth:checkout": "node --conditions=react-server --import tsx scripts/verify-growth-checkout.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -80,6 +91,7 @@
     "react-resizable-panels": "^2.1.9",
     "recharts": "^2.15.4",
     "resend": "^6.12.2",
+    "server-only": "^0.0.1",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
