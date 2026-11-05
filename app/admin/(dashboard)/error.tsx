@@ -30,13 +30,8 @@ export default function AdminError({
         <p className="mt-4 text-sm leading-relaxed text-white/50">
           {isDbError ? (
             <>
-              Your local code expects database columns that don&apos;t exist yet in Neon.
-              Open your terminal and run:{" "}
-              <code className="inline-block mt-2 rounded bg-white/10 px-3 py-1.5 text-xs text-white font-mono">
-                npm run db:push
-              </code>
-              <br />
-              Then click the button below to retry.
+              The workspace could not load its data. Please retry or reload this page.
+              If it continues, check the server logs before changing the database.
             </>
           ) : (
             <>
@@ -55,6 +50,7 @@ export default function AdminError({
           <RefreshCcw className="h-4 w-4" />
           Try Again
         </button>
+        <button type="button" onClick={() => window.location.reload()} className="ml-3 mt-4 rounded-xl border border-white/10 px-6 py-3 text-sm text-white">Reload page</button>
       </div>
     </div>
   );

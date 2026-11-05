@@ -1,0 +1,74 @@
+"use client";
+
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { checkoutFetch } from "@/lib/checkout-fetch";
+import { toast } from "@/hooks/use-toast";
+
+export default function AdminLogin() {
+  const [token, setToken] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+
+    setError("");
+    try {
+      const response = await checkoutFetch("/api/admin/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      }, 15000, "Sign-in took too long. Please retry; your token has not been cleared.");
+      if (!response.headers.get("content-type")?.includes("application/json")) {
+        throw new Error("Admin sign-in is temporarily unavailable. Please reload and try again.");
+      }
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Unable to sign in.");
+      toast({ title: "Authenticated successfully" });
+      // Load the authenticated document rather than a previously cached login route.
+      window.location.replace("/admin/dashboard");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to sign in. Please retry.";
+      setError(message);
+      toast({ title: "Sign-in failed", description: message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main className="admin-shell flex min-h-screen items-center justify-center bg-[#f6f6f6] p-4">
+      <Card className="w-full max-w-md rounded-lg border-neutral-200 shadow-none">
+        <CardHeader className="space-y-2 pb-6 text-center">
+          <CardTitle className="text-2xl font-semibold">HUME Admin</CardTitle>
+          <CardDescription>Enter your API token to access operations.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={onSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="token" className="text-sm font-medium text-muted-foreground">API Token</Label>
+              <Input
+                id="token"
+                type="password"
+                value={token}
+                onChange={e => setToken(e.target.value)}
+                placeholder="Paste your secure token"
+                className="h-11 rounded-md bg-background"
+                required
+              />
+            </div>
+            {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+            <Button type="submit" className="h-11 w-full rounded-md" disabled={loading}>
+              {loading ? "Authenticating..." : "Secure Login"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </main>
+  );
+}

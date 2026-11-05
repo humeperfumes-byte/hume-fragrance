@@ -25,6 +25,10 @@ export function middleware(request: NextRequest) {
   const rewriteUrl = request.nextUrl.clone();
   rewriteUrl.pathname = pathWithoutPrefix;
   const response = prefix ? NextResponse.rewrite(rewriteUrl) : NextResponse.next();
+  if (pathname === "/admin" || pathname.startsWith("/admin/") || pathname.startsWith("/api/admin/")) {
+    response.headers.set("Cache-Control", "private, no-store, max-age=0");
+    response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+  }
   if (isPrivateCustomerPath(pathname)) {
     response.headers.set("Cache-Control", "private, no-store, max-age=0");
     response.headers.set("Referrer-Policy", "no-referrer");
@@ -39,5 +43,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|icon.png|apple-icon.png).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|icon.png|apple-icon.png).*)", "/api/admin/:path*"],
 };
