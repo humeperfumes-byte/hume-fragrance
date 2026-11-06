@@ -1,6 +1,5 @@
 "use client";
 
-import CoinRedemption from "@/components/growth/CoinRedemption";
 import {growthHeaders} from "@/lib/growth/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1233,7 +1232,6 @@ const CartDrawer = () => {
       </div>
 
       <footer className="shrink-0 border-t border-black/10 bg-[#fbfaf8] px-5 py-4">
-          <CoinRedemption/>
           <div className="text-sm">
             <button
               type="button"

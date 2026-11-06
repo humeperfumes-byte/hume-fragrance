@@ -2,7 +2,6 @@
 import { COD_FEE, COD_PAYMENT_METHOD, isCodEligible } from "@/lib/cod-policy";
 import { useCheckoutActivity } from "@/hooks/use-checkout-activity";
 import type { CheckoutEvent } from "@/lib/checkout-activity";
-import CoinRedemption from "@/components/growth/CoinRedemption";
 import { checkoutFetch } from "@/lib/checkout-fetch";
 
 import {
@@ -2392,7 +2391,6 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
               ))}
             </div>
 
-            {secureSession?.savedTotal===undefined&&adminOverrideTotal===null&&<CoinRedemption/>}
             <div className="mt-5 rounded-2xl bg-[#f7f7f8] p-4">
               <p className="text-[0.62rem] uppercase tracking-[0.24em] text-black/35">
                 Billing Snapshot
@@ -2402,7 +2400,6 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
                   <span className="text-black/45">Subtotal</span>
                   <span>{formatINR(totalPrice)}</span>
                 </div>
-                {growthQuote?.coins&&secureSession?.savedTotal===undefined?<div className="flex justify-between text-sm text-emerald-700"><span>HUME Coins</span><span>−₹{growthQuote.coins}</span></div>:null}
                 {growthQuote?.referralDiscount&&secureSession?.savedTotal===undefined?<div className="flex justify-between text-sm text-emerald-700"><span>Referral offer</span><span>−₹{growthQuote.referralDiscount}</span></div>:null}
                 {codFee > 0 && <div className="flex justify-between text-sm"><span className="text-black/45">COD charge</span><span>{formatINR(codFee)}</span></div>}
                 {couponDiscount > 0 ? (

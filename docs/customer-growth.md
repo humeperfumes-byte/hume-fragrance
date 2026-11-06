@@ -1,5 +1,7 @@
 # Customer growth, offers and rewards
 
+Coin redemption is temporarily disabled in cart and checkout through `CHECKOUT_FEATURES.coinRedemption` in `lib/checkout-settings.ts`. The coin controls are hidden and new cart quotes request zero coins. Wallet/admin code and existing saved-order amounts are retained for later completion.
+
 Open http://localhost:3002/admin/growth (also linked as Offers & Rewards). Customers opens the same workspace at its Customers tab. Existing checkout recovery and coupon lead history remain available, with Create offer actions.
 
 - Customers: lifetime orders, cash collected after recorded refunds, average fully paid order value, first/last order, actual verification login and separate account activity; search, segments, date filters, multiple selection, saved groups and CSV. Activity dates do not imply a new login. Historical sessions without an explicit login timestamp use session creation.

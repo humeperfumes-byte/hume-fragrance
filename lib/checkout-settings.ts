@@ -4,6 +4,7 @@ export const CHECKOUT_FEATURES = Object.freeze({
   customerOrderLinks: true,
   checkoutResumeLinks: true,
   errorMonitoring: true,
+  coinRedemption: false,
 });
 
 export const secureCheckoutConfigured = () => CHECKOUT_FEATURES.secureCheckout;

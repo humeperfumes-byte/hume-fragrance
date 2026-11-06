@@ -13,6 +13,7 @@ import type { GrowthQuote } from "@/lib/growth/rules";
 import { getStoredAccountLoginToken } from "@/lib/customer-account";
 import type { FragranceSelection } from "@/lib/discovery-set";
 import { useSiteControls } from "@/hooks/use-site-controls";
+import { CHECKOUT_FEATURES } from "@/lib/checkout-settings";
 
 export interface CartItem {
   id: string;
@@ -81,7 +82,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     sessionStorage.setItem("hume_coin_reservation", id);
     setCoinReservationId(id);
     const selected = Number(sessionStorage.getItem("hume_coins_selected") || 0);
-    if (Number.isInteger(selected) && selected >= 0) setCoinsToUse(selected);
+    if (CHECKOUT_FEATURES.coinRedemption && Number.isInteger(selected) && selected >= 0) setCoinsToUse(selected);
   }, []);
   useEffect(() => {
     sessionStorage.setItem("hume_coins_selected", String(coinsToUse));
@@ -118,7 +119,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           body: JSON.stringify({
             items,
             couponCode: appliedCouponCode || undefined,
-            coins: coinsToUse,
+            coins: CHECKOUT_FEATURES.coinRedemption ? coinsToUse : 0,
             reservationId: coinReservationId,
             welcomePercent: percent,
             revision: revision.current,
