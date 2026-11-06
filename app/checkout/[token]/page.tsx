@@ -1,3 +1,4 @@
+import { savedCouponCode, savedCheckoutDiscount } from "@/lib/checkout-offers";
 import { savedCodFee } from "@/lib/cod-policy";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -31,9 +32,11 @@ export default async function ResumeCheckoutPage({ params, searchParams }: { par
       if (savedOrder && (captured || savedOrder.checkoutChannel === "whatsapp")) redirect(`/order/${deriveOrderToken(token)}`);
       // Stored carts were canonicalized when saved. Render them immediately;
       // availability and authoritative pricing are checked again before payment.
+      const [draft] = savedOrder ? [] : await db.select({ pricingBreakdown: checkoutDrafts.pricingBreakdown }).from(checkoutDrafts).where(eq(checkoutDrafts.sessionId, automatic.id)).limit(1);
+      const appliedCouponCode = savedCouponCode(savedOrder?.appliedCouponCode ?? draft?.pricingBreakdown?.appliedCouponCode);
       const cart = automatic.cart;
       if (!cart) return <main className="mx-auto max-w-xl space-y-5 px-5 py-20"><h1 className="text-2xl font-semibold">Please update your saved selection</h1><p>A saved product is unavailable or needs updated selections. Your bag is preserved.</p><Link href="/shop" className="inline-block underline">Return to the collection</Link></main>;
-      return <main className="min-h-screen bg-background"><Header /><OwnedCheckout session={{ token, id: automatic.id, orderId: automatic.orderId, orderNumber: automatic.orderNumber, cart, details: automatic.details, paymentPending: !!savedOrder, resumed, ...(savedOrder ? { expectedPaymentMinor: storedPaymentMinor(automatic.expectedPaymentMinor, Number(savedOrder.grandTotal), /Prepaid.*Cash on Delivery/i.test(savedOrder.paymentMethod || "")), savedCodFee: savedCodFee(savedOrder.paymentMethod, savedOrder.codFee), savedTotal: Number(savedOrder.grandTotal), savedShippingFee: Number(savedOrder.shippingFee), paymentMode: /Prepaid.*Cash on Delivery/i.test(savedOrder.paymentMethod || "") ? "partial_cod" as const : "full" as const } : {}) }} /><Footer /></main>;
+      return <main className="min-h-screen bg-background"><Header /><OwnedCheckout session={{ token, id: automatic.id, orderId: automatic.orderId, orderNumber: automatic.orderNumber, cart, details: automatic.details, paymentPending: !!savedOrder, appliedCouponCode, resumed, ...(savedOrder ? { expectedPaymentMinor: storedPaymentMinor(automatic.expectedPaymentMinor, Number(savedOrder.grandTotal), /Prepaid.*Cash on Delivery/i.test(savedOrder.paymentMethod || "")), savedSubtotal: Number(savedOrder.subtotal), savedDiscount: savedCheckoutDiscount(Number(savedOrder.subtotal), Number(savedOrder.shippingFee), savedCodFee(savedOrder.paymentMethod, savedOrder.codFee), Number(savedOrder.grandTotal)), savedCodFee: savedCodFee(savedOrder.paymentMethod, savedOrder.codFee), savedTotal: Number(savedOrder.grandTotal), savedShippingFee: Number(savedOrder.shippingFee), paymentMode: /Prepaid.*Cash on Delivery/i.test(savedOrder.paymentMethod || "") ? "partial_cod" as const : "full" as const } : {}) }} /><Footer /></main>;
     }
     const [savedOrder] = await db.select({ id: orders.id }).from(orders).where(eq(orders.id, automatic.orderId)).limit(1);
     if (savedOrder) return <main className="mx-auto max-w-xl px-5 py-20"><h1 className="text-2xl font-semibold">Continue your saved order</h1><p className="mt-4">Sign in to your HUME account to check its payment and continue securely.</p><Link className="mt-5 inline-block underline" href="/account">Sign in to continue</Link></main>;

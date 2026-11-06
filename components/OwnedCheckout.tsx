@@ -5,9 +5,9 @@ import { isCodEligible } from "@/lib/cod-policy";
 import { canChooseCheckoutPayment } from "@/lib/checkout-payment-options";
 import CheckoutClient from "./CheckoutClient";
 import CheckoutLoading from "./CheckoutLoading";
-export type OwnedCheckoutData = { token: string; id: string; orderId: string; orderNumber: string; cart: CartItem[]; details: Record<string, string>; paymentPending: boolean; resumed?: boolean; savedCodFee?: number; savedTotal?: number; savedShippingFee?: number; expectedPaymentMinor?: number; paymentMode?: "full" | "partial_cod" };
+export type OwnedCheckoutData = { token: string; id: string; orderId: string; orderNumber: string; cart: CartItem[]; details: Record<string, string>; paymentPending: boolean; resumed?: boolean; appliedCouponCode?: string | null; savedSubtotal?: number; savedDiscount?: number; savedCodFee?: number; savedTotal?: number; savedShippingFee?: number; expectedPaymentMinor?: number; paymentMode?: "full" | "partial_cod" };
 export default function OwnedCheckout({ session }: { session: OwnedCheckoutData }) {
-  const { hydrated, restoreItems } = useCart();
+  const { hydrated, restoreItems, setAppliedCouponCode } = useCart();
   const once = useRef(false);
   const [ready, setReady] = useState(false);
   const [message, setMessage] = useState("");
@@ -28,6 +28,7 @@ export default function OwnedCheckout({ session }: { session: OwnedCheckoutData 
     if (!hydrated || once.current) return;
     once.current = true;
     restoreItems(session.cart);
+    if (!session.paymentPending && session.appliedCouponCode !== undefined) setAppliedCouponCode(session.appliedCouponCode);
     let restoredDetails = session.details;
     // A quick app-router back navigation can beat the final keepalive save.
     // Use local fields only for this exact unfinished session, never an order
@@ -42,7 +43,7 @@ export default function OwnedCheckout({ session }: { session: OwnedCheckoutData 
     if (session.paymentMode) window.localStorage.setItem("hume_payment_recovery_mode_v1", session.paymentMode);
     if (Object.keys(restoredDetails).length) window.localStorage.setItem("hume_checkout_details_v1", JSON.stringify(restoredDetails));
     setReady(true);
-  }, [hydrated, restoreItems, session]);
+  }, [hydrated, restoreItems, setAppliedCouponCode, session]);
   useEffect(() => { if (session.paymentMode) setMode(session.paymentMode); }, [session.paymentMode]);
   const chooseMode = async (next: "full" | "partial_cod") => {
     if (!allowPaymentChoice || switching || next === mode) return;
@@ -72,5 +73,5 @@ export default function OwnedCheckout({ session }: { session: OwnedCheckoutData 
       </div>
       {switching && <p role="status" className="mt-2 text-sm">Updating your payment option…</p>}
     </aside> : null;
-  return <CheckoutClient paymentOptions={paymentOptions} paymentMode={allowPaymentChoice ? mode : "full"} paymentBlocked={switching} secureSession={{ token: session.token, id: session.id, orderId: session.orderId, orderNumber: session.orderNumber, savedCodFee: session.savedCodFee, savedTotal: session.savedTotal, savedShippingFee: session.savedShippingFee, expectedPaymentMinor: session.expectedPaymentMinor }} />;
+  return <CheckoutClient paymentOptions={paymentOptions} paymentMode={allowPaymentChoice ? mode : "full"} paymentBlocked={switching} secureSession={{ token: session.token, id: session.id, orderId: session.orderId, orderNumber: session.orderNumber, savedSubtotal: session.savedSubtotal, savedDiscount: session.savedDiscount, savedCodFee: session.savedCodFee, savedTotal: session.savedTotal, savedShippingFee: session.savedShippingFee, expectedPaymentMinor: session.expectedPaymentMinor }} />;
 }

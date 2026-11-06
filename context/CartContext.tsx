@@ -14,6 +14,7 @@ import { getStoredAccountLoginToken } from "@/lib/customer-account";
 import type { FragranceSelection } from "@/lib/discovery-set";
 import { useSiteControls } from "@/hooks/use-site-controls";
 import { CHECKOUT_FEATURES } from "@/lib/checkout-settings";
+import { subscribeCheckoutRewardChanges } from "@/lib/checkout-offers";
 
 export interface CartItem {
   id: string;
@@ -76,6 +77,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [quoteRetry, setQuoteRetry] = useState(0);
   const revision = useRef(0);
   const refreshGrowthQuote = () => setQuoteRetry((n) => n + 1);
+  useEffect(() => subscribeCheckoutRewardChanges(window, () => setQuoteRetry(n => n + 1)), []);
   useEffect(() => {
     const id =
       sessionStorage.getItem("hume_coin_reservation") || crypto.randomUUID();

@@ -3,6 +3,8 @@ import { COD_FEE, COD_PAYMENT_METHOD, isCodEligible } from "@/lib/cod-policy";
 import { useCheckoutActivity } from "@/hooks/use-checkout-activity";
 import type { CheckoutEvent } from "@/lib/checkout-activity";
 import { checkoutFetch } from "@/lib/checkout-fetch";
+import { subscribeCheckoutRewardChanges } from "@/lib/checkout-offers";
+import CheckoutOfferStatus from "@/components/CheckoutOfferStatus";
 
 import {
   type KeyboardEvent,
@@ -520,7 +522,7 @@ function PaymentStartNotice({ message }: { message: string }) {
   return <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950"><p>{message}</p></div>;
 }
 
-export default function CheckoutClient({ secureSession, paymentBlocked = false, paymentMode, paymentOptions }: { paymentOptions?: (baseTotal: number) => React.ReactNode; paymentBlocked?: boolean; paymentMode?: RecoveryPaymentMode; secureSession?: { token: string; id: string; orderId: string; orderNumber: string; savedCodFee?: number; savedTotal?: number; savedShippingFee?: number; expectedPaymentMinor?: number } } = {}) {
+export default function CheckoutClient({ secureSession, paymentBlocked = false, paymentMode, paymentOptions }: { paymentOptions?: (baseTotal: number) => React.ReactNode; paymentBlocked?: boolean; paymentMode?: RecoveryPaymentMode; secureSession?: { token: string; id: string; orderId: string; orderNumber: string; savedSubtotal?: number; savedDiscount?: number; savedCodFee?: number; savedTotal?: number; savedShippingFee?: number; expectedPaymentMinor?: number } } = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const { items, totalPrice, clearCart, appliedCouponCode, hydrated,growthQuote,growthQuotePending,growthQuoteError,coinReservationId } = useCart();
@@ -659,7 +661,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
     () => calculateCouponDiscount(appliedCoupon, items, totalPrice),
     [appliedCoupon, items, totalPrice],
   );
-  const couponDiscount = growthQuote?.couponDiscount ?? Math.min(totalPrice, couponResult.discount);
+  const couponDiscount = secureSession?.savedTotal !== undefined ? 0 : growthQuote?.couponDiscount ?? Math.min(totalPrice, couponResult.discount);
 
   const isWelcomeRewardBlocked = useMemo(() => {
     return items.length > 0 && items.every((item) => item.isGift || isDiscoverySetCartItem(item));
@@ -667,7 +669,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
 
   const activeWelcomeReward = settings.welcomeBackEnabled && !isWelcomeRewardBlocked ? welcomeBackReward : null;
 
-  const welcomeBackDiscount = growthQuote?.welcomeDiscount ?? calculateWelcomeBackDiscount(
+  const welcomeBackDiscount = secureSession?.savedTotal !== undefined ? 0 : growthQuote?.welcomeDiscount ?? calculateWelcomeBackDiscount(
     activeWelcomeReward,
     totalPrice,
     couponDiscount,
@@ -862,10 +864,10 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const syncReward = () => setWelcomeBackReward(readWelcomeBackReward(window.localStorage));
-    window.addEventListener("hume:welcome-back-reward-sync", syncReward);
+    const unsubscribe = subscribeCheckoutRewardChanges(window, syncReward);
     const reward = readWelcomeBackReward(window.localStorage);
     setWelcomeBackReward(reward);
-    if (!reward) return () => window.removeEventListener("hume:welcome-back-reward-sync", syncReward);
+    if (!reward) return unsubscribe;
     window.dispatchEvent(
       new CustomEvent("hume:tracking", {
         detail: {
@@ -881,7 +883,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
         },
       }),
     );
-    return () => window.removeEventListener("hume:welcome-back-reward-sync", syncReward);
+    return unsubscribe;
   }, []);
 
   const buildDraftPayload = useCallback(
@@ -2391,6 +2393,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
               ))}
             </div>
 
+            {secureSession?.savedTotal === undefined && <CheckoutOfferStatus />}
             <div className="mt-5 rounded-2xl bg-[#f7f7f8] p-4">
               <p className="text-[0.62rem] uppercase tracking-[0.24em] text-black/35">
                 Billing Snapshot
@@ -2398,10 +2401,11 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
               <div className="mt-3 space-y-1.5 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="text-black/45">Subtotal</span>
-                  <span>{formatINR(totalPrice)}</span>
+                  <span>{formatINR(secureSession?.savedSubtotal ?? totalPrice)}</span>
                 </div>
                 {growthQuote?.referralDiscount&&secureSession?.savedTotal===undefined?<div className="flex justify-between text-sm text-emerald-700"><span>Referral offer</span><span>−₹{growthQuote.referralDiscount}</span></div>:null}
                 {codFee > 0 && <div className="flex justify-between text-sm"><span className="text-black/45">COD charge</span><span>{formatINR(codFee)}</span></div>}
+                {secureSession?.savedDiscount !== undefined && secureSession.savedDiscount > 0 && <div className="flex items-center justify-between"><span className="text-black/45">Saved order discount</span><span className="text-emerald-600">-{formatINR(secureSession.savedDiscount)}</span></div>}
                 {couponDiscount > 0 ? (
                   <div className="flex items-center justify-between">
                     <span className="text-black/45">
@@ -2422,7 +2426,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
                     </span>
                   </div>
                 ) : null}
-                {shippingSavings > 0 ? (
+                {secureSession?.savedTotal === undefined && shippingSavings > 0 ? (
                   <div className="flex items-center justify-between">
                     <span className="text-black/45">
                       {activeWelcomeReward
@@ -2434,7 +2438,7 @@ export default function CheckoutClient({ secureSession, paymentBlocked = false, 
                     </span>
                   </div>
                 ) : null}
-                {adminOverrideTotal !== null && rawGrandTotal > adminOverrideTotal ? (
+                {secureSession?.savedTotal === undefined && adminOverrideTotal !== null && rawGrandTotal > adminOverrideTotal ? (
                   <div className="flex items-center justify-between">
                     <span className="text-black/45">Special Discount</span>
                     <span className="text-emerald-600">

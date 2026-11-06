@@ -2,6 +2,7 @@
 
 import {growthHeaders} from "@/lib/growth/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import CheckoutOfferStatus from "@/components/CheckoutOfferStatus";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowRight,
@@ -430,6 +431,8 @@ const CartDrawer = () => {
       setRewardNow(now);
       if (welcomeBackReward.expiresAt <= now) {
         setWelcomeBackReward(null);
+        try { window.localStorage.removeItem("hume_welcome_back_reward_v1"); } catch { /* The quote still rechecks expiry. */ }
+        window.dispatchEvent(new CustomEvent("hume:welcome-back-reward-sync"));
       }
     }, 1000);
     return () => window.clearInterval(interval);
@@ -1232,6 +1235,7 @@ const CartDrawer = () => {
       </div>
 
       <footer className="shrink-0 border-t border-black/10 bg-[#fbfaf8] px-5 py-4">
+          <CheckoutOfferStatus />
           <div className="text-sm">
             <button
               type="button"
