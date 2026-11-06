@@ -3,6 +3,7 @@ import { requireAdminToken } from "@/lib/admin-auth";
 import { trackDelhiveryWaybill } from "@/lib/tracking/delhivery";
 import { trackSpeedPostConsignment } from "@/lib/tracking/india-post";
 import { trackShiprocketAwb } from "@/lib/tracking/shiprocket";
+import { trackShadowfaxAwb } from "@/lib/tracking/shadowfax";
 import {
   TRACKING_CARRIERS,
   TRACKING_STATUS_META,
@@ -287,6 +288,10 @@ async function trackWithConfiguredEndpoint(
     return trackShiprocketAwb(trackingNumber);
   }
 
+  if (carrier === "shadowfax") {
+    return trackShadowfaxAwb(trackingNumber);
+  }
+
   const endpointTemplate = getProviderEndpoint(carrier);
 
   if (!endpointTemplate) {
@@ -393,9 +398,11 @@ export async function POST(request: NextRequest) {
               ? true
               : carrier === "delhivery"
                 ? Boolean(process.env.DELHIVERY_API_TOKEN)
-                : carrier === "shiprocket"
-                  ? Boolean(process.env.SHIPROCKET_API_EMAIL && (process.env.SHIPROCKET_API_KEY || process.env.SHIPROCKET_API_PASSWORD))
-                  : Boolean(getProviderEndpoint(carrier)),
+                : carrier === "shadowfax"
+                  ? Boolean(process.env.SHADOWFAX_API_TOKEN?.trim())
+                  : carrier === "shiprocket"
+                    ? Boolean(process.env.SHIPROCKET_API_EMAIL && (process.env.SHIPROCKET_API_KEY || process.env.SHIPROCKET_API_PASSWORD))
+                    : Boolean(getProviderEndpoint(carrier)),
           ];
         }),
       ),

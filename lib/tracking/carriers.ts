@@ -19,6 +19,16 @@ export const TRACKING_CARRIERS = {
     envKeys: ["DELHIVERY_API_TOKEN", "DELHIVERY_TRACKING_ENDPOINT optional"],
     hint: "Usually a 12-14 digit AWB number.",
   },
+  shadowfax: {
+    label: "Shadowfax",
+    shortLabel: "Shadowfax",
+    codeLabel: "AWB / tracking ID",
+    officialUrl: "https://www.shadowfax.in/track",
+    accent: "from-orange-400 to-rose-500",
+    tone: "text-orange-200",
+    envKeys: ["SHADOWFAX_API_TOKEN"],
+    hint: "Use the Shadowfax AWB saved when booking the shipment.",
+  },
   shiprocket: {
     label: "Shiprocket",
     shortLabel: "Shiprocket",

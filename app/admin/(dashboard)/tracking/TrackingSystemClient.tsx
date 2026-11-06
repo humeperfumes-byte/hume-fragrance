@@ -135,6 +135,7 @@ function normalizeOrderCarrier(value: string | null | undefined): TrackingCarrie
   if (isTrackingCarrier(normalized)) return normalized;
   if (/shiprocket|ship_?rocket/.test(normalized)) return "shiprocket";
   if (/delhivery/.test(normalized)) return "delhivery";
+  if (/shadow_?fax/.test(normalized)) return "shadowfax";
   if (/blue_?dart|bluedart/.test(normalized)) return "bluedart";
   return "speed_post";
 }
@@ -301,10 +302,10 @@ export default function TrackingSystemClient({ initialTrackedOrders = [] }: Trac
           </div>
           <h1 className="text-2xl">Shipment Tracking System</h1>
           <p className="mt-2 text-sm text-white/45">
-            Track Speed Post, Delhivery, and Blue Dart shipments from one admin desk.
+            Track Shadowfax, Delhivery, Shiprocket, Speed Post, and Blue Dart shipments from one admin desk.
           </p>
         </div>
-        <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-2">
+        <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-2 sm:grid-cols-3">
           {carrierEntries.map(([key, config]) => (
             <button
               key={key}

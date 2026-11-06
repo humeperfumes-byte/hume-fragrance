@@ -1338,6 +1338,7 @@ export function OrdersTable({
                             <option className="bg-[#111]" value="shiprocket">Shiprocket</option>
                             <option className="bg-[#111]" value="speed_post">Speed Post</option>
                             <option className="bg-[#111]" value="delhivery">Delhivery</option>
+                            <option className="bg-[#111]" value="shadowfax">Shadowfax</option>
                             <option className="bg-[#111]" value="bluedart">Blue Dart</option>
                           </select>
                         </div>

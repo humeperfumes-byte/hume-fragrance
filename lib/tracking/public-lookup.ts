@@ -4,6 +4,7 @@ import { orders } from "@/db/schema";
 import { isLikelyDelhiveryAwb, trackDelhiveryWaybill } from "@/lib/tracking/delhivery";
 import { trackSpeedPostConsignment } from "@/lib/tracking/india-post";
 import { trackShiprocketAwb } from "@/lib/tracking/shiprocket";
+import { isLikelyShadowfaxAwb, trackShadowfaxAwb } from "@/lib/tracking/shadowfax";
 import {
   TRACKING_CARRIERS,
   TRACKING_STATUS_META,
@@ -52,8 +53,10 @@ function normalizeCarrier(value: string | null | undefined, trackingNumber: stri
   if (/shiprocket|ship_?rocket/.test(normalized)) return "shiprocket";
   if (/blue_?dart|bluedart/.test(normalized)) return "bluedart";
   if (/delhivery/.test(normalized)) return "delhivery";
+  if (/shadow_?fax/.test(normalized)) return "shadowfax";
   if (/speed|india_?post|indian_?post/.test(normalized)) return "speed_post";
   if (/^[A-Z]{2}\d{9}IN$/.test(cleanTrackingNumber(trackingNumber))) return "speed_post";
+  if (isLikelyShadowfaxAwb(trackingNumber)) return "shadowfax";
   if (isLikelyDelhiveryAwb(trackingNumber) && process.env.DELHIVERY_API_TOKEN?.trim()) return "delhivery";
   if (process.env.SHIPROCKET_API_EMAIL && (process.env.SHIPROCKET_API_KEY || process.env.SHIPROCKET_API_PASSWORD)) {
     return "shiprocket";
@@ -329,6 +332,10 @@ async function trackCarrierConsignment(
 
   if (carrier === "shiprocket") {
     return trackShiprocketAwb(trackingNumber);
+  }
+
+  if (carrier === "shadowfax") {
+    return trackShadowfaxAwb(trackingNumber);
   }
 
   const endpointTemplate = getProviderEndpoint(carrier);
